@@ -1,0 +1,11 @@
+.vscode/**
+typings/**
+out/test/**
+test/**
+node/**
+**/*.ts
+**/*.map
+.gitignore
+tsconfig.json
+tsd.json
+gulpfile.js

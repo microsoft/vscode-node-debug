@@ -1,0 +1,17 @@
+{
+	"version": "0.1.0",
+	"configurations": [
+		{
+			"name": "node-debug server",
+			"type": "node",
+			"request": "launch",
+			"runtimeExecutable": "/usr/local/bin/iojs",
+			//"runtimeArgs": ["--harmony"],
+			"program": "./node/nodeDebug.ts",
+			"stopOnEntry": false,
+			"args": [ "--server=4711" ],
+			"sourceMaps": true,
+			"outDir": "out"
+		}
+	]
+}
