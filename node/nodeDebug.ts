@@ -1,6 +1,7 @@
-/*---------------------------------------------------------
- * Copyright (C) Microsoft Corporation. All rights reserved.
- *--------------------------------------------------------*/
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
 
 import {DebugSession, Thread, Source, StackFrame, Scope, Variable, Breakpoint, TerminatedEvent, InitializedEvent, StoppedEvent, OutputEvent, ErrorDestination} from '../common/debugSession';
 import {NodeV8Protocol, NodeV8Event, NodeV8Response} from './nodeV8Protocol';
