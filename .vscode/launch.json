@@ -2,6 +2,18 @@
 	"version": "0.1.0",
 	"configurations": [
 		{
+			"name": "node-debug extension",
+			"type": "extensionHost",
+			"request": "launch",
+			"runtimeExecutable": "${execPath}",
+			"args": [
+				"--extensionDevelopmentPath=${workspaceRoot}"
+			],
+			"stopOnEntry": false,
+			"sourceMaps": true,
+			"outDir": "out"
+		},
+		{
 			"name": "node-debug server",
 			"type": "node",
 			"request": "launch",
