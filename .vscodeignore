@@ -3,5 +3,4 @@
 **/.DS_Store
 !out/**
 !package.json
-!OSSREADME.json
 !node_modules/source-map/**
