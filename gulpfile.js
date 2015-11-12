@@ -54,17 +54,12 @@ gulp.task('ts-watch', ['internal-build'], function(cb) {
 
 // compile and copy everything to outDest
 gulp.task('internal-build', function(callback) {
-	runSequence('internal-compile', 'internal-copy-scripts', 'internal-copy-package-json', callback);
+	runSequence('internal-compile', 'internal-copy-scripts', callback);
 });
 
 gulp.task('internal-copy-scripts', function() {
 	return gulp.src(['node/terminateProcess.sh', 'node/TerminalHelper.scpt'])
 		.pipe(gulp.dest(outDest + '/node'));
-});
-
-gulp.task('internal-copy-package-json', function() {
-	return gulp.src(['package.json'])
-		.pipe(gulp.dest(outDest));
 });
 
 gulp.task('internal-compile', function() {
@@ -74,7 +69,7 @@ gulp.task('internal-compile', function() {
 });
 
 gulp.task('internal-zip', function(callback) {
-	return gulp.src([outDest + '/**/*', 'node_modules/source-map/**/*'], { base: '.' }).pipe(vzip.dest(uploadDest + '/node-debug.zip'));
+	return gulp.src([outDest + '/**/*', 'node_modules/source-map/**/*', 'package.json'], { base: '.' }).pipe(vzip.dest(uploadDest + '/node-debug.zip'));
 });
 
 gulp.task('internal-upload', function() {
