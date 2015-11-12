@@ -69,7 +69,7 @@ gulp.task('internal-compile', function() {
 });
 
 gulp.task('internal-zip', function(callback) {
-	return gulp.src([outDest + '/**/*', 'node_modules/source-map/**/*', 'package.json'], { base: '.' }).pipe(vzip.dest(uploadDest + '/node-debug.zip'));
+	return gulp.src([outDest + '/**/*', 'node_modules/source-map/**/*', 'package.json', 'ThirdPartyNotices.txt', 'LICENSE.txt'], { base: '.' }).pipe(vzip.dest(uploadDest + '/node-debug.zip'));
 });
 
 gulp.task('internal-upload', function() {
