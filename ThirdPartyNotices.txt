@@ -1,9 +1,12 @@
 THIRD-PARTY SOFTWARE NOTICES AND INFORMATION
 Do Not Translate or Localize
 
-Microsoft’s Visual Studio Code “Preview” incorporates components from the projects listed below. Microsoft licenses these components to you under Microsoft’s Visual Studio Code “Preview” software licensing terms, except that components licensed under open source licenses requiring that such components remain under their original license are being made available to you by Microsoft under their original licensing terms.
+This project incorporates material from the project(s) listed below (collectively, “Third Party Code”).
+Microsoft is not the original author of the Third Party Code.  The original copyright notice and license
+under which Microsoft received such Third Party Code are set out below. This Third Party Code is licensed
+to you under their original license terms set forth below.  Microsoft reserves all other rights not
+expressly granted, whether by implication, estoppel or otherwise.
 
-The original copyright notices and the licenses under which Microsoft received such components are set forth below for informational purposes. Please refer to the accompanying credits file for additional notices regarding the Chromium open source project.  Microsoft reserves all rights not expressly granted herein, whether by implication, estoppel or otherwise.
 
 1.	source-map version 0.4.4 (https://github.com/mozilla/source-map)
 2.	amdefine version 1.0.0 (https://github.com/jrburke/amdefine)
