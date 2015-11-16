@@ -9,7 +9,7 @@
   "private": true,
   "engines": {
     "node": ">= 0.12.0",
-    "vscode": "0.10.x"
+    "vscode": "^0.10.1"
   },
   "dependencies": {
 	  "source-map": "*"
