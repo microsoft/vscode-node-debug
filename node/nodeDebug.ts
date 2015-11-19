@@ -525,7 +525,7 @@ export class NodeDebugSession extends DebugSession {
 						this.sendErrorResponse(response, 2009, "cannot connect to runtime process (timeout after {_timeout}ms)", { _timeout: timeout });
 					}
 				} else {
-					this.sendErrorResponse(response, 2010, "cannot connect to runtime process (reason: {_error})", { _error: err });
+					this.sendErrorResponse(response, 2010, "cannot connect to runtime process (reason: {_error})", { _error: err.message });
 				}
 			}
 		});
