@@ -57,7 +57,7 @@ gulp.task('internal-build', function(callback) {
 });
 
 gulp.task('internal-copy-scripts', function() {
-	return gulp.src(['node/terminateProcess.sh', 'node/TerminalHelper.scpt'])
+	return gulp.src(['src/node/terminateProcess.sh', 'src/node/TerminalHelper.scpt'])
 		.pipe(gulp.dest(outDest + '/node'));
 });
 
