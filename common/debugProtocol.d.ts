@@ -58,7 +58,7 @@ declare module DebugProtocol {
 	/** Event message for "stopped" event type.
 		The event indicates that the execution of the debugee has stopped due to a break condition.
 		This can be caused by by a break point previously set, a stepping action has completed or by executing a debugger statement.
-    */
+	*/
 	export interface StoppedEvent extends Event {
 		body: {
 			/** The reason for the event (such as: 'step', 'breakpoint', 'exception', 'pause') */
@@ -319,7 +319,7 @@ declare module DebugProtocol {
 				This means that there is no location information available. */
 			stackFrames: StackFrame[];
 		};
-    }
+	}
 
 	/** Scopes request; value of command field is "scopes".
 		The request returns the variable scopes for a given stackframe ID.
@@ -338,7 +338,7 @@ declare module DebugProtocol {
 			/** The scopes of the stackframe. If the array has length zero, there are no scopes available. */
 			scopes: Scope[];
 		};
-    }
+	}
 
 	/** Variables request; value of command field is "variables".
 		Retrieves all children for the given variable reference.
@@ -389,7 +389,7 @@ declare module DebugProtocol {
 			/** All threads. */
 			threads: Thread[];
 		};
-    }
+	}
 
 	/** Evaluate request; value of command field is "evaluate".
 		Evaluates the given expression in the context of the top most stack frame.
@@ -397,13 +397,15 @@ declare module DebugProtocol {
 	*/
 	export interface EvaluateRequest extends Request {
 		arguments: EvaluateArguments;
-    }
+	}
 	/** Arguments for "evaluate" request. */
 	export interface EvaluateArguments {
-		/** The expression to evaluate */
+		/** The expression to evaluate. */
 		expression: string;
-		/** Evaluate the expression in the context of this stack frame. If not specified, the expression is evaluated in the global context. */
+		/** Evaluate the expression in the scope of this stack frame. If not specified, the expression is evaluated in the global scope. */
 		frameId?: number;
+		/** The context in which the evaluate request is run. Possible values are 'watch' if evaluate is run in a watch or 'repl' if run from the REPL console. */
+		context?: string;
 	}
 	/** Response to "evaluate" request. */
 	export interface EvaluateResponse extends Response {
