@@ -832,10 +832,16 @@ export class NodeDebugSession extends DebugSession {
 
 		if (source.name) {
 			this.findModule(source.name, (id: number) => {
-				scriptId = id;
-				this._clearAllBreakpoints(response, null, scriptId, lines, columns, sourcemap, clientLines);
-				return;
+				if (id >= 0) {
+					scriptId = id;
+					this._clearAllBreakpoints(response, null, scriptId, lines, columns, sourcemap, clientLines);
+					return;
+				} else {
+					this.sendErrorResponse(response, 2019, "internal module {_module} not found", { _module: source.name });
+					return;
+				}
 			});
+			return;
 		}
 
 		if (source.sourceReference > 0) {
@@ -844,7 +850,7 @@ export class NodeDebugSession extends DebugSession {
 			return;
 		}
 
-		this.sendErrorResponse(response, 2012, "no source specified", null, ErrorDestination.Telemetry);
+		this.sendErrorResponse(response, 2012, "no valid source specified", null, ErrorDestination.Telemetry);
 	}
 
 	/*
