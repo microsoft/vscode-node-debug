@@ -493,15 +493,7 @@ export class NodeDebugSession extends DebugSession {
 			if (NodeDebugSession.TRACE_INITIALISATION) console.error('_init: connect event in _attach');
 			connected = true;
 			this._node.startDispatch(socket, socket);
-
-			if (this._adapterID === 'extensionHost' /* && this._node.embeddedHostVersion === 4 */) {
-				// for some reason we need a 'continue' request to make node send the stop-on-entry event in node versions 4.x
-				this._node.command('continue', null, (resp: NodeV8Response) => {
-					this._initialize(response);
-				});
-			} else {
-				this._initialize(response);
-			}
+			this._initialize(response);
 			return;
 		});
 		const endTime = new Date().getTime() + timeout;
