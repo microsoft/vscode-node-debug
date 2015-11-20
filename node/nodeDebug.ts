@@ -1931,7 +1931,7 @@ export class NodeDebugSession extends DebugSession {
 	private findModule(name: string, cb: (id: number) => void): void {
 		this._node.command('scripts', { types: 1 + 2 + 4, filter: name }, (resp: NodeV8Response) => {
 			if (resp.success) {
-				if (resp.body.Count > 0) {
+				if (resp.body.length > 0) {
 					cb(resp.body[0].id);
 					return;
 				}
