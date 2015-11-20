@@ -16,8 +16,7 @@ var vzip = require('gulp-vinyl-zip');
 var compilation = tsb.create(path.join(__dirname, 'tsconfig.json'), true);
 
 var sources = [
-	'common/**/*.ts',
-	'node/**/*.ts',
+	'src/**/*.ts',
 	'typings/**/*.ts',
 	'test/**/*.ts'
 ];
