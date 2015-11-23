@@ -219,10 +219,10 @@ export class DebugSession extends V8Protocol {
 
 	protected sendErrorResponse(response: DebugProtocol.Response, code: number, format: string, args?: any, dest: ErrorDestination = ErrorDestination.User): void {
 
-		const message = DebugSession.formatPII(format, true, args);
+		format = `request '${response.command}': ${format}`;
 
 		response.success = false;
-		response.message = `${response.command}: ${message}`;
+		response.message = DebugSession.formatPII(format, true, args);
 		if (!response.body) {
 			response.body = {};
 		}
