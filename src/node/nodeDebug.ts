@@ -1258,8 +1258,11 @@ export class NodeDebugSession extends DebugSession {
 
 	protected scopesRequest(response: DebugProtocol.ScopesResponse, args: DebugProtocol.ScopesArguments): void {
 
-		const frameReference = args.frameId;
-		const frame = this._frameHandles.get(frameReference);
+		const frame = this._frameHandles.get(args.frameId);
+		if (!frame) {
+			this.sendErrorResponse(response, 2020, "stack frame not valid");
+			return;
+		}
 		const frameIx = frame.index;
 		const frameThis = this.getValueFromCache(frame.receiver);
 
@@ -1680,6 +1683,10 @@ export class NodeDebugSession extends DebugSession {
 		};
 		if (args.frameId > 0) {
 			const frame = this._frameHandles.get(args.frameId);
+			if (!frame) {
+				this.sendErrorResponse(response, 2020, "stack frame not valid");
+				return;
+			}
 			const frameIx = frame.index;
 			(<any>evalArgs).frame = frameIx;
 		} else {
