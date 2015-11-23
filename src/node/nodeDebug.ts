@@ -493,15 +493,7 @@ export class NodeDebugSession extends DebugSession {
 			if (NodeDebugSession.TRACE_INITIALISATION) console.error('_init: connect event in _attach');
 			connected = true;
 			this._node.startDispatch(socket, socket);
-
-			if (this._adapterID === 'extensionHost' /* && this._node.embeddedHostVersion === 4 */) {
-				// for some reason we need a 'continue' request to make node send the stop-on-entry event in node versions 4.x
-				this._node.command('continue', null, (resp: NodeV8Response) => {
-					this._initialize(response);
-				});
-			} else {
-				this._initialize(response);
-			}
+			this._initialize(response);
 			return;
 		});
 		const endTime = new Date().getTime() + timeout;
@@ -829,10 +821,16 @@ export class NodeDebugSession extends DebugSession {
 
 		if (source.name) {
 			this.findModule(source.name, (id: number) => {
-				scriptId = id;
-				this._clearAllBreakpoints(response, null, scriptId, lines, columns, sourcemap, clientLines);
-				return;
+				if (id >= 0) {
+					scriptId = id;
+					this._clearAllBreakpoints(response, null, scriptId, lines, columns, sourcemap, clientLines);
+					return;
+				} else {
+					this.sendErrorResponse(response, 2019, "internal module {_module} not found", { _module: source.name });
+					return;
+				}
 			});
+			return;
 		}
 
 		if (source.sourceReference > 0) {
@@ -841,7 +839,7 @@ export class NodeDebugSession extends DebugSession {
 			return;
 		}
 
-		this.sendErrorResponse(response, 2012, "no source specified", null, ErrorDestination.Telemetry);
+		this.sendErrorResponse(response, 2012, "no valid source specified", null, ErrorDestination.Telemetry);
 	}
 
 	/*
@@ -1257,8 +1255,11 @@ export class NodeDebugSession extends DebugSession {
 
 	protected scopesRequest(response: DebugProtocol.ScopesResponse, args: DebugProtocol.ScopesArguments): void {
 
-		const frameReference = args.frameId;
-		const frame = this._frameHandles.get(frameReference);
+		const frame = this._frameHandles.get(args.frameId);
+		if (!frame) {
+			this.sendErrorResponse(response, 2020, "stack frame not valid");
+			return;
+		}
 		const frameIx = frame.index;
 		const frameThis = this.getValueFromCache(frame.receiver);
 
@@ -1679,6 +1680,10 @@ export class NodeDebugSession extends DebugSession {
 		};
 		if (args.frameId > 0) {
 			const frame = this._frameHandles.get(args.frameId);
+			if (!frame) {
+				this.sendErrorResponse(response, 2020, "stack frame not valid");
+				return;
+			}
 			const frameIx = frame.index;
 			(<any>evalArgs).frame = frameIx;
 		} else {
@@ -1931,7 +1936,7 @@ export class NodeDebugSession extends DebugSession {
 	private findModule(name: string, cb: (id: number) => void): void {
 		this._node.command('scripts', { types: 1 + 2 + 4, filter: name }, (resp: NodeV8Response) => {
 			if (resp.success) {
-				if (resp.body.Count > 0) {
+				if (resp.body.length > 0) {
 					cb(resp.body[0].id);
 					return;
 				}

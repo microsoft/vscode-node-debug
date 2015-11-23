@@ -16,8 +16,7 @@ var vzip = require('gulp-vinyl-zip');
 var compilation = tsb.create(path.join(__dirname, 'tsconfig.json'), true);
 
 var sources = [
-	'common/**/*.ts',
-	'node/**/*.ts',
+	'src/**/*.ts',
 	'typings/**/*.ts',
 	'test/**/*.ts'
 ];
@@ -58,7 +57,7 @@ gulp.task('internal-build', function(callback) {
 });
 
 gulp.task('internal-copy-scripts', function() {
-	return gulp.src(['node/terminateProcess.sh', 'node/TerminalHelper.scpt'])
+	return gulp.src(['src/node/terminateProcess.sh', 'src/node/TerminalHelper.scpt'])
 		.pipe(gulp.dest(outDest + '/node'));
 });
 
