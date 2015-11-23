@@ -451,10 +451,7 @@ export class NodeDebugSession extends DebugSession {
 		this.sendEvent(new OutputEvent(cli, 'console'));
 	}
 
-	private _captureOutput(process: CP.ChildProcess) {
-
-		var sanitize = (s: string) => s.toString().replace(/\r\n$/mg, '\n');
-
+	private _captureOutput(process: CP.ChildProcess) {		
 		process.stdout.on('data', (data: string) => {
 			this.sendEvent(new OutputEvent(data.toString(), 'stdout'));
 		});
