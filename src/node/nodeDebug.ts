@@ -735,7 +735,11 @@ export class NodeDebugSession extends DebugSession {
 		if (!this._inShutdown) {
 			this._inShutdown = true;
 
-			this._node.command('disconnect'); // we don't wait for reponse
+			if (this._attachMode) {
+				// disconnect only in attach mode since otherwise node continues to run until it is killed
+				this._node.command('disconnect'); // we don't wait for reponse
+			}
+
 			this._node.stop();	// stop socket connection (otherwise node.js dies with ECONNRESET on Windows)
 
 			if (!this._attachMode) {
