@@ -296,9 +296,6 @@ export class NodeDebugSession extends DebugSession {
 				// re-attach to the received port
 				port = extensionHostData.reattachPort;
 			} else {
-				// make sure that we launch VSCode and not just electron pretending to be node
-				delete process.env['ATOM_SHELL_INTERNAL_RUN_AS_NODE'];
-
 				// we know that extensionHost is always launched with --nolazy
 				this._lazy = false;
 
@@ -451,7 +448,7 @@ export class NodeDebugSession extends DebugSession {
 		this.sendEvent(new OutputEvent(cli, 'console'));
 	}
 
-	private _captureOutput(process: CP.ChildProcess) {		
+	private _captureOutput(process: CP.ChildProcess) {
 		process.stdout.on('data', (data: string) => {
 			this.sendEvent(new OutputEvent(data.toString(), 'stdout'));
 		});
