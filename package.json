@@ -19,7 +19,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://monacotools.visualstudio.com/DefaultCollection/Monaco/_git/vscode-node-debug"
+    "url": "https://github.com/Microsoft/vscode-node-debug.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Microsoft/vscode-node-debug/issues"
   },
   "devDependencies": {
     "gulp": "^3.9.0",
