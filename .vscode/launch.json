@@ -2,7 +2,7 @@
 	"version": "0.1.0",
 	"configurations": [
 		{
-			"name": "node-debug extension",
+			"name": "Run Extension",
 			"type": "extensionHost",
 			"request": "launch",
 			"runtimeExecutable": "${execPath}",
@@ -14,7 +14,7 @@
 			"outDir": "out"
 		},
 		{
-			"name": "node-debug server",
+			"name": "Run Server",
 			"type": "node",
 			"request": "launch",
 			//"runtimeExecutable": "/usr/local/bin/iojs",
@@ -24,6 +24,19 @@
 			"args": [ "--server=4711" ],
 			"sourceMaps": true,
 			"outDir": "out"
+		},
+		{
+			"name": "Run Tests",
+			"type": "node",
+			"request": "launch",
+			"program": "node_modules/mocha/bin/_mocha",
+			"args": [
+				"./out/tests",
+				"--timeout", "999999",
+				"--colors"
+			],
+			"sourceMaps": true,
+			"outDir": "./out"
 		}
 	]
 }
