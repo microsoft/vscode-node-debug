@@ -291,30 +291,19 @@ export class NodeDebugSession extends DebugSession {
 		// special code for 'extensionHost' debugging
 		if (this._adapterID === 'extensionHost') {
 
-			let extensionHostData = (<any>args).extensionHostData;
-			if (extensionHostData) {
-				// re-attach to the received port
-				port = extensionHostData.reattachPort;
-			} else {
-				// we know that extensionHost is always launched with --nolazy
-				this._lazy = false;
+			// we know that extensionHost is always launched with --nolazy
+			this._lazy = false;
 
-				// we always launch in 'debug-brk' mode, but we only show the break event if 'stopOnEntry' attribute is true.
-				const launchArgs = [ runtimeExecutable, `--debugBrkPluginHost=${port}` ].concat(runtimeArgs, programArgs);
+			// we always launch in 'debug-brk' mode, but we only show the break event if 'stopOnEntry' attribute is true.
+			const launchArgs = [ runtimeExecutable, `--debugBrkPluginHost=${port}` ].concat(runtimeArgs, programArgs);
 
-				this._sendLaunchCommandToConsole(launchArgs);
+			this._sendLaunchCommandToConsole(launchArgs);
 
-				const cmd = CP.spawn(runtimeExecutable, launchArgs.slice(1));
-				cmd.on('error', (err) => {
-					this._terminated(`failed to launch extensionHost (${err})`);
-				});
-				this._captureOutput(cmd);
-			}
-
-			// try to attach
-			setTimeout(() => {
-				this._attach(response, port, 3000);
-			}, 2000);
+			const cmd = CP.spawn(runtimeExecutable, launchArgs.slice(1));
+			cmd.on('error', (err) => {
+				this._terminated(`failed to launch extensionHost (${err})`);
+			});
+			this._captureOutput(cmd);
 
 			// we are done!
 			return;
@@ -468,15 +457,19 @@ export class NodeDebugSession extends DebugSession {
 
 	protected attachRequest(response: DebugProtocol.AttachResponse, args: AttachRequestArguments): void {
 
-		this._initializeSourceMaps(args);
-
 		if (!args.port) {
 			this.sendErrorResponse(response, 2008, "property 'port' is missing");
 			return;
 		}
-		const port = args.port;
-		this._attachMode = true;
-		this._attach(response, port);
+
+		if (this._adapterID === 'extensionHost') {
+			// in EH mode 'attach' is called after 'launch', so we stay in launch mode and we do not initialize source maps again
+		} else {
+			this._initializeSourceMaps(args);
+			this._attachMode = true;
+		}
+
+		this._attach(response, args.port);
 	}
 
 	/*
