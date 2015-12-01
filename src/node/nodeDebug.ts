@@ -263,7 +263,7 @@ export class NodeDebugSession extends DebugSession {
 	protected launchRequest(response: DebugProtocol.LaunchResponse, args: LaunchRequestArguments): void {
 
 		this._externalConsole = (typeof args.externalConsole === 'boolean') && args.externalConsole;
-		this._stopOnEntry = (typeof args.externalConsole === 'boolean') && args.stopOnEntry;
+		this._stopOnEntry = (typeof args.stopOnEntry === 'boolean') && args.stopOnEntry;
 
 		this._initializeSourceMaps(args);
 
