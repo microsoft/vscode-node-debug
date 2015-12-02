@@ -1,6 +1,11 @@
-*
-*/**
-**/.DS_Store
-!out/**
-!package.json
-!node_modules/source-map/**
+.vscode/**/*
+.gitignore
+src/**/*
+out/tests/**/*
+typings/**/*
+**/*.js.map
+gulpfile.js
+tsconfig.json
+tsd.json
+README.md
+!node_modules/source-map/*

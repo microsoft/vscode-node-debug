@@ -1,6 +1,6 @@
 {
   "name": "node-debug",
-  "version": "0.10.1",
+  "version": "0.10.2",
   "publisher": "isidor",
   "description": "Visual Studio Code debug adapter for node.js",
   "author": {
