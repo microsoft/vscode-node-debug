@@ -245,9 +245,8 @@ export class NodeDebugSession extends DebugSession {
 
 	/**
 	 * The debug session has terminated.
-	 * If a port is given, this data is added to the event so that a client can try to reconnect.
 	 */
-	private _terminated(reason: string, reattachPort?: number): void {
+	private _terminated(reason: string): void {
 		if (NodeDebugSession.TRACE) console.error('_terminate: ' + reason);
 
 		if (this._terminalProcess) {
@@ -257,17 +256,7 @@ export class NodeDebugSession extends DebugSession {
 
 		if (!this._isTerminated) {
 			this._isTerminated = true;
-			const e = new TerminatedEvent();
-			// piggyback the port to re-attach
-			if (reattachPort) {
-				if (!(<any>e).body) {
-					(<any>e).body = {};
-				}
-				(<any>e).body.extensionHost = {
-					reattachPort: reattachPort
-				};
-			}
-			this.sendEvent(e);
+			this.sendEvent(new TerminatedEvent());
 		}
 	}
 
@@ -327,6 +316,7 @@ export class NodeDebugSession extends DebugSession {
 			this._captureOutput(cmd);
 
 			// we are done!
+			this.sendResponse(response);
 			return;
 		}
 
@@ -468,9 +458,11 @@ export class NodeDebugSession extends DebugSession {
 	}
 
 	private _initializeSourceMaps(args: SourceMapsArguments) {
-		if (typeof args.sourceMaps === 'boolean' && args.sourceMaps) {
-			const generatedCodeDirectory = args.outDir;
-			this._sourceMaps = new SourceMaps(generatedCodeDirectory);
+		if (!this._sourceMaps) {
+			if (typeof args.sourceMaps === 'boolean' && args.sourceMaps) {
+				const generatedCodeDirectory = args.outDir;
+				this._sourceMaps = new SourceMaps(generatedCodeDirectory);
+			}
 		}
 	}
 
@@ -483,10 +475,12 @@ export class NodeDebugSession extends DebugSession {
 			return;
 		}
 
+		this._initializeSourceMaps(args);
+
 		if (this._adapterID === 'extensionHost') {
-			// in EH mode 'attach' is called after 'launch', so we stay in launch mode and we do not initialize source maps again
+			// in EH mode 'attach' means 'launch' mode
+			this._attachMode = false;
 		} else {
-			this._initializeSourceMaps(args);
 			this._attachMode = true;
 		}
 
@@ -511,7 +505,7 @@ export class NodeDebugSession extends DebugSession {
 		socket.on('error', (err: any) => {
 			if (connected) {
 				// since we are connected this error is fatal
-				this._terminateAndRetry('socket error', port);
+				this._terminated('socket error');
 			} else {
 				// we are not yet connected so retry a few times
 				if (err.code === 'ECONNREFUSED' || err.code === 'ECONNRESET') {
@@ -530,16 +524,8 @@ export class NodeDebugSession extends DebugSession {
 			}
 		});
 		socket.on('end', (err: any) => {
-			this._terminateAndRetry('socket end', port);
+			this._terminated('socket end');
 		});
-	}
-
-	private _terminateAndRetry(reason: string, port: number): void {
-		if (this._adapterID === 'extensionHost' && !this._inShutdown) {
-			this._terminated(reason, port);
-		} else {
-			this._terminated(reason);
-		}
 	}
 
 	private _initialize(response: DebugProtocol.Response, retryCount: number = 0) : void {
