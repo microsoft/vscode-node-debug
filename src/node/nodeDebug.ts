@@ -81,6 +81,27 @@ export class ArrayExpander implements Expandable {
 }
 
 /**
+ * This class represents an internal line/column breakpoint.
+ */
+export class InternalBreakpoint {
+
+	/** The requested breakpoint line location in the JavaScript file. */
+	line: number;
+	/** The requested breakpoint column location in the JavaScript file. */
+	column: number;
+
+	/** do not try to set this breakpoint (because source locations could not successfully be mapped to destination locations) */
+	ignore: boolean;
+
+	/** true if this breakpoint could be set and node.js returned an 'actual location' for it. */
+	verified: boolean;
+	/** The actual line location of this breakpoint in client coordinates. Contains the original client line if breakpoint could not be verified. */
+	actualLine: number;
+	/** the actual column location of this breakpoint in client coordinates. Contains the original client column if breakpoint could not be verified. */
+	actualColumn: number;
+}
+
+/**
  * This interface should always match the schema found in the node-debug extension manifest.
  */
 export interface SourceMapsArguments {
@@ -760,11 +781,16 @@ export class NodeDebugSession extends DebugSession {
 		const clientLines = args.lines;
 
 		// convert line numbers from client
-		const lines = new Array<number>(clientLines.length);
-		const columns = new Array<number>(clientLines.length);
+		const lbs = new Array<InternalBreakpoint>(clientLines.length);
 		for (let i = 0; i < clientLines.length; i++) {
-			lines[i] = this.convertClientLineToDebugger(clientLines[i]);
-			columns[i] = 0;
+			lbs[i] = {
+				actualLine: clientLines[i],
+				actualColumn: this.convertDebuggerColumnToClient(1),	// hardcoded for now
+				line: this.convertClientLineToDebugger(clientLines[i]),
+				column: 0,	// hardcoded for now
+				verified: false,
+				ignore: false
+			};
 		}
 
 		let scriptId = -1;
@@ -783,13 +809,16 @@ export class NodeDebugSession extends DebugSession {
 			if (p) {
 				sourcemap = true;
 				// source map line numbers
-				for (let i = 0; i < lines.length; i++) {
+				for (let i = 0; i < lbs.length; i++) {
 					let pp = path;
-					const mr = this._sourceMaps.MapFromSource(pp, lines[i], columns[i]);
+					const mr = this._sourceMaps.MapFromSource(pp, lbs[i].line, lbs[i].column);
 					if (mr) {
 						pp = mr.path;
-						lines[i] = mr.line;
-						columns[i] = mr.column;
+						lbs[i].line = mr.line;
+						lbs[i].column = mr.column;
+					} else {
+						// we couldn't map this breakpoint -> do not try to set it
+						lbs[i].ignore = true;
 					}
 					if (pp !== p) {
 						// console.error(`setBreakPointsRequest: sourceMap limitation ${pp}`);
@@ -798,18 +827,12 @@ export class NodeDebugSession extends DebugSession {
 				path = p;
 			}
 			else if (!NodeDebugSession.isJavaScript(path)) {
-				// return these breakpoints as unverified
-				const bpts = new Array<Breakpoint>();
-				for (let l of clientLines) {
-					bpts.push(new Breakpoint(false, l));
+				// ignore all breakpoints for this source
+				for (let lb of lbs) {
+					lb.ignore = true;
 				}
-				response.body = {
-					breakpoints: bpts
-				};
-				this.sendResponse(response);
-				return;
 			}
-			this._clearAllBreakpoints(response, path, -1, lines, columns, sourcemap, clientLines);
+			this._clearAllBreakpoints(response, path, -1, lbs, sourcemap);
 			return;
 		}
 
@@ -817,7 +840,7 @@ export class NodeDebugSession extends DebugSession {
 			this.findModule(source.name, (id: number) => {
 				if (id >= 0) {
 					scriptId = id;
-					this._clearAllBreakpoints(response, null, scriptId, lines, columns, sourcemap, clientLines);
+					this._clearAllBreakpoints(response, null, scriptId, lbs, sourcemap);
 					return;
 				} else {
 					this.sendErrorResponse(response, 2019, "internal module {_module} not found", { _module: source.name });
@@ -829,7 +852,7 @@ export class NodeDebugSession extends DebugSession {
 
 		if (source.sourceReference > 0) {
 			scriptId = source.sourceReference - 1000;
-			this._clearAllBreakpoints(response, null, scriptId, lines, columns, sourcemap, clientLines);
+			this._clearAllBreakpoints(response, null, scriptId, lbs, sourcemap);
 			return;
 		}
 
@@ -839,7 +862,7 @@ export class NodeDebugSession extends DebugSession {
 	/*
 	 * Phase 2 of setBreakpointsRequest: clear all breakpoints of a given file
 	 */
-	private _clearAllBreakpoints(response: DebugProtocol.SetBreakpointsResponse, path: string, scriptId: number, lines: number[], columns: number[], sourcemap: boolean, clientLines: number[]): void {
+	private _clearAllBreakpoints(response: DebugProtocol.SetBreakpointsResponse, path: string, scriptId: number, lbs: InternalBreakpoint[], sourcemap: boolean): void {
 
 		// clear all existing breakpoints for the given path or script ID
 		this._node.command('listbreakpoints', null, (nodeResponse: NodeV8Response) => {
@@ -867,7 +890,7 @@ export class NodeDebugSession extends DebugSession {
 				}
 
 				this._clearBreakpoints(toClear, 0, () => {
-					this._finishSetBreakpoints(response, path, scriptId, lines, columns, sourcemap, clientLines);
+					this._finishSetBreakpoints(response, path, scriptId, lbs, sourcemap);
 				});
 
 			} else {
@@ -906,11 +929,15 @@ export class NodeDebugSession extends DebugSession {
 	/*
 	 * Finish the setBreakpointsRequest: set the breakpooints and send the verification response back to client
 	 */
-	private _finishSetBreakpoints(response: DebugProtocol.SetBreakpointsResponse, path: string, scriptId: number, lines: number[], columns: number[], sourcemap: boolean, clientLines: number[]): void {
+	private _finishSetBreakpoints(response: DebugProtocol.SetBreakpointsResponse, path: string, scriptId: number, lbs: InternalBreakpoint[], sourcemap: boolean): void {
 
-		const breakpoints = new Array<Breakpoint>();
+		this._setBreakpoints(0, path, scriptId, lbs, sourcemap, () => {
 
-		this._setBreakpoints(breakpoints, 0, path, scriptId, lines, columns, sourcemap, clientLines, () => {
+			const breakpoints = new Array<Breakpoint>();
+			for (let lb of lbs) {
+				breakpoints.push(new Breakpoint(lb.verified, lb.actualLine /* ; lb.clientColumn */));
+			}
+
 			response.body = {
 				breakpoints: breakpoints
 			};
@@ -921,45 +948,47 @@ export class NodeDebugSession extends DebugSession {
 	/**
 	 * Recursive function for setting node breakpoints.
 	 */
-	private _setBreakpoints(breakpoints: Array<Breakpoint>, ix: number, path: string, scriptId: number, lines: number[], columns: number[], sourcemap: boolean, clientLines: number[], done: () => void) : void {
+	private _setBreakpoints(ix: number, path: string, scriptId: number, lbs: InternalBreakpoint[], sourcemap: boolean, done: () => void) : void {
 
-		if (lines.length == 0) {	// nothing to do
+		if (lbs.length == 0) {	// nothing to do
 			done();
 			return;
 		}
 
-		this._robustSetBreakPoint(scriptId, path, lines[ix], columns[ix], (verified: boolean, actualLine, actualColumn) => {
+		this._robustSetBreakPoint(scriptId, path, lbs[ix], (success: boolean, actualLine: number, actualColumn: number) => {
 
-			// prepare sending breakpoint locations back to client
-			let sourceLine = clientLines[ix];	// we start with the original lines from the client
+			if (success) {
+				// breakpoint successfully set and we've got an actual location
 
-			if (verified) {
 				if (sourcemap) {
-					if (!this._lazy) {	// only if not in lazy mode we try to map actual Positions back
+					// this source uses a sourcemap so we have to map locations back
+
+					if (!this._lazy) {	// only if not in lazy mode we try to map actual positions back
 						// map adjusted js breakpoints back to source language
 						if (path && this._sourceMaps) {
-							const p = path;
-							const mr = this._sourceMaps.MapToSource(p, actualLine, actualColumn);
+							const mr = this._sourceMaps.MapToSource(path, actualLine, actualColumn);
 							if (mr) {
 								actualLine = mr.line;
 								actualColumn = mr.column;
 							}
 						}
-						sourceLine = this.convertDebuggerLineToClient(actualLine);
+						lbs[ix].actualLine = this.convertDebuggerLineToClient(actualLine);
 					}
 				} else {
-					sourceLine = this.convertDebuggerLineToClient(actualLine);
+					lbs[ix].actualLine = this.convertDebuggerLineToClient(actualLine);
 				}
+
 			}
-			breakpoints[ix] = new Breakpoint(verified, sourceLine);
+			lbs[ix].verified = success;
 
 			// nasty corner case: since we ignore the break-on-entry event we have to make sure that we
 			// stop in the entry point line if the user has an explicit breakpoint there.
 			// For this we check here whether a breakpoint is at the same location as the "break-on-entry" location.
 			// If yes, then we plan for hitting the breakpoint instead of "continue" over it!
+
 			if (!this._stopOnEntry) {	// only relevant if we do not stop on entry
-				const li = verified ? actualLine : lines[ix];
-				const co = columns[ix]; // verified ? actualColumn : columns[ix];
+				const li = success ? actualLine : lbs[ix].line;
+				const co = lbs[ix].column; // success ? actualColumn : columns[ix];
 				if (this._entryPath === path && this._entryLine === li && this._entryColumn === co) {
 					// if yes, we do not have to "continue" but we have to generate a stopped event instead
 					this._needContinue = false;
@@ -968,10 +997,10 @@ export class NodeDebugSession extends DebugSession {
 				}
 			}
 
-			if (ix+1 < lines.length) {
+			if (ix+1 < lbs.length) {
 				setImmediate(() => {
 					// recurse
-					this._setBreakpoints(breakpoints, ix+1, path, scriptId, lines, columns, sourcemap, clientLines, done);
+					this._setBreakpoints(ix+1, path, scriptId, lbs, sourcemap, done);
 				});
 			} else {
 				done();
@@ -980,21 +1009,30 @@ export class NodeDebugSession extends DebugSession {
 	}
 
 	/*
-	 * register a single breakpoint with node and retry if it fails due to drive letter casing (on Windows)
+	 * register a single breakpoint with node and retry if it fails due to drive letter casing (on Windows).
+	 * On success the actual line and column is returned.
 	 */
-	private _robustSetBreakPoint(scriptId: number, path: string, l: number, c: number, done: (success: boolean, actualLine?: number, actualColumn?: number) => void): void {
-		this._setBreakpoint(scriptId, path, l, c, (verified: boolean, actualLine, actualColumn) => {
-			if (verified) {
+	private _robustSetBreakPoint(scriptId: number, path: string, lb: InternalBreakpoint, done: (success: boolean, actualLine?: number, actualColumn?: number) => void): void {
+
+		if (lb.ignore) {
+			// ignore this breakpoint because it couldn't be source mapped successfully
+			done(false);
+			return;
+		}
+
+		this._setBreakpoint(scriptId, path, lb, (success: boolean, actualLine: number, actualColumn: number) => {
+
+			if (success) {
 				done(true, actualLine, actualColumn);
 				return;
 			}
 
-			// take care of a mismatch of drive letter caseing
+			// failure -> guess: mismatch of drive letter caseing
 			const root = PathUtils.getPathRoot(path);
 			if (root && root.length === 3) { // root contains a drive letter
 				path = path.substring(0, 1).toUpperCase() + path.substring(1);
-				this._setBreakpoint(scriptId, path, l, c, (verified: boolean, actualLine, actualColumn) => {
-					if (verified) {
+				this._setBreakpoint(scriptId, path, lb, (success: boolean, actualLine, actualColumn) => {
+					if (success) {
 						done(true, actualLine, actualColumn);
 					} else {
 						done(false);
@@ -1009,20 +1047,20 @@ export class NodeDebugSession extends DebugSession {
 	/*
 	 * register a single breakpoint with node.
 	 */
-	private _setBreakpoint(scriptId: number, path: string, l: number, c: number, cb: (success: boolean, actualLine?: number, actualColumn?: number) => void): void {
+	private _setBreakpoint(scriptId: number, path: string, lb: InternalBreakpoint, cb: (success: boolean, actualLine?: number, actualColumn?: number) => void): void {
 
-		if (l === 0) {
-			c += NodeDebugSession.FIRST_LINE_OFFSET;
+		if (lb.line === 0) {
+			lb.column += NodeDebugSession.FIRST_LINE_OFFSET;
 		}
 
-		let actualLine = l;
-		let actualColumn = c;
+		let actualLine = lb.line;
+		let actualColumn = lb.column;
 
 		let a: any;
 		if (scriptId > 0) {
-			a = { type: 'scriptId', target: scriptId, line: l, column: c };
+			a = { type: 'scriptId', target: scriptId, line: lb.line, column: lb.column };
 		} else {
-			a = { type: 'script', target: path, line: l, column: c };
+			a = { type: 'script', target: path, line: lb.line, column: lb.column };
 		}
 
 		this._node.command('setbreakpoint', a, (resp: NodeV8Response) => {
@@ -1038,7 +1076,7 @@ export class NodeDebugSession extends DebugSession {
 							actualColumn = 0;
 					}
 
-					if (actualLine !== l) {
+					if (actualLine !== lb.line) {
 						// console.error(`setbreakpoint: ${l} !== ${actualLine}`);
 					}
 					cb(true, actualLine, actualColumn);
