@@ -81,7 +81,8 @@ export class ArrayExpander implements Expandable {
 }
 
 /**
- * This class represents an internal line/column breakpoint.
+ * This class represents an internal line/column breakpoint and its verification state.
+ * It is only used temporarily in the setBreakpointsRequest.
  */
 export class InternalBreakpoint {
 
@@ -250,7 +251,8 @@ export class NodeDebugSession extends DebugSession {
 		if (NodeDebugSession.TRACE) console.error('_terminate: ' + reason);
 
 		if (this._terminalProcess) {
-			// delay the TerminatedEvent so that the user can see the result of the process in the terminal
+			// if the debug adapter owns a terminal,
+			// we delay the TerminatedEvent so that the user can see the result of the process in the terminal.
 			return;
 		}
 
@@ -435,7 +437,7 @@ export class NodeDebugSession extends DebugSession {
 	}
 
 	private _sendLaunchCommandToConsole(args: string[]) {
-		// print the command to launch tghe target to the debug console
+		// print the command to launch the target to the debug console
 		let cli = '';
 		for (var a of args) {
 			if (a.indexOf(' ') >= 0) {
@@ -707,19 +709,6 @@ export class NodeDebugSession extends DebugSession {
 	}
 
 	//---- disconnect request -------------------------------------------------------------------------------------------------
-
-	protected disconnectRequest(response: DebugProtocol.DisconnectResponse, args: DebugProtocol.DisconnectArguments): void {
-
-		// special code for 'extensionHost' debugging
-		if (this._adapterID === 'extensionHost') {
-			// detect whether this disconnect request is part of a restart session
-			if (args && (<any>args).extensionHostData && (<any>args).extensionHostData.restart && this._nodeProcessId > 0) {
-				this._nodeProcessId = 0;
-			}
-		}
-
-		super.disconnectRequest(response, args);
-	}
 
 	/**
 	 * we rely on the generic implementation from debugSession but we override 'v8Protocol.shutdown'
