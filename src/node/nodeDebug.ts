@@ -154,6 +154,7 @@ export class NodeDebugSession extends DebugSession {
 	private static PROTO = '__proto__';
 	private static DEBUG_EXTENSION = 'debugExtension.js';
 	private static NODE_TERMINATION_POLL_INTERVAL = 3000;
+	private static ATTACH_TIMEOUT = 10000;
 
 	private static NODE_SHEBANG_MATCHER = new RegExp('#! */usr/bin/env +node');
 
@@ -492,7 +493,7 @@ export class NodeDebugSession extends DebugSession {
 	/*
 	 * shared code used in launchRequest and attachRequest
 	 */
-	private _attach(response: DebugProtocol.Response, port: number, timeout: number = 5000): void {
+	private _attach(response: DebugProtocol.Response, port: number, timeout: number = NodeDebugSession.ATTACH_TIMEOUT): void {
 		let connected = false;
 		const socket = new Net.Socket();
 		socket.connect(port);
