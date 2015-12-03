@@ -79,9 +79,12 @@ export class Breakpoint implements DebugProtocol.Breakpoint {
 	verified: boolean;
 	line: number;
 
-	public constructor(verified: boolean, line: number) {
+	public constructor(verified: boolean, line: number, column?: number) {
 		this.verified = verified;
 		this.line = line;
+		if (typeof column === 'number') {
+			(<any>this).column = column;
+		}
 	}
 }
 

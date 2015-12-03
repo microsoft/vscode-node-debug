@@ -910,7 +910,7 @@ export class NodeDebugSession extends DebugSession {
 
 			const breakpoints = new Array<Breakpoint>();
 			for (let lb of lbs) {
-				breakpoints.push(new Breakpoint(lb.verified, lb.actualLine /* ; lb.clientColumn */));
+				breakpoints.push(new Breakpoint(lb.verified, lb.actualLine, lb.actualColumn));
 			}
 
 			response.body = {
@@ -937,7 +937,6 @@ export class NodeDebugSession extends DebugSession {
 
 				if (sourcemap) {
 					// this source uses a sourcemap so we have to map locations back
-
 					if (!this._lazy) {	// only if not in lazy mode we try to map actual positions back
 						// map adjusted js breakpoints back to source language
 						if (path && this._sourceMaps) {
@@ -947,14 +946,12 @@ export class NodeDebugSession extends DebugSession {
 								actualColumn = mr.column;
 							}
 						}
-						lbs[ix].actualLine = this.convertDebuggerLineToClient(actualLine);
 					}
-				} else {
-					lbs[ix].actualLine = this.convertDebuggerLineToClient(actualLine);
 				}
-
+				lbs[ix].verified = true;
+				lbs[ix].actualLine = this.convertDebuggerLineToClient(actualLine);
+				lbs[ix].actualColumn = this.convertDebuggerColumnToClient(actualColumn);
 			}
-			lbs[ix].verified = success;
 
 			// nasty corner case: since we ignore the break-on-entry event we have to make sure that we
 			// stop in the entry point line if the user has an explicit breakpoint there.
@@ -1022,25 +1019,29 @@ export class NodeDebugSession extends DebugSession {
 	/*
 	 * register a single breakpoint with node.
 	 */
-	private _setBreakpoint(scriptId: number, path: string, lb: InternalBreakpoint, cb: (success: boolean, actualLine?: number, actualColumn?: number) => void): void {
+	private _setBreakpoint(scriptId: number, path: string, lb: InternalBreakpoint, done: (success: boolean, actualLine?: number, actualColumn?: number) => void): void {
 
-		if (lb.line === 0) {
-			lb.column += NodeDebugSession.FIRST_LINE_OFFSET;
+		let line = lb.line;
+		let column = lb.column;
+
+		if (line === 0) {
+			column += NodeDebugSession.FIRST_LINE_OFFSET;
 		}
-
-		let actualLine = lb.line;
-		let actualColumn = lb.column;
 
 		let a: any;
 		if (scriptId > 0) {
-			a = { type: 'scriptId', target: scriptId, line: lb.line, column: lb.column };
+			a = { type: 'scriptId', target: scriptId, line: line, column: column };
 		} else {
-			a = { type: 'script', target: path, line: lb.line, column: lb.column };
+			a = { type: 'script', target: path, line: line, column: column };
 		}
 
 		this._node.command('setbreakpoint', a, (resp: NodeV8Response) => {
+
 			if (resp.success) {
-				const al = resp.body.actual_locations;
+				let actualLine = lb.line;
+				let actualColumn = lb.column;
+
+				const al = resp.body.breakpoint;
 				if (al.length > 0) {
 					actualLine = al[0].line;
 					actualColumn = al[0].column;
@@ -1054,12 +1055,12 @@ export class NodeDebugSession extends DebugSession {
 					if (actualLine !== lb.line) {
 						// console.error(`setbreakpoint: ${l} !== ${actualLine}`);
 					}
-					cb(true, actualLine, actualColumn);
-					return;
 				}
-				//console.error(`setbreakpoint: could not set breakpoint in ${path}:{l}`);
+				done(true, actualLine, actualColumn);
+				return;
 			}
-			cb(false);
+
+			done(false);
 			return;
 		});
 	}

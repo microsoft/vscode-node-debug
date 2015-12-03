@@ -493,7 +493,9 @@ declare module DebugProtocol {
 	export interface Breakpoint {
 		/** If true breakpoint could be set (but not necessarily at the correct location). */
 		verified: boolean;
-		/** The actual location of the breakpoint. */
+		/** The actual line of the breakpoint. */
 		line: number;
+		/** The actual column of the breakpoint. */
+		column?: number;
 	}
 }
