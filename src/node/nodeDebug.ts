@@ -711,6 +711,19 @@ export class NodeDebugSession extends DebugSession {
 
 	//---- disconnect request -------------------------------------------------------------------------------------------------
 
+	protected disconnectRequest(response: DebugProtocol.DisconnectResponse, args: DebugProtocol.DisconnectArguments): void {
+
+		// special code for 'extensionHost' debugging
+		if (this._adapterID === 'extensionHost') {
+			// detect whether this disconnect request is part of a restart session
+			if (args && (<any>args).restart && this._nodeProcessId > 0) {
+				this._nodeProcessId = 0;
+			}
+		}
+
+		super.disconnectRequest(response, args);
+	}
+
 	/**
 	 * we rely on the generic implementation from debugSession but we override 'v8Protocol.shutdown'
 	 * to disconnect from node and kill node & subprocesses
