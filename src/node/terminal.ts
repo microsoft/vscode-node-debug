@@ -139,13 +139,13 @@ class WindowsTerminalService extends DefaultTerminalService {
 
 		return new Promise<any>( (resolve, reject) => {
 			const cmd = `taskkill /F /T /PID ${pid}`;
-			CP.exec(cmd, (err, stdout, stderr) => {
-				if (err) {
-					reject(err);
-				} else {
-					resolve();
-				}
-			});
+			try {
+				CP.execSync(cmd);
+				resolve();
+			}
+			catch (err) {
+				reject(err);
+			}
 		});
 	}
 }

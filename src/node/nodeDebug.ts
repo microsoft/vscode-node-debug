@@ -716,7 +716,8 @@ export class NodeDebugSession extends DebugSession {
 		// special code for 'extensionHost' debugging
 		if (this._adapterID === 'extensionHost') {
 			// detect whether this disconnect request is part of a restart session
-			if (args && (<any>args).restart && this._nodeProcessId > 0) {
+			if (this._nodeProcessId > 0 && args && typeof (<any>args).restart === 'boolean' && (<any>args).restart) {
+				// do not kill extensionHost (since vscode will do this for us in a nicer way without killing the window)
 				this._nodeProcessId = 0;
 			}
 		}
