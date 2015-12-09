@@ -3,9 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import {DebugSession, Thread, Source, StackFrame, Scope, Variable, Breakpoint, TerminatedEvent, InitializedEvent, StoppedEvent, OutputEvent, ErrorDestination} from '../common/debugSession';
+import {DebugSession, Thread, Source, StackFrame, Scope, Variable, Breakpoint, TerminatedEvent, InitializedEvent, StoppedEvent, OutputEvent, Handles, ErrorDestination} from 'vscode-debugadapter';
+import {DebugProtocol} from 'vscode-debugprotocol';
+
 import {NodeV8Protocol, NodeV8Event, NodeV8Response} from './nodeV8Protocol';
-import {Handles} from '../common/handles';
 import {ISourceMaps, SourceMaps} from './sourceMaps';
 import {Terminal} from './terminal';
 import * as PathUtils from './pathUtilities';
