@@ -165,6 +165,7 @@ export class NodeDebugSession extends DebugSession {
 	private static EXCEPTION_REASON = "exception";
 	private static DEBUGGER_REASON = "debugger statement";
 	private static USER_REQUEST_REASON = "user request";
+	private static FIRST_LINE_REASON = "first line break";
 
 	private static ANON_FUNCTION = "(anonymous function)";
 
@@ -176,6 +177,7 @@ export class NodeDebugSession extends DebugSession {
 	public _variableHandles = new Handles<Expandable>();
 	public _frameHandles = new Handles<any>();
 	private _refCache = new Map<number, any>();
+	private _breakpointMap = new Map<string, Array<InternalBreakpoint>>();
 
 	private _externalConsole: boolean;
 	private _isTerminated: boolean;
@@ -193,6 +195,7 @@ export class NodeDebugSession extends DebugSession {
 	private _needContinue: boolean;
 	private _needBreakpointEvent: boolean;
 	private _lazy: boolean; // whether node is in 'lazy' mode
+ 	private _firstLineBreakId: number;
 
 	private _gotEntryEvent: boolean;
 	private _entryPath: string;
@@ -211,6 +214,8 @@ export class NodeDebugSession extends DebugSession {
 			this._lastStoppedEvent = this.createStoppedEvent(event.body);
 			if (this._lastStoppedEvent.body.reason === NodeDebugSession.ENTRY_REASON) {
 				if (NodeDebugSession.TRACE_INITIALISATION) console.error('_init: supressed stop-on-entry event');
+			} else if (this._lastStoppedEvent.body.reason === NodeDebugSession.FIRST_LINE_REASON) {
+				this._handleFirstLineBreak(event);
 			} else {
 				this.sendEvent(this._lastStoppedEvent);
 			}
@@ -243,6 +248,48 @@ export class NodeDebugSession extends DebugSession {
 		this._variableHandles.reset();
 		this._frameHandles.reset();
 		this._refCache = new Map<number, any>();
+	}
+
+	private _handleFirstLineBreak(breakEvent: NodeV8Event) {
+		this._node.command('scripts', {
+			ids: [breakEvent.body.script.id],
+			includeSource: true,
+		}, (sourceResponse: NodeV8Response) => {
+			let source = sourceResponse.body[0];
+			this._sourceMaps.ParseGeneratedSource(source.name, source.source);
+			let mr = this._sourceMaps.MapToSource(source.name, 0, 0);
+
+			if (!mr) {
+				this._node.command('continue');
+				return;
+			}
+
+			let originalPath = mr.path;
+			let lbs = this._breakpointMap.get(originalPath);
+			this._breakpointMap.delete(originalPath);
+
+			if (!lbs || !lbs.length) {
+				this._node.command('continue');
+				return;
+			}
+
+			for (let i = 0; i < lbs.length; i++) {
+				const mr = this._sourceMaps.MapFromSource(originalPath, lbs[i].line, lbs[i].column);
+				if (mr) {
+					lbs[i].line = mr.line;
+					lbs[i].column = mr.column;
+					lbs[i].ignore = false;
+				} else {
+					lbs[i].ignore = true;
+				}
+			}
+
+			this._clearAllBreakpointsFromPathOrScript(source.name, null, response => {
+				this._setBreakpoints(0, source.name, null, lbs, true, () => {
+					this._node.command('continue');
+				});
+			});
+		});
 	}
 
 	/**
@@ -650,10 +697,10 @@ export class NodeDebugSession extends DebugSession {
 						if (NodeDebugSession.TRACE_INITIALISATION) console.error('_init: 2nd retrieve node pid: OK');
 						this._nodeProcessId = parseInt(resp.body.value);
 					}
-					this._middleInitialize(stopped);
+					this._addFirstLineBreaks(stopped);
 				});
 			} else {
-				this._middleInitialize(stopped);
+				this._addFirstLineBreaks(stopped);
 			}
 		} else {
 			if (NodeDebugSession.TRACE_INITIALISATION) console.error(`_init: no entry event after ${n} retries; give up`);
@@ -667,9 +714,20 @@ export class NodeDebugSession extends DebugSession {
 					this.rememberEntryLocation(s.name, resp.body.line, resp.body.column);
 				}
 
-				this._middleInitialize(stopped);
+				this._addFirstLineBreaks(stopped);
 			});
 		}
+	}
+
+	private _addFirstLineBreaks(stopped: boolean): void {
+		let debugSession = this;
+		this._node.command('setbreakpoint', {
+			type: 'scriptRegExp',
+			target: '.*(?!\\.js$)\\.[^.]+$'
+		}, (data: any) => {
+			debugSession._firstLineBreakId = data.body.breakpoint;
+			debugSession._middleInitialize(stopped);
+		});
 	}
 
 	private _middleInitialize(stopped: boolean): void {
@@ -816,12 +874,20 @@ export class NodeDebugSession extends DebugSession {
 				}
 				path = p;
 			}
-			else if (!NodeDebugSession.isJavaScript(path)) {
-				// ignore all breakpoints for this source
-				for (let lb of lbs) {
-					lb.ignore = true;
+			else {
+				// we might get a sourcemap for this path later
+				if (path) {
+					this._breakpointMap.set(path, lbs);
+				}
+
+				if (!NodeDebugSession.isJavaScript(path)) {
+					// ignore all breakpoints for this source
+					for (let lb of lbs) {
+						lb.ignore = true;
+					}
 				}
 			}
+
 			this._clearAllBreakpoints(response, path, -1, lbs, sourcemap);
 			return;
 		}
@@ -855,8 +921,17 @@ export class NodeDebugSession extends DebugSession {
 	private _clearAllBreakpoints(response: DebugProtocol.SetBreakpointsResponse, path: string, scriptId: number, lbs: InternalBreakpoint[], sourcemap: boolean): void {
 
 		// clear all existing breakpoints for the given path or script ID
-		this._node.command('listbreakpoints', null, (nodeResponse: NodeV8Response) => {
+		this._clearAllBreakpointsFromPathOrScript(path, scriptId, nodeResponse => {
+			if (nodeResponse.success) {
+				this._finishSetBreakpoints(response, path, scriptId, lbs, sourcemap);
+			} else {
+				this.sendNodeResponse(response, nodeResponse);
+			}
+		})
+	}
 
+	private _clearAllBreakpointsFromPathOrScript(path: string, scriptId: number, done: (NodeV8Response) => void) : void {
+		this._node.command('listbreakpoints', null, (nodeResponse: NodeV8Response) => {
 			if (nodeResponse.success) {
 				const toClear = new Array<number>();
 
@@ -880,15 +955,15 @@ export class NodeDebugSession extends DebugSession {
 				}
 
 				this._clearBreakpoints(toClear, 0, () => {
-					this._finishSetBreakpoints(response, path, scriptId, lbs, sourcemap);
+					done(nodeResponse);
 				});
 
 			} else {
-				this.sendNodeResponse(response, nodeResponse);
+				done(nodeResponse);
 			}
 
 		});
-	}
+  }
 
 	/**
 	 * Recursive function for deleting node breakpoints.
@@ -1920,6 +1995,8 @@ export class NodeDebugSession extends DebugSession {
 					const line = body.sourceLine;
 					const column = body.sourceColumn;
 					this.rememberEntryLocation(path, line, column);
+				} else if (id === this._firstLineBreakId) {
+					reason = NodeDebugSession.FIRST_LINE_REASON;
 				} else {
 					reason = NodeDebugSession.BREAKPOINT_REASON;
 				}

@@ -33,6 +33,11 @@ export interface ISourceMaps {
 	 * line and column are 0 based.
 	 */
 	MapToSource(path: string, line: number, column: number): MappingResult;
+
+	/*
+	 * Parse generated source and save mappings for that source if found.
+	 */
+	ParseGeneratedSource(pathToGenerated: string, generatedSource: string): void;
 }
 
 
@@ -41,6 +46,7 @@ export class SourceMaps implements ISourceMaps {
 	public static TRACE = false;
 
 	private static SOURCE_MAPPING_MATCHER = new RegExp("//[#@] ?sourceMappingURL=(.+)$");
+	private static DATA_URI_MATCHER = new RegExp('data:application\/json(?:;(.*?|\b)),(.*)$');
 
 	private _generatedToSourceMaps:  { [id: string] : SourceMap; } = {};		// generated -> source file
 	private _sourceToGeneratedMaps:  { [id: string] : SourceMap; } = {};		// source file -> generated
@@ -82,6 +88,51 @@ export class SourceMaps implements ISourceMaps {
 			}
 		}
 		return null;
+	}
+
+	public ParseGeneratedSource(pathToGenerated: string, generatedSource: string): SourceMap {
+		let map: SourceMap = null;
+
+		// try to find a source map URL in the generated source
+		let map_path: string = null;
+		const uri = this._findSourceMapInGeneratedSource(generatedSource);
+		if (uri) {
+			const uriParts = uri.match(SourceMaps.DATA_URI_MATCHER);
+			if (uriParts) {
+				const json = new Buffer(uriParts[2], uriParts[1] || 'utf8').toString();
+				try {
+					if (json) {
+						map = new SourceMap(pathToGenerated, json);
+						this._generatedToSourceMaps[pathToGenerated] = map;
+						return;
+					}
+				}
+				catch (e) {
+					console.error(`FindGeneratedToSourceMapping: exception while processing data url (${e})`);
+					return;
+				}
+			}
+			else {
+				map_path = uri;
+			}
+		}
+
+		// if path is relative make it absolute
+		if (map_path && !Path.isAbsolute(map_path)) {
+			map_path = PathUtils.makePathAbsolute(pathToGenerated, map_path);
+		}
+
+		if (map_path === null || !FS.existsSync(map_path)) {
+			// try to find map file next to the generated source
+			map_path = pathToGenerated + ".map";
+		}
+
+		if (FS.existsSync(map_path)) {
+			map = this._createSourceMap(map_path, pathToGenerated);
+			if (map) {
+				this._generatedToSourceMaps[pathToGenerated] = map;
+			}
+		}
 	}
 
 	//---- private -----------------------------------------------------------------------
@@ -150,60 +201,22 @@ export class SourceMaps implements ISourceMaps {
 	}
 
 	private _findGeneratedToSourceMapping(pathToGenerated: string): SourceMap {
+		if (pathToGenerated in this._generatedToSourceMaps) {
+			return this._generatedToSourceMaps[pathToGenerated];
+		}
 
 		if (pathToGenerated) {
-
-			if (pathToGenerated in this._generatedToSourceMaps) {
-				return this._generatedToSourceMaps[pathToGenerated];
+			let contents;
+			try {
+				contents = FS.readFileSync(pathToGenerated).toString();
+			} catch (e) {
+				return null;
 			}
 
-			let map: SourceMap = null;
-
-			// try to find a source map URL in the generated source
-			let map_path: string = null;
-			const uri = this._findSourceMapInGeneratedSource(pathToGenerated);
-			if (uri) {
-				if (uri.indexOf("data:application/json;base64,") >= 0) {
-					const pos = uri.indexOf(',');
-					if (pos > 0) {
-						const data = uri.substr(pos+1);
-						try {
-							const buffer = new Buffer(data, 'base64');
-							const json = buffer.toString();
-							if (json) {
-								map = new SourceMap(pathToGenerated, json);
-								this._generatedToSourceMaps[pathToGenerated] = map;
-								return map;
-							}
-						}
-						catch (e) {
-							console.error(`FindGeneratedToSourceMapping: exception while processing data url (${e})`);
-						}
-					}
-				} else {
-					map_path = uri;
-				}
-			}
-
-			// if path is relative make it absolute
-            if (map_path && !Path.isAbsolute(map_path)) {
- 				map_path = PathUtils.makePathAbsolute(pathToGenerated, map_path);
-            }
-
-			if (map_path === null || !FS.existsSync(map_path)) {
-				// try to find map file next to the generated source
-				map_path = pathToGenerated + ".map";
-			}
-
-			if (FS.existsSync(map_path)) {
-				map = this._createSourceMap(map_path, pathToGenerated);
-				if (map) {
-					this._generatedToSourceMaps[pathToGenerated] = map;
-					return map;
-				}
-			}
+			this.ParseGeneratedSource(pathToGenerated, contents);
 		}
-		return null;
+
+		return this._generatedToSourceMaps[pathToGenerated] || null;
 	}
 
 	private _createSourceMap(map_path: string, path: string): SourceMap {
@@ -218,21 +231,16 @@ export class SourceMaps implements ISourceMaps {
 	}
 
 	//  find "//# sourceMappingURL=<url>"
-	private _findSourceMapInGeneratedSource(pathToGenerated: string): string {
-
-		try {
-			const contents = FS.readFileSync(pathToGenerated).toString();
-			const lines = contents.split('\n');
-			for (let line of lines) {
-				const matches = SourceMaps.SOURCE_MAPPING_MATCHER.exec(line);
-				if (matches && matches.length === 2) {
-					const uri = matches[1].trim();
-					return uri;
-				}
+	private _findSourceMapInGeneratedSource(contents: string): string {
+		const lines = contents.split('\n');
+		for (let line of lines) {
+			const matches = SourceMaps.SOURCE_MAPPING_MATCHER.exec(line);
+			if (matches && matches.length === 2) {
+				const uri = matches[1].trim();
+				return uri;
 			}
-		} catch (e) {
-			// ignore exception
 		}
+
 		return null;
 	}
 }
@@ -283,7 +291,7 @@ class SourceMap {
 	 */
 	public doesOriginateFrom(absPath: string): boolean {
 		for (let name of this._sources) {
-			const p = Path.join(this._sourceRoot, name);
+			const p = Path.resolve(this._sourceRoot, name);
 			if (p === absPath) {
 				return true;
 			}
