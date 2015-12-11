@@ -113,6 +113,14 @@ export interface SourceMapsArguments {
 	outDir?: string;
 }
 
+class SourceSource {
+	scriptId: number;
+
+	constructor(sid: number) {
+		this.scriptId = sid;
+	}
+}
+
 /**
  * This interface should always match the schema found in the node-debug extension manifest.
  */
@@ -175,7 +183,7 @@ export class NodeDebugSession extends DebugSession {
 	private _adapterID: string;
 	public _variableHandles = new Handles<Expandable>();
 	public _frameHandles = new Handles<any>();
-	private _sourceHandles = new Handles<number>();
+	private _sourceHandles = new Handles<SourceSource>();
 	private _refCache = new Map<number, any>();
 
 	private _externalConsole: boolean;
@@ -855,9 +863,11 @@ export class NodeDebugSession extends DebugSession {
 		}
 
 		if (source.sourceReference > 0) {
-			scriptId = this._sourceHandles.get(source.sourceReference);
-			this._clearAllBreakpoints(response, null, scriptId, lbs, sourcemap);
-			return;
+			const srcSource = this._sourceHandles.get(source.sourceReference);
+			if (srcSource.scriptId) {
+				this._clearAllBreakpoints(response, null, srcSource.scriptId, lbs, sourcemap);
+				return;
+			}
 		}
 
 		this.sendErrorResponse(response, 2012, "no valid source specified", null, ErrorDestination.Telemetry);
@@ -1243,9 +1253,9 @@ export class NodeDebugSession extends DebugSession {
 						}
 
 						if (src === null) {
-							const script_id = script_val.id;
+							const script_id:number = script_val.id;
 							if (script_id >= 0) {
-								const sourceHandle = this._sourceHandles.create(script_id);
+								const sourceHandle = this._sourceHandles.create(new SourceSource(script_id));
 								src = new Source(name, null, sourceHandle);
 							}
 						}
@@ -1760,19 +1770,23 @@ export class NodeDebugSession extends DebugSession {
 	protected sourceRequest(response: DebugProtocol.SourceResponse, args: DebugProtocol.SourceArguments): void {
 
 		const sourceHandle = args.sourceReference;
-		const scriptId = this._sourceHandles.get(sourceHandle);
+		const srcSource = this._sourceHandles.get(sourceHandle);
 
-		this._node.command('scripts', { types: 1+2+4, includeSource: true, ids: [ scriptId ] }, (nodeResponse: NodeV8Response) => {
-			if (nodeResponse.success) {
-				const content = nodeResponse.body[0].source;
-				response.body = {
-					content: content
-				};
-				this.sendResponse(response);
-			} else {
-				this.sendNodeResponse(response, nodeResponse);
-			}
-		});
+		if (srcSource.scriptId) {
+			this._node.command('scripts', { types: 1+2+4, includeSource: true, ids: [ srcSource.scriptId ] }, (nodeResponse: NodeV8Response) => {
+				if (nodeResponse.success) {
+					const content = nodeResponse.body[0].source;
+					response.body = {
+						content: content
+					};
+					this.sendResponse(response);
+				} else {
+					this.sendNodeResponse(response, nodeResponse);
+				}
+			});
+		} else {
+			this.sendErrorResponse(response, 9999, "sourceRequest error");
+		}
 	}
 
 	//---- private helpers ----------------------------------------------------------------------------------------------------
