@@ -145,7 +145,7 @@ export interface AttachRequestArguments extends SourceMapsArguments {
 
 export class NodeDebugSession extends DebugSession {
 
-	private static TRACE = true;
+	private static TRACE = false;
 
 	private static NODE = 'node';
 	private static DUMMY_THREAD_ID = 1;
