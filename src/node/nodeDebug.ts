@@ -145,8 +145,7 @@ export interface AttachRequestArguments extends SourceMapsArguments {
 
 export class NodeDebugSession extends DebugSession {
 
-	private static TRACE = false;
-	private static TRACE_INITIALISATION = false;
+	private static TRACE = true;
 
 	private static NODE = 'node';
 	private static DUMMY_THREAD_ID = 1;
@@ -200,18 +199,17 @@ export class NodeDebugSession extends DebugSession {
 	private _entryLine: number;
 	private _entryColumn: number;
 
-
 	public constructor(debuggerLinesStartAt1: boolean, isServer: boolean = false) {
 		super(debuggerLinesStartAt1, isServer);
 
 		this._node = new NodeV8Protocol();
 
 		this._node.on('break', (event: NodeV8Event) => {
-			if (NodeDebugSession.TRACE_INITIALISATION) console.error('_init: got break event from node');
+			this.log('NodeDebugSession: got break event from node');
 			this._stopped();
 			this._lastStoppedEvent = this.createStoppedEvent(event.body);
 			if (this._lastStoppedEvent.body.reason === NodeDebugSession.ENTRY_REASON) {
-				if (NodeDebugSession.TRACE_INITIALISATION) console.error('_init: supressed stop-on-entry event');
+				this.log('NodeDebugSession: supressed stop-on-entry event');
 			} else {
 				this.sendEvent(this._lastStoppedEvent);
 			}
@@ -250,7 +248,7 @@ export class NodeDebugSession extends DebugSession {
 	 * The debug session has terminated.
 	 */
 	private _terminated(reason: string): void {
-		if (NodeDebugSession.TRACE) console.error('_terminate: ' + reason);
+		this.log('_terminated: ' + reason);
 
 		if (this._terminalProcess) {
 			// if the debug adapter owns a terminal,
@@ -268,8 +266,12 @@ export class NodeDebugSession extends DebugSession {
 
 	protected initializeRequest(response: DebugProtocol.InitializeResponse, args: DebugProtocol.InitializeRequestArguments): void {
 
+		this.log('initializeRequest: adapterID: ' + args.adapterID);
+
 		this._adapterID = args.adapterID;
 		this.sendResponse(response);
+
+		this.log('initializeRequest: after sending response');
 	}
 
 	//---- launch request -----------------------------------------------------------------------------------------------------
@@ -296,6 +298,7 @@ export class NodeDebugSession extends DebugSession {
 			}
 			runtimeExecutable = NodeDebugSession.NODE;     // use node from PATH
 		}
+
 
 		const runtimeArgs = args.runtimeArgs || [];
 		const programArgs = args.args || [];
@@ -479,6 +482,8 @@ export class NodeDebugSession extends DebugSession {
 			return;
 		}
 
+		this.log('attachRequest: port ' + args.port);
+
 		this._initializeSourceMaps(args);
 
 		if (this._adapterID === 'extensionHost') {
@@ -499,7 +504,7 @@ export class NodeDebugSession extends DebugSession {
 		const socket = new Net.Socket();
 		socket.connect(port);
 		socket.on('connect', (err: any) => {
-			if (NodeDebugSession.TRACE_INITIALISATION) console.error('_init: connect event in _attach');
+			this.log('_attach: connect event in _attach');
 			connected = true;
 			this._node.startDispatch(socket, socket);
 			this._initialize(response);
@@ -516,7 +521,7 @@ export class NodeDebugSession extends DebugSession {
 					const now = new Date().getTime();
 					if (now < endTime) {
 						setTimeout(() => {
-							if (NodeDebugSession.TRACE_INITIALISATION) console.error('_init: retry socket.connect');
+							this.log('_attach: retry socket.connect');
 							socket.connect(port);
 						}, 200);		// retry after 200 ms
 					} else {
@@ -538,11 +543,11 @@ export class NodeDebugSession extends DebugSession {
 
 			let ok = resp.success;
 			if (resp.success) {
-				if (NodeDebugSession.TRACE_INITIALISATION) console.error('_init: retrieve node pid: OK');
+				this.log('_initialize: retrieve node pid: OK');
 				this._nodeProcessId = parseInt(resp.body.value);
 			} else {
 				if (resp.message.indexOf('process is not defined') >= 0) {
-					if (NodeDebugSession.TRACE_INITIALISATION) console.error('_init: process not defined error; got no pid');
+					this.log('_initialize: process not defined error; got no pid');
 					ok = true; // continue and try to get process.pid later
 				}
 			}
@@ -564,7 +569,7 @@ export class NodeDebugSession extends DebugSession {
 					return;
 				}
 			} else {
-				if (NodeDebugSession.TRACE_INITIALISATION) console.error('_init: retrieve node pid: failed');
+				this.log('_initialize: retrieve node pid: failed');
 
 				if (retryCount < 10) {
 					setTimeout(() => {
@@ -605,11 +610,11 @@ export class NodeDebugSession extends DebugSession {
 
 				this._node.command('evaluate', { expression: contents }, (resp: NodeV8Response) => {
 					if (resp.success) {
-						if (NodeDebugSession.TRACE_INITIALISATION) console.error('_init: node code inject: OK');
+						this.log('_extendDebugger: node code inject: OK');
 						this._nodeExtensionsAvailable = true;
 						callback(false);
 					} else {
-						if (NodeDebugSession.TRACE_INITIALISATION) console.error('_init: node code inject: failed, try again...');
+						this.log('_extendDebugger: node code inject: failed, try again...');
 						callback(true);
 					}
 				});
@@ -629,7 +634,7 @@ export class NodeDebugSession extends DebugSession {
 	 */
 	private _startInitialize(stopped: boolean, n: number = 0): void {
 
-		if (NodeDebugSession.TRACE_INITIALISATION) console.error(`_init: _startInitialize(${stopped})`);
+		this.log(`_startInitialize: _startInitialize(${stopped})`);
 
 		// wait at most 500ms for receiving the break on entry event
 		// (since in attach mode we cannot enforce that node is started with --debug-brk, we cannot assume that we receive this event)
@@ -643,12 +648,12 @@ export class NodeDebugSession extends DebugSession {
 		}
 
 		if (this._gotEntryEvent) {
-			if (NodeDebugSession.TRACE_INITIALISATION) console.error(`_init: got break on entry event after ${n} retries`);
+			this.log(`_startInitialize: got break on entry event after ${n} retries`);
 			if (this._nodeProcessId <= 0) {
 				// if we haven't gotten a process pid so far, we try it again
 				this._node.command('evaluate', { expression: 'process.pid', global: true }, (resp: NodeV8Response) => {
 					if (resp.success) {
-						if (NodeDebugSession.TRACE_INITIALISATION) console.error('_init: 2nd retrieve node pid: OK');
+						this.log('_startInitialize: 2nd retrieve node pid: OK');
 						this._nodeProcessId = parseInt(resp.body.value);
 					}
 					this._middleInitialize(stopped);
@@ -657,7 +662,7 @@ export class NodeDebugSession extends DebugSession {
 				this._middleInitialize(stopped);
 			}
 		} else {
-			if (NodeDebugSession.TRACE_INITIALISATION) console.error(`_init: no entry event after ${n} retries; give up`);
+			this.log(`_startInitialize: no entry event after ${n} retries; give up`);
 
 			this._gotEntryEvent = true;	// we pretend to got one so that no ENTRY_REASON event will show up later...
 
@@ -675,24 +680,24 @@ export class NodeDebugSession extends DebugSession {
 
 	private _middleInitialize(stopped: boolean): void {
 		// request UI to send breakpoints
-		if (NodeDebugSession.TRACE_INITIALISATION) console.error('_init: -> fire initialize event');
+		this.log('_middleInitialize: -> fire initialize event');
 		this.sendEvent(new InitializedEvent());
 
 		// in attach-mode we don't know whether the debuggee has been launched in 'stop on entry' mode
 		// so we use the stopped state of the VM
 		if (this._attachMode) {
-			if (NodeDebugSession.TRACE_INITIALISATION) console.error(`_init: in attach mode we guess stopOnEntry flag to be "${stopped}"`);
+			this.log(`_middleInitialize: in attach mode we guess stopOnEntry flag to be "${stopped}"`);
 			this._stopOnEntry = stopped;
 		}
 
 		if (this._stopOnEntry) {
 			// user has requested 'stop on entry' so send out a stop-on-entry
-			if (NodeDebugSession.TRACE_INITIALISATION) console.error('_init: -> fire stop-on-entry event');
+			this.log('_middleInitialize: -> fire stop-on-entry event');
 			this.sendEvent(new StoppedEvent(NodeDebugSession.ENTRY_REASON, NodeDebugSession.DUMMY_THREAD_ID));
 		}
 		else {
 			// since we are stopped but UI doesn't know about this, remember that we continue later in finishInitialize()
-			if (NodeDebugSession.TRACE_INITIALISATION) console.error('_init: remember to do a "Continue" later');
+			this.log('_middleInitialize: remember to do a "Continue" later');
 			this._needContinue = true;
 		}
 	}
@@ -700,12 +705,12 @@ export class NodeDebugSession extends DebugSession {
 	private _finishInitialize(): void {
 		if (this._needContinue) {
 			this._needContinue = false;
-			if (NodeDebugSession.TRACE_INITIALISATION) console.error('_init: do a "Continue"');
+			this.log('_finishInitialize: do a "Continue"');
 			this._node.command('continue', null, (nodeResponse) => { });
 		}
 		if (this._needBreakpointEvent) {
 			this._needBreakpointEvent = false;
-			if (NodeDebugSession.TRACE_INITIALISATION) console.error('_init: fire a breakpoint event');
+			this.log('_finishInitialize: fire a breakpoint event');
 			this.sendEvent(new StoppedEvent(NodeDebugSession.BREAKPOINT_REASON, NodeDebugSession.DUMMY_THREAD_ID));
 		}
 	}
@@ -731,6 +736,9 @@ export class NodeDebugSession extends DebugSession {
 	 * to disconnect from node and kill node & subprocesses
 	 */
 	public shutdown(): void {
+
+		this.log('shutdown: shutdown');
+
 		if (!this._inShutdown) {
 			this._inShutdown = true;
 
@@ -745,19 +753,23 @@ export class NodeDebugSession extends DebugSession {
 				// kill the whole process tree either starting with the terminal or with the node process
 				let pid = this._terminalProcess ? this._terminalProcess.pid : this._nodeProcessId;
 				if (pid > 0) {
+					this.log('shutdown: kill tree');
 					Terminal.killTree(pid).then(() => {
 						this._terminalProcess = null;
 						this._nodeProcessId = -1;
+						this.log('shutdown: calling super shutdown 1');
 						super.shutdown();
 					}).catch((error) => {
 						this._terminalProcess = null;
 						this._nodeProcessId = -1;
+						this.log('shutdown: calling super shutdown 2');
 						super.shutdown();
 					});
 					return;
 				}
 			}
 
+			this.log('shutdown: calling super shutdown 3');
 			super.shutdown();
 		}
 	}
@@ -981,7 +993,7 @@ export class NodeDebugSession extends DebugSession {
 					// if yes, we do not have to "continue" but we have to generate a stopped event instead
 					this._needContinue = false;
 					this._needBreakpointEvent = true;
-					if (NodeDebugSession.TRACE_INITIALISATION) console.error('_init: remember to fire a breakpoint event later');
+					this.log('_setBreakpoints: remember to fire a breakpoint event later');
 				}
 			}
 
@@ -1970,6 +1982,14 @@ export class NodeDebugSession extends DebugSession {
 	}
 
 	//---- private static ---------------------------------------------------------------
+
+	private log(message: string) {
+		if (NodeDebugSession.TRACE) {
+			const s = process.pid + ": " + message + '\r\n';
+			//console.error(s);
+			this.sendEvent(new OutputEvent(s, 'stderr'));
+		}
+	}
 
 	private static isJavaScript(path: string): boolean {
 
