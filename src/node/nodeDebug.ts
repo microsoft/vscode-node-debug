@@ -175,6 +175,7 @@ export class NodeDebugSession extends DebugSession {
 	private _adapterID: string;
 	public _variableHandles = new Handles<Expandable>();
 	public _frameHandles = new Handles<any>();
+	private _sourceHandles = new Handles<number>();
 	private _refCache = new Map<number, any>();
 
 	private _externalConsole: boolean;
@@ -854,7 +855,7 @@ export class NodeDebugSession extends DebugSession {
 		}
 
 		if (source.sourceReference > 0) {
-			scriptId = source.sourceReference - 1000;
+			scriptId = this._sourceHandles.get(source.sourceReference);
 			this._clearAllBreakpoints(response, null, scriptId, lbs, sourcemap);
 			return;
 		}
@@ -1244,7 +1245,8 @@ export class NodeDebugSession extends DebugSession {
 						if (src === null) {
 							const script_id = script_val.id;
 							if (script_id >= 0) {
-								src = new Source(name, null, 1000 + script_id);
+								const sourceHandle = this._sourceHandles.create(script_id);
+								src = new Source(name, null, sourceHandle);
 							}
 						}
 					}
@@ -1756,9 +1758,11 @@ export class NodeDebugSession extends DebugSession {
 	//--- source request ------------------------------------------------------------------------------------------------------
 
 	protected sourceRequest(response: DebugProtocol.SourceResponse, args: DebugProtocol.SourceArguments): void {
-		const sourceId = args.sourceReference;
-		const sid = sourceId - 1000;
-		this._node.command('scripts', { types: 1+2+4, includeSource: true, ids: [ sid ] }, (nodeResponse: NodeV8Response) => {
+
+		const sourceHandle = args.sourceReference;
+		const scriptId = this._sourceHandles.get(sourceHandle);
+
+		this._node.command('scripts', { types: 1+2+4, includeSource: true, ids: [ scriptId ] }, (nodeResponse: NodeV8Response) => {
 			if (nodeResponse.success) {
 				const content = nodeResponse.body[0].source;
 				response.body = {
