@@ -115,6 +115,7 @@ export interface SourceMapsArguments {
 
 class SourceSource {
 	scriptId: number;
+	source: string;
 
 	constructor(sid: number) {
 		this.scriptId = sid;
@@ -184,7 +185,6 @@ export class NodeDebugSession extends DebugSession {
 	public _variableHandles = new Handles<Expandable>();
 	public _frameHandles = new Handles<any>();
 	private _sourceHandles = new Handles<SourceSource>();
-	private _scriptSources = new Map<number, string>();
 	private _refCache = new Map<number, any>();
 
 	private _externalConsole: boolean;
@@ -1773,28 +1773,27 @@ export class NodeDebugSession extends DebugSession {
 		const sourceHandle = args.sourceReference;
 		const srcSource = this._sourceHandles.get(sourceHandle);
 
+		if (srcSource.source) {
+			response.body = {
+				content: srcSource.source
+			};
+			this.sendResponse(response);
+			return;
+		}
+
 		if (srcSource.scriptId) {
 
-			let source = this._scriptSources.get(srcSource.scriptId);
-			if (source) {
+			this._node.command('scripts', { types: 1+2+4, includeSource: true, ids: [ srcSource.scriptId ] }, (nodeResponse: NodeV8Response) => {
+				if (nodeResponse.success) {
+					srcSource.source = nodeResponse.body[0].source;
+				} else {
+					srcSource.source = "<source not found>";
+				}
 				response.body = {
-					content: source
+					content: srcSource.source
 				};
 				this.sendResponse(response);
-			} else {
-				this._node.command('scripts', { types: 1+2+4, includeSource: true, ids: [ srcSource.scriptId ] }, (nodeResponse: NodeV8Response) => {
-					if (nodeResponse.success) {
-						source = nodeResponse.body[0].source;
-					} else {
-						source = "<source not found>";
-					}
-					this._scriptSources.set(srcSource.scriptId, source);
-					response.body = {
-						content: source
-					};
-					this.sendResponse(response);
-				});
-			}
+			});
 
 		} else {
 			this.sendErrorResponse(response, 9999, "sourceRequest error");
