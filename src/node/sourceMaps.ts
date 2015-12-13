@@ -10,7 +10,8 @@ import * as PathUtils from './pathUtilities';
 
 
 export interface MappingResult {
-	path: string;
+	path: string;		// absolute path
+	content?: string;	// optional content of source (source inlined in source map)
 	line: number;
 	column: number;
 }
@@ -78,7 +79,7 @@ export class SourceMaps implements ISourceMaps {
 			const mr = map.originalPositionFor(line, column);
 			if (mr && mr.source) {
 				if (SourceMaps.TRACE) console.error(`${Path.basename(pathToGenerated)} ${line}:${column} -> ${mr.line}:${mr.column}`);
-				return { path: mr.source, line: mr.line-1, column: mr.column};
+				return { path: mr.source, content: (<any>mr).content, line: mr.line-1, column: mr.column};
 			}
 		}
 		return null;
@@ -313,6 +314,13 @@ class SourceMap {
 
 		const mp = this._smc.originalPositionFor(needle);
 		if (mp.source) {
+
+			// if source map has inlined source, return it
+			const src = this._smc.sourceContentFor(mp.source);
+			if (src) {
+				(<any>mp).content = src;
+			}
+
 			mp.source = PathUtils.canonicalizeUrl(mp.source);
 			mp.source = PathUtils.makePathAbsolute(this._generatedFile, mp.source);
 		}

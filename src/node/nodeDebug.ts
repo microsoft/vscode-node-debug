@@ -117,8 +117,9 @@ class SourceSource {
 	scriptId: number;
 	source: string;
 
-	constructor(sid: number) {
+	constructor(sid: number, content?: string) {
 		this.scriptId = sid;
+		this.source = content;
 	}
 }
 
@@ -183,7 +184,7 @@ export class NodeDebugSession extends DebugSession {
 
 	private _adapterID: string;
 	public _variableHandles = new Handles<Expandable>();
-	public _frameHandles = new Handles<any>();
+	private _frameHandles = new Handles<any>();
 	private _sourceHandles = new Handles<SourceSource>();
 	private _refCache = new Map<number, any>();
 
@@ -1241,16 +1242,24 @@ export class NodeDebugSession extends DebugSession {
 							}
 
 							// source mapping
+							let id = 0;
 							if (this._sourceMaps) {
 								const mr = this._sourceMaps.MapToSource(path, line, column);
 								if (mr) {
 									path = mr.path;
 									line = mr.line;
 									column = mr.column;
+
+									// if source map has inlined surce, 
+									const content = (<any>mr).content;
+									if (content && path && !FS.existsSync(path)) {
+										path = null;
+										id = this._sourceHandles.create(new SourceSource(0, content));
+									}
 								}
 							}
 
-							src = new Source(name, this.convertDebuggerPathToClient(path));
+							src = new Source(name, this.convertDebuggerPathToClient(path), id);
 						}
 
 						if (src === null) {
