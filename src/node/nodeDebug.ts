@@ -196,8 +196,8 @@ export class NodeDebugSession extends DebugSession {
 
 	private _gotEntryEvent: boolean;
 	private _entryPath: string;
-	private _entryLine: number;
-	private _entryColumn: number;
+	private _entryLine: number;		// entry line in *.js file (not in the source file)
+	private _entryColumn: number;	// entry column in *.js file (not in the source file)
 
 	public constructor(debuggerLinesStartAt1: boolean, isServer: boolean = false) {
 		super(debuggerLinesStartAt1, isServer);
@@ -986,11 +986,9 @@ export class NodeDebugSession extends DebugSession {
 			// For this we check here whether a breakpoint is at the same location as the "break-on-entry" location.
 			// If yes, then we plan for hitting the breakpoint instead of "continue" over it!
 
-			if (!this._stopOnEntry) {	// only relevant if we do not stop on entry
-				const li = success ? actualLine : lbs[ix].line;
-				const co = lbs[ix].column; // success ? actualColumn : columns[ix];
-				if (this._entryPath === path && this._entryLine === li && this._entryColumn === co) {
-					// if yes, we do not have to "continue" but we have to generate a stopped event instead
+			if (!this._stopOnEntry && this._entryPath === path) {	// only relevant if we do not stop on entry and have a matching file
+				if (this._entryLine === lbs[ix].line && this._entryColumn === lbs[ix].column) {
+					// we do not have to "continue" but we have to generate a stopped event instead
 					this._needContinue = false;
 					this._needBreakpointEvent = true;
 					this.log('_setBreakpoints: remember to fire a breakpoint event later');
