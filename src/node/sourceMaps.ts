@@ -55,7 +55,7 @@ export class SourceMaps implements ISourceMaps {
 		var map = this._findSourceToGeneratedMapping(pathToSource);
 		if (map)
 			return map.generatedPath();
-		return null;;
+		return null;
 	}
 
 	public MapFromSource(pathToSource: string, line: number, column: number): MappingResult {
@@ -63,7 +63,7 @@ export class SourceMaps implements ISourceMaps {
 		if (map) {
 			line += 1;	// source map impl is 1 based
 			const mr = map.generatedPositionFor(pathToSource, line, column);
-			if (typeof mr.line === 'number') {
+			if (mr && typeof mr.line === 'number') {
 				if (SourceMaps.TRACE) console.error(`${Path.basename(pathToSource)} ${line}:${column} -> ${mr.line}:${mr.column}`);
 				return { path: map.generatedPath(), line: mr.line-1, column: mr.column};
 			}
@@ -76,7 +76,7 @@ export class SourceMaps implements ISourceMaps {
 		if (map) {
 			line += 1;	// source map impl is 1 based
 			const mr = map.originalPositionFor(line, column);
-			if (mr.source) {
+			if (mr && mr.source) {
 				if (SourceMaps.TRACE) console.error(`${Path.basename(pathToGenerated)} ${line}:${column} -> ${mr.line}:${mr.column}`);
 				return { path: mr.source, line: mr.line-1, column: mr.column};
 			}
@@ -268,7 +268,11 @@ class SourceMap {
 			this._sourceRoot += Path.sep;
 		}
 
-		this._smc = new SourceMapConsumer(sm);
+		try {
+			this._smc = new SourceMapConsumer(sm);
+		} catch (e) {
+			// ignore exception and leave _smc undefined
+		}
 	}
 
 	/*
@@ -292,9 +296,14 @@ class SourceMap {
 	}
 
 	/*
-	 * finds the nearest source location for the given location in the generated file.
+	 * Finds the nearest source location for the given location in the generated file.
+	 * Returns null if sourcemap is invalid.
 	 */
 	public originalPositionFor(line: number, column: number, bias: Bias = Bias.LEAST_UPPER_BOUND): SourceMap.MappedPosition {
+
+		if (!this._smc) {
+			return null;
+		}
 
 		var needle = {
 			line: line,
@@ -312,9 +321,14 @@ class SourceMap {
 	}
 
 	/*
-	 * finds the nearest location in the generated file for the given source location.
+	 * Finds the nearest location in the generated file for the given source location.
+	 * Returns null if sourcemap is invalid.
 	 */
 	public generatedPositionFor(src: string, line: number, column: number, bias = Bias.LEAST_UPPER_BOUND): SourceMap.Position {
+
+		if (!this._smc) {
+			return null;
+		}
 
 		// make input path relative to sourceRoot
 		if (this._sourceRoot) {
