@@ -54,7 +54,7 @@
 						"program": "${workspaceRoot}/app.js",
 						"stopOnEntry": false,
 						"args": [],
-						"cwd": ".",
+						"cwd": "${workspaceRoot}",
 						"runtimeExecutable": null,
 						"runtimeArgs": ["--nolazy"],
 						"env": {
