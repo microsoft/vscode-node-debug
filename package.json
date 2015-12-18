@@ -51,7 +51,7 @@
 						"name": "Launch",
 						"type": "node",
 						"request": "launch",
-						"program": "app.js",
+						"program": "${workspaceRoot}/app.js",
 						"stopOnEntry": false,
 						"args": [],
 						"cwd": ".",
