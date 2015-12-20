@@ -885,7 +885,8 @@ export class NodeDebugSession extends DebugSession {
 						break;
 					case 'scriptName':
 						const script_name: string = breakpoint.script_name;
-						if (script_name === path) {
+						if (script_name === path ||
+							/Windows/.test(require('os').type()) && script_name.toLowerCase() === path.toLowerCase()) {
 							toClear.push(breakpoint.number);
 						}
 						break;
