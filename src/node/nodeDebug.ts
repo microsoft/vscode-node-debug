@@ -281,8 +281,6 @@ export class NodeDebugSession extends DebugSession {
 
 		this._adapterID = args.adapterID;
 		this.sendResponse(response);
-
-		this.log('initializeRequest: after sending response');
 	}
 
 	//---- launch request -----------------------------------------------------------------------------------------------------
@@ -515,7 +513,7 @@ export class NodeDebugSession extends DebugSession {
 		const socket = new Net.Socket();
 		socket.connect(port);
 		socket.on('connect', (err: any) => {
-			this.log('_attach: connect event in _attach');
+			this.log('_attach: connected');
 			connected = true;
 			this._node.startDispatch(socket, socket);
 			this._initialize(response);
@@ -554,7 +552,7 @@ export class NodeDebugSession extends DebugSession {
 
 			let ok = resp.success;
 			if (resp.success) {
-				this.log('_initialize: retrieve node pid: OK');
+				this.log('_initialize: got process id from node');
 				this._nodeProcessId = parseInt(resp.body.value);
 			} else {
 				if (resp.message.indexOf('process is not defined') >= 0) {
@@ -580,7 +578,7 @@ export class NodeDebugSession extends DebugSession {
 					return;
 				}
 			} else {
-				this.log('_initialize: retrieve node pid: failed');
+				this.log('_initialize: retrieving process id from node failed');
 
 				if (retryCount < 10) {
 					setTimeout(() => {
@@ -645,7 +643,9 @@ export class NodeDebugSession extends DebugSession {
 	 */
 	private _startInitialize(stopped: boolean, n: number = 0): void {
 
-		this.log(`_startInitialize: _startInitialize(${stopped})`);
+		if (n == 0) {
+			this.log(`_startInitialize: stopped: ${stopped}`);
+		}
 
 		// wait at most 500ms for receiving the break on entry event
 		// (since in attach mode we cannot enforce that node is started with --debug-brk, we cannot assume that we receive this event)
@@ -664,7 +664,7 @@ export class NodeDebugSession extends DebugSession {
 				// if we haven't gotten a process pid so far, we try it again
 				this._node.command('evaluate', { expression: 'process.pid', global: true }, (resp: NodeV8Response) => {
 					if (resp.success) {
-						this.log('_startInitialize: 2nd retrieve node pid: OK');
+						this.log('_startInitialize: got process id from node (2nd try)');
 						this._nodeProcessId = parseInt(resp.body.value);
 					}
 					this._middleInitialize(stopped);
@@ -673,7 +673,7 @@ export class NodeDebugSession extends DebugSession {
 				this._middleInitialize(stopped);
 			}
 		} else {
-			this.log(`_startInitialize: no entry event after ${n} retries; give up`);
+			this.log(`_startInitialize: no entry event after ${n} retries; giving up`);
 
 			this._gotEntryEvent = true;	// we pretend to got one so that no ENTRY_REASON event will show up later...
 
@@ -691,7 +691,7 @@ export class NodeDebugSession extends DebugSession {
 
 	private _middleInitialize(stopped: boolean): void {
 		// request UI to send breakpoints
-		this.log('_middleInitialize: -> fire initialize event');
+		this.log('_middleInitialize: fire initialized event');
 		this.sendEvent(new InitializedEvent());
 
 		// in attach-mode we don't know whether the debuggee has been launched in 'stop on entry' mode
@@ -703,7 +703,7 @@ export class NodeDebugSession extends DebugSession {
 
 		if (this._stopOnEntry) {
 			// user has requested 'stop on entry' so send out a stop-on-entry
-			this.log('_middleInitialize: -> fire stop-on-entry event');
+			this.log('_middleInitialize: fire stop-on-entry event');
 			this.sendEvent(new StoppedEvent(NodeDebugSession.ENTRY_REASON, NodeDebugSession.DUMMY_THREAD_ID));
 		}
 		else {
@@ -721,7 +721,7 @@ export class NodeDebugSession extends DebugSession {
 		}
 		if (this._needBreakpointEvent) {
 			this._needBreakpointEvent = false;
-			this.log('_finishInitialize: fire a breakpoint event');
+			this.log('_finishInitialize: fire breakpoint event');
 			this.sendEvent(new StoppedEvent(NodeDebugSession.BREAKPOINT_REASON, NodeDebugSession.DUMMY_THREAD_ID));
 		}
 	}
@@ -743,12 +743,10 @@ export class NodeDebugSession extends DebugSession {
 	}
 
 	/**
-	 * we rely on the generic implementation from debugSession but we override 'v8Protocol.shutdown'
+	 * we rely on the generic implementation from DebugSession but we override 'Protocol.shutdown'
 	 * to disconnect from node and kill node & subprocesses
 	 */
 	public shutdown(): void {
-
-		this.log('shutdown: shutdown');
 
 		if (!this._inShutdown) {
 			this._inShutdown = true;
@@ -764,23 +762,20 @@ export class NodeDebugSession extends DebugSession {
 				// kill the whole process tree either starting with the terminal or with the node process
 				let pid = this._terminalProcess ? this._terminalProcess.pid : this._nodeProcessId;
 				if (pid > 0) {
-					this.log('shutdown: kill tree');
+					this.log('shutdown: kill debugee and sub-processes');
 					Terminal.killTree(pid).then(() => {
 						this._terminalProcess = null;
 						this._nodeProcessId = -1;
-						this.log('shutdown: calling super shutdown 1');
 						super.shutdown();
 					}).catch((error) => {
 						this._terminalProcess = null;
 						this._nodeProcessId = -1;
-						this.log('shutdown: calling super shutdown 2');
 						super.shutdown();
 					});
 					return;
 				}
 			}
 
-			this.log('shutdown: calling super shutdown 3');
 			super.shutdown();
 		}
 	}
@@ -1072,7 +1067,9 @@ export class NodeDebugSession extends DebugSession {
 			a = { type: 'scriptId', target: scriptId, line: line, column: column };
 		} else {
 			a = { type: 'script', target: path, line: line, column: column };
+			this.log('_setBreakpoint: path: ' + path);
 		}
+
 
 		this._node.command('setbreakpoint', a, (resp: NodeV8Response) => {
 
