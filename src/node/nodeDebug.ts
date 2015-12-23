@@ -113,13 +113,18 @@ export interface SourceMapsArguments {
 	outDir?: string;
 }
 
+/**
+ * A SourceSource represents the source contents of an internal module or of a source map with inlined contents.
+ */
 class SourceSource {
-	scriptId: number;
+	scriptId: number;	// if 0 then source contains the file contents of a source map, otherwise a scriptID.
 	source: string;
+	path: string;
 
-	constructor(sid: number, content?: string) {
+	constructor(sid: number, content?: string, path?: string) {
 		this.scriptId = sid;
 		this.source = content;
+		this.path = path;
 	}
 }
 
@@ -805,7 +810,15 @@ export class NodeDebugSession extends DebugSession {
 		let scriptId = -1;
 		let path: string = null;
 
-		// we assume that only one of the source attributes is specified.
+		if (source.sourceReference > 0) {
+			const srcSource = this._sourceHandles.get(source.sourceReference);
+			if (srcSource.scriptId) {
+				this._clearAllBreakpoints(response, null, srcSource.scriptId, lbs, sourcemap);
+				return;
+			}
+			source.path = srcSource.path;
+		}
+
 		if (source.path) {
 			path = this.convertClientPathToDebugger(source.path);
 			// resolve the path to a real path (resolve symbolic links)
@@ -819,18 +832,17 @@ export class NodeDebugSession extends DebugSession {
 				sourcemap = true;
 				// source map line numbers
 				for (let i = 0; i < lbs.length; i++) {
-					let pp = path;
-					const mr = this._sourceMaps.MapFromSource(pp, lbs[i].line, lbs[i].column);
+					const mr = this._sourceMaps.MapFromSource(path, lbs[i].line, lbs[i].column);
 					if (mr) {
-						pp = mr.path;
+						if (mr.path !== p) {
+							// this source line maps to a different destination file -> this is not supported
+							// console.error(`setBreakPointsRequest: sourceMap limitation ${pp}`);
+						}
 						lbs[i].line = mr.line;
 						lbs[i].column = mr.column;
 					} else {
-						// we couldn't map this breakpoint -> do not try to set it
+						// we couldn't map this breakpoint -> ignore it
 						lbs[i].ignore = true;
-					}
-					if (pp !== p) {
-						// console.error(`setBreakPointsRequest: sourceMap limitation ${pp}`);
 					}
 				}
 				path = p;
@@ -857,14 +869,6 @@ export class NodeDebugSession extends DebugSession {
 				}
 			});
 			return;
-		}
-
-		if (source.sourceReference > 0) {
-			const srcSource = this._sourceHandles.get(source.sourceReference);
-			if (srcSource.scriptId) {
-				this._clearAllBreakpoints(response, null, srcSource.scriptId, lbs, sourcemap);
-				return;
-			}
 		}
 
 		this.sendErrorResponse(response, 2012, "no valid source specified", null, ErrorDestination.Telemetry);
@@ -1239,7 +1243,6 @@ export class NodeDebugSession extends DebugSession {
 							}
 
 							// source mapping
-							let id = 0;
 							if (this._sourceMaps) {
 								const mr = this._sourceMaps.MapToSource(path, line, column);
 								if (mr) {
@@ -1247,23 +1250,28 @@ export class NodeDebugSession extends DebugSession {
 									line = mr.line;
 									column = mr.column;
 
-									// if source map has inlined surce, 
+									// if source map has inlined source,
 									const content = (<any>mr).content;
-									if (content && path && !FS.existsSync(path)) {
-										path = null;
-										id = this._sourceHandles.create(new SourceSource(0, content));
+									if (content) {
+										if (path) {
+											name = Path.basename(path);
+										}
+										const sourceHandle = this._sourceHandles.create(new SourceSource(0, content, path));
+										src = new Source(name, null, sourceHandle, "inlined content from source map");
 									}
 								}
 							}
 
-							src = new Source(name, this.convertDebuggerPathToClient(path), id);
+							if (src == null) {
+								src = new Source(name, this.convertDebuggerPathToClient(path));
+							}
 						}
 
 						if (src === null) {
 							const script_id:number = script_val.id;
 							if (script_id >= 0) {
 								const sourceHandle = this._sourceHandles.create(new SourceSource(script_id));
-								src = new Source(name, null, sourceHandle);
+								src = new Source(name, null, sourceHandle, "internal module");
 							}
 						}
 					}
