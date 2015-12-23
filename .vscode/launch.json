@@ -11,32 +11,30 @@
 			],
 			"stopOnEntry": false,
 			"sourceMaps": true,
-			"outDir": "out"
+			"outDir": "${workspaceRoot}/out"
 		},
 		{
 			"name": "Run Server",
 			"type": "node",
 			"request": "launch",
-			//"runtimeExecutable": "/usr/local/bin/iojs",
-			//"runtimeArgs": ["--harmony"],
-			"program": "./src/node/nodeDebug.ts",
+			"program": "${workspaceRoot}/src/node/nodeDebug.ts",
 			"stopOnEntry": false,
 			"args": [ "--server=4711" ],
 			"sourceMaps": true,
-			"outDir": "out"
+			"outDir": "${workspaceRoot}/out"
 		},
 		{
 			"name": "Run Tests",
 			"type": "node",
 			"request": "launch",
-			"program": "node_modules/mocha/bin/_mocha",
+			"program": "${workspaceRoot}/node_modules/mocha/bin/_mocha",
 			"args": [
 				"./out/tests",
 				"--timeout", "999999",
 				"--colors"
 			],
 			"sourceMaps": true,
-			"outDir": "./out"
+			"outDir": "${workspaceRoot}/out"
 		}
 	]
 }
