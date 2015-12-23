@@ -502,7 +502,7 @@ export class NodeDebugSession extends DebugSession {
 	private _attach(response: DebugProtocol.Response, port: number, timeout: number = NodeDebugSession.ATTACH_TIMEOUT): void {
 		let connected = false;
 		const socket = new Net.Socket();
-		socket.connect(port);
+		socket.connect(port, '127.0.0.1');
 		socket.on('connect', (err: any) => {
 			this.log('_attach: connect event in _attach');
 			connected = true;
