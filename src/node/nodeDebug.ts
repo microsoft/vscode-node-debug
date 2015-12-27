@@ -154,8 +154,12 @@ export interface LaunchRequestArguments extends SourceMapsArguments {
  * This interface should always match the schema found in the node-debug extension manifest.
  */
 export interface AttachRequestArguments extends SourceMapsArguments {
-	/** The local port to attach to */
+	/** The debug port to attach to. */
 	port: number;
+	/** The TCP/IP address of the port (remote addresses only supported for node >= 5.0). */
+	address?: string;
+	/** Retry for this number of milliseconds to connect to the node process. */
+	timeout?: number;
 }
 
 export class NodeDebugSession extends DebugSession {
@@ -491,13 +495,6 @@ export class NodeDebugSession extends DebugSession {
 
 	protected attachRequest(response: DebugProtocol.AttachResponse, args: AttachRequestArguments): void {
 
-		if (!args.port) {
-			this.sendErrorResponse(response, 2008, "property 'port' is missing");
-			return;
-		}
-
-		this.log('attachRequest: port ' + args.port);
-
 		this._initializeSourceMaps(args);
 
 		if (this._adapterID === 'extensionHost') {
@@ -507,23 +504,39 @@ export class NodeDebugSession extends DebugSession {
 			this._attachMode = true;
 		}
 
-		this._attach(response, args.port);
+		this._attach(response, args.port, args.address, args.timeout);
 	}
 
 	/*
 	 * shared code used in launchRequest and attachRequest
 	 */
-	private _attach(response: DebugProtocol.Response, port: number, timeout: number = NodeDebugSession.ATTACH_TIMEOUT): void {
+	private _attach(response: DebugProtocol.Response, port?: number, address?: string, timeout?: number): void {
+
+		if (!port) {
+			port = 5858;
+		}
+
+		if (!address || address === 'localhost') {
+			address = '127.0.0.1';
+		}
+
+		if (!timeout) {
+			timeout = NodeDebugSession.ATTACH_TIMEOUT;
+		}
+
+		this.log(`_attach: address: ${address} port: ${port}`);
+
 		let connected = false;
 		const socket = new Net.Socket();
-		socket.connect(port, '127.0.0.1');
+		socket.connect(port, address);
+
 		socket.on('connect', (err: any) => {
 			this.log('_attach: connected');
 			connected = true;
 			this._node.startDispatch(socket, socket);
 			this._initialize(response);
-			return;
 		});
+
 		const endTime = new Date().getTime() + timeout;
 		socket.on('error', (err: any) => {
 			if (connected) {

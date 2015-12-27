@@ -1,7 +1,7 @@
 {
 	"name": "node-debug",
-	"version": "0.10.2",
-	"publisher": "isidor",
+	"version": "0.10.3",
+	"publisher": "andreweinand",
 	"description": "Visual Studio Code debug adapter for node.js",
 	"author": {
 		"name": "Microsoft Corporation"
@@ -68,7 +68,9 @@
 						"name": "Attach",
 						"type": "node",
 						"request": "attach",
-						"port": 5858
+						"port": 5858,
+						"sourceMaps": false,
+						"outDir": null
 					}
 				],
 				"configurationAttributes": {
@@ -130,12 +132,21 @@
 						}
 					},
 					"attach": {
-						"required": ["port"],
 						"properties": {
 							"port": {
 								"type": "number",
-								"description": "Port to attach to.",
-								"default": "undefined"
+								"description": "Debug port to attach to. Default is 5858.",
+								"default": "5858"
+							},
+							"address": {
+								"type": "string",
+								"description": "TCP/IP address of debug port (for node >= 5.0 only). Default is 'localhost'.",
+								"default": "localhost"
+							},
+							"timeout": {
+								"type": "number",
+								"description": "Retry for this number of milliseconds to connect to the node runtime. Default is 10000 ms.",
+								"default": "10000"
 							},
 							"sourceMaps": {
 								"type": "boolean",
