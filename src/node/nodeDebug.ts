@@ -225,8 +225,7 @@ export class NodeDebugSession extends DebugSession {
 		this._node = new NodeV8Protocol();
 
 		this._node.on('break', (event: NodeV8Event) => {
-			this.log('NodeDebugSession: got break event from node');
-			this._stopped();
+			this._stopped('break');
 			this._lastStoppedEvent = this.createStoppedEvent(event.body);
 			if (this._lastStoppedEvent.body.reason === NodeDebugSession.ENTRY_REASON) {
 				this.log('NodeDebugSession: supressed stop-on-entry event');
@@ -236,7 +235,7 @@ export class NodeDebugSession extends DebugSession {
 		});
 
 		this._node.on('exception', (event: NodeV8Event) => {
-			this._stopped();
+			this._stopped('exception');
 			this._lastStoppedEvent = this.createStoppedEvent(event.body);
 			this.sendEvent(this._lastStoppedEvent);
 		});
@@ -257,7 +256,8 @@ export class NodeDebugSession extends DebugSession {
 	/**
 	 * clear everything that is no longer valid after a new stopped event.
 	 */
-	private _stopped(): void {
+	private _stopped(reason: string): void {
+		this.log(`_stopped: got ${reason} event from node`);
 		this._exception = undefined;
 		this._variableHandles.reset();
 		this._frameHandles.reset();
@@ -268,7 +268,7 @@ export class NodeDebugSession extends DebugSession {
 	 * The debug session has terminated.
 	 */
 	private _terminated(reason: string): void {
-		this.log('_terminated: ' + reason);
+		this.log(`_terminated: ${reason}`);
 
 		if (this._terminalProcess) {
 			// if the debug adapter owns a terminal,
@@ -286,7 +286,7 @@ export class NodeDebugSession extends DebugSession {
 
 	protected initializeRequest(response: DebugProtocol.InitializeResponse, args: DebugProtocol.InitializeRequestArguments): void {
 
-		this.log('initializeRequest: adapterID: ' + args.adapterID);
+		this.log(`initializeRequest: adapterID: ${args.adapterID}`);
 
 		this._adapterID = args.adapterID;
 		this.sendResponse(response);
@@ -559,6 +559,7 @@ export class NodeDebugSession extends DebugSession {
 				}
 			}
 		});
+
 		socket.on('end', (err: any) => {
 			this._terminated('socket end');
 		});
@@ -570,8 +571,8 @@ export class NodeDebugSession extends DebugSession {
 
 			let ok = resp.success;
 			if (resp.success) {
-				this.log('_initialize: got process id from node');
 				this._nodeProcessId = parseInt(resp.body.value);
+				this.log(`_initialize: got process id ${this._nodeProcessId} from node`);
 			} else {
 				if (resp.message.indexOf('process is not defined') >= 0) {
 					this.log('_initialize: process not defined error; got no pid');
@@ -682,8 +683,8 @@ export class NodeDebugSession extends DebugSession {
 				// if we haven't gotten a process pid so far, we try it again
 				this._node.command('evaluate', { expression: 'process.pid', global: true }, (resp: NodeV8Response) => {
 					if (resp.success) {
-						this.log('_startInitialize: got process id from node (2nd try)');
 						this._nodeProcessId = parseInt(resp.body.value);
+						this.log(`_initialize: got process id ${this._nodeProcessId} from node (2nd try)`);
 					}
 					this._middleInitialize(stopped);
 				});
@@ -732,16 +733,16 @@ export class NodeDebugSession extends DebugSession {
 	}
 
 	private _finishInitialize(): void {
-		if (this._needContinue) {
-			this._needContinue = false;
-			this.log('_finishInitialize: do a "Continue"');
-			this._node.command('continue', null, (nodeResponse) => { });
-		}
-		if (this._needBreakpointEvent) {
-			this._needBreakpointEvent = false;
-			this.log('_finishInitialize: fire breakpoint event');
-			this.sendEvent(new StoppedEvent(NodeDebugSession.BREAKPOINT_REASON, NodeDebugSession.DUMMY_THREAD_ID));
-		}
+			if (this._needContinue) {
+				this._needContinue = false;
+				this.log('_finishInitialize: do a "Continue"');
+				this._node.command('continue', null, (nodeResponse) => { });
+			}
+			if (this._needBreakpointEvent) {
+				this._needBreakpointEvent = false;
+				this.log('_finishInitialize: fire breakpoint event');
+				this.sendEvent(new StoppedEvent(NodeDebugSession.BREAKPOINT_REASON, NodeDebugSession.DUMMY_THREAD_ID));
+			}
 	}
 
 	//---- disconnect request -------------------------------------------------------------------------------------------------
@@ -1079,16 +1080,18 @@ export class NodeDebugSession extends DebugSession {
 			column += NodeDebugSession.FIRST_LINE_OFFSET;
 		}
 
+		let info = path;
 		let a: any;
 		if (scriptId > 0) {
 			a = { type: 'scriptId', target: scriptId, line: line, column: column };
+			info = '' + scriptId;
 		} else {
 			a = { type: 'script', target: path, line: line, column: column };
-			this.log('_setBreakpoint: path: ' + path);
 		}
 
-
 		this._node.command('setbreakpoint', a, (resp: NodeV8Response) => {
+
+			this.log(`_setBreakpoint: ${info}: ${resp.success}`);
 
 			if (resp.success) {
 				let actualLine = lb.line;
@@ -1121,6 +1124,8 @@ export class NodeDebugSession extends DebugSession {
 	//--- set exception request -----------------------------------------------------------------------------------------------
 
 	protected setExceptionBreakPointsRequest(response: DebugProtocol.SetExceptionBreakpointsResponse, args: DebugProtocol.SetExceptionBreakpointsArguments): void {
+
+		this.log(`setExceptionBreakPointsRequest`);
 
 		let f: string;
 		const filters = args.filters;
@@ -1703,7 +1708,7 @@ export class NodeDebugSession extends DebugSession {
 	protected pauseRequest(response: DebugProtocol.PauseResponse, args: DebugProtocol.PauseArguments) : void {
     	this._node.command('suspend', null, (nodeResponse) => {
 			if (nodeResponse.success) {
-				this._stopped();
+				this._stopped('pause');
 				this._lastStoppedEvent = new StoppedEvent(NodeDebugSession.USER_REQUEST_REASON, NodeDebugSession.DUMMY_THREAD_ID);
 				this.sendResponse(response);
 				this.sendEvent(this._lastStoppedEvent);
