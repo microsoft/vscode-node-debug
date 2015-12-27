@@ -91,6 +91,8 @@ export class InternalBreakpoint {
 	line: number;
 	/** The requested breakpoint column location in the JavaScript file. */
 	column: number;
+	/** optional expression for conditional breakpoints. */
+	expression: string;
 
 	/** do not try to set this breakpoint (because source locations could not successfully be mapped to destination locations) */
 	ignore: boolean;
@@ -158,7 +160,7 @@ export interface AttachRequestArguments extends SourceMapsArguments {
 	port: number;
 	/** The TCP/IP address of the port (remote addresses only supported for node >= 5.0). */
 	address?: string;
-	/** Retry for this number of milliseconds to connect to the node process. */
+	/** Retry for this number of milliseconds to connect to the node runtime. */
 	timeout?: number;
 }
 
@@ -804,21 +806,41 @@ export class NodeDebugSession extends DebugSession {
 	protected setBreakPointsRequest(response: DebugProtocol.SetBreakpointsResponse, args: DebugProtocol.SetBreakpointsArguments): void {
 
 		let sourcemap = false;
-
 		const source = args.source;
-		const clientLines = args.lines;
+		let lbs;
 
-		// convert line numbers from client
-		const lbs = new Array<InternalBreakpoint>(clientLines.length);
-		for (let i = 0; i < clientLines.length; i++) {
-			lbs[i] = {
-				actualLine: clientLines[i],
-				actualColumn: this.convertDebuggerColumnToClient(1),	// hardcoded for now
-				line: this.convertClientLineToDebugger(clientLines[i]),
-				column: 0,	// hardcoded for now
-				verified: false,
-				ignore: false
-			};
+		if (args.breakpoints) {
+			const breakpoints = args.breakpoints;
+
+			lbs = new Array<InternalBreakpoint>(breakpoints.length);
+			for (let i = 0; i < breakpoints.length; i++) {
+				lbs[i] = {
+					line: this.convertClientLineToDebugger(breakpoints[i].line),
+					column: this.convertClientColumnToDebugger(breakpoints[i].column),
+					expression: breakpoints[i].expression,
+
+					actualLine: breakpoints[i].line,
+					actualColumn: breakpoints[i].column,
+					verified: false,
+					ignore: false
+				};
+			}
+		} else {
+			const clientLines = args.lines;
+
+			// convert line numbers from client
+			lbs = new Array<InternalBreakpoint>(clientLines.length);
+			for (let i = 0; i < clientLines.length; i++) {
+				lbs[i] = {
+					line: this.convertClientLineToDebugger(clientLines[i]),
+					column: 0,	// hardcoded for now
+
+					actualLine: clientLines[i],
+					actualColumn: this.convertDebuggerColumnToClient(1),	// hardcoded for now
+					verified: false,
+					ignore: false
+				};
+			}
 		}
 
 		let scriptId = -1;
@@ -1081,12 +1103,20 @@ export class NodeDebugSession extends DebugSession {
 		}
 
 		let info = path;
-		let a: any;
+		let a: any = {
+			line: line,
+			column: column
+		};
+		if (lb.expression) {
+			a.condition = lb.expression;
+		}
 		if (scriptId > 0) {
-			a = { type: 'scriptId', target: scriptId, line: line, column: column };
+			a.type = 'scriptId';
+			a.target = scriptId;
 			info = '' + scriptId;
 		} else {
-			a = { type: 'script', target: path, line: line, column: column };
+			a.type = 'script';
+			a.target = path;
 		}
 
 		this._node.command('setbreakpoint', a, (resp: NodeV8Response) => {
