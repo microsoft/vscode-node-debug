@@ -43,7 +43,7 @@
 			{
 				"type": "node",
 				"label": "Node.js",
-				"enableBreakpointsFor": { "languageIds": ["javascript"] },
+				"enableBreakpointsFor": { "languageIds": ["javascript", "javascriptreact"] },
 				"program": "./out/node/nodeDebug.js",
 				"runtime": "node",
 				"initialConfigurations": [
