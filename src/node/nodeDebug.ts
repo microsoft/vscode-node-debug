@@ -817,7 +817,7 @@ export class NodeDebugSession extends DebugSession {
 				lbs[i] = {
 					line: this.convertClientLineToDebugger(breakpoints[i].line),
 					column: this.convertClientColumnToDebugger(breakpoints[i].column),
-					expression: breakpoints[i].expression,
+					expression: breakpoints[i].condition,
 
 					actualLine: breakpoints[i].line,
 					actualColumn: breakpoints[i].column,
