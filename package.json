@@ -75,7 +75,7 @@
 				],
 				"configurationAttributes": {
 					"launch": {
-						"required": ["program"],
+						"required": ["program", "cwd"],
 						"properties": {
 							"program": {
 								"type": "string",
