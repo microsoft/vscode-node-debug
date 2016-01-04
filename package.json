@@ -79,7 +79,7 @@
 						"properties": {
 							"program": {
 								"type": "string",
-								"description": "Workspace relative path to the program."
+								"description": "Absolute path to the program."
 							},
 							"stopOnEntry": {
 								"type": "boolean",
@@ -99,12 +99,12 @@
 							},
 							"cwd": {
 								"type": "string",
-								"description": "Workspace relative or absolute path to the working directory of the program being debugged. Default is the current workspace.",
+								"description": "Absolute path to the working directory of the program being debugged. Default is the current workspace.",
 								"default": "."
 							},
 							"runtimeExecutable": {
 								"type": ["string", "null"],
-								"description": "Workspace relative or absolute path to the runtime executable to be used. Default is the runtime executable on the PATH.",
+								"description": "Absolute path to the runtime executable to be used. Default is the runtime executable on the PATH.",
 								"default": null
 							},
 							"runtimeArgs": {
