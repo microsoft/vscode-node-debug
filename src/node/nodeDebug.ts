@@ -1139,7 +1139,7 @@ export class NodeDebugSession extends DebugSession {
 				let actualLine = lb.line;
 				let actualColumn = lb.column;
 
-				const al = resp.body.breakpoint;
+				const al = resp.body.actual_locations;
 				if (al.length > 0) {
 					actualLine = al[0].line;
 					actualColumn = al[0].column;
