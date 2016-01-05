@@ -168,6 +168,8 @@ export class NodeDebugSession extends DebugSession {
 
 	private static TRACE = false;
 
+	private static USE_BREAKPOINT_REGEXP = true;
+
 	private static NODE = 'node';
 	private static DUMMY_THREAD_ID = 1;
 	private static DUMMY_THREAD_NAME = 'Node';
@@ -921,20 +923,24 @@ export class NodeDebugSession extends DebugSession {
 			if (nodeResponse.success) {
 				const toClear = new Array<number>();
 
+				const path_regexp = this._pathToRegexp(path);
+
 				// try to match breakpoints
 				for (let breakpoint of nodeResponse.body.breakpoints) {
-					const type: string = breakpoint.type;
-					switch (type) {
+					switch (breakpoint.type) {
 					case 'scriptId':
-						const script_id: number = breakpoint.script_id;
-						if (script_id === scriptId) {
+						if (scriptId === breakpoint.script_id) {
 							toClear.push(breakpoint.number);
 						}
 						break;
 					case 'scriptName':
-						const script_name: string = breakpoint.script_name;
-						if (script_name === path ||
-							/Windows/.test(require('os').type()) && script_name.toLowerCase() === path.toLowerCase()) {
+						if (path === breakpoint.script_name) {
+							// /Windows/.test(require('os').type()) && script_name.toLowerCase() === path.toLowerCase()) {
+							toClear.push(breakpoint.number);
+						}
+						break;
+					case 'scriptRegExp':
+						if (path_regexp === breakpoint.script_regexp) {
 							toClear.push(breakpoint.number);
 						}
 						break;
@@ -1116,8 +1122,13 @@ export class NodeDebugSession extends DebugSession {
 			a.target = scriptId;
 			info = '' + scriptId;
 		} else {
-			a.type = 'script';
-			a.target = path;
+			if (NodeDebugSession.USE_BREAKPOINT_REGEXP) {
+				a.type = 'scriptRegExp';
+				a.target = this._pathToRegexp(path);
+			} else {
+				a.type = 'script';
+				a.target = path;
+			}
 		}
 
 		this._node.command('setbreakpoint', a, (resp: NodeV8Response) => {
@@ -1150,6 +1161,33 @@ export class NodeDebugSession extends DebugSession {
 			done(false);
 			return;
 		});
+	}
+
+	/**
+	 * converts a path into a regular expression for use in the setbreakpoint request
+	 */
+	private _pathToRegexp(path: string): string {
+		let escPath = path.replace(/([/\\.?*()^${}|[\]])/g, '\\$1');
+
+		/*
+		// support case-insensitive breakpoint paths
+		const escPathUpper = escPath.toUpperCase();
+		const escPathLower = escPath.toLowerCase();
+
+		escPath = '';
+		for (var i = 0; i < escPathUpper.length; i++) {
+			const u = escPathUpper[i];
+			const l = escPathLower[i];
+			if (u === l) {
+				escPath += u;
+			} else {
+				escPath += '[' + l + u + ']';
+			}
+		}
+		*/
+
+		const pathRegex = '^(.*[\\/\\\\])?' + escPath + '$';		// skips drive letters
+		return pathRegex;
 	}
 
 	//--- set exception request -----------------------------------------------------------------------------------------------
