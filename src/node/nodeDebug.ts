@@ -836,7 +836,7 @@ export class NodeDebugSession extends DebugSession {
 		if (source.sourceReference > 0) {
 			const srcSource = this._sourceHandles.get(source.sourceReference);
 			if (srcSource.scriptId) {
-				this._clearAllBreakpoints(response, null, srcSource.scriptId, lbs, sourcemap);
+				this._updateBreakpoints(response, null, srcSource.scriptId, lbs, sourcemap);
 				return;
 			}
 			source.path = srcSource.path;
@@ -876,7 +876,7 @@ export class NodeDebugSession extends DebugSession {
 					lb.ignore = true;
 				}
 			}
-			this._clearAllBreakpoints(response, path, -1, lbs, sourcemap);
+			this._updateBreakpoints(response, path, -1, lbs, sourcemap);
 			return;
 		}
 
@@ -884,7 +884,7 @@ export class NodeDebugSession extends DebugSession {
 			this.findModule(source.name, (id: number) => {
 				if (id >= 0) {
 					scriptId = id;
-					this._clearAllBreakpoints(response, null, scriptId, lbs, sourcemap);
+					this._updateBreakpoints(response, null, scriptId, lbs, sourcemap);
 					return;
 				} else {
 					this.sendErrorResponse(response, 2019, "internal module {_module} not found", { _module: source.name });
@@ -900,7 +900,7 @@ export class NodeDebugSession extends DebugSession {
 	/*
 	 * Phase 2 of setBreakpointsRequest: clear all breakpoints of a given file
 	 */
-	private _clearAllBreakpoints(response: DebugProtocol.SetBreakpointsResponse, path: string, scriptId: number, lbs: InternalBreakpoint[], sourcemap: boolean): void {
+	private _updateBreakpoints(response: DebugProtocol.SetBreakpointsResponse, path: string, scriptId: number, lbs: InternalBreakpoint[], sourcemap: boolean): void {
 
 		// clear all existing breakpoints for the given path or script ID
 		this._node.command('listbreakpoints', null, (nodeResponse: NodeV8Response) => {
