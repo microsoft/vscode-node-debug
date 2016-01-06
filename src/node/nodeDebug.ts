@@ -168,8 +168,6 @@ export class NodeDebugSession extends DebugSession {
 
 	private static TRACE = false;
 
-	private static USE_BREAKPOINT_REGEXP = true;
-
 	private static NODE = 'node';
 	private static DUMMY_THREAD_ID = 1;
 	private static DUMMY_THREAD_NAME = 'Node';
@@ -933,12 +931,6 @@ export class NodeDebugSession extends DebugSession {
 							toClear.push(breakpoint.number);
 						}
 						break;
-					case 'scriptName':
-						if (path === breakpoint.script_name) {
-							// /Windows/.test(require('os').type()) && script_name.toLowerCase() === path.toLowerCase()) {
-							toClear.push(breakpoint.number);
-						}
-						break;
 					case 'scriptRegExp':
 						if (path_regexp === breakpoint.script_regexp) {
 							toClear.push(breakpoint.number);
@@ -1013,7 +1005,7 @@ export class NodeDebugSession extends DebugSession {
 			return;
 		}
 
-		this._robustSetBreakPoint(scriptId, path, lbs[ix], (success: boolean, actualLine: number, actualColumn: number) => {
+		this._setBreakpoint(scriptId, path, lbs[ix], (success: boolean, actualLine: number, actualColumn: number) => {
 
 			if (success) {
 				// breakpoint successfully set and we've got an actual location
@@ -1062,45 +1054,15 @@ export class NodeDebugSession extends DebugSession {
 	}
 
 	/*
-	 * register a single breakpoint with node and retry if it fails due to drive letter casing (on Windows).
-	 * On success the actual line and column is returned.
+	 * register a single breakpoint with node.
 	 */
-	private _robustSetBreakPoint(scriptId: number, path: string, lb: InternalBreakpoint, done: (success: boolean, actualLine?: number, actualColumn?: number) => void): void {
+	private _setBreakpoint(scriptId: number, path: string, lb: InternalBreakpoint, done: (success: boolean, actualLine?: number, actualColumn?: number) => void): void {
 
 		if (lb.ignore) {
 			// ignore this breakpoint because it couldn't be source mapped successfully
 			done(false);
 			return;
 		}
-
-		this._setBreakpoint(scriptId, path, lb, (success: boolean, actualLine: number, actualColumn: number) => {
-
-			if (success) {
-				done(true, actualLine, actualColumn);
-				return;
-			}
-
-			// failure -> guess: mismatch of drive letter caseing
-			const root = PathUtils.getPathRoot(path);
-			if (root && root.length === 3) { // root contains a drive letter
-				path = path.substring(0, 1).toUpperCase() + path.substring(1);
-				this._setBreakpoint(scriptId, path, lb, (success: boolean, actualLine, actualColumn) => {
-					if (success) {
-						done(true, actualLine, actualColumn);
-					} else {
-						done(false);
-					}
-				});
-			} else {
-				done(false);
-			}
-		});
-	}
-
-	/*
-	 * register a single breakpoint with node.
-	 */
-	private _setBreakpoint(scriptId: number, path: string, lb: InternalBreakpoint, done: (success: boolean, actualLine?: number, actualColumn?: number) => void): void {
 
 		let line = lb.line;
 		let column = lb.column;
@@ -1122,13 +1084,8 @@ export class NodeDebugSession extends DebugSession {
 			a.target = scriptId;
 			info = '' + scriptId;
 		} else {
-			if (NodeDebugSession.USE_BREAKPOINT_REGEXP) {
-				a.type = 'scriptRegExp';
-				a.target = this._pathToRegexp(path);
-			} else {
-				a.type = 'script';
-				a.target = path;
-			}
+			a.type = 'scriptRegExp';
+			a.target = this._pathToRegexp(path);
 		}
 
 		this._node.command('setbreakpoint', a, (resp: NodeV8Response) => {
@@ -1167,7 +1124,16 @@ export class NodeDebugSession extends DebugSession {
 	 * converts a path into a regular expression for use in the setbreakpoint request
 	 */
 	private _pathToRegexp(path: string): string {
+        
+		const root = PathUtils.getPathRoot(path);
+
 		let escPath = path.replace(/([/\\.?*()^${}|[\]])/g, '\\$1');
+        
+		if (root && root.length === 3) { // root contains a drive letter
+            const u = escPath.substring(0, 1).toUpperCase();
+            const l = u.toLowerCase();
+			escPath = '[' + l + u + ']' + escPath.substring(1);
+        }
 
 		/*
 		// support case-insensitive breakpoint paths
