@@ -734,19 +734,6 @@ export class NodeDebugSession extends DebugSession {
 		}
 	}
 
-	private _finishInitialize(): void {
-			if (this._needContinue) {
-				this._needContinue = false;
-				this.log('_finishInitialize: do a "Continue"');
-				this._node.command('continue', null, (nodeResponse) => { });
-			}
-			if (this._needBreakpointEvent) {
-				this._needBreakpointEvent = false;
-				this.log('_finishInitialize: fire breakpoint event');
-				this.sendEvent(new StoppedEvent(NodeDebugSession.BREAKPOINT_REASON, NodeDebugSession.DUMMY_THREAD_ID));
-			}
-	}
-
 	//---- disconnect request -------------------------------------------------------------------------------------------------
 
 	protected disconnectRequest(response: DebugProtocol.DisconnectResponse, args: DebugProtocol.DisconnectArguments): void {
@@ -1184,14 +1171,12 @@ export class NodeDebugSession extends DebugSession {
 							this._node.command('setexceptionbreak', { type: f, enabled: true }, (nodeResponse3: NodeV8Response) => {
 								if (nodeResponse3.success) {
 									this.sendResponse(response);	// send response for setexceptionbreak
-									this._finishInitialize();
 								} else {
 									this.sendNodeResponse(response, nodeResponse3);
 								}
 							});
 						} else {
 							this.sendResponse(response);	// send response for setexceptionbreak
-							this._finishInitialize();
 						}
 					} else {
 						this.sendNodeResponse(response, nodeResponse2);
@@ -1201,6 +1186,27 @@ export class NodeDebugSession extends DebugSession {
 				this.sendNodeResponse(response, nodeResponse1);
 			}
 		});
+	}
+
+	//--- set exception request -----------------------------------------------------------------------------------------------
+
+	protected configurationDoneRequest(response: DebugProtocol.ConfigurationDoneResponse, args: DebugProtocol.ConfigurationDoneArguments): void {
+
+		// all breakpoints are configured now -> start debugging
+
+		if (this._needContinue) {	// we do not break on entry
+			this._needContinue = false;
+			this.log('configurationDoneRequest: do a "Continue"');
+			this._node.command('continue', null, (nodeResponse) => { });
+		}
+
+		if (this._needBreakpointEvent) {	// we have to break on entry
+			this._needBreakpointEvent = false;
+			this.log('configurationDoneRequest: fire breakpoint event');
+			this.sendEvent(new StoppedEvent(NodeDebugSession.BREAKPOINT_REASON, NodeDebugSession.DUMMY_THREAD_ID));
+		}
+
+		this.sendResponse(response);
 	}
 
 	//--- threads request -----------------------------------------------------------------------------------------------------
