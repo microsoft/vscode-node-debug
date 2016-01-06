@@ -809,7 +809,7 @@ export class NodeDebugSession extends DebugSession {
 		const source = args.source;
 		let lbs;
 
-		if (args.breakpoints) {
+		if (args.breakpoints) {	// prefer the array of breakpoints
 			const breakpoints = args.breakpoints;
 
 			lbs = new Array<InternalBreakpoint>(breakpoints.length);
@@ -1124,11 +1124,14 @@ export class NodeDebugSession extends DebugSession {
 	 * converts a path into a regular expression for use in the setbreakpoint request
 	 */
 	private _pathToRegexp(path: string): string {
-        
+
+		if (!path)
+			return path;
+
 		const root = PathUtils.getPathRoot(path);
 
 		let escPath = path.replace(/([/\\.?*()^${}|[\]])/g, '\\$1');
-        
+
 		if (root && root.length === 3) { // root contains a drive letter
             const u = escPath.substring(0, 1).toUpperCase();
             const l = u.toLowerCase();
