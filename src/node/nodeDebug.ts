@@ -794,44 +794,37 @@ export class NodeDebugSession extends DebugSession {
 
 		let sourcemap = false;
 		const source = args.source;
-		let lbs;
+		let scriptId = -1;
+		let path: string = null;
 
-		if (args.breakpoints) {	// prefer the array of breakpoints
-			const breakpoints = args.breakpoints;
-
-			lbs = new Array<InternalBreakpoint>(breakpoints.length);
-			for (let i = 0; i < breakpoints.length; i++) {
-				lbs[i] = {
-					line: this.convertClientLineToDebugger(breakpoints[i].line),
-					column: this.convertClientColumnToDebugger(breakpoints[i].column),
-					expression: breakpoints[i].condition,
-
-					actualLine: breakpoints[i].line,
-					actualColumn: breakpoints[i].column,
+		let lbs = new Array<InternalBreakpoint>();
+		if (args.breakpoints) {
+			// prefer the new API: array of breakpoints
+			for (let b of args.breakpoints) {
+				lbs.push({
+					line: this.convertClientLineToDebugger(b.line),
+					column: typeof b.column === 'number' ? this.convertClientColumnToDebugger(b.column) : 0,
+					expression: b.condition,
+					actualLine: b.line,
+					actualColumn: typeof b.column === 'number' ? b.column : this.convertDebuggerColumnToClient(1),
 					verified: false,
 					ignore: false
-				};
+				});
 			}
 		} else {
-			const clientLines = args.lines;
-
-			// convert line numbers from client
-			lbs = new Array<InternalBreakpoint>(clientLines.length);
-			for (let i = 0; i < clientLines.length; i++) {
-				lbs[i] = {
-					line: this.convertClientLineToDebugger(clientLines[i]),
+			// deprecated API: convert line number array
+			for (let l of args.lines) {
+				lbs.push({
+					line: this.convertClientLineToDebugger(l),
 					column: 0,	// hardcoded for now
-
-					actualLine: clientLines[i],
+					expression: undefined,
+					actualLine: l,
 					actualColumn: this.convertDebuggerColumnToClient(1),	// hardcoded for now
 					verified: false,
 					ignore: false
-				};
+				});
 			}
 		}
-
-		let scriptId = -1;
-		let path: string = null;
 
 		if (source.sourceReference > 0) {
 			const srcSource = this._sourceHandles.get(source.sourceReference);
