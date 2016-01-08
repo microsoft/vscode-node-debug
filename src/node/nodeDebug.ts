@@ -1108,11 +1108,10 @@ export class NodeDebugSession extends DebugSession {
 		if (!path)
 			return path;
 
-		const root = PathUtils.getPathRoot(path);
-
 		let escPath = path.replace(/([/\\.?*()^${}|[\]])/g, '\\$1');
 
-		if (root && root.length === 3) { // root contains a drive letter
+ 		// check for drive letter
+		if ((path.length >= 3 && path[1] === ':' && path[2] === '\\' && ((path[0] >= 'a' && path[0] <= 'z') || (path[0] >= 'A' && path[0] <= 'Z')))) {
             const u = escPath.substring(0, 1).toUpperCase();
             const l = u.toLowerCase();
 			escPath = '[' + l + u + ']' + escPath.substring(1);

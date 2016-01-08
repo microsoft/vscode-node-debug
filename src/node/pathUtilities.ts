@@ -7,18 +7,6 @@ import * as Path from 'path';
 import * as URL from 'url';
 
 
-export function getPathRoot(p: string) {
-	if (p) {
-		if (p.length >= 3 && p[1] === ':' && p[2] === '\\' && ((p[0] >= 'a' && p[0] <= 'z') || (p[0] >= 'A' && p[0] <= 'Z'))) {
-			return p.substr(0, 3);
-		}
-		if (p.length > 0 && p[0] === '/') {
-			return '/';
-		}
-	}
-	return null;
-}
-
 export function makePathAbsolute(absPath: string, relPath: string): string {
 	return Path.resolve(Path.dirname(absPath), relPath);
 }
