@@ -847,18 +847,18 @@ export class NodeDebugSession extends DebugSession {
 			if (p) {
 				sourcemap = true;
 				// source map line numbers
-				for (let i = 0; i < lbs.length; i++) {
-					const mr = this._sourceMaps.MapFromSource(path, lbs[i].line, lbs[i].column);
+				for (let lb of lbs) {
+					const mr = this._sourceMaps.MapFromSource(path, lb.line, lb.column);
 					if (mr) {
 						if (mr.path !== p) {
 							// this source line maps to a different destination file -> this is not supported
 							// console.error(`setBreakPointsRequest: sourceMap limitation ${pp}`);
 						}
-						lbs[i].line = mr.line;
-						lbs[i].column = mr.column;
+						lb.line = mr.line;
+						lb.column = mr.column;
 					} else {
 						// we couldn't map this breakpoint -> ignore it
-						lbs[i].ignore = true;
+						lb.ignore = true;
 					}
 				}
 				path = p;
