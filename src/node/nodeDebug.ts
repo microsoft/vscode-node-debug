@@ -1301,15 +1301,15 @@ export class NodeDebugSession extends DebugSession {
 								const mr = this._sourceMaps.MapToSource(path, line, column);
 								if (mr) {
 									path = mr.path;
+									if (path) {
+										name = Path.basename(path);
+									}
 									line = mr.line;
 									column = mr.column;
 
 									// if source map has inlined source,
 									const content = (<any>mr).content;
 									if (content) {
-										if (path) {
-											name = Path.basename(path);
-										}
 										const sourceHandle = this._sourceHandles.create(new SourceSource(0, content, path));
 										src = new Source(name, null, sourceHandle, "inlined content from source map");
 									}
