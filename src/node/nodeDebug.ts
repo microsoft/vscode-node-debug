@@ -1291,25 +1291,29 @@ export class NodeDebugSession extends DebugSession {
 							if (this._sourceMaps) {
 								const mr = this._sourceMaps.MapToSource(path, line, column);
 								if (mr) {
-									path = mr.path;
 
 									// verify that a file exists at path
-
-
-									if (path) {
+									if (FS.existsSync(mr.path)) {
+										// use this mapping
+										path = mr.path;
 										name = Path.basename(path);
-									}
-									line = mr.line;
-									column = mr.column;
+										line = mr.line;
+										column = mr.column;
+									} else {
+										// file doesn't exist at path
 
-									// if source map has inlined source,
-									const content = (<any>mr).content;
-									if (content) {
-										const sourceHandle = this._sourceHandles.create(new SourceSource(0, content));
-										const adapterData = {
-											inlinePath: path
-										};
-										src = new Source(name, null, sourceHandle, "inlined content from source map", adapterData);
+										// if source map has inlined source,
+										const content = (<any>mr).content;
+										if (content) {
+											name = Path.basename(mr.path);
+											const sourceHandle = this._sourceHandles.create(new SourceSource(0, content));
+											const adapterData = {
+												inlinePath: mr.path
+											};
+											src = new Source(name, null, sourceHandle, "inlined content from source map", adapterData);
+											line = mr.line;
+											column = mr.column;
+										}
 									}
 								}
 							}
