@@ -8,6 +8,8 @@ import * as FS from 'fs';
 import {SourceMapConsumer} from 'source-map';
 import * as PathUtils from './pathUtilities';
 
+var util = require('../../node_modules/source-map/lib/util.js');
+
 
 export interface MappingResult {
 	path: string;		// absolute path
@@ -172,7 +174,7 @@ export class SourceMaps implements ISourceMaps {
 							const buffer = new Buffer(data, 'base64');
 							const json = buffer.toString();
 							if (json) {
-								map = new SourceMap(pathToGenerated, json);
+								map = new SourceMap(pathToGenerated, pathToGenerated, json);
 								this._generatedToSourceMaps[pathToGenerated] = map;
 								return map;
 							}
@@ -209,8 +211,9 @@ export class SourceMaps implements ISourceMaps {
 
 	private _createSourceMap(map_path: string, path: string): SourceMap {
 		try {
-			const contents = FS.readFileSync(Path.join(map_path)).toString();
-			return new SourceMap(path, contents);
+			const mp = Path.join(map_path);
+			const contents = FS.readFileSync(mp).toString();
+			return new SourceMap(mp, path, contents);
 		}
 		catch (e) {
 			console.error(`CreateSourceMap: {e}`);
@@ -245,29 +248,30 @@ enum Bias {
 
 class SourceMap {
 
+	private _mapPath: string;			// the path where this sourcemap lives
 	private _generatedFile: string;		// the generated file for this sourcemap
 	private _sources: string[];			// the sources of generated file (relative to sourceRoot)
 	private _sourceRoot: string;		// the common prefix for the source (can be a URL)
 	private _smc: SourceMapConsumer;	// the source map
 
 
-	public constructor(generatedPath: string, json: string) {
+	public constructor(mapPath: string, generatedPath: string, json: string) {
 
+		this._mapPath = mapPath;
 		this._generatedFile = generatedPath;
 
 		const sm = JSON.parse(json);
-		this._sources = sm.sources;
-		let sr = <string> sm.sourceRoot;
-		if (sr) {
-			sr = PathUtils.canonicalizeUrl(sr);
-			this._sourceRoot = PathUtils.makePathAbsolute(generatedPath, sr);
-		} else {
-			this._sourceRoot = Path.dirname(generatedPath);
-		}
 
-		if (this._sourceRoot[this._sourceRoot.length-1] !== Path.sep) {
-			this._sourceRoot += Path.sep;
-		}
+		this._sourceRoot = sm.sourceRoot || '';
+
+		// normalize sources entries
+	    this._sources = sm.sources
+      		.map(util.normalize)
+       		.map((source) => {
+        		return this._sourceRoot && util.isAbsolute(this._sourceRoot) && util.isAbsolute(source)
+          			? util.relative(this._sourceRoot, source)
+          			: source;
+     		 });
 
 		try {
 			this._smc = new SourceMapConsumer(sm);
@@ -287,13 +291,43 @@ class SourceMap {
 	 * returns true if this source map originates from the given source.
 	 */
 	public doesOriginateFrom(absPath: string): boolean {
+		return this.findSource(absPath) != null;
+	}
+
+	private findSource(absPath: string): string {
 		for (let name of this._sources) {
-			const p = Path.join(this._sourceRoot, name);
-			if (p === absPath) {
-				return true;
+			if (this.pathMatches(absPath, name) !== null) {
+				return name;
 			}
 		}
-		return false;
+		return null;
+	}
+
+	/**
+	 * returns the path that matches
+	 */
+	private pathMatches(absPath: string, name: string) : string {
+		let url = this.absolutePath(name);
+		if (absPath == url) {
+			return absPath;
+		}
+
+		/*
+		// try to match with windows path separators
+		if (process.platform === 'win32') {
+			absPath = absPath.replace(/\\/g, '/');
+		}
+		*/
+
+		return null;
+	}
+
+	private absolutePath(name: string): string {
+		let path = util.join(this._sourceRoot, name);
+		if (!util.isAbsolute(path)) {
+			path = util.join(Path.dirname(this._mapPath), path);
+		}
+		return PathUtils.canonicalizeUrl(path);
 	}
 
 	/*
@@ -321,8 +355,8 @@ class SourceMap {
 				(<any>mp).content = src;
 			}
 
-			mp.source = PathUtils.canonicalizeUrl(mp.source);
-			mp.source = PathUtils.makePathAbsolute(this._generatedFile, mp.source);
+			// map result back to absolute path
+			mp.source = this.absolutePath(mp.source);
 		}
 
 		return mp;
@@ -332,24 +366,17 @@ class SourceMap {
 	 * Finds the nearest location in the generated file for the given source location.
 	 * Returns null if sourcemap is invalid.
 	 */
-	public generatedPositionFor(src: string, line: number, column: number, bias = Bias.LEAST_UPPER_BOUND): SourceMap.Position {
+	public generatedPositionFor(absPath: string, line: number, column: number, bias = Bias.LEAST_UPPER_BOUND): SourceMap.Position {
 
 		if (!this._smc) {
 			return null;
 		}
 
-		// make input path relative to sourceRoot
-		if (this._sourceRoot) {
-			src = Path.relative(this._sourceRoot, src);
-		}
-
-		// source-maps always use forward slashes
-		if (process.platform === 'win32') {
-			src = src.replace(/\\/g, '/');
-		}
+		// make sure that we use an entry from the "sources" array that matches the passed absolute path
+		const source = this.findSource(absPath);
 
 		const needle = {
-			source: src,
+			source: source,
 			line: line,
 			column: column,
 			bias: bias
