@@ -226,9 +226,9 @@ export class NodeDebugSession extends DebugSession {
 
 		this._node.on('break', (event: NodeV8Event) => {
 			this._stopped('break');
-			this._lastStoppedEvent = this.createStoppedEvent(event.body);
+			this._lastStoppedEvent = this._createStoppedEvent(event.body);
 			if (this._lastStoppedEvent.body.reason === NodeDebugSession.ENTRY_REASON) {
-				this.log('NodeDebugSession: supressed stop-on-entry event');
+				this._log('NodeDebugSession: supressed stop-on-entry event');
 			} else {
 				this.sendEvent(this._lastStoppedEvent);
 			}
@@ -236,7 +236,7 @@ export class NodeDebugSession extends DebugSession {
 
 		this._node.on('exception', (event: NodeV8Event) => {
 			this._stopped('exception');
-			this._lastStoppedEvent = this.createStoppedEvent(event.body);
+			this._lastStoppedEvent = this._createStoppedEvent(event.body);
 			this.sendEvent(this._lastStoppedEvent);
 		});
 
@@ -257,7 +257,7 @@ export class NodeDebugSession extends DebugSession {
 	 * clear everything that is no longer valid after a new stopped event.
 	 */
 	private _stopped(reason: string): void {
-		this.log(`_stopped: got ${reason} event from node`);
+		this._log(`_stopped: got ${reason} event from node`);
 		this._exception = undefined;
 		this._variableHandles.reset();
 		this._frameHandles.reset();
@@ -268,7 +268,7 @@ export class NodeDebugSession extends DebugSession {
 	 * The debug session has terminated.
 	 */
 	private _terminated(reason: string): void {
-		this.log(`_terminated: ${reason}`);
+		this._log(`_terminated: ${reason}`);
 
 		if (this._terminalProcess) {
 			// if the debug adapter owns a terminal,
@@ -286,7 +286,7 @@ export class NodeDebugSession extends DebugSession {
 
 	protected initializeRequest(response: DebugProtocol.InitializeResponse, args: DebugProtocol.InitializeRequestArguments): void {
 
-		this.log(`initializeRequest: adapterID: ${args.adapterID}`);
+		this._log(`initializeRequest: adapterID: ${args.adapterID}`);
 
 		this._adapterID = args.adapterID;
 		this.sendResponse(response);
@@ -524,14 +524,14 @@ export class NodeDebugSession extends DebugSession {
 			timeout = NodeDebugSession.ATTACH_TIMEOUT;
 		}
 
-		this.log(`_attach: address: ${address} port: ${port}`);
+		this._log(`_attach: address: ${address} port: ${port}`);
 
 		let connected = false;
 		const socket = new Net.Socket();
 		socket.connect(port, address);
 
 		socket.on('connect', (err: any) => {
-			this.log('_attach: connected');
+			this._log('_attach: connected');
 			connected = true;
 			this._node.startDispatch(socket, socket);
 			this._initialize(response);
@@ -548,7 +548,7 @@ export class NodeDebugSession extends DebugSession {
 					const now = new Date().getTime();
 					if (now < endTime) {
 						setTimeout(() => {
-							this.log('_attach: retry socket.connect');
+							this._log('_attach: retry socket.connect');
 							socket.connect(port);
 						}, 200);		// retry after 200 ms
 					} else {
@@ -572,10 +572,10 @@ export class NodeDebugSession extends DebugSession {
 			let ok = resp.success;
 			if (resp.success) {
 				this._nodeProcessId = parseInt(resp.body.value);
-				this.log(`_initialize: got process id ${this._nodeProcessId} from node`);
+				this._log(`_initialize: got process id ${this._nodeProcessId} from node`);
 			} else {
 				if (resp.message.indexOf('process is not defined') >= 0) {
-					this.log('_initialize: process not defined error; got no pid');
+					this._log('_initialize: process not defined error; got no pid');
 					ok = true; // continue and try to get process.pid later
 				}
 			}
@@ -597,7 +597,7 @@ export class NodeDebugSession extends DebugSession {
 					return;
 				}
 			} else {
-				this.log('_initialize: retrieving process id from node failed');
+				this._log('_initialize: retrieving process id from node failed');
 
 				if (retryCount < 10) {
 					setTimeout(() => {
@@ -606,7 +606,7 @@ export class NodeDebugSession extends DebugSession {
 					}, 50);
 					return;
 				} else {
-					this.sendNodeResponse(response, resp);
+					this._sendNodeResponse(response, resp);
 				}
 			}
 		});
@@ -638,11 +638,11 @@ export class NodeDebugSession extends DebugSession {
 
 				this._node.command('evaluate', { expression: contents }, (resp: NodeV8Response) => {
 					if (resp.success) {
-						this.log('_extendDebugger: node code inject: OK');
+						this._log('_extendDebugger: node code inject: OK');
 						this._nodeExtensionsAvailable = true;
 						callback(false);
 					} else {
-						this.log('_extendDebugger: node code inject: failed, try again...');
+						this._log('_extendDebugger: node code inject: failed, try again...');
 						callback(true);
 					}
 				});
@@ -663,7 +663,7 @@ export class NodeDebugSession extends DebugSession {
 	private _startInitialize(stopped: boolean, n: number = 0): void {
 
 		if (n == 0) {
-			this.log(`_startInitialize: stopped: ${stopped}`);
+			this._log(`_startInitialize: stopped: ${stopped}`);
 		}
 
 		// wait at most 500ms for receiving the break on entry event
@@ -678,13 +678,13 @@ export class NodeDebugSession extends DebugSession {
 		}
 
 		if (this._gotEntryEvent) {
-			this.log(`_startInitialize: got break on entry event after ${n} retries`);
+			this._log(`_startInitialize: got break on entry event after ${n} retries`);
 			if (this._nodeProcessId <= 0) {
 				// if we haven't gotten a process pid so far, we try it again
 				this._node.command('evaluate', { expression: 'process.pid', global: true }, (resp: NodeV8Response) => {
 					if (resp.success) {
 						this._nodeProcessId = parseInt(resp.body.value);
-						this.log(`_initialize: got process id ${this._nodeProcessId} from node (2nd try)`);
+						this._log(`_initialize: got process id ${this._nodeProcessId} from node (2nd try)`);
 					}
 					this._middleInitialize(stopped);
 				});
@@ -692,15 +692,15 @@ export class NodeDebugSession extends DebugSession {
 				this._middleInitialize(stopped);
 			}
 		} else {
-			this.log(`_startInitialize: no entry event after ${n} retries; giving up`);
+			this._log(`_startInitialize: no entry event after ${n} retries; giving up`);
 
 			this._gotEntryEvent = true;	// we pretend to got one so that no ENTRY_REASON event will show up later...
 
 			this._node.command('frame', null, (resp: NodeV8Response) => {
 				if (resp.success) {
-					this.cacheRefs(resp);
-					let s = this.getValueFromCache(resp.body.script);
-					this.rememberEntryLocation(s.name, resp.body.line, resp.body.column);
+					this._cacheRefs(resp);
+					let s = this._getValueFromCache(resp.body.script);
+					this._rememberEntryLocation(s.name, resp.body.line, resp.body.column);
 				}
 
 				this._middleInitialize(stopped);
@@ -710,24 +710,24 @@ export class NodeDebugSession extends DebugSession {
 
 	private _middleInitialize(stopped: boolean): void {
 		// request UI to send breakpoints
-		this.log('_middleInitialize: fire initialized event');
+		this._log('_middleInitialize: fire initialized event');
 		this.sendEvent(new InitializedEvent());
 
 		// in attach-mode we don't know whether the debuggee has been launched in 'stop on entry' mode
 		// so we use the stopped state of the VM
 		if (this._attachMode) {
-			this.log(`_middleInitialize: in attach mode we guess stopOnEntry flag to be "${stopped}"`);
+			this._log(`_middleInitialize: in attach mode we guess stopOnEntry flag to be "${stopped}"`);
 			this._stopOnEntry = stopped;
 		}
 
 		if (this._stopOnEntry) {
 			// user has requested 'stop on entry' so send out a stop-on-entry
-			this.log('_middleInitialize: fire stop-on-entry event');
+			this._log('_middleInitialize: fire stop-on-entry event');
 			this.sendEvent(new StoppedEvent(NodeDebugSession.ENTRY_REASON, NodeDebugSession.DUMMY_THREAD_ID));
 		}
 		else {
 			// since we are stopped but UI doesn't know about this, remember that we continue later in finishInitialize()
-			this.log('_middleInitialize: remember to do a "Continue" later');
+			this._log('_middleInitialize: remember to do a "Continue" later');
 			this._needContinue = true;
 		}
 	}
@@ -768,7 +768,7 @@ export class NodeDebugSession extends DebugSession {
 				// kill the whole process tree either starting with the terminal or with the node process
 				let pid = this._terminalProcess ? this._terminalProcess.pid : this._nodeProcessId;
 				if (pid > 0) {
-					this.log('shutdown: kill debugee and sub-processes');
+					this._log('shutdown: kill debugee and sub-processes');
 					Terminal.killTree(pid).then(() => {
 						this._terminalProcess = null;
 						this._nodeProcessId = -1;
@@ -878,7 +878,7 @@ export class NodeDebugSession extends DebugSession {
 		}
 
 		if (source.name) {
-			this.findModule(source.name, (id: number) => {
+			this._findModule(source.name, (id: number) => {
 				if (id >= 0) {
 					scriptId = id;
 					this._updateBreakpoints(response, null, scriptId, lbs, sourcemap);
@@ -928,7 +928,7 @@ export class NodeDebugSession extends DebugSession {
 				});
 
 			} else {
-				this.sendNodeResponse(response, nodeResponse);
+				this._sendNodeResponse(response, nodeResponse);
 			}
 
 		});
@@ -1022,7 +1022,7 @@ export class NodeDebugSession extends DebugSession {
 					// we do not have to "continue" but we have to generate a stopped event instead
 					this._needContinue = false;
 					this._needBreakpointEvent = true;
-					this.log('_setBreakpoints: remember to fire a breakpoint event later');
+					this._log('_setBreakpoints: remember to fire a breakpoint event later');
 				}
 			}
 
@@ -1074,7 +1074,7 @@ export class NodeDebugSession extends DebugSession {
 
 		this._node.command('setbreakpoint', a, (resp: NodeV8Response) => {
 
-			this.log(`_setBreakpoint: ${info}: ${resp.success}`);
+			this._log(`_setBreakpoint: ${info}: ${resp.success}`);
 
 			if (resp.success) {
 				let actualLine = lb.line;
@@ -1083,7 +1083,7 @@ export class NodeDebugSession extends DebugSession {
 				const al = resp.body.actual_locations;
 				if (al.length > 0) {
 					actualLine = al[0].line;
-					actualColumn = this.adjustColumn(actualLine, al[0].column);
+					actualColumn = this._adjustColumn(actualLine, al[0].column);
 
 					if (actualLine !== lb.line) {
 						// console.error(`setbreakpoint: ${l} !== ${actualLine}`);
@@ -1140,7 +1140,7 @@ export class NodeDebugSession extends DebugSession {
 
 	protected setExceptionBreakPointsRequest(response: DebugProtocol.SetExceptionBreakpointsResponse, args: DebugProtocol.SetExceptionBreakpointsArguments): void {
 
-		this.log(`setExceptionBreakPointsRequest`);
+		this._log(`setExceptionBreakPointsRequest`);
 
 		let f: string;
 		const filters = args.filters;
@@ -1162,18 +1162,18 @@ export class NodeDebugSession extends DebugSession {
 								if (nodeResponse3.success) {
 									this.sendResponse(response);	// send response for setexceptionbreak
 								} else {
-									this.sendNodeResponse(response, nodeResponse3);
+									this._sendNodeResponse(response, nodeResponse3);
 								}
 							});
 						} else {
 							this.sendResponse(response);	// send response for setexceptionbreak
 						}
 					} else {
-						this.sendNodeResponse(response, nodeResponse2);
+						this._sendNodeResponse(response, nodeResponse2);
 					}
 				});
 			} else {
-				this.sendNodeResponse(response, nodeResponse1);
+				this._sendNodeResponse(response, nodeResponse1);
 			}
 		});
 	}
@@ -1186,13 +1186,13 @@ export class NodeDebugSession extends DebugSession {
 
 		if (this._needContinue) {	// we do not break on entry
 			this._needContinue = false;
-			this.log('configurationDoneRequest: do a "Continue"');
+			this._log('configurationDoneRequest: do a "Continue"');
 			this._node.command('continue', null, (nodeResponse) => { });
 		}
 
 		if (this._needBreakpointEvent) {	// we have to break on entry
 			this._needBreakpointEvent = false;
-			this.log('configurationDoneRequest: fire breakpoint event');
+			this._log('configurationDoneRequest: fire breakpoint event');
 			this.sendEvent(new StoppedEvent(NodeDebugSession.BREAKPOINT_REASON, NodeDebugSession.DUMMY_THREAD_ID));
 		}
 
@@ -1256,7 +1256,7 @@ export class NodeDebugSession extends DebugSession {
 
 			if (backtraceResponse.success) {
 
-				this.cacheRefs(backtraceResponse);
+				this._cacheRefs(backtraceResponse);
 
 				let totalFrames = backtraceResponse.body.totalFrames;
 				if (maxLevels > 0 && totalFrames > maxLevels) {
@@ -1272,13 +1272,13 @@ export class NodeDebugSession extends DebugSession {
 				const frame = backtraceResponse.body.frames[0];
 
 				// resolve some refs
-				this.getValues([ frame.script, frame.func, frame.receiver ], () => {
+				this._getValues([ frame.script, frame.func, frame.receiver ], () => {
 
 					let line = frame.line;
-					let column = this.adjustColumn(line, frame.column);
+					let column = this._adjustColumn(line, frame.column);
 
 					let src: Source = null;
-					const script_val = this.getValueFromCache(frame.script);
+					const script_val = this._getValueFromCache(frame.script);
 					if (script_val) {
 						let name = script_val.name;
 						if (name && Path.isAbsolute(name)) {
@@ -1292,6 +1292,10 @@ export class NodeDebugSession extends DebugSession {
 								const mr = this._sourceMaps.MapToSource(path, line, column);
 								if (mr) {
 									path = mr.path;
+
+									// verify that a file exists at path
+
+
 									if (path) {
 										name = Path.basename(path);
 									}
@@ -1325,7 +1329,7 @@ export class NodeDebugSession extends DebugSession {
 					}
 
 					let func_name: string;
-					const func_val = this.getValueFromCache(frame.func);
+					const func_val = this._getValueFromCache(frame.func);
 					if (func_val) {
 						func_name = func_val.inferredName;
 						if (!func_name || func_name.length === 0) {
@@ -1370,13 +1374,13 @@ export class NodeDebugSession extends DebugSession {
 			return;
 		}
 		const frameIx = frame.index;
-		const frameThis = this.getValueFromCache(frame.receiver);
+		const frameThis = this._getValueFromCache(frame.receiver);
 
 		this._node.command('scopes', { frame_index: frameIx, frameNumber: frameIx }, (scopesResponse: NodeV8Response) => {
 
 			if (scopesResponse.success) {
 
-				this.cacheRefs(scopesResponse);
+				this._cacheRefs(scopesResponse);
 
 				const scopes = new Array<Scope>();
 
@@ -1412,7 +1416,7 @@ export class NodeDebugSession extends DebugSession {
 		const extra = type === 1 ? this_val : null;
 		const expensive = type === 0;
 
-		this.getValue(scope.object, (scopeObject: any) => {
+		this._getValue(scope.object, (scopeObject: any) => {
 			if (scopeObject) {
 				scopesResult.push(new Scope(scopeName, this._variableHandles.create(new PropertyExpander(scopeObject, extra)), expensive));
 			}
@@ -1538,7 +1542,7 @@ export class NodeDebugSession extends DebugSession {
 
 			if (selectedProperties.length > 0) {
 				// third pass: now lookup all refs at once
-				this.resolveToCache(needLookup, () => {
+				this._resolveToCache(needLookup, () => {
 					// build variables
 					this._addVariables(variables, selectedProperties, 0, done);
 				});
@@ -1554,7 +1558,7 @@ export class NodeDebugSession extends DebugSession {
 	private _addVariables(variables: Array<Variable>, properties: Array<any>, ix: number, done: () => void) {
 
 		const property = properties[ix];
-		const val = this.getValueFromCache(property);
+		const val = this._getValueFromCache(property);
 
 		let name = property.name;
 		if (typeof name == 'number') {
@@ -1651,7 +1655,7 @@ export class NodeDebugSession extends DebugSession {
 									done(this._createArrayVariable(name, val, value, size));
 								} else {
 									// the first property of arrays is the length
-									this.getValue(l, (length_val: any) => {
+									this._getValue(l, (length_val: any) => {
 										let size = -1;
 										if (length_val) {
 											size = length_val.value;
@@ -1668,7 +1672,7 @@ export class NodeDebugSession extends DebugSession {
 						return;
 
 					case 'Object':
-						this.getValue(val.constructorFunction, (constructor_val) => {
+						this._getValue(val.constructorFunction, (constructor_val) => {
 							if (constructor_val) {
 								const constructor_name = <string>constructor_val.name;
 								if (constructor_name) {
@@ -1743,7 +1747,7 @@ export class NodeDebugSession extends DebugSession {
 				this.sendResponse(response);
 				this.sendEvent(this._lastStoppedEvent);
 			} else {
-				this.sendNodeResponse(response, nodeResponse);
+				this._sendNodeResponse(response, nodeResponse);
 			}
         });
 	}
@@ -1752,7 +1756,7 @@ export class NodeDebugSession extends DebugSession {
 
 	protected continueRequest(response: DebugProtocol.ContinueResponse, args: DebugProtocol.ContinueArguments): void {
     	this._node.command('continue', null, (nodeResponse) => {
-			this.sendNodeResponse(response, nodeResponse);
+			this._sendNodeResponse(response, nodeResponse);
         });
 	}
 
@@ -1760,19 +1764,19 @@ export class NodeDebugSession extends DebugSession {
 
 	protected stepInRequest(response: DebugProtocol.StepInResponse, args: DebugProtocol.StepInArguments) : void {
     	this._node.command('continue', { stepaction: 'in' }, (nodeResponse) => {
-			this.sendNodeResponse(response, nodeResponse);
+			this._sendNodeResponse(response, nodeResponse);
         });
 	}
 
 	protected stepOutRequest(response: DebugProtocol.StepOutResponse, args: DebugProtocol.StepOutArguments) : void {
     	this._node.command('continue', { stepaction: 'out' }, (nodeResponse) => {
-			this.sendNodeResponse(response, nodeResponse);
+			this._sendNodeResponse(response, nodeResponse);
         });
 	}
 
 	protected nextRequest(response: DebugProtocol.NextResponse, args: DebugProtocol.NextArguments): void {
     	this._node.command('continue', { stepaction: 'next' }, (nodeResponse) => {
-			this.sendNodeResponse(response, nodeResponse);
+			this._sendNodeResponse(response, nodeResponse);
         });
 	}
 
@@ -1864,7 +1868,7 @@ export class NodeDebugSession extends DebugSession {
 
 	//---- private helpers ----------------------------------------------------------------------------------------------------
 
-	private sendNodeResponse(response: DebugProtocol.Response, nodeResponse: NodeV8Response): void {
+	private _sendNodeResponse(response: DebugProtocol.Response, nodeResponse: NodeV8Response): void {
 		if (nodeResponse.success) {
 			this.sendResponse(response);
 		} else {
@@ -1896,33 +1900,33 @@ export class NodeDebugSession extends DebugSession {
 		}
 	}
 
-	private cacheRefs(response: NodeV8Response): void {
+	private _cacheRefs(response: NodeV8Response): void {
 		const refs = response.refs;
 		for (let r of refs) {
-			this.cache(r.handle, r);
+			this._cache(r.handle, r);
 		}
 	}
 
-	private cache(handle: number, o: any): void {
+	private _cache(handle: number, o: any): void {
 		this._refCache[handle] = o;
 	}
 
-	private getValues(containers: any[], done: () => void): void {
+	private _getValues(containers: any[], done: () => void): void {
 
 		const handles = [];
 		for (let container of containers) {
 			handles.push(container.ref);
 		}
 
-		this.resolveToCache(handles, () => {
+		this._resolveToCache(handles, () => {
 			done();
 		});
 	}
 
-	private getValue(container: any, done: (result: any) => void): void {
+	private _getValue(container: any, done: (result: any) => void): void {
 		if (container) {
 			const handle = container.ref;
-			this.resolveToCache([ handle ], () => {
+			this._resolveToCache([ handle ], () => {
 				const value = this._refCache[handle];
 				done(value);
 			});
@@ -1931,7 +1935,7 @@ export class NodeDebugSession extends DebugSession {
 		}
 	}
 
-	private getValueFromCache(container: any): any {
+	private _getValueFromCache(container: any): any {
 		const handle = container.ref;
 		const value = this._refCache[handle];
 		if (value)
@@ -1940,7 +1944,7 @@ export class NodeDebugSession extends DebugSession {
 		return null;
 	}
 
-	private resolveToCache(handles: number[], done: () => void): void {
+	private _resolveToCache(handles: number[], done: () => void): void {
 
 		const lookup = new Array<number>();
 
@@ -1959,12 +1963,12 @@ export class NodeDebugSession extends DebugSession {
 			this._node.command(this._nodeExtensionsAvailable ? 'vscode_lookup' : 'lookup', { handles: lookup }, (resp: NodeV8Response) => {
 
 				if (resp.success) {
-					this.cacheRefs(resp);
+					this._cacheRefs(resp);
 
 					for (let key in resp.body) {
 						const obj = resp.body[key];
 						const handle: number = obj.handle;
-						this.cache(handle, obj);
+						this._cache(handle, obj);
 					}
 
 				} else {
@@ -1980,7 +1984,7 @@ export class NodeDebugSession extends DebugSession {
 						const handle = handles[i];
 						const r = this._refCache[handle];
 						if (!r) {
-							this.cache(handle, val);
+							this._cache(handle, val);
 						}
 					}
 				}
@@ -1991,7 +1995,7 @@ export class NodeDebugSession extends DebugSession {
 		}
 	}
 
-	private createStoppedEvent(body: any): DebugProtocol.StoppedEvent {
+	private _createStoppedEvent(body: any): DebugProtocol.StoppedEvent {
 
 		// workaround: load sourcemap for this location to populate cache
 		if (this._sourceMaps) {
@@ -2018,10 +2022,7 @@ export class NodeDebugSession extends DebugSession {
 				const id = breakpoints[0];
 				if (!this._gotEntryEvent && id === 1) {	// 'stop on entry point' is implemented as a breakpoint with id 1
 					reason = NodeDebugSession.ENTRY_REASON;
-					const path = body.script.name;
-					const line = body.sourceLine;
-					const column = body.sourceColumn;
-					this.rememberEntryLocation(path, line, column);
+					this._rememberEntryLocation(body.script.name, body.sourceLine, body.sourceColumn);
 				} else {
 					reason = NodeDebugSession.BREAKPOINT_REASON;
 				}
@@ -2044,11 +2045,11 @@ export class NodeDebugSession extends DebugSession {
 		return new StoppedEvent(reason, NodeDebugSession.DUMMY_THREAD_ID, exception_text);
 	}
 
-	private rememberEntryLocation(path: string, line: number, column: number): void {
+	private _rememberEntryLocation(path: string, line: number, column: number): void {
 		if (path) {
 			this._entryPath = path;
 			this._entryLine = line;
-			this._entryColumn = this.adjustColumn(line, column);
+			this._entryColumn = this._adjustColumn(line, column);
 			this._gotEntryEvent = true;
 		}
 	}
@@ -2056,7 +2057,7 @@ export class NodeDebugSession extends DebugSession {
 	/**
 	 * workaround for column being off in the first line (because of a wrapped anonymous function)
 	 */
-	private adjustColumn(line: number, column: number): number {
+	private _adjustColumn(line: number, column: number): number {
 		if (line === 0) {
 			column -= NodeDebugSession.FIRST_LINE_OFFSET;
 			if (column < 0) {
@@ -2066,7 +2067,7 @@ export class NodeDebugSession extends DebugSession {
 		return column;
 	}
 
-	private findModule(name: string, done: (id: number) => void): void {
+	private _findModule(name: string, done: (id: number) => void): void {
 		this._node.command('scripts', { types: 1 + 2 + 4, filter: name }, (resp: NodeV8Response) => {
 			if (resp.success) {
 				for (var result of resp.body) {
@@ -2080,15 +2081,15 @@ export class NodeDebugSession extends DebugSession {
 		});
 	}
 
-	//---- private static ---------------------------------------------------------------
-
-	private log(message: string) {
+	private _log(message: string) {
 		if (NodeDebugSession.TRACE) {
 			const s = process.pid + ": " + message + '\r\n';
 			//console.error(s);
 			this.sendEvent(new OutputEvent(s, 'stderr'));
 		}
 	}
+
+	//---- private static ---------------------------------------------------------------
 
 	private static isJavaScript(path: string): boolean {
 
@@ -2107,6 +2108,7 @@ export class NodeDebugSession extends DebugSession {
 				return true;
 			}
 		} catch(e) {
+			// silently ignore problems
 		}
 
 		return false;
