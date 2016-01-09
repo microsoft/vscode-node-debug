@@ -121,12 +121,10 @@ export interface SourceMapsArguments {
 class SourceSource {
 	scriptId: number;	// if 0 then source contains the file contents of a source map, otherwise a scriptID.
 	source: string;
-	path: string;
 
-	constructor(sid: number, content?: string, path?: string) {
+	constructor(sid: number, content?: string) {
 		this.scriptId = sid;
 		this.source = content;
-		this.path = path;
 	}
 }
 
@@ -826,13 +824,19 @@ export class NodeDebugSession extends DebugSession {
 			}
 		}
 
+		if (source.adapterData) {
+			// a breakpoint in inlined source
+			if (source.adapterData.inlinePath) {
+				source.path = source.adapterData.inlinePath;
+			}
+		}
+
 		if (source.sourceReference > 0) {
 			const srcSource = this._sourceHandles.get(source.sourceReference);
-			if (srcSource.scriptId) {
+			if (srcSource && srcSource.scriptId) {
 				this._updateBreakpoints(response, null, srcSource.scriptId, lbs, sourcemap);
 				return;
 			}
-			source.path = srcSource.path;
 		}
 
 		if (source.path) {
@@ -1310,8 +1314,11 @@ export class NodeDebugSession extends DebugSession {
 									// if source map has inlined source,
 									const content = (<any>mr).content;
 									if (content) {
-										const sourceHandle = this._sourceHandles.create(new SourceSource(0, content, path));
-										src = new Source(name, null, sourceHandle, "inlined content from source map");
+										const sourceHandle = this._sourceHandles.create(new SourceSource(0, content));
+										const adapterData = {
+											inlinePath: path
+										};
+										src = new Source(name, null, sourceHandle, "inlined content from source map", adapterData);
 									}
 								}
 							}
