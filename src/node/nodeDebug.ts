@@ -1083,13 +1083,7 @@ export class NodeDebugSession extends DebugSession {
 				const al = resp.body.actual_locations;
 				if (al.length > 0) {
 					actualLine = al[0].line;
-					actualColumn = al[0].column;
-
-					if (actualLine === 0) {
-						actualColumn -= NodeDebugSession.FIRST_LINE_OFFSET;
-						if (actualColumn < 0)
-							actualColumn = 0;
-					}
+					actualColumn = this.adjustColumn(actualLine, al[0].column);
 
 					if (actualLine !== lb.line) {
 						// console.error(`setbreakpoint: ${l} !== ${actualLine}`);
@@ -1280,8 +1274,8 @@ export class NodeDebugSession extends DebugSession {
 				// resolve some refs
 				this.getValues([ frame.script, frame.func, frame.receiver ], () => {
 
-					let line: number = frame.line;
-					let column: number = frame.column;
+					let line = frame.line;
+					let column = this.adjustColumn(line, frame.column);
 
 					let src: Source = null;
 					const script_val = this.getValueFromCache(frame.script);
@@ -1292,13 +1286,6 @@ export class NodeDebugSession extends DebugSession {
 							// string path = PathUtilities.MapResolvedBack(name, _realPathMap);
 							let path = name;
 							name = Path.basename(path);
-
-							// workaround for column being off in the first line (because of a wrapped anonymous function)
-							if (line === 0) {
-								column -= NodeDebugSession.FIRST_LINE_OFFSET;
-								if (column < 0)
-									column = 0;
-							}
 
 							// source mapping
 							if (this._sourceMaps) {
@@ -2061,14 +2048,22 @@ export class NodeDebugSession extends DebugSession {
 		if (path) {
 			this._entryPath = path;
 			this._entryLine = line;
-			this._entryColumn = column;
-			if (line === 0) {
-				this._entryColumn -= NodeDebugSession.FIRST_LINE_OFFSET;
-				if (this._entryColumn < 0)
-					this._entryColumn = 0;
-			}
+			this._entryColumn = this.adjustColumn(line, column);
 			this._gotEntryEvent = true;
 		}
+	}
+
+	/**
+	 * workaround for column being off in the first line (because of a wrapped anonymous function)
+	 */
+	private adjustColumn(line: number, column: number): number {
+		if (line === 0) {
+			column -= NodeDebugSession.FIRST_LINE_OFFSET;
+			if (column < 0) {
+				column = 0;
+			}
+		}
+		return column;
 	}
 
 	private findModule(name: string, done: (id: number) => void): void {
