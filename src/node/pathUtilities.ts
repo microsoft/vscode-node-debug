@@ -46,19 +46,42 @@ export function canonicalizeUrl(url: string): string {
 	return p;
 }
 
+/**
+ * Given an absolute, normalized, and existing file path 'realPath' returns the exact path that the file has on disk.
+ * On a case insensitive file system, the returned path might differ from the original path by character casing.
+ * On a case sensitive file system, the returned path will always be identical to the original path.
+ * In case of errors, null is returned. But you cannot use this function to verify that a path exists.
+ * realPath does not handle '..' or '.' path segments and it does not take the locale into account.
+ */
 export function realPath(path: string): string {
-	if (path === '/') {
-		return path;
-	}
+
 	let dir = Path.dirname(path);
-	let name = Path.basename(path).toLocaleLowerCase();
-	let entries = FS.readdirSync(dir);
-	let entry = entries.find((e) => e.toLocaleLowerCase() === name);
-	if (entry) {
-		let prefix = realPath(dir);
-		if (prefix) {
-			return Path.join(prefix, entry);
-		}
-	}
+	if (path === dir) {    // end recursion
+		return path;
+	}    
+	let name = Path.basename(path).toLowerCase();
+    try {
+        let entries = FS.readdirSync(dir);
+        let found = entries.filter((e) => e.toLowerCase() === name);    // use a case insensitive search
+        if (found.length == 1) {
+            // on a case sensitive filesystem we cannot determine here, whether the file exists or not, hence we need the 'file exists' precondition  
+            let prefix = realPath(dir);   // recurse
+            if (prefix) {
+                return Path.join(prefix, found[0]);
+            }
+        } else if (found.length > 1) {
+            // must be a case sensitive filesystem
+            let entry = found.find((e) => e === name);    // use a case sensitive search
+            if (entry) {
+                let prefix = realPath(dir);   // recurse
+                if (prefix) {
+                    return Path.join(prefix, found[0]);
+                }
+            }
+        }
+    }
+    catch (error) {
+        // silently ignore error
+    }
 	return null;
 }
