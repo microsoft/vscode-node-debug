@@ -56,32 +56,32 @@ export function canonicalizeUrl(url: string): string {
 export function realPath(path: string): string {
 
 	let dir = Path.dirname(path);
-	if (path === dir) {    // end recursion
+	if (path === dir) {	// end recursion
 		return path;
-	}    
+	}
 	let name = Path.basename(path).toLowerCase();
-    try {
-        let entries = FS.readdirSync(dir);
-        let found = entries.filter((e) => e.toLowerCase() === name);    // use a case insensitive search
-        if (found.length == 1) {
-            // on a case sensitive filesystem we cannot determine here, whether the file exists or not, hence we need the 'file exists' precondition  
-            let prefix = realPath(dir);   // recurse
-            if (prefix) {
-                return Path.join(prefix, found[0]);
-            }
-        } else if (found.length > 1) {
-            // must be a case sensitive filesystem
-            let entry = found.find((e) => e === name);    // use a case sensitive search
-            if (entry) {
-                let prefix = realPath(dir);   // recurse
-                if (prefix) {
-                    return Path.join(prefix, found[0]);
-                }
-            }
-        }
-    }
-    catch (error) {
-        // silently ignore error
-    }
+	try {
+		let entries = FS.readdirSync(dir);
+		let found = entries.filter((e) => e.toLowerCase() === name);	// use a case insensitive search
+		if (found.length == 1) {
+			// on a case sensitive filesystem we cannot determine here, whether the file exists or not, hence we need the 'file exists' precondition
+			let prefix = realPath(dir);   // recurse
+			if (prefix) {
+				return Path.join(prefix, found[0]);
+			}
+		} else if (found.length > 1) {
+			// must be a case sensitive filesystem
+			let entry = found.find((e) => e === name);	// use a case sensitive search
+			if (entry) {
+				let prefix = realPath(dir);   // recurse
+				if (prefix) {
+					return Path.join(prefix, found[0]);
+				}
+			}
+		}
+	}
+	catch (error) {
+		// silently ignore error
+	}
 	return null;
 }
