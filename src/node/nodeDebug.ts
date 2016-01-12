@@ -352,6 +352,10 @@ export class NodeDebugSession extends DebugSession {
 				this.sendErrorResponse(response, 2007, "program '{path}' does not exist", { path: programPath });
 				return;
 			}
+			if (programPath != PathUtils.realPath(programPath)) {
+				this.sendErrorResponse(response, 2021, "program path uses differently cased character than file on disk; this might result in breakpoints not being hit");
+				return;
+			}
 		} else {
 			this.sendErrorResponse(response, 2005, "property 'program' is missing or empty");
 			return;

@@ -5,6 +5,7 @@
 
 import * as Path from 'path';
 import * as URL from 'url';
+import * as FS from 'fs';
 
 
 export function makePathAbsolute(absPath: string, relPath: string): string {
@@ -43,4 +44,21 @@ export function canonicalizeUrl(url: string): string {
 		return p.substr(1);
 	}
 	return p;
+}
+
+export function realPath(path: string): string {
+	if (path === '/') {
+		return path;
+	}
+	let dir = Path.dirname(path);
+	let name = Path.basename(path).toLocaleLowerCase();
+	let entries = FS.readdirSync(dir);
+	let entry = entries.find((e) => e.toLocaleLowerCase() === name);
+	if (entry) {
+		let prefix = realPath(dir);
+		if (prefix) {
+			return Path.join(prefix, entry);
+		}
+	}
+	return null;
 }
