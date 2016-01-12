@@ -5,6 +5,7 @@
 
 import * as Path from 'path';
 import * as FS from 'fs';
+import * as URL from 'url';
 import {SourceMapConsumer} from 'source-map';
 import * as PathUtils from './pathUtilities';
 
@@ -307,18 +308,14 @@ class SourceMap {
 	 * returns the path that matches
 	 */
 	private pathMatches(absPath: string, name: string) : string {
-		let url = this.absolutePath(name);
-		if (absPath == url) {
-			return absPath;
-		}
-
-		/*
 		// try to match with windows path separators
 		if (process.platform === 'win32') {
 			absPath = absPath.replace(/\\/g, '/');
 		}
-		*/
-
+		let url = this.absolutePath(name);
+		if (absPath === url) {
+			return absPath;
+		}
 		return null;
 	}
 
@@ -327,7 +324,8 @@ class SourceMap {
 		if (!util.isAbsolute(path)) {
 			path = util.join(Path.dirname(this._mapPath), path);
 		}
-		return PathUtils.canonicalizeUrl(path);
+		//return PathUtils.canonicalizeUrl(path);
+        return URL.parse(path).href;
 	}
 
 	/*
