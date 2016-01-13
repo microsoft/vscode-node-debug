@@ -36,16 +36,6 @@ export function makeRelative(target: string, path: string) {
 	return result;
 }
 
-export function canonicalizeUrl(url: string): string {
-	let u = URL.parse(url);
-	let p = u.pathname;
-
-	if (p.length >= 4 && p[0] === '/' && p[2] === ':' && p[3] === '/' && ((p[1] >= 'a' && p[1] <= 'z') || (p[1] >= 'A' && p[1] <= 'Z'))) {
-		return p.substr(1);
-	}
-	return p;
-}
-
 /**
  * Given an absolute, normalized, and existing file path 'realPath' returns the exact path that the file has on disk.
  * On a case insensitive file system, the returned path might differ from the original path by character casing.

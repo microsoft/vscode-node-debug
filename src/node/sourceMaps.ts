@@ -258,14 +258,25 @@ class SourceMap {
 
 	public constructor(mapPath: string, generatedPath: string, json: string) {
 
-		this._mapPath = mapPath;
+		this._mapPath = this.forwardSlashes(mapPath);
 		this._generatedFile = generatedPath;
 
 		const sm = JSON.parse(json);
 
-		this._sourceRoot = sm.sourceRoot || '';
+		// try to fix all embedded paths because:
+		// - source map sources are URLs, so even on Windows they should be using forward slashes.
+		// - the source-map library expects forward slashes in all cases, their relative path logic
+		//   (specifically the "normalize" function) gives incorrect results when passing in backslashes.
 
-		// normalize sources entries
+		sm.sourceRoot = this.toUrl(sm.sourceRoot, '');
+
+		for (let i = 0; i < sm.sources.length; i++) {
+			sm.sources[i] = this.toUrl(sm.sources[i]);
+		}
+
+		this._sourceRoot = sm.sourceRoot;
+
+		// use source-map utilities to normalize sources entries
 	    this._sources = sm.sources
       		.map(util.normalize)
        		.map((source) => {
@@ -281,6 +292,21 @@ class SourceMap {
 		}
 	}
 
+	private toUrl(path: string, dflt?: string) : string {
+		if (path) {
+			path = path.replace(/\\/g, '/');
+			if (/^[a-zA-Z]:\//.test(path)) {
+				path = 'file:///' + path;
+			}
+			return path;
+		}
+		return dflt;
+	}
+
+	private forwardSlashes(path: string, dflt?: string) : string {
+		return path ? path.replace(/\\/g, '/') : dflt;
+	}
+
 	/*
 	 * the generated file of this source map.
 	 */
@@ -292,12 +318,12 @@ class SourceMap {
 	 * returns true if this source map originates from the given source.
 	 */
 	public doesOriginateFrom(absPath: string): boolean {
-		return this.findSource(absPath) != null;
+		return this.findSource(absPath) !== null;
 	}
 
 	private findSource(absPath: string): string {
 		for (let name of this._sources) {
-			if (this.pathMatches(absPath, name) !== null) {
+			if (this.pathMatches(absPath, name)) {
 				return name;
 			}
 		}
@@ -305,27 +331,35 @@ class SourceMap {
 	}
 
 	/**
-	 * returns the path that matches
+	 * returns true if the given absolute path matches name.
 	 */
-	private pathMatches(absPath: string, name: string) : string {
+	private pathMatches(absPath: string, name: string) : boolean {
 		// try to match with windows path separators
 		if (process.platform === 'win32') {
 			absPath = absPath.replace(/\\/g, '/');
 		}
 		let url = this.absolutePath(name);
-		if (absPath === url) {
-			return absPath;
-		}
-		return null;
+		return absPath === url;
 	}
 
+	/**
+	 * Tries to make the given path absolute by prefixing it with the source root and/or the source maps location.
+	 * Any url schemes are removed.
+	 */
 	private absolutePath(name: string): string {
-		let path = util.join(this._sourceRoot, name);
+		let path: string = util.join(this._sourceRoot, name);
 		if (!util.isAbsolute(path)) {
 			path = util.join(Path.dirname(this._mapPath), path);
 		}
-		//return PathUtils.canonicalizeUrl(path);
-        return URL.parse(path).href;
+		const prefix = 'file://';
+		if (path.indexOf(prefix) === 0) {
+			path = path.substr(prefix.length);
+			if (/^\/[a-zA-Z]:\//.test(path)) {
+				path = path.substr(1);
+			}
+		}
+		// was: return PathUtils.canonicalizeUrl(path);
+	    return path;
 	}
 
 	/*
@@ -355,6 +389,10 @@ class SourceMap {
 
 			// map result back to absolute path
 			mp.source = this.absolutePath(mp.source);
+
+			if (process.platform === 'win32') {
+				mp.source = mp.source.replace(/\//g, '\\');
+			}
 		}
 
 		return mp;
