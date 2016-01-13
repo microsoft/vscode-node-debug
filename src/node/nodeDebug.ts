@@ -794,6 +794,8 @@ export class NodeDebugSession extends DebugSession {
 
 	protected setBreakPointsRequest(response: DebugProtocol.SetBreakpointsResponse, args: DebugProtocol.SetBreakpointsArguments): void {
 
+		this._log(`setBreakPointsRequest`);
+
 		let sourcemap = false;
 		const source = args.source;
 		let scriptId = -1;
@@ -980,6 +982,7 @@ export class NodeDebugSession extends DebugSession {
 				breakpoints: breakpoints
 			};
 			this.sendResponse(response);
+            this._log(`_finishSetBreakpoints: sent response`);
 		});
 	}
 
@@ -1188,17 +1191,21 @@ export class NodeDebugSession extends DebugSession {
 
 		// all breakpoints are configured now -> start debugging
 
+		let info = 'nothing to do';
+
 		if (this._needContinue) {	// we do not break on entry
 			this._needContinue = false;
-			this._log('configurationDoneRequest: do a "Continue"');
+			info = 'do a "Continue"';
 			this._node.command('continue', null, (nodeResponse) => { });
 		}
 
 		if (this._needBreakpointEvent) {	// we have to break on entry
 			this._needBreakpointEvent = false;
-			this._log('configurationDoneRequest: fire breakpoint event');
+			info = 'fire breakpoint event';
 			this.sendEvent(new StoppedEvent(NodeDebugSession.BREAKPOINT_REASON, NodeDebugSession.DUMMY_THREAD_ID));
 		}
+
+		this._log(`configurationDoneRequest: ${info}`);
 
 		this.sendResponse(response);
 	}
