@@ -249,7 +249,7 @@ enum Bias {
 
 class SourceMap {
 
-	private _mapPath: string;			// the path where this sourcemap lives
+	private _sourcemapLocation: string;	// the directory where this sourcemap lives
 	private _generatedFile: string;		// the generated file for this sourcemap
 	private _sources: string[];			// the sources of generated file (relative to sourceRoot)
 	private _sourceRoot: string;		// the common prefix for the source (can be a URL)
@@ -258,15 +258,16 @@ class SourceMap {
 
 	public constructor(mapPath: string, generatedPath: string, json: string) {
 
-		this._mapPath = this.forwardSlashes(mapPath);
+		this._sourcemapLocation = this.toUrl(Path.dirname(mapPath));
 		this._generatedFile = generatedPath;
 
 		const sm = JSON.parse(json);
 
 		// try to fix all embedded paths because:
 		// - source map sources are URLs, so even on Windows they should be using forward slashes.
-		// - the source-map library expects forward slashes in all cases, their relative path logic
+		// - the source-map library expects forward slashes and their relative path logic
 		//   (specifically the "normalize" function) gives incorrect results when passing in backslashes.
+		// - paths starting with drive letters are not recognized as absolute by the source-map library
 
 		sm.sourceRoot = this.toUrl(sm.sourceRoot, '');
 
@@ -303,10 +304,6 @@ class SourceMap {
 		return dflt;
 	}
 
-	private forwardSlashes(path: string, dflt?: string) : string {
-		return path ? path.replace(/\\/g, '/') : dflt;
-	}
-
 	/*
 	 * the generated file of this source map.
 	 */
@@ -321,6 +318,10 @@ class SourceMap {
 		return this.findSource(absPath) !== null;
 	}
 
+	/**
+	 * returns the first entry from the sources array that matches the given absPath
+	 * or null otherwise.
+	 */
 	private findSource(absPath: string): string {
 		for (let name of this._sources) {
 			if (this.pathMatches(absPath, name)) {
@@ -334,7 +335,7 @@ class SourceMap {
 	 * returns true if the given absolute path matches name.
 	 */
 	private pathMatches(absPath: string, name: string) : boolean {
-		// try to match with windows path separators
+		// on Windows change back slashes to forward slashes because the source-map library requires this
 		if (process.platform === 'win32') {
 			absPath = absPath.replace(/\\/g, '/');
 		}
@@ -349,7 +350,7 @@ class SourceMap {
 	private absolutePath(name: string): string {
 		let path: string = util.join(this._sourceRoot, name);
 		if (!util.isAbsolute(path)) {
-			path = util.join(Path.dirname(this._mapPath), path);
+			path = util.join(this._sourcemapLocation, path);
 		}
 		const prefix = 'file://';
 		if (path.indexOf(prefix) === 0) {
@@ -358,7 +359,6 @@ class SourceMap {
 				path = path.substr(1);
 			}
 		}
-		// was: return PathUtils.canonicalizeUrl(path);
 	    return path;
 	}
 
@@ -390,7 +390,8 @@ class SourceMap {
 			// map result back to absolute path
 			mp.source = this.absolutePath(mp.source);
 
-			if (process.platform === 'win32') {
+			// on Windows change forward slashes back to back slashes
+ 			if (process.platform === 'win32') {
 				mp.source = mp.source.replace(/\//g, '\\');
 			}
 		}
