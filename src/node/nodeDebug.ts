@@ -1116,7 +1116,7 @@ export class NodeDebugSession extends DebugSession {
 		let escPath = path.replace(/([/\\.?*()^${}|[\]])/g, '\\$1');
 
  		// check for drive letter
-		if ((path.length >= 3 && path[1] === ':' && path[2] === '\\' && ((path[0] >= 'a' && path[0] <= 'z') || (path[0] >= 'A' && path[0] <= 'Z')))) {
+		if (/^[a-zA-Z]:\\/.test(path)) {
             const u = escPath.substring(0, 1).toUpperCase();
             const l = u.toLowerCase();
 			escPath = '[' + l + u + ']' + escPath.substring(1);
