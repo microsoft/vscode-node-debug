@@ -17,6 +17,7 @@
 			"name": "Run Server",
 			"type": "node",
 			"request": "launch",
+			"cwd": "${workspaceRoot}",
 			"program": "${workspaceRoot}/src/node/nodeDebug.ts",
 			"stopOnEntry": false,
 			"args": [ "--server=4711" ],
@@ -27,6 +28,7 @@
 			"name": "Run Tests",
 			"type": "node",
 			"request": "launch",
+			"cwd": "${workspaceRoot}",
 			"program": "${workspaceRoot}/node_modules/mocha/bin/_mocha",
 			"args": [
 				"./out/tests",
