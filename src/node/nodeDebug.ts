@@ -197,6 +197,7 @@ export class NodeDebugSession extends DebugSession {
 	private _sourceHandles = new Handles<SourceSource>();
 	private _refCache = new Map<number, any>();
 
+	private _remoteSession = false;
 	private _externalConsole: boolean;
 	private _isTerminated: boolean;
 	private _inShutdown: boolean;
@@ -531,6 +532,8 @@ export class NodeDebugSession extends DebugSession {
 
 		if (!address || address === 'localhost') {
 			address = '127.0.0.1';
+		} else {
+			this._remoteSession = true;
 		}
 
 		if (!timeout) {
@@ -595,7 +598,9 @@ export class NodeDebugSession extends DebugSession {
 
 			if (ok) {
 
+				if (!this._remoteSession) {
 				this._pollForNodeTermination();
+				}
 
 				const runtimeSupportsExtension = this._node.embeddedHostVersion === 0; // node version 0.x.x (io.js has version >= 1)
 				if (this._tryToExtendNode && runtimeSupportsExtension) {
