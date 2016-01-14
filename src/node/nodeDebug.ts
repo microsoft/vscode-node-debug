@@ -289,6 +289,15 @@ export class NodeDebugSession extends DebugSession {
 		this._log(`initializeRequest: adapterID: ${args.adapterID}`);
 
 		this._adapterID = args.adapterID;
+
+		//---- Send back feature and their options
+
+		// This debug adapter supports the configurationDoneRequest.
+		response.supportsConfigurationDoneRequest = true;
+
+        // This debug adapter does not (yet) support a side effect free evaluate request for data hovers.
+        response.supportEvaluateForHovers = false;
+
 		this.sendResponse(response);
 	}
 
