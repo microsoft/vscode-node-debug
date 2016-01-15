@@ -43,7 +43,7 @@ export function isAbsolutePath(path: string) {
 	if (path.charAt(0) === '/') {
 		return true;
 	}
-	if (/^[a-zA-Z]:[\\\/]/.test(path)) {
+	if (/^[a-zA-Z]\:[\\\/]/.test(path)) {
 		return true;
 	}
 	return false;
@@ -85,7 +85,7 @@ export function makeRelative2(from: string, to: string): string {
 	var froms = from.substr(1).split('/');
 	var tos = to.substr(1).split('/');
 
-	while (froms[0] === tos[0]) {
+	while (froms.length > 0 && tos.length > 0 && froms[0] === tos[0]) {
 		froms.shift();
 		tos.shift();
 	}
@@ -95,10 +95,9 @@ export function makeRelative2(from: string, to: string): string {
 		l = tos.length - 1;
 	}
 
-	if (l > 0) {
-		while (l--) {
-			tos.unshift('..');
-		}
+	while (l > 0) {
+		tos.unshift('..');
+		l--;
 	}
 	return tos.join('/');
 }

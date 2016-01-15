@@ -355,7 +355,7 @@ class SourceMap {
 		const prefix = 'file://';
 		if (path.indexOf(prefix) === 0) {
 			path = path.substr(prefix.length);
-			if (/^\/[a-zA-Z]:\//.test(path)) {
+			if (/^\/[a-zA-Z]\:\//.test(path)) {
 				path = path.substr(1);
 			}
 		}
