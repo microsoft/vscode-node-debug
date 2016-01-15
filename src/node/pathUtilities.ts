@@ -36,6 +36,73 @@ export function makeRelative(target: string, path: string) {
 	return result;
 }
 
+export function isAbsolutePath(path: string) {
+	if (!path) {
+		return false;
+	}
+	if (path.charAt(0) === '/') {
+		return true;
+	}
+	if (/^[a-zA-Z]:[\\\/]/.test(path)) {
+		return true;
+	}
+	return false;
+}
+
+export function normalize(path: string) : string {
+
+	path = path.replace(/\\/g, '/');
+
+	if (/^[a-zA-Z]\:\//.test(path)) {
+		path = '/' + path;
+	}
+
+	return path;
+}
+
+export function toWindows(path: string) : string {
+	if (/^\/[a-zA-Z]\:\//.test(path)) {
+		path = path.substr(1);
+	}
+	path = path.replace(/\//g, '\\');
+	return path;
+}
+
+export function join(absPath: string, relPath: string) : string {
+	absPath = normalize(absPath);
+	relPath = normalize(relPath);
+	if (absPath.charAt(absPath.length-1) === '/') {
+		return absPath + relPath;
+	}
+	return absPath + '/' + relPath;
+}
+
+export function makeRelative2(from: string, to: string): string {
+
+	from = normalize(from);
+	to = normalize(to);
+
+	var froms = from.substr(1).split('/');
+	var tos = to.substr(1).split('/');
+
+	while (froms[0] === tos[0]) {
+		froms.shift();
+		tos.shift();
+	}
+
+	var l = froms.length - tos.length;
+	if (l === 0) {
+		l = tos.length - 1;
+	}
+
+	if (l > 0) {
+		while (l--) {
+			tos.unshift('..');
+		}
+	}
+	return tos.join('/');
+}
+
 /**
  * Given an absolute, normalized, and existing file path 'realPath' returns the exact path that the file has on disk.
  * On a case insensitive file system, the returned path might differ from the original path by character casing.

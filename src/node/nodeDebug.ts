@@ -106,16 +106,6 @@ export class InternalBreakpoint {
 }
 
 /**
- * This interface should always match the schema found in the node-debug extension manifest.
- */
-export interface SourceMapsArguments {
-	/** Configure source maps. By default source maps are disabled. */
-	sourceMaps?: boolean;
-	/** Where to look for the generated code. Only used if sourceMaps is true. */
-	outDir?: string;
-}
-
-/**
  * A SourceSource represents the source contents of an internal module or of a source map with inlined contents.
  */
 class SourceSource {
@@ -129,13 +119,23 @@ class SourceSource {
 }
 
 /**
- * This interface should always match the schema found in the node-debug extension manifest.
+ * Arguments shared between Launch and Attach requests.
  */
-export interface LaunchRequestArguments extends SourceMapsArguments {
-	/** An absolute path to the program to debug. */
-	program: string;
+export interface CommonArguments {
 	/** Automatically stop target after launch. If not specified, target does not stop. */
 	stopOnEntry?: boolean;
+	/** Configure source maps. By default source maps are disabled. */
+	sourceMaps?: boolean;
+	/** Where to look for the generated code. Only used if sourceMaps is true. */
+	outDir?: string;
+}
+
+/**
+ * This interface should always match the schema found in the node-debug extension manifest.
+ */
+export interface LaunchRequestArguments extends CommonArguments {
+	/** An absolute path to the program to debug. */
+	program: string;
 	/** Optional arguments passed to the debuggee. */
 	args?: string[];
 	/** Launch the debuggee in this working directory (specified as an absolute path). If omitted the debuggee is lauched in its own directory. */
@@ -153,14 +153,20 @@ export interface LaunchRequestArguments extends SourceMapsArguments {
 /**
  * This interface should always match the schema found in the node-debug extension manifest.
  */
-export interface AttachRequestArguments extends SourceMapsArguments {
+export interface AttachRequestArguments extends CommonArguments {
 	/** The debug port to attach to. */
 	port: number;
 	/** The TCP/IP address of the port (remote addresses only supported for node >= 5.0). */
 	address?: string;
 	/** Retry for this number of milliseconds to connect to the node runtime. */
 	timeout?: number;
+
+	/** Node's root directory. */
+	remoteRoot?: string;
+	/** VS Code's root directory. */
+	localRoot?: string;
 }
+
 
 export class NodeDebugSession extends DebugSession {
 
@@ -197,11 +203,13 @@ export class NodeDebugSession extends DebugSession {
 	private _sourceHandles = new Handles<SourceSource>();
 	private _refCache = new Map<number, any>();
 
-	private _remoteSession = false;
+	private _localRoot: string;
+	private _remoteRoot: string;
 	private _externalConsole: boolean;
 	private _isTerminated: boolean;
 	private _inShutdown: boolean;
 	private _terminalProcess: CP.ChildProcess;		// the terminal process or undefined
+	private _pollForNodeProcess = false;
 	private _nodeProcessId: number = -1; 		// pid of the node runtime
 	private _node: NodeV8Protocol;
 	private _exception;
@@ -307,9 +315,8 @@ export class NodeDebugSession extends DebugSession {
 	protected launchRequest(response: DebugProtocol.LaunchResponse, args: LaunchRequestArguments): void {
 
 		this._externalConsole = (typeof args.externalConsole === 'boolean') && args.externalConsole;
-		this._stopOnEntry = (typeof args.stopOnEntry === 'boolean') && args.stopOnEntry;
 
-		this._initializeSourceMaps(args);
+		this._processCommonArgs(args);
 
 		var port = random(3000, 50000);
 
@@ -326,7 +333,6 @@ export class NodeDebugSession extends DebugSession {
 			}
 			runtimeExecutable = NodeDebugSession.NODE;     // use node from PATH
 		}
-
 
 		const runtimeArgs = args.runtimeArgs || [];
 		const programArgs = args.args || [];
@@ -435,7 +441,12 @@ export class NodeDebugSession extends DebugSession {
 					});
 				}
 
+				// since node starts in a terminal, we cannot track it with an 'exit' handler
+				// plan for polling after we have gotten the process pid.
+				this._pollForNodeProcess = true;
+
 				this._attach(response, port);
+
 			}).catch((error) => {
 				this.sendErrorResponse(response, 2011, "cannot launch target in terminal (reason: {_error})", { _error: error.message }, ErrorDestination.Telemetry | ErrorDestination.User );
 				this._terminated('terminal error: ' + error.message);
@@ -496,7 +507,10 @@ export class NodeDebugSession extends DebugSession {
 		});
 	}
 
-	private _initializeSourceMaps(args: SourceMapsArguments) {
+	private _processCommonArgs(args: CommonArguments) {
+
+		this._stopOnEntry = (typeof args.stopOnEntry === 'boolean') && args.stopOnEntry;
+
 		if (!this._sourceMaps) {
 			if (typeof args.sourceMaps === 'boolean' && args.sourceMaps) {
 				const generatedCodeDirectory = args.outDir;
@@ -509,7 +523,7 @@ export class NodeDebugSession extends DebugSession {
 
 	protected attachRequest(response: DebugProtocol.AttachResponse, args: AttachRequestArguments): void {
 
-		this._initializeSourceMaps(args);
+		this._processCommonArgs(args);
 
 		if (this._adapterID === 'extensionHost') {
 			// in EH mode 'attach' means 'launch' mode
@@ -517,6 +531,9 @@ export class NodeDebugSession extends DebugSession {
 		} else {
 			this._attachMode = true;
 		}
+
+		this._localRoot = args.localRoot;
+		this._remoteRoot = args.remoteRoot;
 
 		this._attach(response, args.port, args.address, args.timeout);
 	}
@@ -532,8 +549,6 @@ export class NodeDebugSession extends DebugSession {
 
 		if (!address || address === 'localhost') {
 			address = '127.0.0.1';
-		} else {
-			this._remoteSession = true;
 		}
 
 		if (!timeout) {
@@ -598,8 +613,8 @@ export class NodeDebugSession extends DebugSession {
 
 			if (ok) {
 
-				if (!this._remoteSession) {
-				this._pollForNodeTermination();
+				if (this._pollForNodeProcess) {
+					this._pollForNodeTermination();
 				}
 
 				const runtimeSupportsExtension = this._node.embeddedHostVersion === 0; // node version 0.x.x (io.js has version >= 1)
@@ -861,8 +876,6 @@ export class NodeDebugSession extends DebugSession {
 
 		if (source.path) {
 			path = this.convertClientPathToDebugger(source.path);
-			// resolve the path to a real path (resolve symbolic links)
-			//path = PathUtilities.RealPath(path, _realPathMap);
 
 			let p: string = null;
 			if (this._sourceMaps) {
@@ -893,6 +906,10 @@ export class NodeDebugSession extends DebugSession {
 					lb.ignore = true;
 				}
 			}
+
+			// try to convert local path to remote path
+			path = this._localToRemote(path);
+
 			this._updateBreakpoints(response, path, -1, lbs, sourcemap);
 			return;
 		}
@@ -1306,10 +1323,13 @@ export class NodeDebugSession extends DebugSession {
 					const script_val = this._getValueFromCache(frame.script);
 					if (script_val) {
 						let name = script_val.name;
-						if (name && Path.isAbsolute(name)) {
-							// try to map the real path back to a symbolic link
-							// string path = PathUtilities.MapResolvedBack(name, _realPathMap);
+						if (name && PathUtils.isAbsolutePath(name)) {
+
 							let path = name;
+
+							// convert remote path back to local path
+							path = this._remoteToLocal(path);
+
 							name = Path.basename(path);
 
 							// source mapping
@@ -1897,6 +1917,40 @@ export class NodeDebugSession extends DebugSession {
 
 	//---- private helpers ----------------------------------------------------------------------------------------------------
 
+	/**
+	 * Tries to map a (local) VSCode path to a corresponding path on a remote host (where node is running).
+	 * The remote host might use a different OS so we have to make sure to create correct file pathes.
+	 */
+	private _localToRemote(path: string) : string {
+		if (this._remoteRoot && this._localRoot) {
+
+			let relPath = PathUtils.makeRelative2(this._localRoot, path);
+			path = PathUtils.join(this._remoteRoot, relPath);
+
+			if (/^[a-zA-Z]:[\/\\]/.test(this._remoteRoot)) {	// Windows
+				path = PathUtils.toWindows(path);
+			}
+		}
+		return path;
+	}
+
+	/**
+	 * Tries to map a path from the remote host (where node is running) to a corresponding local path.
+	 * The remote host might use a different OS so we have to make sure to create correct file pathes.
+	 */
+	private _remoteToLocal(path: string) : string {
+		if (this._remoteRoot && this._localRoot) {
+
+			let relPath = PathUtils.makeRelative2(this._remoteRoot, path);
+			path = PathUtils.join(this._localRoot, relPath);
+
+			if (process.platform === 'win32') {	// local is Windows
+				relPath = PathUtils.toWindows(path);
+			}
+		}
+		return path;
+	}
+
 	private _sendNodeResponse(response: DebugProtocol.Response, nodeResponse: NodeV8Response): void {
 		if (nodeResponse.success) {
 			this.sendResponse(response);
@@ -2028,8 +2082,9 @@ export class NodeDebugSession extends DebugSession {
 
 		// workaround: load sourcemap for this location to populate cache
 		if (this._sourceMaps) {
-			const path = body.script.name;
-			if (path) {
+			let path = body.script.name;
+			if (path && PathUtils.isAbsolutePath(path)) {
+				path = this._remoteToLocal(path);
 				let mr = this._sourceMaps.MapToSource(path, 0, 0);
 			}
 		}
