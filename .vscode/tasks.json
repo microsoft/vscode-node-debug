@@ -1,7 +1,7 @@
 {
     "version": "0.1.0",
     "command": "gulp",
-    "isShellCommand": true,    
+    "isShellCommand": true,
     "tasks": [
        {
             "taskName": "ts-watch",
@@ -20,6 +20,25 @@
 				"watchedTaskBeginsRegExp": "^\\*\\*\\* Starting\\.\\.\\.$",
 				"watchedTaskEndsRegExp": "^\\*\\*\\* Finished with \\d+ errors\\.$"
 			}
-        }
+        },
+		{
+			"taskName": "tslint",
+			"args": [],
+			"problemMatcher": {
+				"owner": "tslint",
+				"fileLocation": [
+					"relative",
+					"${workspaceRoot}"
+				],
+				"severity": "warning",
+				"pattern": {
+					"regexp": "^\\[tslint\\] (.*):(\\d+):(\\d+):\\s+(.*)$",
+					"file": 1,
+					"line": 2,
+					"column": 3,
+					"message": 4
+				}
+			}
+		}
     ]
 }
