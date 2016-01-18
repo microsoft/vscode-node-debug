@@ -279,13 +279,12 @@ class SourceMap {
 
 		// use source-map utilities to normalize sources entries
 	    this._sources = sm.sources
-      		.map(util.normalize)
-       		.map((source) => {
-        		return this._sourceRoot && util.isAbsolute(this._sourceRoot) && util.isAbsolute(source)
-          			? util.relative(this._sourceRoot, source)
-          			: source;
-     		 });
-
+			.map(util.normalize)
+			.map((source) => {
+				return this._sourceRoot && util.isAbsolute(this._sourceRoot) && util.isAbsolute(source)
+					? util.relative(this._sourceRoot, source)
+					: source;
+			});
 		try {
 			this._smc = new SourceMapConsumer(sm);
 		} catch (e) {
