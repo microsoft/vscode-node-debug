@@ -825,11 +825,7 @@ export class NodeDebugSession extends DebugSession {
 
 		this._log(`setBreakPointsRequest`);
 
-		let sourcemap = false;
-		const source = args.source;
-		let scriptId = -1;
-		let path: string = null;
-
+		// normalize the two types of input arguments into an internal datastructure
 		let lbs = new Array<InternalBreakpoint>();
 		if (args.breakpoints) {
 			// prefer the new API: array of breakpoints
@@ -859,71 +855,46 @@ export class NodeDebugSession extends DebugSession {
 			}
 		}
 
+		const source = args.source;
+
 		if (source.adapterData) {
-			// a breakpoint in inlined source
+
 			if (source.adapterData.inlinePath) {
-				source.path = source.adapterData.inlinePath;
+				// a breakpoint in inlined source: we need to source map
+				this._mapSourceAndUpdateBreakpoints(response, source.adapterData.inlinePath, lbs);
+				return;
+			}
+
+			if (source.adapterData.remotePath) {
+				// a breakpoint in a remote file: don't try to source map
+				this._updateBreakpoints(response, source.adapterData.remotePath, -1, lbs);
+				return;
 			}
 		}
 
 		if (source.sourceReference > 0) {
 			const srcSource = this._sourceHandles.get(source.sourceReference);
 			if (srcSource && srcSource.scriptId) {
-				this._updateBreakpoints(response, null, srcSource.scriptId, lbs, sourcemap);
+				this._updateBreakpoints(response, null, srcSource.scriptId, lbs);
 				return;
 			}
 		}
 
 		if (source.path) {
-			path = this.convertClientPathToDebugger(source.path);
-
-			let p: string = null;
-			if (this._sourceMaps) {
-				p = this._sourceMaps.MapPathFromSource(path);
-			}
-			if (p) {
-				sourcemap = true;
-				// source map line numbers
-				for (let lb of lbs) {
-					const mapresult = this._sourceMaps.MapFromSource(path, lb.line, lb.column);
-					if (mapresult) {
-						if (mapresult.path !== p) {
-							// this source line maps to a different destination file -> this is not supported
-							// console.error(`setBreakPointsRequest: sourceMap limitation ${pp}`);
-						}
-						lb.line = mapresult.line;
-						lb.column = mapresult.column;
-					} else {
-						// we couldn't map this breakpoint -> ignore it
-						lb.ignore = true;
-					}
-				}
-				path = p;
-			}
-			else if (!NodeDebugSession.isJavaScript(path)) {
-				// ignore all breakpoints for this source
-				for (let lb of lbs) {
-					lb.ignore = true;
-				}
-			}
-
-			// try to convert local path to remote path
-			path = this._localToRemote(path);
-
-			this._updateBreakpoints(response, path, -1, lbs, sourcemap);
+			let path = this.convertClientPathToDebugger(source.path);
+			this._mapSourceAndUpdateBreakpoints(response, path, lbs);
 			return;
 		}
 
 		if (source.name) {
-			this._findModule(source.name, (id: number) => {
-				if (id >= 0) {
-					scriptId = id;
-					this._updateBreakpoints(response, null, scriptId, lbs, sourcemap);
-					return;
+			// a core module
+			this._findModule(source.name, (scriptId: number) => {
+				if (scriptId >= 0) {
+					this._updateBreakpoints(response, null, scriptId, lbs);
 				} else {
 					this.sendErrorResponse(response, 2019, "internal module {_module} not found", { _module: source.name });
-					return;
 				}
+				return;
 			});
 			return;
 		}
@@ -931,10 +902,50 @@ export class NodeDebugSession extends DebugSession {
 		this.sendErrorResponse(response, 2012, "no valid source specified", null, ErrorDestination.Telemetry);
 	}
 
+	private _mapSourceAndUpdateBreakpoints(response: DebugProtocol.SetBreakpointsResponse, path: string, lbs: InternalBreakpoint[]) {
+
+		let sourcemap = false;
+
+		let p: string = null;
+		if (this._sourceMaps) {
+			p = this._sourceMaps.MapPathFromSource(path);
+		}
+		if (p) {
+			sourcemap = true;
+			// source map line numbers
+			for (let lb of lbs) {
+				const mapresult = this._sourceMaps.MapFromSource(path, lb.line, lb.column);
+				if (mapresult) {
+					if (mapresult.path !== p) {
+						// this source line maps to a different destination file -> this is not supported
+						// console.error(`setBreakPointsRequest: sourceMap limitation ${pp}`);
+					}
+					lb.line = mapresult.line;
+					lb.column = mapresult.column;
+				} else {
+					// we couldn't map this breakpoint -> ignore it
+					lb.ignore = true;
+				}
+			}
+			path = p;
+		}
+		else if (!NodeDebugSession.isJavaScript(path)) {
+			// ignore all breakpoints for this source
+			for (let lb of lbs) {
+				lb.ignore = true;
+			}
+		}
+
+		// try to convert local path to remote path
+		path = this._localToRemote(path);
+
+		this._updateBreakpoints(response, path, -1, lbs, sourcemap);
+	}
+
 	/*
-	 * Phase 2 of setBreakpointsRequest: clear all breakpoints of a given file
+	 * Phase 2 of setBreakpointsRequest: clear and set all breakpoints of a given source
 	 */
-	private _updateBreakpoints(response: DebugProtocol.SetBreakpointsResponse, path: string, scriptId: number, lbs: InternalBreakpoint[], sourcemap: boolean): void {
+	private _updateBreakpoints(response: DebugProtocol.SetBreakpointsResponse, path: string, scriptId: number, lbs: InternalBreakpoint[], sourcemap: boolean = false): void {
 
 		// clear all existing breakpoints for the given path or script ID
 		this._node.command('listbreakpoints', null, (nodeResponse: NodeV8Response) => {
@@ -1320,28 +1331,38 @@ export class NodeDebugSession extends DebugSession {
 					let column = this._adjustColumn(line, frame.column);
 
 					let src: Source = null;
+					let origin = "content streamed from node";
+					let adapterData: any;
+
 					const script_val = this._getValueFromCache(frame.script);
 					if (script_val) {
 						let name = script_val.name;
 						if (name && PathUtils.isAbsolutePath(name)) {
 
-							let path = name;
+							let remotePath = name;		// with remote debugging path might come from a different OS
 
-							// convert remote path back to local path
-							path = this._remoteToLocal(path);
+							// if launch.json defines localRoot and remoteRoot try to convert remote path back to a local path
+							let localPath = this._remoteToLocal(remotePath);
 
-							name = Path.basename(path);
+							if (localPath !== remotePath && this._attachMode) {
+								// assume attached to remote node process
+								origin = "content streamed from remote node";
+							}
+
+							name = Path.basename(localPath);
 
 							// source mapping
 							if (this._sourceMaps) {
-								const mapresult = this._sourceMaps.MapToSource(path, line, column);
+
+								// try to map
+								const mapresult = this._sourceMaps.MapToSource(localPath, line, column);
 								if (mapresult) {
 
 									// verify that a file exists at path
 									if (FS.existsSync(mapresult.path)) {
 										// use this mapping
-										path = mapresult.path;
-										name = Path.basename(path);
+										localPath = mapresult.path;
+										name = Path.basename(localPath);
 										line = mapresult.line;
 										column = mapresult.column;
 									} else {
@@ -1363,16 +1384,26 @@ export class NodeDebugSession extends DebugSession {
 								}
 							}
 
-							if (src == null) {
-								src = new Source(name, this.convertDebuggerPathToClient(path));
+							if (src === null) {
+								if (FS.existsSync(localPath)) {
+									src = new Source(name, this.convertDebuggerPathToClient(localPath));
+								} else {
+									// source doesn't exist locally
+									adapterData = {
+										remotePath: remotePath	// assume it is a remote path
+									};
+								}
 							}
+						} else {
+							origin = "core module";
 						}
 
 						if (src === null) {
+							// fall back: source not found locally -> prepare to stream source content from node backend.
 							const script_id:number = script_val.id;
 							if (script_id >= 0) {
 								const sourceHandle = this._sourceHandles.create(new SourceSource(script_id));
-								src = new Source(name, null, sourceHandle, "internal module");
+								src = new Source(name, null, sourceHandle, origin, adapterData);
 							}
 						}
 					}
