@@ -885,14 +885,14 @@ export class NodeDebugSession extends DebugSession {
 				sourcemap = true;
 				// source map line numbers
 				for (let lb of lbs) {
-					const mr = this._sourceMaps.MapFromSource(path, lb.line, lb.column);
-					if (mr) {
-						if (mr.path !== p) {
+					const mapresult = this._sourceMaps.MapFromSource(path, lb.line, lb.column);
+					if (mapresult) {
+						if (mapresult.path !== p) {
 							// this source line maps to a different destination file -> this is not supported
 							// console.error(`setBreakPointsRequest: sourceMap limitation ${pp}`);
 						}
-						lb.line = mr.line;
-						lb.column = mr.column;
+						lb.line = mapresult.line;
+						lb.column = mapresult.column;
 					} else {
 						// we couldn't map this breakpoint -> ignore it
 						lb.ignore = true;
@@ -1037,10 +1037,10 @@ export class NodeDebugSession extends DebugSession {
 					if (!this._lazy) {	// only if not in lazy mode we try to map actual positions back
 						// map adjusted js breakpoints back to source language
 						if (path && this._sourceMaps) {
-							const mr = this._sourceMaps.MapToSource(path, actualLine, actualColumn);
-							if (mr) {
-								actualLine = mr.line;
-								actualColumn = mr.column;
+							const mapresult = this._sourceMaps.MapToSource(path, actualLine, actualColumn);
+							if (mapresult) {
+								actualLine = mapresult.line;
+								actualColumn = mapresult.column;
 							}
 						}
 					}
@@ -1334,30 +1334,30 @@ export class NodeDebugSession extends DebugSession {
 
 							// source mapping
 							if (this._sourceMaps) {
-								const mr = this._sourceMaps.MapToSource(path, line, column);
-								if (mr) {
+								const mapresult = this._sourceMaps.MapToSource(path, line, column);
+								if (mapresult) {
 
 									// verify that a file exists at path
-									if (FS.existsSync(mr.path)) {
+									if (FS.existsSync(mapresult.path)) {
 										// use this mapping
-										path = mr.path;
+										path = mapresult.path;
 										name = Path.basename(path);
-										line = mr.line;
-										column = mr.column;
+										line = mapresult.line;
+										column = mapresult.column;
 									} else {
 										// file doesn't exist at path
 
 										// if source map has inlined source,
-										const content = (<any>mr).content;
+										const content = (<any>mapresult).content;
 										if (content) {
-											name = Path.basename(mr.path);
+											name = Path.basename(mapresult.path);
 											const sourceHandle = this._sourceHandles.create(new SourceSource(0, content));
 											const adapterData = {
-												inlinePath: mr.path
+												inlinePath: mapresult.path
 											};
 											src = new Source(name, null, sourceHandle, "inlined content from source map", adapterData);
-											line = mr.line;
-											column = mr.column;
+											line = mapresult.line;
+											column = mapresult.column;
 										}
 									}
 								}
@@ -2085,7 +2085,7 @@ export class NodeDebugSession extends DebugSession {
 			let path = body.script.name;
 			if (path && PathUtils.isAbsolutePath(path)) {
 				path = this._remoteToLocal(path);
-				let mr = this._sourceMaps.MapToSource(path, 0, 0);
+				this._sourceMaps.MapToSource(path, 0, 0);
 			}
 		}
 

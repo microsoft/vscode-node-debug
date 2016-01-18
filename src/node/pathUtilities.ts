@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as Path from 'path';
-import * as URL from 'url';
 import * as FS from 'fs';
 
 
