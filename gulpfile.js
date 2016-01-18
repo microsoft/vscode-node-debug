@@ -7,6 +7,8 @@ var gulp = require('gulp');
 var path = require('path');
 var tsb = require('gulp-tsb');
 var log = require('gulp-util').log;
+var tslint = require("gulp-tslint");
+var filter = require('gulp-filter');
 var azure = require('gulp-azure-storage');
 var git = require('git-rev-sync');
 var del = require('del');
@@ -78,4 +80,35 @@ gulp.task('internal-upload', function() {
 			key: process.env.AZURE_STORAGE_ACCESS_KEY,
 			container: 'debuggers'
 		}));
+});
+
+var allTypeScript = [
+	'src/**/*.ts'
+];
+
+var tslintFilter = [
+	'**',
+	'!**/*.d.ts',
+	'!**/typings/**'
+];
+
+var lintReporter = function (output, file, options) {
+	//emits: src/helloWorld.c:5:3: warning: implicit declaration of function ‘prinft’
+	var relativeBase = file.base.substring(file.cwd.length + 1).replace('\\', '/');
+	output.forEach(function(e) {
+		var message = relativeBase + e.name + ':' + (e.startPosition.line + 1) + ':' + (e.startPosition.character + 1) + ': ' + e.failure;
+		console.log('[tslint] ' + message);
+	});
+};
+
+gulp.task('tslint', function () {
+	gulp.src(allTypeScript)
+	.pipe(filter(tslintFilter))
+	.pipe(tslint({
+		rulesDirectory: "node_modules/tslint-microsoft-contrib"
+	}))
+	.pipe(tslint.report(lintReporter, {
+		summarizeFailureOutput: false,
+		emitError: false
+	}))
 });
