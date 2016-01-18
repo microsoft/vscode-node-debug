@@ -56,6 +56,8 @@ export function normalize(path: string) : string {
 		path = '/' + path;
 	}
 
+	path = Path.normalize(path);	// use node's normalize to remove '<dir>/..' etc.
+
 	return path;
 }
 
@@ -71,9 +73,12 @@ export function join(absPath: string, relPath: string) : string {
 	absPath = normalize(absPath);
 	relPath = normalize(relPath);
 	if (absPath.charAt(absPath.length-1) === '/') {
-		return absPath + relPath;
+		absPath = absPath + relPath;
+	} else {
+		absPath = absPath + '/' + relPath;
 	}
-	return absPath + '/' + relPath;
+	absPath = Path.normalize(absPath);
+	return absPath;
 }
 
 export function makeRelative2(from: string, to: string): string {

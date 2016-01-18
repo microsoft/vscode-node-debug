@@ -13,13 +13,16 @@ describe('pathUtilities', () => {
 
 	describe('normalize(path)', () => {
 
-		it('should return a path with forward slashes', () => {
+		it('should return a path with forward slashes and \'..\' removed', () => {
 			assert.equal(PathUtils.normalize('/a/b/c'), '/a/b/c');
-			//assert.equal(PathUtils.normalize('/a/b//c'), '/a/b/c');
-			//assert.equal(PathUtils.normalize('/a/b/../c'), '/a/c');
+			assert.equal(PathUtils.normalize('/a/b//c'), '/a/b/c');
+			assert.equal(PathUtils.normalize('/a/./b/c'), '/a/b/c');
+			assert.equal(PathUtils.normalize('/a/b/../c'), '/a/c');
 
 			assert.equal(PathUtils.normalize('c:\\a\\b'), '/c:/a/b');
 			assert.equal(PathUtils.normalize('C:\\a\\b'), '/C:/a/b');
+			assert.equal(PathUtils.normalize('C:\\a\\..\\b'), '/C:/b');
+			assert.equal(PathUtils.normalize('C:\\a\\.\\b'), '/C:/a/b');
 			assert.equal(PathUtils.normalize('c:/a/b'), '/c:/a/b');
 			assert.equal(PathUtils.normalize('C:/a/b'), '/C:/a/b');
 		});
