@@ -106,11 +106,9 @@ suite('Node Debug Adapter', () => {
 						source: { path: PROGRAM }
 					});
 				}).then(response => {
-					assert.deepEqual(response.body.breakpoints[0], {
-						verified: true,
-						line: BREAKPOINT_LINE,
-						column: -1
-					});
+					const bp = response.body.breakpoints[0];
+					assert.equal(bp.verified, true);
+					assert.equal(bp.line, BREAKPOINT_LINE);
 					return dc.configurationDoneRequest();
 				}),
 
