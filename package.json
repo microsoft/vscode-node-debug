@@ -39,7 +39,7 @@
 		"del": "*",
 		"run-sequence": "*",
 		"gulp-vinyl-zip": "*",
-		"mocha": "*"
+		"mocha": "^2.3.4"
 	},
 	"contributes": {
 		"debuggers": [
