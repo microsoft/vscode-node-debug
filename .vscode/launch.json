@@ -31,9 +31,10 @@
 			"cwd": "${workspaceRoot}",
 			"program": "${workspaceRoot}/node_modules/mocha/bin/_mocha",
 			"args": [
-				"./out/tests",
+				"-u", "tdd",
 				"--timeout", "999999",
-				"--colors"
+				"--colors",
+				"./out/tests"
 			],
 			"sourceMaps": true,
 			"outDir": "${workspaceRoot}/out"
