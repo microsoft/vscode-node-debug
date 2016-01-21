@@ -7,10 +7,17 @@ import * as Path from 'path';
 import * as FS from 'fs';
 
 
+/**
+  * The input paths must use the path syntax of the underlying operating system.
+ */
 export function makePathAbsolute(absPath: string, relPath: string): string {
 	return Path.resolve(Path.dirname(absPath), relPath);
 }
 
+/**
+ * Remove the first segment of the given path and return the result.
+ * The input path must use the path syntax of the underlying operating system.
+ */
 export function removeFirstSegment(path: string) {
 	const segments = path.split(Path.sep);
 	segments.shift();
@@ -20,6 +27,10 @@ export function removeFirstSegment(path: string) {
 	return null;
 }
 
+/**
+ * Return the relative path between 'path' and 'target'.
+ * The input paths must use the path syntax of the underlying operating system.
+ */
 export function makeRelative(target: string, path: string) {
 	const t = target.split(Path.sep);
 	const p = path.split(Path.sep);
@@ -33,77 +44,6 @@ export function makeRelative(target: string, path: string) {
 		result = Path.join(result, p[i]);
 	}
 	return result;
-}
-
-export function isAbsolutePath(path: string) {
-	if (!path) {
-		return false;
-	}
-	if (path.charAt(0) === '/') {
-		return true;
-	}
-	if (/^[a-zA-Z]\:[\\\/]/.test(path)) {
-		return true;
-	}
-	return false;
-}
-
-export function normalize(path: string) : string {
-
-	path = path.replace(/\\/g, '/');
-
-	if (/^[a-zA-Z]\:\//.test(path)) {
-		path = '/' + path;
-	}
-
-	path = Path.normalize(path);	// use node's normalize to remove '<dir>/..' etc.
-
-	return path;
-}
-
-export function toWindows(path: string) : string {
-	if (/^\/[a-zA-Z]\:\//.test(path)) {
-		path = path.substr(1);
-	}
-	path = path.replace(/\//g, '\\');
-	return path;
-}
-
-export function join(absPath: string, relPath: string) : string {
-	absPath = normalize(absPath);
-	relPath = normalize(relPath);
-	if (absPath.charAt(absPath.length-1) === '/') {
-		absPath = absPath + relPath;
-	} else {
-		absPath = absPath + '/' + relPath;
-	}
-	absPath = Path.normalize(absPath);
-	return absPath;
-}
-
-export function makeRelative2(from: string, to: string): string {
-
-	from = normalize(from);
-	to = normalize(to);
-
-	var froms = from.substr(1).split('/');
-	var tos = to.substr(1).split('/');
-
-	while (froms.length > 0 && tos.length > 0 && froms[0] === tos[0]) {
-		froms.shift();
-		tos.shift();
-	}
-
-	var l = froms.length - tos.length;
-	if (l === 0) {
-		l = tos.length - 1;
-	}
-
-	while (l > 0) {
-		tos.unshift('..');
-		l--;
-	}
-	return tos.join('/');
 }
 
 /**
@@ -144,4 +84,91 @@ export function realPath(path: string): string {
 		// silently ignore error
 	}
 	return null;
+}
+
+//---- the following functions work with Windows and Unix-style paths independent from the underlying OS.
+
+/**
+ * Returns true if the Windows or Unix-style path is absolute.
+ */
+export function isAbsolutePath(path: string) {
+	if (path) {
+		if (path.charAt(0) === '/') {
+			return true;
+		}
+		if (/^[a-zA-Z]\:[\\\/]/.test(path)) {
+			return true;
+		}
+	}
+	return false;
+}
+
+/**
+ * Convert the given Windows or Unix-style path into a normalized path that only uses forward slashes and has all superflous '..' sequences removed.
+ * If the path starts with a Windows-style drive letter, a '/' is prepended.
+ */
+export function normalize(path: string) : string {
+
+	path = path.replace(/\\/g, '/');
+	if (/^[a-zA-Z]\:\//.test(path)) {
+		path = '/' + path;
+	}
+	path = Path.normalize(path);	// use node's normalize to remove '<dir>/..' etc.
+	path = path.replace(/\\/g, '/');
+	return path;
+}
+
+/**
+ * Convert the given normalized path into a Windows-style path.
+ */
+export function toWindows(path: string) : string {
+	if (/^\/[a-zA-Z]\:\//.test(path)) {
+		path = path.substr(1);
+	}
+	path = path.replace(/\//g, '\\');
+	return path;
+}
+
+/**
+ * Append the given relative path to the absolute path and normalize the result.
+ */
+export function join(absPath: string, relPath: string) : string {
+	absPath = normalize(absPath);
+	relPath = normalize(relPath);
+	if (absPath.charAt(absPath.length-1) === '/') {
+		absPath = absPath + relPath;
+	} else {
+		absPath = absPath + '/' + relPath;
+	}
+	absPath = Path.normalize(absPath);
+	absPath = absPath.replace(/\\/g, '/');
+	return absPath;
+}
+
+/**
+ * Return the relative path between 'from' and 'to'.
+ */
+export function makeRelative2(from: string, to: string): string {
+
+	from = normalize(from);
+	to = normalize(to);
+
+	var froms = from.substr(1).split('/');
+	var tos = to.substr(1).split('/');
+
+	while (froms.length > 0 && tos.length > 0 && froms[0] === tos[0]) {
+		froms.shift();
+		tos.shift();
+	}
+
+	var l = froms.length - tos.length;
+	if (l === 0) {
+		l = tos.length - 1;
+	}
+
+	while (l > 0) {
+		tos.unshift('..');
+		l--;
+	}
+	return tos.join('/');
 }
