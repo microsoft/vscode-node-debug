@@ -69,21 +69,36 @@ describe('pathUtilities', () => {
 	describe('makeRelative(target, path)', () => {
 
 		it('identical paths should return empty string', () => {
-			assert.equal(PathUtils.makeRelative('/a/b', '/a/b'), '');
+			if (process.platform === 'win32') {
+				assert.equal(PathUtils.makeRelative('c:\\a\\b', 'c:\\a\\b'), '');
+			} else {
+				assert.equal(PathUtils.makeRelative('/a/b', '/a/b'), '');
+			}
 		});
 
 		it('target and path same length', () => {
-			assert.equal(PathUtils.makeRelative('/a/b/c/d/e/f', '/a/b/c/g/h/j'), 'g/h/j');
+			if (process.platform === 'win32') {
+				assert.equal(PathUtils.makeRelative('c:\\a\\b\\c\\d\\e\\f', 'c:\\a\\b\\c\\g\\h\\j'), 'g\\h\\j');
+			} else {
+				assert.equal(PathUtils.makeRelative('/a/b/c/d/e/f', '/a/b/c/g/h/j'), 'g/h/j');
+			}
 		});
 
 		it('target is longer', () => {
-			assert.equal(PathUtils.makeRelative('/a/b/c/d', '/a/b/c'), '');
+			if (process.platform === 'win32') {
+				assert.equal(PathUtils.makeRelative('c:\\a\\b\\c\\d', 'c:\\a\\b\\c'), '');
+			} else {
+				assert.equal(PathUtils.makeRelative('/a/b/c/d', '/a/b/c'), '');
+			}
 		});
 
 		it('path is longer', () => {
-			assert.equal(PathUtils.makeRelative('/a/b/c/d', '/a/b/c/d/e'), 'e');
+			if (process.platform === 'win32') {
+				assert.equal(PathUtils.makeRelative('c:\\a\\b\\c\\d', 'c:\\a\\b\\c\\d\\e'), 'e');
+			} else {
+				assert.equal(PathUtils.makeRelative('/a/b/c/d', '/a/b/c/d/e'), 'e');
+			}
 		});
-
 	});
 
 	describe('makeRelative2(from, to)', () => {
@@ -106,7 +121,6 @@ describe('pathUtilities', () => {
 			assert.equal(PathUtils.makeRelative2('/a/b/c/d', '/a/b/c/d/e/f'), 'e/f');
 			assert.equal(PathUtils.makeRelative2('/', '/a/b'), 'a/b');
 		});
-
 	});
 
 });
