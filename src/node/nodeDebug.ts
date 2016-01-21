@@ -302,10 +302,10 @@ export class NodeDebugSession extends DebugSession {
 		//---- Send back feature and their options
 
 		// This debug adapter supports the configurationDoneRequest.
-		response.supportsConfigurationDoneRequest = true;
+		response.body.supportsConfigurationDoneRequest = true;
 
-        // This debug adapter does not (yet) support a side effect free evaluate request for data hovers.
-        response.supportEvaluateForHovers = false;
+		// This debug adapter does not (yet) support a side effect free evaluate request for data hovers.
+		response.body.supportEvaluateForHovers = false;
 
 		this.sendResponse(response);
 	}
