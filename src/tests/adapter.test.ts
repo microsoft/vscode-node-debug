@@ -28,7 +28,7 @@ suite('Node Debug Adapter', () => {
 
 
 	setup(() => {
-		dc = new DebugClient('node', DEBUG_ADAPTER, 'mock');
+		dc = new DebugClient('node', DEBUG_ADAPTER, 'node');
 		dc.start();
    });
 
