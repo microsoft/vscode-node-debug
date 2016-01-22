@@ -46,8 +46,9 @@ export class SourceMaps implements ISourceMaps {
 
 	private static SOURCE_MAPPING_MATCHER = new RegExp("//[#@] ?sourceMappingURL=(.+)$");
 
-	private _generatedToSourceMaps:  { [id: string] : SourceMap; } = {};		// generated -> source file
-	private _sourceToGeneratedMaps:  { [id: string] : SourceMap; } = {};		// source file -> generated
+	private _allSourceMaps: { [id: string] : SourceMap; } = {};			// map file path -> SourceMap
+	private _generatedToSourceMaps:  { [id: string] : SourceMap; } = {};	// generated file -> SourceMap
+	private _sourceToGeneratedMaps:  { [id: string] : SourceMap; } = {};	// source file -> SourceMap
 	private _generatedCodeDirectory: string;
 
 
@@ -90,140 +91,165 @@ export class SourceMaps implements ISourceMaps {
 
 	//---- private -----------------------------------------------------------------------
 
+	/**
+	 * Tries to find a SourceMap for the given source.
+	 * This is difficult because the source does not contain any information about where
+	 * the generated code or the source map is located.
+	 * Our strategy is as follows:
+	 * - search in all known source maps whether if refers to this source in the sources array.
+	 * - ...
+	 */
 	private _findSourceToGeneratedMapping(pathToSource: string): SourceMap {
 
-		if (pathToSource) {
+		if (!pathToSource) {
+			return null;
+		}
 
-			if (pathToSource in this._sourceToGeneratedMaps) {
-				return this._sourceToGeneratedMaps[pathToSource];
+		// try to find in existing
+		if (pathToSource in this._sourceToGeneratedMaps) {
+			return this._sourceToGeneratedMaps[pathToSource];
+		}
+
+		// a reverse lookup: in all source maps try to find pathToSource in the sources array
+		for (let key in this._generatedToSourceMaps) {
+			const m = this._generatedToSourceMaps[key];
+			if (m.doesOriginateFrom(pathToSource)) {
+				this._sourceToGeneratedMaps[pathToSource] = m;
+				return m;
 			}
+		}
 
-			for (let key in this._generatedToSourceMaps) {
-				const m = this._generatedToSourceMaps[key];
-				if (m.doesOriginateFrom(pathToSource)) {
+		// search for all map files in generatedCodeDirectory
+		if (this._generatedCodeDirectory) {
+			let maps = FS.readdirSync(this._generatedCodeDirectory).filter((e) => e.endsWith('.map'));
+			for (let map_name of maps) {
+				const map_path = Path.join(this._generatedCodeDirectory, map_name);
+				const m = this._loadSourceMap(map_path);
+				if (m && m.doesOriginateFrom(pathToSource)) {
 					this._sourceToGeneratedMaps[pathToSource] = m;
 					return m;
 				}
 			}
-			// not found in existing maps
+		}
 
+		// no map found
+
+		let pathToGenerated = pathToSource;
+
+		const ext = Path.extname(pathToSource);
+		if (ext !== 'js') {
 			// use heuristic: change extension to ".js" and find a map for it
-			let pathToGenerated = pathToSource;
 			const pos = pathToSource.lastIndexOf('.');
 			if (pos >= 0) {
 				pathToGenerated = pathToSource.substr(0, pos) + '.js';
 			}
+		}
 
-			let map = null;
+		let map = null;
 
-			// first look into the generated code directory
-			if (this._generatedCodeDirectory) {
-				let rest = PathUtils.makeRelative(this._generatedCodeDirectory, pathToGenerated);
-				while (rest) {
-					const path = Path.join(this._generatedCodeDirectory, rest);
-					map = this._findGeneratedToSourceMapping(path);
-					if (map) {
-						break;
-					}
-					rest = PathUtils.removeFirstSegment(rest)
+		// first look into the generated code directory
+		if (this._generatedCodeDirectory) {
+			let rest = PathUtils.makeRelative(this._generatedCodeDirectory, pathToGenerated);
+			while (rest) {
+				const path = Path.join(this._generatedCodeDirectory, rest);
+				map = this._findGeneratedToSourceMapping(path);
+				if (map) {
+					break;
 				}
+				rest = PathUtils.removeFirstSegment(rest)
 			}
+		}
 
-			// VSCode extension host support:
-			// we know that the plugin has an "out" directory next to the "src" directory
-			if (map === null) {
-				let srcSegment = Path.sep + 'src' + Path.sep;
-				if (pathToGenerated.indexOf(srcSegment) >= 0) {
-					let outSegment = Path.sep + 'out' + Path.sep;
-					pathToGenerated = pathToGenerated.replace(srcSegment, outSegment);
-					map = this._findGeneratedToSourceMapping(pathToGenerated);
-				}
-			}
-
-			// if not found look in the same directory as the source
-			if (map === null && pathToGenerated !== pathToSource) {
+		// VSCode extension host support:
+		// we know that the plugin has an "out" directory next to the "src" directory
+		if (map === null) {
+			let srcSegment = Path.sep + 'src' + Path.sep;
+			if (pathToGenerated.indexOf(srcSegment) >= 0) {
+				let outSegment = Path.sep + 'out' + Path.sep;
+				pathToGenerated = pathToGenerated.replace(srcSegment, outSegment);
 				map = this._findGeneratedToSourceMapping(pathToGenerated);
 			}
+		}
 
+		// if not found look in the same directory as the source
+		if (map === null && pathToGenerated !== pathToSource) {
+			map = this._findGeneratedToSourceMapping(pathToGenerated);
+		}
+
+		if (map) {
+			this._sourceToGeneratedMaps[pathToSource] = map;
+			return map;
+		}
+
+		// nothing found
+		return null;
+	}
+
+	/**
+	 * Tries to find a SourceMap for the given path to a generated file.
+	 * This is simple if the generated file has the 'sourceMappingURL' at the end.
+	 * If not, we are using some heuristics...
+	 */
+	private _findGeneratedToSourceMapping(pathToGenerated: string): SourceMap {
+
+		if (!pathToGenerated) {
+			return null;
+		}
+
+		if (pathToGenerated in this._generatedToSourceMaps) {
+			return this._generatedToSourceMaps[pathToGenerated];
+		}
+
+		// try to find a source map URL in the generated file
+		let map_path: string = null;
+		const uri = this._findSourceMapUrlInFile(pathToGenerated);
+		if (uri) {
+			// if uri is data url source map is inlined in generated file
+			if (uri.indexOf("data:application/json;base64,") >= 0) {
+				const pos = uri.indexOf(',');
+				if (pos > 0) {
+					const data = uri.substr(pos+1);
+					try {
+						const buffer = new Buffer(data, 'base64');
+						const json = buffer.toString();
+						if (json) {
+							return this._registerSourceMap(new SourceMap(pathToGenerated, pathToGenerated, json));
+						}
+					}
+					catch (e) {
+						console.error(`_findGeneratedToSourceMapping: exception while processing data url (${e})`);
+					}
+				}
+			} else {
+				map_path = uri;
+			}
+		}
+
+		// if path is relative make it absolute
+		if (map_path && !Path.isAbsolute(map_path)) {
+			map_path = PathUtils.makePathAbsolute(pathToGenerated, map_path);
+		}
+
+		if (!map_path || !FS.existsSync(map_path)) {
+			// try to find map file next to the generated source
+			map_path = pathToGenerated + '.map';
+		}
+
+		if (map_path && FS.existsSync(map_path)) {
+			const map = this._loadSourceMap(map_path, pathToGenerated);
 			if (map) {
-				this._sourceToGeneratedMaps[pathToSource] = map;
 				return map;
 			}
 		}
+
 		return null;
 	}
 
-	private _findGeneratedToSourceMapping(pathToGenerated: string): SourceMap {
-
-		if (pathToGenerated) {
-
-			if (pathToGenerated in this._generatedToSourceMaps) {
-				return this._generatedToSourceMaps[pathToGenerated];
-			}
-
-			let map: SourceMap = null;
-
-			// try to find a source map URL in the generated source
-			let map_path: string = null;
-			const uri = this._findSourceMapInGeneratedSource(pathToGenerated);
-			if (uri) {
-				if (uri.indexOf("data:application/json;base64,") >= 0) {
-					const pos = uri.indexOf(',');
-					if (pos > 0) {
-						const data = uri.substr(pos+1);
-						try {
-							const buffer = new Buffer(data, 'base64');
-							const json = buffer.toString();
-							if (json) {
-								map = new SourceMap(pathToGenerated, pathToGenerated, json);
-								this._generatedToSourceMaps[pathToGenerated] = map;
-								return map;
-							}
-						}
-						catch (e) {
-							console.error(`FindGeneratedToSourceMapping: exception while processing data url (${e})`);
-						}
-					}
-				} else {
-					map_path = uri;
-				}
-			}
-
-			// if path is relative make it absolute
-            if (map_path && !Path.isAbsolute(map_path)) {
- 				map_path = PathUtils.makePathAbsolute(pathToGenerated, map_path);
-            }
-
-			if (map_path === null || !FS.existsSync(map_path)) {
-				// try to find map file next to the generated source
-				map_path = pathToGenerated + ".map";
-			}
-
-			if (FS.existsSync(map_path)) {
-				map = this._createSourceMap(map_path, pathToGenerated);
-				if (map) {
-					this._generatedToSourceMaps[pathToGenerated] = map;
-					return map;
-				}
-			}
-		}
-		return null;
-	}
-
-	private _createSourceMap(map_path: string, path: string): SourceMap {
-		try {
-			const mp = Path.join(map_path);
-			const contents = FS.readFileSync(mp).toString();
-			return new SourceMap(mp, path, contents);
-		}
-		catch (e) {
-			console.error(`CreateSourceMap: {e}`);
-		}
-		return null;
-	}
-
-	//  find "//# sourceMappingURL=<url>"
-	private _findSourceMapInGeneratedSource(pathToGenerated: string): string {
+	/**
+	 * try to find the 'sourceMappingURL' in the file with the given path.
+	 * Returns null in case of errors.
+	 */
+	private _findSourceMapUrlInFile(pathToGenerated: string): string {
 
 		try {
 			const contents = FS.readFileSync(pathToGenerated).toString();
@@ -240,6 +266,41 @@ export class SourceMaps implements ISourceMaps {
 		}
 		return null;
 	}
+
+	/**
+	 * Loads source map from file system.
+	 * If no generatedPath is given, the 'file' attribute of the source map is used.
+	 */
+	private _loadSourceMap(map_path: string, generatedPath?: string): SourceMap {
+
+		if (map_path in this._allSourceMaps) {
+			return this._allSourceMaps[map_path];
+		}
+
+		try {
+			const mp = Path.join(map_path);
+			const contents = FS.readFileSync(mp).toString();
+
+			const map = new SourceMap(mp, generatedPath, contents);
+			this._allSourceMaps[map_path] = map;
+
+			this._registerSourceMap(map);
+
+			return map;
+		}
+		catch (e) {
+			console.error(`_loadSourceMap: {e}`);
+		}
+		return null;
+	}
+
+	private _registerSourceMap(map: SourceMap): SourceMap {
+		var gp = map.generatedPath();
+		if (gp) {
+			this._generatedToSourceMaps[gp] = map;
+		}
+		return map;
+	}
 }
 
 enum Bias {
@@ -250,18 +311,27 @@ enum Bias {
 class SourceMap {
 
 	private _sourcemapLocation: string;	// the directory where this sourcemap lives
-	private _generatedFile: string;		// the generated file for this sourcemap
-	private _sources: string[];			// the sources of generated file (relative to sourceRoot)
-	private _sourceRoot: string;		// the common prefix for the source (can be a URL)
-	private _smc: SourceMapConsumer;	// the source map
+	private _generatedFile: string;		// the generated file to which this source map belongs to
+	private _sources: string[];			// the sources of the generated file (relative to sourceRoot)
+	private _sourceRoot: string;			// the common prefix for the source (can be a URL)
+	private _smc: SourceMapConsumer;		// the source map
 
 
 	public constructor(mapPath: string, generatedPath: string, json: string) {
 
 		this._sourcemapLocation = this.toUrl(Path.dirname(mapPath));
-		this._generatedFile = generatedPath;
 
 		const sm = JSON.parse(json);
+
+		if (!generatedPath) {
+			let file = sm.file;
+			if (!PathUtils.isAbsolutePath(file)) {
+				generatedPath = PathUtils.makePathAbsolute(mapPath, file);
+			}
+		}
+
+		this._generatedFile = generatedPath;
+
 
 		// try to fix all embedded paths because:
 		// - source map sources are URLs, so even on Windows they should be using forward slashes.
@@ -278,7 +348,7 @@ class SourceMap {
 		this._sourceRoot = sm.sourceRoot;
 
 		// use source-map utilities to normalize sources entries
-	    this._sources = sm.sources
+		this._sources = sm.sources
 			.map(util.normalize)
 			.map((source) => {
 				return this._sourceRoot && util.isAbsolute(this._sourceRoot) && util.isAbsolute(source)
@@ -304,14 +374,14 @@ class SourceMap {
 	}
 
 	/*
-	 * the generated file of this source map.
+	 * The generated file this source map belongs to.
 	 */
 	public generatedPath(): string {
 		return this._generatedFile;
 	}
 
 	/*
-	 * returns true if this source map originates from the given source.
+	 * Returns true if this source map originates from the given source.
 	 */
 	public doesOriginateFrom(absPath: string): boolean {
 		return this.findSource(absPath) !== null;
