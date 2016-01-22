@@ -130,7 +130,7 @@ export class DebugClient extends ProtocolClient {
 		});
 	}
 
-	public launch(args: DebugProtocol.LaunchRequestArguments): Promise<any> {
+	public launch(args: DebugProtocol.LaunchRequestArguments): Promise<DebugProtocol.LaunchResponse> {
 
 		return this.initializeRequest().then(response => {
 			return this.launchRequest(args);
