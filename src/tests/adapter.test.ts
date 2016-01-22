@@ -145,6 +145,7 @@ suite('Node Debug Adapter', () => {
 					const frame = response.body.stackFrames[0];
 					return dc.evaluateRequest({ context: "watch", frameId: frame.id, expression: "x" }).then(response => {
 						assert.equal(response.body.result, 9, "x !== 9");
+						return response;
 					});
 				})
 
