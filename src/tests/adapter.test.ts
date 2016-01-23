@@ -31,6 +31,17 @@ suite('Node Debug Adapter', () => {
 	   dc.stop();
    });
 
+   suite('basic', () => {
+
+		test('unknown request should produce error', done => {
+			dc.send('illegal_request').then(() => {
+				done(new Error("does not report error on unknown request"));
+			}).catch(() => {
+				done();
+			});
+		});
+
+   });
 
 	suite('initialize', () => {
 
