@@ -480,14 +480,17 @@ class SourceMap {
 
 		// make sure that we use an entry from the "sources" array that matches the passed absolute path
 		const source = this.findSource(absPath);
+		if (source) {
+			const needle = {
+				source: source,
+				line: line,
+				column: column,
+				bias: bias
+			};
 
-		const needle = {
-			source: source,
-			line: line,
-			column: column,
-			bias: bias
-		};
+			return this._smc.generatedPositionFor(needle);
+		}
 
-		return this._smc.generatedPositionFor(needle);
+		return null;
 	}
 }
