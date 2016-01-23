@@ -61,6 +61,7 @@ suite('Node Debug Adapter', () => {
 			}).then(response => {
 				done(new Error("does not report error on invalid 'pathFormat' attribute"));
 			}).catch(err => {
+				// error expected
 				done();
 			});
 		});
@@ -78,9 +79,7 @@ suite('Node Debug Adapter', () => {
 
 				dc.waitForEvent('terminated')
 
-			]).then((v) => {
-				done();
-			}).catch(done);
+			]).then(done).catch(done);
 		});
 
 		test('should stop on entry', done => {
@@ -94,9 +93,7 @@ suite('Node Debug Adapter', () => {
 
 				dc.assertStoppedLocation('entry', ENTRY_LINE)
 
-			]).then((v) => {
-				done();
-			}).catch(done);
+			]).then(done).catch(done);
 		});
 
 	});
@@ -105,11 +102,7 @@ suite('Node Debug Adapter', () => {
 
 		test('should stop on a breakpoint', done => {
 
-			dc.hitBreakpoint({
-					program: PROGRAM,
-				}, PROGRAM, BREAKPOINT_LINE).then((v) => {
-				done();
-			}).catch(done);
+			dc.hitBreakpoint({ program: PROGRAM, }, PROGRAM, BREAKPOINT_LINE).then(done).catch(done);
 
 		});
 
@@ -143,9 +136,7 @@ suite('Node Debug Adapter', () => {
 					});
 				})
 
-			]).then((v) => {
-				done();
-			}).catch(done);
+			]).then(done).catch(done);
 		});
 
 		test('should stop on a breakpoint in TypeScript source', done => {
@@ -155,12 +146,10 @@ suite('Node Debug Adapter', () => {
 			const BREAKPOINT_LINE = 17;
 
 			dc.hitBreakpoint({
-					program: PROGRAM,
-					sourceMaps: true,
-					outDir: OUT_DIR
-				}, PROGRAM, BREAKPOINT_LINE).then((v) => {
-				done();
-			}).catch(done);
+				program: PROGRAM,
+				sourceMaps: true,
+				outDir: OUT_DIR
+			}, PROGRAM, BREAKPOINT_LINE).then(done).catch(done);
 		});
 
 	});
@@ -188,9 +177,7 @@ suite('Node Debug Adapter', () => {
 
 				dc.assertStoppedLocation('exception', EXCEPTION_LINE)
 
-			]).then((v) => {
-				done();
-			}).catch(done);
+			]).then(done).catch(done);
 		});
 
 		test('should stop on uncaught exception', done => {
@@ -209,9 +196,7 @@ suite('Node Debug Adapter', () => {
 
 				dc.assertStoppedLocation('exception', UNCAUGHT_EXCEPTION_LINE)
 
-			]).then((v) => {
-				done();
-			}).catch(done);
+			]).then(done).catch(done);
 		});
 
 	});

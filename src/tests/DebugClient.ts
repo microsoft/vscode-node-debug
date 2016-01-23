@@ -22,6 +22,18 @@ export class DebugClient extends ProtocolClient {
 	private _socket: net.Socket;
 
 
+	/**
+	 * Creates a DebugClient object that provides a promise-based API to write
+	 * debug adapter tests.
+	 * A simple mocha example for setting and hitting a breakpoint in line 15 of a program 'test.js' looks like this:
+	 *
+	 * test("") {
+	 *     var dc = new DebugClient('node', './out/node/nodeDebug.js', 'node');
+	 *     dc.start();
+	 *     dc.hitBreakpoint({ program: "test.js" }, "test.js", 15).then(done).catch(done);
+	 *     dc.stop();
+	 * }
+	 */
 	constructor(runtime: string, executable: string, debugType: string) {
 		super();
 		this._runtime = runtime;
@@ -32,6 +44,12 @@ export class DebugClient extends ProtocolClient {
 
 	// ---- life cycle --------------------------------------------------------------------------------------------------------
 
+	/**
+	 * Starts a new debug adapter and sets up communication via stdin/stdout.
+	 * If a port number is specified the adapter is not launched but a connection to
+	 * a debug adapter running in server mode is established. This is useful for debugging
+	 * the adapter while running tests. For this reason all timeouts are disabled in server mode.
+	 */
 	public start(done, port?: number) {
 
 		if (typeof port === "number") {
@@ -70,6 +88,9 @@ export class DebugClient extends ProtocolClient {
 		}
 	}
 
+	/**
+	 * Shutdown the debug adapter (or disconnect if in server mode).
+	 */
 	public stop() {
 		if (this._adapterProcess) {
 			this._adapterProcess.kill();
@@ -195,6 +216,9 @@ export class DebugClient extends ProtocolClient {
 		});
 	}
 
+	/**
+	 * Returns a promise that will resolve if a 'initialize' and a 'launch' request were successful.
+	 */
 	public launch(args: DebugProtocol.LaunchRequestArguments): Promise<DebugProtocol.LaunchResponse> {
 
 		return this.initializeRequest().then(response => {
