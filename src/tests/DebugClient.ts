@@ -7,6 +7,7 @@
 
 import cp = require('child_process');
 import assert = require('assert');
+import net = require('net');
 import {DebugProtocol} from 'vscode-debugprotocol';
 import {ProtocolClient} from './ProtocolClient';
 
@@ -18,6 +19,7 @@ export class DebugClient extends ProtocolClient {
 	private _adapterProcess: cp.ChildProcess;
 	private _enableStderr: boolean;
 	private _debugType: string;
+	private _socket: net.Socket;
 
 
 	constructor(runtime: string, executable: string, debugType: string) {
@@ -28,39 +30,52 @@ export class DebugClient extends ProtocolClient {
 		this._debugType = debugType;
 	}
 
-	public start() {
+	public start(done, port?: number) {
 
-		this._adapterProcess = cp.spawn(this._runtime, [ this._executable ], {
-				stdio: [
-					'pipe', 	// stdin
-					'pipe', 	// stdout
-					'pipe'	// stderr
-				],
-			}
-		);
-		const sanitize = (s: string) => s.toString().replace(/\r?\n$/mg, '');
-		// this.serverProcess.stdout.on('data', (data: string) => {
-		// 	console.log('%c' + sanitize(data), 'background: #ddd; font-style: italic;');
-		// });
-		this._adapterProcess.stderr.on('data', (data: string) => {
-			if (this._enableStderr) {
-				console.log(sanitize(data));
-			}
-		});
+		if (typeof port === "number") {
+			this._socket = net.createConnection(port, '127.0.0.1', () => {
+				this.connect(this._socket, this._socket);
+				done();
+			});
+		} else {
+			this._adapterProcess = cp.spawn(this._runtime, [ this._executable ], {
+					stdio: [
+						'pipe', 	// stdin
+						'pipe', 	// stdout
+						'pipe'	// stderr
+					],
+				}
+			);
+			const sanitize = (s: string) => s.toString().replace(/\r?\n$/mg, '');
+			// this.serverProcess.stdout.on('data', (data: string) => {
+			// 	console.log('%c' + sanitize(data), 'background: #ddd; font-style: italic;');
+			// });
+			this._adapterProcess.stderr.on('data', (data: string) => {
+				if (this._enableStderr) {
+					console.log(sanitize(data));
+				}
+			});
 
-		this._adapterProcess.on('error', (err: Error) => {
-			console.log('error');
-		});
-		this._adapterProcess.on('exit', (code: number, signal: string) => {
-			// console.log('exit');
-		});
+			this._adapterProcess.on('error', (err: Error) => {
+				console.log('error');
+			});
+			this._adapterProcess.on('exit', (code: number, signal: string) => {
+				// console.log('exit');
+			});
 
-		this.connect(this._adapterProcess.stdout, this._adapterProcess.stdin);
+			this.connect(this._adapterProcess.stdout, this._adapterProcess.stdin);
+			done();
+		}
 	}
 
 	public stop() {
 		if (this._adapterProcess) {
 			this._adapterProcess.kill();
+			this._adapterProcess = null;
+		}
+		if (this._socket) {
+			this._socket.end();
+			this._socket = null;
 		}
 	}
 
@@ -112,9 +127,11 @@ export class DebugClient extends ProtocolClient {
 			this.on(eventType, event => {
 				resolve(event);
 			});
-			setTimeout(() => {
-				reject(new Error(`no event '${eventType}' received after ${timeout} ms`));
-			}, timeout);
+			if (!this._socket) {	// no timeouts if debugging the tests
+				setTimeout(() => {
+					reject(new Error(`no event '${eventType}' received after ${timeout} ms`));
+				}, timeout);
+			}
 		})
 	}
 
