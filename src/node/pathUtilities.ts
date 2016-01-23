@@ -71,8 +71,7 @@ export function realPath(path: string): string {
 			}
 		} else if (found.length > 1) {
 			// must be a case sensitive filesystem
-			let entry = found.find(e => e === name);	// use a case sensitive search
-			if (entry) {
+			if (found.indexOf(name) >= 0) {	// case sensitive
 				let prefix = realPath(dir);   // recurse
 				if (prefix) {
 					return Path.join(prefix, found[0]);
