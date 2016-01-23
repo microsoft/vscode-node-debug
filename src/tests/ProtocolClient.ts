@@ -37,7 +37,7 @@ export class ProtocolClient extends ee.EventEmitter {
 		});
 	}
 
-	protected send(command: string, args: any): Promise<DebugProtocol.Response> {
+	public send(command: string, args?: any): Promise<DebugProtocol.Response> {
 		return new Promise((completeDispatch, errorDispatch) => {
 			this.doSend(command, args, (result: DebugProtocol.Response) => {
 				if (result.success) {
