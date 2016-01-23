@@ -17,7 +17,7 @@
 	},
 	"dependencies": {
 		"vscode-debugprotocol": "^1.4.0",
-		"vscode-debugadapter": "^1.4.0",
+		"vscode-debugadapter": "^1.4.1",
 		"source-map": "*"
 	},
 	"repository": {
