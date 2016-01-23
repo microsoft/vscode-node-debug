@@ -105,28 +105,12 @@ suite('Node Debug Adapter', () => {
 
 		test('should stop on a breakpoint', done => {
 
-			Promise.all([
-
-				dc.waitForEvent('initialized').then(event => {
-					return dc.setBreakpointsRequest({
-						lines: [ BREAKPOINT_LINE ],
-						breakpoints: [ { line: BREAKPOINT_LINE } ],
-						source: { path: PROGRAM }
-					});
-				}).then(response => {
-					const bp = response.body.breakpoints[0];
-					assert.equal(bp.verified, true);
-					assert.equal(bp.line, BREAKPOINT_LINE);
-					return dc.configurationDoneRequest();
-				}),
-
-				dc.launch({ program: PROGRAM }),
-
-				dc.assertStoppedLocation('breakpoint', BREAKPOINT_LINE)
-
-			]).then((v) => {
+			dc.hitBreakpoint({
+					program: PROGRAM,
+				}, PROGRAM, BREAKPOINT_LINE).then((v) => {
 				done();
 			}).catch(done);
+
 		});
 
 		test('should stop on a conditional breakpoint', done => {
@@ -170,30 +154,11 @@ suite('Node Debug Adapter', () => {
 			const OUT_DIR = Path.join(PROJECT_ROOT, 'src/tests/data/sourcemaps/dist');
 			const BREAKPOINT_LINE = 17;
 
-			Promise.all([
-
-				dc.waitForEvent('initialized').then(event => {
-					return dc.setBreakpointsRequest({
-						lines: [ BREAKPOINT_LINE ],
-						breakpoints: [ { line: BREAKPOINT_LINE } ],
-						source: { path: PROGRAM }
-					});
-				}).then(response => {
-					const bp = response.body.breakpoints[0];
-					assert.equal(bp.verified, true);
-					assert.equal(bp.line, BREAKPOINT_LINE);
-					return dc.configurationDoneRequest();
-				}),
-
-				dc.launch({
+			dc.hitBreakpoint({
 					program: PROGRAM,
 					sourceMaps: true,
 					outDir: OUT_DIR
-				}),
-
-				dc.assertStoppedLocation('breakpoint', BREAKPOINT_LINE)
-
-			]).then((v) => {
+				}, PROGRAM, BREAKPOINT_LINE).then((v) => {
 				done();
 			}).catch(done);
 		});

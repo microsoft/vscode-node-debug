@@ -30,6 +30,8 @@ export class DebugClient extends ProtocolClient {
 		this._debugType = debugType;
 	}
 
+	// ---- life cycle --------------------------------------------------------------------------------------------------------
+
 	public start(done, port?: number) {
 
 		if (typeof port === "number") {
@@ -79,6 +81,8 @@ export class DebugClient extends ProtocolClient {
 		}
 	}
 
+	// ---- protocol requests -------------------------------------------------------------------------------------------------
+
 	public initializeRequest(args?: DebugProtocol.InitializeRequestArguments): Promise<DebugProtocol.InitializeResponse> {
 		if (!args) {
 			args = {
@@ -91,12 +95,20 @@ export class DebugClient extends ProtocolClient {
 		return this.send('initialize', args);
 	}
 
+	public configurationDoneRequest(args?: DebugProtocol.ConfigurationDoneArguments): Promise<DebugProtocol.ConfigurationDoneResponse> {
+		return this.send('configurationDone', args);
+	}
+
 	public launchRequest(args: DebugProtocol.LaunchRequestArguments): Promise<DebugProtocol.LaunchResponse> {
 		return this.send('launch', args);
 	}
 
-	public configurationDoneRequest(args?: DebugProtocol.ConfigurationDoneArguments): Promise<DebugProtocol.ConfigurationDoneResponse> {
-		return this.send('configurationDone', args);
+	public attachRequest(args: DebugProtocol.AttachRequestArguments): Promise<DebugProtocol.AttachResponse> {
+		return this.send('attach', args);
+	}
+
+	public disconnectRequest(args: DebugProtocol.DisconnectArguments): Promise<DebugProtocol.DisconnectResponse> {
+		return this.send('disconnect', args);
 	}
 
 	public setBreakpointsRequest(args: DebugProtocol.SetBreakpointsArguments): Promise<DebugProtocol.SetBreakpointsResponse> {
@@ -107,15 +119,51 @@ export class DebugClient extends ProtocolClient {
 		return this.send('setExceptionBreakpoints', args);
 	}
 
+	public continueRequest(args: DebugProtocol.ContinueArguments): Promise<DebugProtocol.ContinueResponse> {
+		return this.send('continue', args);
+	}
+
+	public nextRequest(args: DebugProtocol.NextArguments): Promise<DebugProtocol.NextResponse> {
+		return this.send('next', args);
+	}
+
+	public stepInRequest(args: DebugProtocol.StepInArguments): Promise<DebugProtocol.StepInResponse> {
+		return this.send('stepIn', args);
+	}
+
+	public stepOutRequest(args: DebugProtocol.StepOutArguments): Promise<DebugProtocol.StepOutResponse> {
+		return this.send('stepOut', args);
+	}
+
+	public pauseRequest(args: DebugProtocol.PauseArguments): Promise<DebugProtocol.PauseResponse> {
+		return this.send('pause', args);
+	}
+
 	public stacktraceRequest(args: DebugProtocol.StackTraceArguments): Promise<DebugProtocol.StackTraceResponse> {
 		return this.send('stackTrace', args);
+	}
+
+	public scopesRequest(args: DebugProtocol.ScopesArguments): Promise<DebugProtocol.ScopesResponse> {
+		return this.send('scopes', args);
+	}
+
+	public variablesRequest(args: DebugProtocol.VariablesArguments): Promise<DebugProtocol.VariablesResponse> {
+		return this.send('variables', args);
+	}
+
+	public sourceRequest(args: DebugProtocol.SourceArguments): Promise<DebugProtocol.SourceResponse> {
+		return this.send('source', args);
+	}
+
+	public threadsRequest(): Promise<DebugProtocol.ThreadsResponse> {
+		return this.send('threads');
 	}
 
 	public evaluateRequest(args: DebugProtocol.EvaluateArguments): Promise<DebugProtocol.EvaluateResponse> {
 		return this.send('evaluate', args);
 	}
 
-	// helpers
+	// ---- convenience methods -----------------------------------------------------------------------------------------------
 
 	/*
 	 * Returns a promise that will resolve if an event with a specific type was received within the given timeout.
@@ -170,5 +218,36 @@ export class DebugClient extends ProtocolClient {
 			assert.equal(response.body.stackFrames[0].line, line);
 			return response;
 		});
+	}
+
+	// ---- scenarios ---------------------------------------------------------------------------------------------------------
+
+	/**
+	 * Returns a promise that will resolve if a configurable breakpoint has been hit within 1000ms
+	 * and the event's reason and line number was asserted.
+	 * The promise will be rejected if a timeout occurs, the assertions fail, or if the requests fails.
+	 */
+	public hitBreakpoint(launchArgs: any, program: string, line: number) : Promise<any> {
+
+		return Promise.all([
+
+			this.waitForEvent('initialized').then(event => {
+				return this.setBreakpointsRequest({
+					lines: [ line ],
+					breakpoints: [ { line: line } ],
+					source: { path: program }
+				});
+			}).then(response => {
+				const bp = response.body.breakpoints[0];
+				assert.equal(bp.verified, true);
+				assert.equal(bp.line, line);
+				return this.configurationDoneRequest();
+			}),
+
+			this.launch(launchArgs),
+
+			this.assertStoppedLocation('breakpoint', line)
+
+		]);
 	}
 }
