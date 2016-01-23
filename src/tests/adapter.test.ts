@@ -79,7 +79,7 @@ suite('Node Debug Adapter', () => {
 
 				dc.waitForEvent('terminated')
 
-			]).then(done).catch(done);
+			]).then(() => done()).catch(done);
 		});
 
 		test('should stop on entry', done => {
@@ -93,7 +93,7 @@ suite('Node Debug Adapter', () => {
 
 				dc.assertStoppedLocation('entry', ENTRY_LINE)
 
-			]).then(done).catch(done);
+			]).then(() => done()).catch(done);
 		});
 
 	});
@@ -102,7 +102,7 @@ suite('Node Debug Adapter', () => {
 
 		test('should stop on a breakpoint', done => {
 
-			dc.hitBreakpoint({ program: PROGRAM, }, PROGRAM, BREAKPOINT_LINE).then(done).catch(done);
+			dc.hitBreakpoint({ program: PROGRAM, }, PROGRAM, BREAKPOINT_LINE).then(() => done()).catch(done);
 
 		});
 
@@ -136,7 +136,7 @@ suite('Node Debug Adapter', () => {
 					});
 				})
 
-			]).then(done).catch(done);
+			]).then(() => done()).catch(done);
 		});
 
 		test('should stop on a breakpoint in TypeScript source', done => {
@@ -149,7 +149,7 @@ suite('Node Debug Adapter', () => {
 				program: PROGRAM,
 				sourceMaps: true,
 				outDir: OUT_DIR
-			}, PROGRAM, BREAKPOINT_LINE).then(done).catch(done);
+			}, PROGRAM, BREAKPOINT_LINE).then(() => done()).catch(done);
 		});
 
 	});
@@ -159,7 +159,6 @@ suite('Node Debug Adapter', () => {
 		const PROGRAM = Path.join(PROJECT_ROOT, 'src/tests/data/programWithException.js');
 		const EXCEPTION_LINE = 6;
 		const UNCAUGHT_EXCEPTION_LINE = 12;
-
 
 		test('should stop on a caught exception', done => {
 
@@ -177,7 +176,7 @@ suite('Node Debug Adapter', () => {
 
 				dc.assertStoppedLocation('exception', EXCEPTION_LINE)
 
-			]).then(done).catch(done);
+			]).then(() => done()).catch(done);
 		});
 
 		test('should stop on uncaught exception', done => {
@@ -196,7 +195,7 @@ suite('Node Debug Adapter', () => {
 
 				dc.assertStoppedLocation('exception', UNCAUGHT_EXCEPTION_LINE)
 
-			]).then(done).catch(done);
+			]).then(() => done()).catch(done);
 		});
 
 	});

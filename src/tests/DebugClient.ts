@@ -30,7 +30,7 @@ export class DebugClient extends ProtocolClient {
 	 * test("") {
 	 *     var dc = new DebugClient('node', './out/node/nodeDebug.js', 'node');
 	 *     dc.start();
-	 *     dc.hitBreakpoint({ program: "test.js" }, "test.js", 15).then(done).catch(done);
+	 *     dc.hitBreakpoint({ program: "test.js" }, "test.js", 15).then(() => done()).catch(done);
 	 *     dc.stop();
 	 * }
 	 */
