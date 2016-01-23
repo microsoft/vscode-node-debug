@@ -125,12 +125,13 @@ suite('pathUtilities', () => {
 
 	suite('realPath(path)', () => {
 
-		test('on a case sensitive file system realPath should always return the same path', () => {
+		const path = __filename;
 
-			const path = __filename;
+		if (process.platform === 'win32' || process.platform === 'darwin') {
 
-			if (process.platform === 'win32' || process.platform === 'darwin') {
-				// case insensitive file system
+			// assume case insensitive file system
+
+			test('on a case insensitive file system realPath might return different casing for a given path', () => {
 
 				const upper = path.toUpperCase();
 				const real = PathUtils.realPath(upper);
@@ -138,15 +139,19 @@ suite('pathUtilities', () => {
 				assert.notEqual(real, upper);
 				assert.equal(real, path);
 				assert.equal(real.toUpperCase(), upper);
-			} else {
-				// case insensitive file system
+			});
+
+		} else {
+			// linux, unix, etc. -> assume case sensitive file system
+
+			test('on a case sensitive file system realPath should always return the same path', () => {
 
 				const real = PathUtils.realPath(path);
 
 				assert.equal(real, path);
-			}
-		});
 
+			});
+		}
 	});
 
 });

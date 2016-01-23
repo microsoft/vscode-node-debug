@@ -52,11 +52,16 @@ export function makeRelative(target: string, path: string) {
  * On a case sensitive file system, the returned path will always be identical to the original path.
  * In case of errors, null is returned. But you cannot use this function to verify that a path exists.
  * realPath does not handle '..' or '.' path segments and it does not take the locale into account.
+ * Since a drive letter of a Windows path cannot be looked up, realPath normalizes the drive letter to lower case.
  */
 export function realPath(path: string): string {
 
 	let dir = Path.dirname(path);
 	if (path === dir) {	// end recursion
+		// is this an upper case drive letter?
+		if (/^[A-Z]\:\\$/.test(path)) {
+			path = path.toLowerCase();
+		}
 		return path;
 	}
 	let name = Path.basename(path).toLowerCase();
