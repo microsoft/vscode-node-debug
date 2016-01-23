@@ -123,4 +123,30 @@ suite('pathUtilities', () => {
 		});
 	});
 
+	suite('realPath(path)', () => {
+
+		test('on a case sensitive file system realPath should always return the same path', () => {
+
+			const path = __filename;
+
+			if (process.platform === 'win32' || process.platform === 'darwin') {
+				// case insensitive file system
+
+				const upper = path.toUpperCase();
+				const real = PathUtils.realPath(upper);
+
+				assert.notEqual(real, upper);
+				assert.equal(real, path);
+				assert.equal(real.toUpperCase(), upper);
+			} else {
+				// case insensitive file system
+
+				const real = PathUtils.realPath(path);
+
+				assert.equal(real, path);
+			}
+		});
+
+	});
+
 });
