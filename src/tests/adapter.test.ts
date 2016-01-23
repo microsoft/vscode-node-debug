@@ -16,20 +16,15 @@ suite('Node Debug Adapter', () => {
 
 	const PROJECT_ROOT = Path.join(__dirname, '../../');
 	const PROGRAM = Path.join(PROJECT_ROOT, 'src/tests/data/program.js');
-	const PROGRAM_WITH_EXCEPTION = Path.join(PROJECT_ROOT, 'src/tests/data/programWithException.js');
 
-	const ENTRY_LINE = 1
 	const BREAKPOINT_LINE = 2;
-	const COND_BREAKPOINT_LINE = 13;
-	const EXCEPTION_LINE = 6;
-	const UNCAUGHT_EXCEPTION_LINE = 12;
 
 	let dc: DebugClient;
 
 
-	setup(() => {
+	setup((done) => {
 		dc = new DebugClient('node', DEBUG_ADAPTER, 'node');
-		dc.start();
+		dc.start(done);
    });
 
    teardown(() => {
@@ -79,6 +74,8 @@ suite('Node Debug Adapter', () => {
 
 		test('should stop on entry', done => {
 
+			const ENTRY_LINE = 1
+
 			Promise.all([
 				dc.configurationSequence(),
 
@@ -123,6 +120,8 @@ suite('Node Debug Adapter', () => {
 
 		test('should stop on a conditional breakpoint', done => {
 
+			const COND_BREAKPOINT_LINE = 13;
+
 			Promise.all([
 
 				dc.waitForEvent('initialized').then(event => {
@@ -154,9 +153,48 @@ suite('Node Debug Adapter', () => {
 			}).catch(done);
 		});
 
+		test('should stop on a breakpoint in TypeScript source', done => {
+
+			const PROGRAM = Path.join(PROJECT_ROOT, 'src/tests/data/sourcemaps/src/classes.ts');
+			const OUT_DIR = Path.join(PROJECT_ROOT, 'src/tests/data/sourcemaps/dist');
+			const BREAKPOINT_LINE = 17;
+
+			Promise.all([
+
+				dc.waitForEvent('initialized').then(event => {
+					return dc.setBreakpointsRequest({
+						lines: [ BREAKPOINT_LINE ],
+						breakpoints: [ { line: BREAKPOINT_LINE } ],
+						source: { path: PROGRAM }
+					});
+				}).then(response => {
+					const bp = response.body.breakpoints[0];
+					assert.equal(bp.verified, true);
+					assert.equal(bp.line, BREAKPOINT_LINE);
+					return dc.configurationDoneRequest();
+				}),
+
+				dc.launch({
+					program: PROGRAM,
+					sourceMaps: true,
+					outDir: OUT_DIR
+				}),
+
+				dc.assertStoppedLocation('breakpoint', BREAKPOINT_LINE)
+
+			]).then((v) => {
+				done();
+			}).catch(done);
+		});
+
 	});
 
 	suite('setExceptionBreakpoints', () => {
+
+		const PROGRAM = Path.join(PROJECT_ROOT, 'src/tests/data/programWithException.js');
+		const EXCEPTION_LINE = 6;
+		const UNCAUGHT_EXCEPTION_LINE = 12;
+
 
 		test('should stop on a caught exception', done => {
 
@@ -170,7 +208,7 @@ suite('Node Debug Adapter', () => {
 					return dc.configurationDoneRequest();
 				}),
 
-				dc.launch({ program: PROGRAM_WITH_EXCEPTION }),
+				dc.launch({ program: PROGRAM }),
 
 				dc.assertStoppedLocation('exception', EXCEPTION_LINE)
 
@@ -191,7 +229,7 @@ suite('Node Debug Adapter', () => {
 					return dc.configurationDoneRequest();
 				}),
 
-				dc.launch({ program: PROGRAM_WITH_EXCEPTION }),
+				dc.launch({ program: PROGRAM }),
 
 				dc.assertStoppedLocation('exception', UNCAUGHT_EXCEPTION_LINE)
 

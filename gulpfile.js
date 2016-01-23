@@ -19,8 +19,8 @@ var compilation = tsb.create(path.join(__dirname, 'tsconfig.json'), true);
 
 var sources = [
 	'src/**/*.ts',
-	'typings/**/*.ts',
-	'test/**/*.ts'
+	'!src/tests/data/**',
+	'typings/**/*.ts'
 ];
 
 var outDest = 'out';
