@@ -121,7 +121,7 @@ export class SourceMaps implements ISourceMaps {
 
 		// search for all map files in generatedCodeDirectory
 		if (this._generatedCodeDirectory) {
-			let maps = FS.readdirSync(this._generatedCodeDirectory).filter((e) => e.endsWith('.map'));
+			let maps = FS.readdirSync(this._generatedCodeDirectory).filter(e => Path.extname(e.toLowerCase()) === '.map');
 			for (let map_name of maps) {
 				const map_path = Path.join(this._generatedCodeDirectory, map_name);
 				const m = this._loadSourceMap(map_path);

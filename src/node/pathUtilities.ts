@@ -62,7 +62,7 @@ export function realPath(path: string): string {
 	let name = Path.basename(path).toLowerCase();
 	try {
 		let entries = FS.readdirSync(dir);
-		let found = entries.filter((e) => e.toLowerCase() === name);	// use a case insensitive search
+		let found = entries.filter(e => e.toLowerCase() === name);	// use a case insensitive search
 		if (found.length == 1) {
 			// on a case sensitive filesystem we cannot determine here, whether the file exists or not, hence we need the 'file exists' precondition
 			let prefix = realPath(dir);   // recurse
@@ -71,7 +71,7 @@ export function realPath(path: string): string {
 			}
 		} else if (found.length > 1) {
 			// must be a case sensitive filesystem
-			let entry = found.find((e) => e === name);	// use a case sensitive search
+			let entry = found.find(e => e === name);	// use a case sensitive search
 			if (entry) {
 				let prefix = realPath(dir);   // recurse
 				if (prefix) {
