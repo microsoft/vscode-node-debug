@@ -21,6 +21,7 @@ export class DebugClient extends ProtocolClient {
 	private _debugType: string;
 	private _socket: net.Socket;
 
+	private _supportsConfigurationDoneRequest: boolean;
 
 	/**
 	 * Creates a DebugClient object that provides a promise-based API to write
@@ -45,6 +46,7 @@ export class DebugClient extends ProtocolClient {
 		this._executable = executable;
 		this._enableStderr = false;
 		this._debugType = debugType;
+		this._supportsConfigurationDoneRequest = false;
 	}
 
 	// ---- life cycle --------------------------------------------------------------------------------------------------------
@@ -83,7 +85,7 @@ export class DebugClient extends ProtocolClient {
 			});
 			this._adapterProcess.on('exit', (code: number, signal: string) => {
 				// console.log('exit');
-				if (code !== 0) {
+				if (code) {
 					// throw new Error("debug adapter exit code: " + code);
 					done(new Error("debug adapter exit code: " + code));
 				}
@@ -198,7 +200,7 @@ export class DebugClient extends ProtocolClient {
 	 * Returns a promise that will resolve if an event with a specific type was received within the given timeout.
 	 * The promise will be rejected if a timeout occurs.
 	 */
-	public waitForEvent(eventType: string, timeout: number = 1000): Promise<DebugProtocol.Event> {
+	public waitForEvent(eventType: string, timeout: number = 3000): Promise<DebugProtocol.Event> {
 
 		return new Promise((resolve, reject) => {
 			this.on(eventType, event => {
@@ -213,14 +215,19 @@ export class DebugClient extends ProtocolClient {
 	}
 
 	/*
-	 * Returns a promise that will resolve if an 'initialized' event was received within 1000ms
+	 * Returns a promise that will resolve if an 'initialized' event was received within 3000ms
 	 * and a subsequent 'configurationDone' request was successfully executed.
 	 * The promise will be rejected if a timeout occurs or if the 'configurationDone' request fails.
 	 */
 	public configurationSequence(): Promise<any> {
 
 		return this.waitForEvent('initialized').then(event => {
-			return this.configurationDoneRequest();
+			if (this._supportsConfigurationDoneRequest) {
+				return this.configurationDoneRequest();
+			} else {
+				// if debug adapter doesn't support the configurationDoneRequest we has to send the setExceptionBreakpointsRequest.
+				return this.setExceptionBreakpointsRequest({ filters: [ 'all' ] });
+			}
 		});
 	}
 
@@ -230,12 +237,15 @@ export class DebugClient extends ProtocolClient {
 	public launch(args: DebugProtocol.LaunchRequestArguments): Promise<DebugProtocol.LaunchResponse> {
 
 		return this.initializeRequest().then(response => {
+			if (response.body && response.body.supportsConfigurationDoneRequest) {
+				this._supportsConfigurationDoneRequest = true;
+			}
 			return this.launchRequest(args);
 		});
 	}
 
 	/*
-	 * Returns a promise that will resolve if a 'stopped' event was received within 1000ms
+	 * Returns a promise that will resolve if a 'stopped' event was received within 3000ms
 	 * and the event's reason and line number was asserted.
 	 * The promise will be rejected if a timeout occurs, the assertions fail, or if the 'stackTrace' request fails.
 	 */
@@ -255,7 +265,7 @@ export class DebugClient extends ProtocolClient {
 	// ---- scenarios ---------------------------------------------------------------------------------------------------------
 
 	/**
-	 * Returns a promise that will resolve if a configurable breakpoint has been hit within 1000ms
+	 * Returns a promise that will resolve if a configurable breakpoint has been hit within 3000ms
 	 * and the event's reason and line number was asserted.
 	 * The promise will be rejected if a timeout occurs, the assertions fail, or if the requests fails.
 	 */
@@ -273,7 +283,12 @@ export class DebugClient extends ProtocolClient {
 				const bp = response.body.breakpoints[0];
 				assert.equal(bp.verified, true);
 				assert.equal(bp.line, line);
-				return this.configurationDoneRequest();
+				if (this._supportsConfigurationDoneRequest) {
+					return this.configurationDoneRequest();
+				} else {
+					// if debug adapter doesn't support the configurationDoneRequest we has to send the setExceptionBreakpointsRequest.
+					return this.setExceptionBreakpointsRequest({ filters: [ 'all' ] });
+				}
 			}),
 
 			this.launch(launchArgs),
