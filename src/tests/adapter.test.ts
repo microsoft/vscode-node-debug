@@ -40,16 +40,14 @@ suite('Node Debug Adapter', () => {
 				done();
 			});
 		});
-
    });
 
 	suite('initialize', () => {
 
-		test('should return supported features', done => {
-			dc.initializeRequest().then(response => {
+		test('should return supported features', () => {
+			return dc.initializeRequest().then(response => {
 				assert.equal(response.body.supportsConfigurationDoneRequest, true);
-				done();
-			}).catch(done);
+			});
 		});
 
 		test('should produce error for invalid \'pathFormat\'', done => {
@@ -65,52 +63,42 @@ suite('Node Debug Adapter', () => {
 				done();
 			});
 		});
-
 	});
 
 	suite('launch', () => {
 
-		test('should run program to the end', done => {
+		test('should run program to the end', () => {
 
-			Promise.all([
+			return Promise.all([
 				dc.configurationSequence(),
-
 				dc.launch({ program: PROGRAM }),
-
 				dc.waitForEvent('terminated')
-
-			]).then(() => done()).catch(done);
+			]);
 		});
 
-		test('should stop on entry', done => {
+		test('should stop on entry', () => {
 
 			const ENTRY_LINE = 1
 
-			Promise.all([
+			return Promise.all([
 				dc.configurationSequence(),
-
 				dc.launch({ program: PROGRAM, stopOnEntry: true }),
-
 				dc.assertStoppedLocation('entry', ENTRY_LINE)
-
-			]).then(() => done()).catch(done);
+			]);
 		});
-
 	});
 
 	suite('setBreakpoints', () => {
 
-		test('should stop on a breakpoint', done => {
-
-			dc.hitBreakpoint({ program: PROGRAM, }, PROGRAM, BREAKPOINT_LINE).then(() => done()).catch(done);
-
+		test('should stop on a breakpoint', () => {
+			return dc.hitBreakpoint({ program: PROGRAM, }, PROGRAM, BREAKPOINT_LINE);
 		});
 
-		test('should stop on a conditional breakpoint', done => {
+		test('should stop on a conditional breakpoint', () => {
 
 			const COND_BREAKPOINT_LINE = 13;
 
-			Promise.all([
+			return Promise.all([
 
 				dc.waitForEvent('initialized').then(event => {
 					return dc.setBreakpointsRequest({
@@ -135,23 +123,21 @@ suite('Node Debug Adapter', () => {
 						return response;
 					});
 				})
-
-			]).then(() => done()).catch(done);
+			]);
 		});
 
-		test('should stop on a breakpoint in TypeScript source', done => {
+		test('should stop on a breakpoint in TypeScript source', () => {
 
 			const PROGRAM = Path.join(PROJECT_ROOT, 'src/tests/data/sourcemaps/src/classes.ts');
 			const OUT_DIR = Path.join(PROJECT_ROOT, 'src/tests/data/sourcemaps/dist');
 			const BREAKPOINT_LINE = 17;
 
-			dc.hitBreakpoint({
+			return dc.hitBreakpoint({
 				program: PROGRAM,
 				sourceMaps: true,
 				outDir: OUT_DIR
-			}, PROGRAM, BREAKPOINT_LINE).then(() => done()).catch(done);
+			}, PROGRAM, BREAKPOINT_LINE);
 		});
-
 	});
 
 	suite('setExceptionBreakpoints', () => {
@@ -160,9 +146,9 @@ suite('Node Debug Adapter', () => {
 		const EXCEPTION_LINE = 6;
 		const UNCAUGHT_EXCEPTION_LINE = 12;
 
-		test('should stop on a caught exception', done => {
+		test('should stop on a caught exception', () => {
 
-			Promise.all([
+			return Promise.all([
 
 				dc.waitForEvent('initialized').then(event => {
 					return dc.setExceptionBreakpointsRequest({
@@ -175,11 +161,10 @@ suite('Node Debug Adapter', () => {
 				dc.launch({ program: PROGRAM }),
 
 				dc.assertStoppedLocation('exception', EXCEPTION_LINE)
-
-			]).then(() => done()).catch(done);
+			]);
 		});
 
-		test('should stop on uncaught exception', done => {
+		test('should stop on uncaught exception', () => {
 
 			Promise.all([
 
@@ -194,9 +179,7 @@ suite('Node Debug Adapter', () => {
 				dc.launch({ program: PROGRAM }),
 
 				dc.assertStoppedLocation('exception', UNCAUGHT_EXCEPTION_LINE)
-
-			]).then(() => done()).catch(done);
+			]);
 		});
-
 	});
 });

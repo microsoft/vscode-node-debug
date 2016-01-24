@@ -48,7 +48,7 @@ gulp.task('clean', function() {
 
 gulp.task('ts-watch', ['internal-build'], function(cb) {
 	log('Watching build sources...');
-    gulp.watch(sources, ['internal-compile']);
+	gulp.watch(sources, ['internal-compile']);
 });
 
 //---- internal
