@@ -27,12 +27,17 @@ export class DebugClient extends ProtocolClient {
 	 * debug adapter tests.
 	 * A simple mocha example for setting and hitting a breakpoint in line 15 of a program 'test.js' looks like this:
 	 *
-	 * test("") {
-	 *     var dc = new DebugClient('node', './out/node/nodeDebug.js', 'node');
-	 *     dc.start();
-	 *     dc.hitBreakpoint({ program: "test.js" }, "test.js", 15).then(() => done()).catch(done);
-	 *     dc.stop();
-	 * }
+	 * var dc;
+	 * setup(done => {
+	 *     dc = new DebugClient('node', './out/node/nodeDebug.js', 'node');
+	 *     dc.start(done);
+	 * });
+	 * teardown(done => {
+	 *     dc.stop(done);
+	 * });
+	 * test('should stop on a breakpoint', () => {
+	 *     return dc.hitBreakpoint({ program: "test.js" }, "test.js", 15);
+	 * });
 	 */
 	constructor(runtime: string, executable: string, debugType: string) {
 		super();
@@ -67,20 +72,21 @@ export class DebugClient extends ProtocolClient {
 				}
 			);
 			const sanitize = (s: string) => s.toString().replace(/\r?\n$/mg, '');
-			// this.serverProcess.stdout.on('data', (data: string) => {
-			// 	console.log('%c' + sanitize(data), 'background: #ddd; font-style: italic;');
-			// });
 			this._adapterProcess.stderr.on('data', (data: string) => {
 				if (this._enableStderr) {
 					console.log(sanitize(data));
 				}
 			});
 
-			this._adapterProcess.on('error', (err: Error) => {
-				console.log('error');
+			this._adapterProcess.on('error', (err) => {
+				console.log(err);
 			});
 			this._adapterProcess.on('exit', (code: number, signal: string) => {
 				// console.log('exit');
+				if (code !== 0) {
+					// throw new Error("debug adapter exit code: " + code);
+					done(new Error("debug adapter exit code: " + code));
+				}
 			});
 
 			this.connect(this._adapterProcess.stdout, this._adapterProcess.stdin);
@@ -91,7 +97,8 @@ export class DebugClient extends ProtocolClient {
 	/**
 	 * Shutdown the debug adapter (or disconnect if in server mode).
 	 */
-	public stop() {
+	public stop(done) {
+
 		if (this._adapterProcess) {
 			this._adapterProcess.kill();
 			this._adapterProcess = null;
@@ -100,6 +107,7 @@ export class DebugClient extends ProtocolClient {
 			this._socket.end();
 			this._socket = null;
 		}
+		done();
 	}
 
 	// ---- protocol requests -------------------------------------------------------------------------------------------------
