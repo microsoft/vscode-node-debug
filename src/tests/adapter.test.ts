@@ -78,7 +78,7 @@ suite('Node Debug Adapter', () => {
 
 		test('should stop on entry', () => {
 
-			const ENTRY_LINE = 1
+			const ENTRY_LINE = 1;
 
 			return Promise.all([
 				dc.configurationSequence(),
@@ -86,6 +86,19 @@ suite('Node Debug Adapter', () => {
 				dc.assertStoppedLocation('entry', ENTRY_LINE)
 			]);
 		});
+
+		test('should stop on debugger statement', () => {
+
+			const PROGRAM = Path.join(PROJECT_ROOT, 'src/tests/data/programWithDebugger.js');
+			const DEBUGGER_LINE = 6;
+
+			return Promise.all([
+				dc.configurationSequence(),
+				dc.launch({ program: PROGRAM }),
+				dc.assertStoppedLocation('debugger statement', DEBUGGER_LINE)
+			]);
+		});
+
 	});
 
 	suite('setBreakpoints', () => {
@@ -143,10 +156,10 @@ suite('Node Debug Adapter', () => {
 	suite('setExceptionBreakpoints', () => {
 
 		const PROGRAM = Path.join(PROJECT_ROOT, 'src/tests/data/programWithException.js');
-		const EXCEPTION_LINE = 6;
-		const UNCAUGHT_EXCEPTION_LINE = 12;
 
 		test('should stop on a caught exception', () => {
+
+			const EXCEPTION_LINE = 6;
 
 			return Promise.all([
 
@@ -166,7 +179,9 @@ suite('Node Debug Adapter', () => {
 
 		test('should stop on uncaught exception', () => {
 
-			Promise.all([
+			const UNCAUGHT_EXCEPTION_LINE = 12;
+
+			return Promise.all([
 
 				dc.waitForEvent('initialized').then(event => {
 					return dc.setExceptionBreakpointsRequest({
