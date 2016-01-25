@@ -25,13 +25,13 @@ suite('Node Debug Adapter', () => {
 	setup(done => {
 		dc = new DebugClient('node', DEBUG_ADAPTER, 'node');
 		dc.start(done);
-   });
+	});
 
-   teardown(done => {
-	   dc.stop(done);
-   });
+	teardown(done => {
+		dc.stop(done);
+	});
 
-   suite('basic', () => {
+	suite('basic', () => {
 
 		test('unknown request should produce error', done => {
 			dc.send('illegal_request').then(() => {
@@ -40,7 +40,7 @@ suite('Node Debug Adapter', () => {
 				done();
 			});
 		});
-   });
+	});
 
 	suite('initialize', () => {
 
