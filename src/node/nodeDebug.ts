@@ -418,11 +418,6 @@ export class NodeDebugSession extends DebugSession {
 
 		if (runtimeArgs.indexOf('--nolazy') >= 0) {
 			this._lazy = false;
-		} else {
-			if (runtimeArgs.indexOf('--lazy') < 0) {	// if user does not force 'lazy' mode
-				runtimeArgs.push('--nolazy');  			// we force node to compile everything so that breakpoints work immediately
-				this._lazy = false;
-			}
 		}
 
 		// we always break on entry (but if user did not request this, we will not stop in the UI).
