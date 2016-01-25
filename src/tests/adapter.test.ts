@@ -116,7 +116,8 @@ suite('Node Debug Adapter', () => {
 				dc.waitForEvent('initialized').then(event => {
 					return dc.setBreakpointsRequest({
 						breakpoints: [ { line: COND_BREAKPOINT_LINE, condition: "i === 3" } ],
-						source: { path: PROGRAM }
+						source: { path: PROGRAM },
+
 					});
 				}).then(response => {
 					assert.deepEqual(response.body.breakpoints[0], {
@@ -148,7 +149,8 @@ suite('Node Debug Adapter', () => {
 			return dc.hitBreakpoint({
 				program: PROGRAM,
 				sourceMaps: true,
-				outDir: OUT_DIR
+				outDir: OUT_DIR,
+				runtimeArgs: [ "--nolazy" ]
 			}, PROGRAM, BREAKPOINT_LINE);
 		});
 	});

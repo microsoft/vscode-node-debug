@@ -20,6 +20,7 @@
 			"cwd": "${workspaceRoot}",
 			"program": "${workspaceRoot}/src/node/nodeDebug.ts",
 			"stopOnEntry": false,
+			"runtimeArgs": [ "--nolazy" ],
 			"args": [ "--server=4711" ],
 			"sourceMaps": true,
 			"outDir": "${workspaceRoot}/out"
@@ -30,6 +31,7 @@
 			"request": "launch",
 			"cwd": "${workspaceRoot}",
 			"program": "${workspaceRoot}/node_modules/mocha/bin/_mocha",
+			"runtimeArgs": [ "--nolazy" ],
 			"args": [
 				"-u", "tdd",
 				"--timeout", "999999",
