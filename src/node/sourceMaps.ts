@@ -365,8 +365,16 @@ class SourceMap {
 	private toUrl(path: string, dflt?: string) : string {
 		if (path) {
 			path = path.replace(/\\/g, '/');
-			if (/^[a-zA-Z]:\//.test(path)) {
+
+			// if path starts with a drive letter convert path to a file:/// url so that the source-map library can handle it
+			if (/^[a-zA-Z]\:\//.test(path)) {
 				path = 'file:///' + path;
+			}
+
+			// if path contains upper case drive letter convert to lower case
+			if (/^file\:\/\/\/[A-Z]\:\//.test(path)) {
+				const dl = path[8];
+				path = path.replace(dl, dl.toLowerCase());
 			}
 			return path;
 		}
