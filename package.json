@@ -75,7 +75,9 @@
 						"request": "attach",
 						"port": 5858,
 						"sourceMaps": false,
-						"outDir": null
+						"outDir": null,
+						"localRoot": "${workspaceRoot}",
+						"remoteRoot": null
 					}
 				],
 				"configurationAttributes": {
