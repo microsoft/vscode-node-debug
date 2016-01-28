@@ -1,6 +1,6 @@
 {
 	"name": "node-debug",
-	"version": "0.10.3",
+	"version": "0.10.4",
 	"publisher": "andreweinand",
 	"description": "Visual Studio Code debug adapter for node.js",
 	"author": {
@@ -16,8 +16,8 @@
 		"vscode": "^0.10.1"
 	},
 	"dependencies": {
-		"vscode-debugprotocol": "^1.4.0",
-		"vscode-debugadapter": "^1.4.1",
+		"vscode-debugprotocol": "^1.5.0",
+		"vscode-debugadapter": "^1.5.0",
 		"source-map": "*"
 	},
 	"repository": {
