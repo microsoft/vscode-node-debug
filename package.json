@@ -170,14 +170,16 @@
 								"description": "Automatically stop program after launch.",
 								"default": true
 							},
+							"localRoot": {
+								"type": ["string", "null"],
+								"description": "The local source root that corresponds to the 'remoteRoot'.",
+								"default": null
+							},
 							"remoteRoot": {
-                				"type": "string",
-								"description": "The source root of the remote host."
-              				},
-              				"localRoot": {
-                				"type": "string",
-                				"description": "The local source root that corresponds to the 'remoteRoot'."
-              				}
+								"type": ["string", "null"],
+								"description": "The source root of the remote host.",
+								"default": null
+							}
 						}
 					}
 				}
