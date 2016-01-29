@@ -221,7 +221,6 @@ export class NodeDebugSession extends DebugSession {
 	private _stopOnEntry: boolean;
 	private _needContinue: boolean;
 	private _needBreakpointEvent: boolean;
-	private _lazy: boolean; // whether node is in 'lazy' mode
 
 	private _gotEntryEvent: boolean;
 	private _entryPath: string;
@@ -337,13 +336,8 @@ export class NodeDebugSession extends DebugSession {
 		const runtimeArgs = args.runtimeArgs || [];
 		const programArgs = args.args || [];
 
-		this._lazy = true;	// node by default starts in '--lazy' mode
-
 		// special code for 'extensionHost' debugging
 		if (this._adapterID === 'extensionHost') {
-
-			// we know that extensionHost is always launched with --nolazy
-			this._lazy = false;
 
 			// we always launch in 'debug-brk' mode, but we only show the break event if 'stopOnEntry' attribute is true.
 			const launchArgs = [ runtimeExecutable, `--debugBrkPluginHost=${port}` ].concat(runtimeArgs, programArgs);
@@ -414,10 +408,6 @@ export class NodeDebugSession extends DebugSession {
 			// if no working dir given, we use the direct folder of the executable
 			workingDirectory = Path.dirname(programPath);
 			program = Path.basename(programPath);
-		}
-
-		if (runtimeArgs.indexOf('--nolazy') >= 0) {
-			this._lazy = false;
 		}
 
 		// we always break on entry (but if user did not request this, we will not stop in the UI).
@@ -1039,15 +1029,12 @@ export class NodeDebugSession extends DebugSession {
 				// breakpoint successfully set and we've got an actual location
 
 				if (sourcemap) {
-					// this source uses a sourcemap so we have to map locations back
-					if (!this._lazy) {	// only if not in lazy mode we try to map actual positions back
-						// map adjusted js breakpoints back to source language
-						if (path && this._sourceMaps) {
-							const mapresult = this._sourceMaps.MapToSource(path, actualLine, actualColumn);
-							if (mapresult) {
-								actualLine = mapresult.line;
-								actualColumn = mapresult.column;
-							}
+					// this source uses a sourcemap so we have to map js locations back to source locations
+					if (path && this._sourceMaps) {
+						const mapresult = this._sourceMaps.MapToSource(path, actualLine, actualColumn);
+						if (mapresult) {
+							actualLine = mapresult.line;
+							actualColumn = mapresult.column;
 						}
 					}
 				}
