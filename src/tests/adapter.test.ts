@@ -142,8 +142,8 @@ suite('Node Debug Adapter', () => {
 
 		test('should stop on a breakpoint in TypeScript source', () => {
 
-			const PROGRAM = Path.join(PROJECT_ROOT, 'src/tests/data/sourcemaps/src/classes.ts');
-			const OUT_DIR = Path.join(PROJECT_ROOT, 'src/tests/data/sourcemaps/dist');
+			const PROGRAM = Path.join(PROJECT_ROOT, 'src/tests/data/sourcemaps-inline/src/classes.ts');
+			const OUT_DIR = Path.join(PROJECT_ROOT, 'src/tests/data/sourcemaps-inline/dist');
 			const BREAKPOINT_LINE = 17;
 
 			return dc.hitBreakpoint({
@@ -152,6 +152,21 @@ suite('Node Debug Adapter', () => {
 				outDir: OUT_DIR,
 				runtimeArgs: [ "--nolazy" ]
 			}, PROGRAM, BREAKPOINT_LINE);
+		});
+
+		test('should stop on a breakpoint in TypeScript source - Microsoft/vscode#2574', () => {
+
+			const PROGRAM = Path.join(PROJECT_ROOT, 'src/tests/data/sourcemaps-2574/out/classes.js');
+			const SOURCE = Path.join(PROJECT_ROOT, 'src/tests/data/sourcemaps-2574/src/classes.ts');
+			const OUT_DIR = Path.join(PROJECT_ROOT, 'src/tests/data/sourcemaps-2574/out');
+			const BREAKPOINT_LINE = 17;
+
+			return dc.hitBreakpoint({
+				program: PROGRAM,
+				sourceMaps: true,
+				outDir: OUT_DIR,
+				runtimeArgs: [ "--nolazy" ]
+			}, SOURCE, BREAKPOINT_LINE);
 		});
 	});
 

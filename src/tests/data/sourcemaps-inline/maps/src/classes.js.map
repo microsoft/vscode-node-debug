@@ -1,0 +1,20 @@
+{
+	"version": 3,
+	"file": "src/classes.js",
+	"sourceRoot": "",
+	"sources": [
+		"../../src/classes.ts"
+	],
+	"names": [
+		"Foo",
+		"Foo.constructor",
+		"Foo.getName",
+		"Bar",
+		"Bar.constructor",
+		"Bar.getName"
+	],
+	"mappings": ";;;;;AAAA;IAIEA,aAAYA,IAAYA;QACtBC,IAAIA,CAACA,KAAKA,GAAGA,IAAIA,CAACA;IACpBA,CAACA;IAEDD,qBAAOA,GAAPA;QACEE,MAAMA,CAACA,IAAIA,CAACA,KAAKA,CAACA;IACpBA,CAACA;IACHF,UAACA;AAADA,CAXA,AAWCA,IAAA;AAED;IAAkBG,uBAAGA;IAArBA;QAAkBC,8BAAGA;IAKrBA,CAACA;IAHCD,qBAAOA,GAAPA;QACEE,MAAMA,CAACA,gBAAKA,CAACA,OAAOA,WAAEA,GAAGA,MAAMA,CAACA;IAClCA,CAACA;IACHF,UAACA;AAADA,CALA,AAKCA,EALiB,GAAG,EAKpB;AAED,IAAI,GAAG,GAAG,IAAI,GAAG,CAAC,OAAO,CAAC,CAAC;AAE3B,OAAO,CAAC,GAAG,CAAC,GAAG,CAAC,OAAO,EAAE,CAAC,CAAC,CAAC,WAAW",
+	"sourcesContent": [
+		"class Foo {\n\n  private _name: string;\n\n  constructor(name: string) {\n    this._name = name;\n  }\n\n  getName() : string {\n    return this._name;\n  }\n}\n\nclass Bar extends Foo {\n\n  getName() : string {\n    return super.getName() + ' Doe';\n  }\n}\n\nvar bar = new Bar('John2');\n\nconsole.log(bar.getName()); // John Doe\n"
+	]
+}
