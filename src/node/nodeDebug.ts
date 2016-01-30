@@ -532,7 +532,13 @@ export class NodeDebugSession extends DebugSession {
 			this._attachMode = true;
 		}
 
-		this._localRoot = args.localRoot;
+		if (args.localRoot) {
+			if (!FS.existsSync(args.localRoot)) {
+				this.sendErrorResponse(response, 2023, "attribute 'localRoot' ('{path}') does not exist", { path: args.localRoot });
+				return;
+			}
+			this._localRoot = args.localRoot;
+		}
 		this._remoteRoot = args.remoteRoot;
 
 		this._attach(response, args.port, args.address, args.timeout);
