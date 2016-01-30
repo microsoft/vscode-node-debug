@@ -316,9 +316,11 @@ export class NodeDebugSession extends DebugSession {
 
 	protected launchRequest(response: DebugProtocol.LaunchResponse, args: LaunchRequestArguments): void {
 
-		this._externalConsole = (typeof args.externalConsole === 'boolean') && args.externalConsole;
+		if (this._processCommonArgs(response, args)) {
+			return;
+		}
 
-		this._processCommonArgs(args);
+		this._externalConsole = (typeof args.externalConsole === 'boolean') && args.externalConsole;
 
 		var port = random(3000, 50000);
 
@@ -495,23 +497,33 @@ export class NodeDebugSession extends DebugSession {
 		});
 	}
 
-	private _processCommonArgs(args: CommonArguments) {
+	private _processCommonArgs(response: DebugProtocol.Response, args: CommonArguments): boolean {
 
 		this._stopOnEntry = (typeof args.stopOnEntry === 'boolean') && args.stopOnEntry;
 
 		if (!this._sourceMaps) {
 			if (typeof args.sourceMaps === 'boolean' && args.sourceMaps) {
 				const generatedCodeDirectory = args.outDir;
+
+				if (!FS.existsSync(generatedCodeDirectory)) {
+					this.sendErrorResponse(response, 2022, "attribute 'outDir' ('{path}') does not exist", { path: generatedCodeDirectory });
+					return true;
+				}
+
 				this._sourceMaps = new SourceMaps(generatedCodeDirectory);
 			}
 		}
+
+		return false;
 	}
 
 	//---- attach request -----------------------------------------------------------------------------------------------------
 
 	protected attachRequest(response: DebugProtocol.AttachResponse, args: AttachRequestArguments): void {
 
-		this._processCommonArgs(args);
+		if (this._processCommonArgs(response, args)) {
+			return;
+		}
 
 		if (this._adapterID === 'extensionHost') {
 			// in EH mode 'attach' means 'launch' mode
