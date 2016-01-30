@@ -84,10 +84,8 @@ export class DebugClient extends ProtocolClient {
 				console.log(err);
 			});
 			this._adapterProcess.on('exit', (code: number, signal: string) => {
-				// console.log('exit');
 				if (code) {
-					// throw new Error("debug adapter exit code: " + code);
-					done(new Error("debug adapter exit code: " + code));
+					// done(new Error("debug adapter exit code: " + code));
 				}
 			});
 
@@ -262,6 +260,35 @@ export class DebugClient extends ProtocolClient {
 		});
 	}
 
+	/*
+	 * Returns a promise that will resolve if enough output events with the given category have been received
+	 * and the concatenated data match the expected data.
+	 * The promise will be rejected as soon as the received data cannot match the expected data or if a timeout occurs.
+	 */
+	public assertOutput(category: string, expected: string, timeout: number = 3000): Promise<DebugProtocol.Event> {
+
+		return new Promise((resolve, reject) => {
+			let output = '';
+			this.on('output', event => {
+				const e = <DebugProtocol.OutputEvent> event;
+				if (e.body.category === category) {
+					output += e.body.output;
+					if (output === expected) {
+						resolve(event);
+					} else if (expected.indexOf(output) !== 0) {
+						const sanitize = (s: string) => s.toString().replace(/\r/mg, '\\r').replace(/\n/mg, '\\n');
+						reject(new Error(`received data '${sanitize(output)}' is not a prefix of the expected data '${sanitize(expected)}'`));
+					}
+				}
+			});
+			if (!this._socket) {	// no timeouts if debugging the tests
+				setTimeout(() => {
+					reject(new Error(`not enough output data received after ${timeout} ms`));
+				}, timeout);
+			}
+		})
+	}
+
 	// ---- scenarios ---------------------------------------------------------------------------------------------------------
 
 	/**
@@ -286,7 +313,7 @@ export class DebugClient extends ProtocolClient {
 				if (this._supportsConfigurationDoneRequest) {
 					return this.configurationDoneRequest();
 				} else {
-					// if debug adapter doesn't support the configurationDoneRequest we has to send the setExceptionBreakpointsRequest.
+					// if debug adapter doesn't support the configurationDoneRequest we have to send the setExceptionBreakpointsRequest.
 					return this.setExceptionBreakpointsRequest({ filters: [ 'all' ] });
 				}
 			}),
