@@ -213,19 +213,19 @@ suite('Node Debug Adapter', () => {
 				dc.assertStoppedLocation('exception', UNCAUGHT_EXCEPTION_LINE)
 			]);
 		});
-
-		suite('output events', () => {
-
-			const PROGRAM = Path.join(PROJECT_ROOT, 'src/tests/data/programWithOutput.js');
-
-			test('stdout and stderr events should be complete and in correct order', () => {
-				return Promise.all([
-					dc.configurationSequence(),
-					dc.launch({ program: PROGRAM }),
-					dc.assertOutput('stdout', "Hello stdout 0\nHello stdout 1\nHello stdout 2\n"),
-					//dc.assertOutput('stderr', "Hello stderr 0\nHello stderr 1\nHello stderr 2\n")
-				]);
-			});
-		});
 	});
+
+    suite('output events', () => {
+
+        const PROGRAM = Path.join(PROJECT_ROOT, 'src/tests/data/programWithOutput.js');
+
+        test('stdout and stderr events should be complete and in correct order', () => {
+            return Promise.all([
+                dc.configurationSequence(),
+                dc.launch({ program: PROGRAM }),
+                dc.assertOutput('stdout', "Hello stdout 0\nHello stdout 1\nHello stdout 2\n"),
+                //dc.assertOutput('stderr', "Hello stderr 0\nHello stderr 1\nHello stderr 2\n")
+            ]);
+        });
+    });
 });
