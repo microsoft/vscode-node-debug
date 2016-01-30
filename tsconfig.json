@@ -6,6 +6,8 @@
 		"preserveConstEnums": true,
 		"target": "es5",
 		"sourceMap": true,
-		"outDir": "out"
+		"outDir": "out",
+		"inlineSourceMap": true,
+		"sourceRoot": "../../src"
 	}
 }
