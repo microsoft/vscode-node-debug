@@ -405,8 +405,16 @@ class SourceMap {
 	 * or null otherwise.
 	 */
 	private findSource(absPath: string): string {
+		// on Windows change back slashes to forward slashes because the source-map library requires this
+		if (process.platform === 'win32') {
+			absPath = absPath.replace(/\\/g, '/');
+		}
 		for (let name of this._sources) {
-			if (this.pathMatches(absPath, name)) {
+			if (!util.isAbsolute(name)) {
+				name = util.join(this._sourceRoot, name);
+			}
+			let url = this.absolutePath(name);
+			if (absPath === url) {
 				return name;
 			}
 		}
@@ -414,23 +422,10 @@ class SourceMap {
 	}
 
 	/**
-	 * returns true if the given absolute path matches name.
-	 */
-	private pathMatches(absPath: string, name: string) : boolean {
-		// on Windows change back slashes to forward slashes because the source-map library requires this
-		if (process.platform === 'win32') {
-			absPath = absPath.replace(/\\/g, '/');
-		}
-		let url = this.absolutePath(name);
-		return absPath === url;
-	}
-
-	/**
-	 * Tries to make the given path absolute by prefixing it with the source root and/or the source maps location.
+	 * Tries to make the given path absolute by prefixing it with the source maps location.
 	 * Any url schemes are removed.
 	 */
-	private absolutePath(name: string): string {
-		let path: string = util.join(this._sourceRoot, name);
+	private absolutePath(path: string): string {
 		if (!util.isAbsolute(path)) {
 			path = util.join(this._sourcemapLocation, path);
 		}
@@ -441,7 +436,7 @@ class SourceMap {
 				path = path.substr(1);
 			}
 		}
-	    return path;
+		return path;
 	}
 
 	/*
