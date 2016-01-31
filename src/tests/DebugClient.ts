@@ -220,12 +220,7 @@ export class DebugClient extends ProtocolClient {
 	public configurationSequence(): Promise<any> {
 
 		return this.waitForEvent('initialized').then(event => {
-			if (this._supportsConfigurationDoneRequest) {
-				return this.configurationDoneRequest();
-			} else {
-				// if debug adapter doesn't support the configurationDoneRequest we has to send the setExceptionBreakpointsRequest.
-				return this.setExceptionBreakpointsRequest({ filters: [ 'all' ] });
-			}
+			return this.configurationDone();
 		});
 	}
 
@@ -240,6 +235,15 @@ export class DebugClient extends ProtocolClient {
 			}
 			return this.launchRequest(args);
 		});
+	}
+
+	private configurationDone() : Promise<any> {
+		if (this._supportsConfigurationDoneRequest) {
+			return this.configurationDoneRequest();
+		} else {
+			// if debug adapter doesn't support the configurationDoneRequest we have to send the setExceptionBreakpointsRequest.
+			return this.setExceptionBreakpointsRequest({ filters: [ 'all' ] });
+		}
 	}
 
 	/*
@@ -310,12 +314,7 @@ export class DebugClient extends ProtocolClient {
 				const bp = response.body.breakpoints[0];
 				assert.equal(bp.verified, true);
 				assert.equal(bp.line, line);
-				if (this._supportsConfigurationDoneRequest) {
-					return this.configurationDoneRequest();
-				} else {
-					// if debug adapter doesn't support the configurationDoneRequest we have to send the setExceptionBreakpointsRequest.
-					return this.setExceptionBreakpointsRequest({ filters: [ 'all' ] });
-				}
+				return this.configurationDone();
 			}),
 
 			this.launch(launchArgs),
