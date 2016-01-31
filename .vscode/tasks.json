@@ -1,12 +1,12 @@
 {
-    "version": "0.1.0",
-    "command": "gulp",
-    "isShellCommand": true,
-    "tasks": [
-       {
-            "taskName": "ts-watch",
-            "args": [],
-            "isBuildCommand": true,
+	"version": "0.1.0",
+	"command": "gulp",
+	"isShellCommand": true,
+	"tasks": [
+		{
+			"taskName": "ts-watch",
+			"args": [],
+			"isBuildCommand": true,
 			"isWatching": true,
 			"problemMatcher": {
 				"owner": "typescript",
@@ -20,7 +20,7 @@
 				"watchedTaskBeginsRegExp": "^\\*\\*\\* Starting\\.\\.\\.$",
 				"watchedTaskEndsRegExp": "^\\*\\*\\* Finished with \\d+ errors\\.$"
 			}
-        },
+		},
 		{
 			"taskName": "tslint",
 			"args": [],
@@ -40,5 +40,5 @@
 				}
 			}
 		}
-    ]
+	]
 }
