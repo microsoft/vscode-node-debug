@@ -363,6 +363,7 @@ export class NodeDebugSession extends DebugSession {
 		let programPath = args.program;
 		if (programPath) {
 			programPath = this.convertClientPathToDebugger(programPath);
+			programPath = Path.normalize(programPath);
 			if (!FS.existsSync(programPath)) {
 				this.sendErrorResponse(response, 2007, "program '{path}' does not exist", { path: programPath });
 				return;
