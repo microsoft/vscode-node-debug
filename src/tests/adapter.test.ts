@@ -149,7 +149,8 @@ suite('Node Debug Adapter', () => {
 			return dc.hitBreakpoint({
 				program: PROGRAM,
 				sourceMaps: true,
-				outDir: OUT_DIR
+				outDir: OUT_DIR,
+				runtimeArgs: [ "--nolazy" ]
 			}, PROGRAM, BREAKPOINT_LINE);
 		});
 
@@ -163,7 +164,8 @@ suite('Node Debug Adapter', () => {
 			return dc.hitBreakpoint({
 				program: PROGRAM,
 				sourceMaps: true,
-				outDir: OUT_DIR
+				outDir: OUT_DIR,
+				runtimeArgs: [ "--nolazy" ]
 			}, TS_SOURCE, TS_LINE);
 		});
 
@@ -179,7 +181,8 @@ suite('Node Debug Adapter', () => {
 			return dc.hitBreakpoint({
 				program: PROGRAM,
 				sourceMaps: true,
-				outDir: OUT_DIR
+				outDir: OUT_DIR,
+				runtimeArgs: [ "--nolazy" ]
 			}, JS_SOURCE, JS_LINE, TS_SOURCE, TS_LINE);
 		});
 	});
