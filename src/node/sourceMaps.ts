@@ -142,7 +142,7 @@ export class SourceMaps implements ISourceMaps {
 		let pathToGenerated = pathToSource;
 
 		const ext = Path.extname(pathToSource);
-		if (ext !== 'js') {
+		if (ext !== '.js') {
 			// use heuristic: change extension to ".js" and find a map for it
 			const pos = pathToSource.lastIndexOf('.');
 			if (pos >= 0) {

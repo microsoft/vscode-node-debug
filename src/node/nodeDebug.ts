@@ -912,28 +912,32 @@ export class NodeDebugSession extends DebugSession {
 
 		let sourcemap = false;
 
-		let p: string = null;
+		let generated: string = null;
 		if (this._sourceMaps) {
-			p = this._sourceMaps.MapPathFromSource(path);
+			generated = this._sourceMaps.MapPathFromSource(path);
+			if (generated === path) {   // if generated and source are the same we don't need a sourcemap
+				generated = null;
+			}
 		}
-		if (p) {
+		if (generated) {
 			sourcemap = true;
 			// source map line numbers
 			for (let lb of lbs) {
 				const mapresult = this._sourceMaps.MapFromSource(path, lb.line, lb.column);
 				if (mapresult) {
-					if (mapresult.path !== p) {
-						// this source line maps to a different destination file -> this is not supported
-						// console.error(`setBreakPointsRequest: sourceMap limitation ${pp}`);
+					if (mapresult.path !== generated) {
+						// this source line maps to a different destination file -> this is not supported, ignore breakpoint
+						lb.ignore = true;
+					} else {
+						lb.line = mapresult.line;
+						lb.column = mapresult.column;
 					}
-					lb.line = mapresult.line;
-					lb.column = mapresult.column;
 				} else {
 					// we couldn't map this breakpoint -> ignore it
 					lb.ignore = true;
 				}
 			}
-			path = p;
+			path = generated;
 		}
 		else if (!NodeDebugSession.isJavaScript(path)) {
 			// ignore all breakpoints for this source
