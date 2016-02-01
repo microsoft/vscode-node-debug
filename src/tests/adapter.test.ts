@@ -149,39 +149,38 @@ suite('Node Debug Adapter', () => {
 			return dc.hitBreakpoint({
 				program: PROGRAM,
 				sourceMaps: true,
-				outDir: OUT_DIR,
-				runtimeArgs: [ "--nolazy" ]
+				outDir: OUT_DIR
 			}, PROGRAM, BREAKPOINT_LINE);
 		});
 
 		test('should stop on a breakpoint in TypeScript source - Microsoft/vscode#2574', () => {
 
 			const PROGRAM = Path.join(PROJECT_ROOT, 'src/tests/data/sourcemaps-2574/out/classes.js');
-			const SOURCE = Path.join(PROJECT_ROOT, 'src/tests/data/sourcemaps-2574/src/classes.ts');
 			const OUT_DIR = Path.join(PROJECT_ROOT, 'src/tests/data/sourcemaps-2574/out');
-			const BREAKPOINT_LINE = 17;
+			const TS_SOURCE = Path.join(PROJECT_ROOT, 'src/tests/data/sourcemaps-2574/src/classes.ts');
+			const TS_LINE = 17;
 
 			return dc.hitBreakpoint({
 				program: PROGRAM,
 				sourceMaps: true,
-				outDir: OUT_DIR,
-				runtimeArgs: [ "--nolazy" ]
-			}, SOURCE, BREAKPOINT_LINE);
+				outDir: OUT_DIR
+			}, TS_SOURCE, TS_LINE);
 		});
 
 		test('should stop on a breakpoint in TypeScript even if breakpoint was set in JavaScript - Microsoft/vscode-node-debug#43', () => {
 
 			const PROGRAM = Path.join(PROJECT_ROOT, 'src/tests/data/sourcemaps-2574/out/classes.js');
-			const SOURCE = Path.join(PROJECT_ROOT, 'src/tests/data/sourcemaps-2574/src/classes.ts');
 			const OUT_DIR = Path.join(PROJECT_ROOT, 'src/tests/data/sourcemaps-2574/out');
-			const BREAKPOINT_LINE = 21;
+			const JS_SOURCE = PROGRAM;
+			const JS_LINE = 21;
+			const TS_SOURCE = Path.join(PROJECT_ROOT, 'src/tests/data/sourcemaps-2574/src/classes.ts');
+			const TS_LINE = 17;
 
 			return dc.hitBreakpoint({
 				program: PROGRAM,
 				sourceMaps: true,
-				outDir: OUT_DIR,
-				runtimeArgs: [ "--nolazy" ]
-			}, PROGRAM, BREAKPOINT_LINE, SOURCE, 17);
+				outDir: OUT_DIR
+			}, JS_SOURCE, JS_LINE, TS_SOURCE, TS_LINE);
 		});
 	});
 
@@ -230,17 +229,17 @@ suite('Node Debug Adapter', () => {
 		});
 	});
 
-    suite('output events', () => {
+	suite('output events', () => {
 
-        const PROGRAM = Path.join(PROJECT_ROOT, 'src/tests/data/programWithOutput.js');
+		const PROGRAM = Path.join(PROJECT_ROOT, 'src/tests/data/programWithOutput.js');
 
-        test('stdout and stderr events should be complete and in correct order', () => {
-            return Promise.all([
-                dc.configurationSequence(),
-                dc.launch({ program: PROGRAM }),
-                dc.assertOutput('stdout', "Hello stdout 0\nHello stdout 1\nHello stdout 2\n"),
-                //dc.assertOutput('stderr', "Hello stderr 0\nHello stderr 1\nHello stderr 2\n")
-            ]);
-        });
-    });
+		test('stdout and stderr events should be complete and in correct order', () => {
+			return Promise.all([
+				dc.configurationSequence(),
+				dc.launch({ program: PROGRAM }),
+				dc.assertOutput('stdout', "Hello stdout 0\nHello stdout 1\nHello stdout 2\n"),
+				//dc.assertOutput('stderr', "Hello stderr 0\nHello stderr 1\nHello stderr 2\n")
+			]);
+		});
+	});
 });
