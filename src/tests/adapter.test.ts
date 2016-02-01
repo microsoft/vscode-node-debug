@@ -83,7 +83,7 @@ suite('Node Debug Adapter', () => {
 			return Promise.all([
 				dc.configurationSequence(),
 				dc.launch({ program: PROGRAM, stopOnEntry: true }),
-				dc.assertStoppedLocation('entry', ENTRY_LINE)
+				dc.assertStoppedLocation('entry', PROGRAM, ENTRY_LINE)
 			]);
 		});
 
@@ -95,7 +95,7 @@ suite('Node Debug Adapter', () => {
 			return Promise.all([
 				dc.configurationSequence(),
 				dc.launch({ program: PROGRAM }),
-				dc.assertStoppedLocation('debugger statement', DEBUGGER_LINE)
+				dc.assertStoppedLocation('debugger statement', PROGRAM, DEBUGGER_LINE)
 			]);
 		});
 
@@ -130,7 +130,7 @@ suite('Node Debug Adapter', () => {
 
 				dc.launch({ program: PROGRAM }),
 
-				dc.assertStoppedLocation('breakpoint', COND_BREAKPOINT_LINE).then(response => {
+				dc.assertStoppedLocation('breakpoint', PROGRAM, COND_BREAKPOINT_LINE).then(response => {
 					const frame = response.body.stackFrames[0];
 					return dc.evaluateRequest({ context: "watch", frameId: frame.id, expression: "x" }).then(response => {
 						assert.equal(response.body.result, 9, "x !== 9");
@@ -168,6 +168,21 @@ suite('Node Debug Adapter', () => {
 				runtimeArgs: [ "--nolazy" ]
 			}, SOURCE, BREAKPOINT_LINE);
 		});
+
+		test('should stop on a breakpoint in TypeScript even if breakpoint was set in JavaScript - Microsoft/vscode-node-debug#43', () => {
+
+			const PROGRAM = Path.join(PROJECT_ROOT, 'src/tests/data/sourcemaps-2574/out/classes.js');
+			const SOURCE = Path.join(PROJECT_ROOT, 'src/tests/data/sourcemaps-2574/src/classes.ts');
+			const OUT_DIR = Path.join(PROJECT_ROOT, 'src/tests/data/sourcemaps-2574/out');
+			const BREAKPOINT_LINE = 21;
+
+			return dc.hitBreakpoint({
+				program: PROGRAM,
+				sourceMaps: true,
+				outDir: OUT_DIR,
+				runtimeArgs: [ "--nolazy" ]
+			}, PROGRAM, BREAKPOINT_LINE, SOURCE, 17);
+		});
 	});
 
 	suite('setExceptionBreakpoints', () => {
@@ -190,7 +205,7 @@ suite('Node Debug Adapter', () => {
 
 				dc.launch({ program: PROGRAM }),
 
-				dc.assertStoppedLocation('exception', EXCEPTION_LINE)
+				dc.assertStoppedLocation('exception', PROGRAM, EXCEPTION_LINE)
 			]);
 		});
 
@@ -210,7 +225,7 @@ suite('Node Debug Adapter', () => {
 
 				dc.launch({ program: PROGRAM }),
 
-				dc.assertStoppedLocation('exception', UNCAUGHT_EXCEPTION_LINE)
+				dc.assertStoppedLocation('exception', PROGRAM, UNCAUGHT_EXCEPTION_LINE)
 			]);
 		});
 	});

@@ -251,7 +251,7 @@ export class DebugClient extends ProtocolClient {
 	 * and the event's reason and line number was asserted.
 	 * The promise will be rejected if a timeout occurs, the assertions fail, or if the 'stackTrace' request fails.
 	 */
-	public assertStoppedLocation(reason: string, line: number) : Promise<DebugProtocol.StackTraceResponse> {
+	public assertStoppedLocation(reason: string, path: string, line: number) : Promise<DebugProtocol.StackTraceResponse> {
 
 		return this.waitForEvent('stopped').then(event => {
 			assert.equal(event.body.reason, reason);
@@ -259,7 +259,9 @@ export class DebugClient extends ProtocolClient {
 				threadId: event.body.threadId
 			});
 		}).then(response => {
-			assert.equal(response.body.stackFrames[0].line, line);
+			const frame = response.body.stackFrames[0];
+			assert.equal(frame.source.path, path);
+			assert.equal(frame.line, line);
 			return response;
 		});
 	}
@@ -300,7 +302,10 @@ export class DebugClient extends ProtocolClient {
 	 * and the event's reason and line number was asserted.
 	 * The promise will be rejected if a timeout occurs, the assertions fail, or if the requests fails.
 	 */
-	public hitBreakpoint(launchArgs: any, program: string, line: number) : Promise<any> {
+	public hitBreakpoint(launchArgs: any, path: string, line: number, expected_path?: string, expected_line?: number) : Promise<any> {
+
+		expected_path = expected_path || path;
+		expected_line = expected_line || line;
 
 		return Promise.all([
 
@@ -308,7 +313,7 @@ export class DebugClient extends ProtocolClient {
 				return this.setBreakpointsRequest({
 					lines: [ line ],
 					breakpoints: [ { line: line } ],
-					source: { path: program }
+					source: { path: path }
 				});
 			}).then(response => {
 				const bp = response.body.breakpoints[0];
@@ -319,7 +324,7 @@ export class DebugClient extends ProtocolClient {
 
 			this.launch(launchArgs),
 
-			this.assertStoppedLocation('breakpoint', line)
+			this.assertStoppedLocation('breakpoint', expected_path, expected_line)
 
 		]);
 	}
