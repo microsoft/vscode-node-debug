@@ -8,6 +8,8 @@ import * as FS from 'fs';
 import * as URL from 'url';
 import {SourceMapConsumer} from 'source-map';
 import * as PathUtils from './pathUtilities';
+import {NodeDebugSession} from './nodeDebug';
+
 
 var util = require('../../node_modules/source-map/lib/util.js');
 
@@ -42,17 +44,17 @@ export interface ISourceMaps {
 
 export class SourceMaps implements ISourceMaps {
 
-	public static TRACE = false;
-
 	private static SOURCE_MAPPING_MATCHER = new RegExp("//[#@] ?sourceMappingURL=(.+)$");
 
+	private _session: NodeDebugSession;
 	private _allSourceMaps: { [id: string] : SourceMap; } = {};			// map file path -> SourceMap
 	private _generatedToSourceMaps:  { [id: string] : SourceMap; } = {};	// generated file -> SourceMap
 	private _sourceToGeneratedMaps:  { [id: string] : SourceMap; } = {};	// source file -> SourceMap
 	private _generatedCodeDirectory: string;
 
 
-	public constructor(generatedCodeDirectory: string) {
+	public constructor(session: NodeDebugSession, generatedCodeDirectory: string) {
+		this._session = session;
 		this._generatedCodeDirectory = generatedCodeDirectory;
 	}
 
@@ -69,8 +71,11 @@ export class SourceMaps implements ISourceMaps {
 			line += 1;	// source map impl is 1 based
 			const mr = map.generatedPositionFor(pathToSource, line, column);
 			if (mr && typeof mr.line === 'number') {
-				if (SourceMaps.TRACE) console.error(`${Path.basename(pathToSource)} ${line}:${column} -> ${mr.line}:${mr.column}`);
-				return { path: map.generatedPath(), line: mr.line-1, column: mr.column};
+				return {
+					path: map.generatedPath(),
+					line: mr.line-1,
+					column: mr.column
+				};
 			}
 		}
 		return null;
@@ -82,8 +87,12 @@ export class SourceMaps implements ISourceMaps {
 			line += 1;	// source map impl is 1 based
 			const mr = map.originalPositionFor(line, column);
 			if (mr && mr.source) {
-				if (SourceMaps.TRACE) console.error(`${Path.basename(pathToGenerated)} ${line}:${column} -> ${mr.line}:${mr.column}`);
-				return { path: mr.source, content: (<any>mr).content, line: mr.line-1, column: mr.column};
+				return {
+					path: mr.source,
+					content: (<any>mr).content,
+					line: mr.line-1,
+					column: mr.column
+				};
 			}
 		}
 		return null;
@@ -127,6 +136,7 @@ export class SourceMaps implements ISourceMaps {
 					const map_path = Path.join(this._generatedCodeDirectory, map_name);
 					const m = this._loadSourceMap(map_path);
 					if (m && m.doesOriginateFrom(pathToSource)) {
+						this._log(`_findSourceToGeneratedMapping: found source map for source ${pathToSource} in outDir`);
 						this._sourceToGeneratedMaps[pathToSource] = m;
 						return m;
 					}
@@ -218,11 +228,12 @@ export class SourceMaps implements ISourceMaps {
 						const buffer = new Buffer(data, 'base64');
 						const json = buffer.toString();
 						if (json) {
+							this._log(`_findGeneratedToSourceMapping: successfully read inlined source map in '${pathToGenerated}'`);
 							return this._registerSourceMap(new SourceMap(pathToGenerated, pathToGenerated, json));
 						}
 					}
 					catch (e) {
-						console.error(`_findGeneratedToSourceMapping: exception while processing data url (${e})`);
+						this._log(`_findGeneratedToSourceMapping: exception while processing data url '${e}'`);
 					}
 				}
 			} else {
@@ -263,6 +274,7 @@ export class SourceMaps implements ISourceMaps {
 				const matches = SourceMaps.SOURCE_MAPPING_MATCHER.exec(line);
 				if (matches && matches.length === 2) {
 					const uri = matches[1].trim();
+					this._log(`_findSourceMapUrlInFile: source map url at end of generated file '${pathToGenerated}''`);
 					return uri;
 				}
 			}
@@ -291,10 +303,12 @@ export class SourceMaps implements ISourceMaps {
 
 			this._registerSourceMap(map);
 
+			this._log(`_loadSourceMap: successfully loaded source map '${map_path}'`);
+
 			return map;
 		}
 		catch (e) {
-			console.error(`_loadSourceMap: {e}`);
+			this._log(`_loadSourceMap: loading source map '${map_path}' failed with exception: ${e}`);
 		}
 		return null;
 	}
@@ -305,6 +319,10 @@ export class SourceMaps implements ISourceMaps {
 			this._generatedToSourceMaps[gp] = map;
 		}
 		return map;
+	}
+
+	private _log(message: string): void {
+		this._session.log('sm', message);
 	}
 }
 

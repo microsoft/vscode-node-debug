@@ -122,6 +122,13 @@ class SourceSource {
  * Arguments shared between Launch and Attach requests.
  */
 export interface CommonArguments {
+	/** comma separated list of trace selectors. Supported:
+	 * 'all': all
+	 * 'la': launch/attach
+	 * 'bp': breakpoints
+	 * 'sm': source maps
+	 * */
+	trace?: string;
 	/** Automatically stop target after launch. If not specified, target does not stop. */
 	stopOnEntry?: boolean;
 	/** Configure source maps. By default source maps are disabled. */
@@ -170,8 +177,6 @@ export interface AttachRequestArguments extends CommonArguments {
 
 export class NodeDebugSession extends DebugSession {
 
-	private static TRACE = false;
-
 	private static NODE = 'node';
 	private static DUMMY_THREAD_ID = 1;
 	private static DUMMY_THREAD_NAME = 'Node';
@@ -196,6 +201,9 @@ export class NodeDebugSession extends DebugSession {
 	private static SCOPE_NAMES = [ "Global", "Local", "With", "Closure", "Catch", "Block", "Script" ];
 
 	private static LARGE_DATASTRUCTURE_TIMEOUT = "<...>"; // "<large data structure timeout>";
+
+	private _trace: string[];
+	private _traceAll = false;
 
 	private _adapterID: string;
 	public _variableHandles = new Handles<Expandable>();
@@ -236,7 +244,7 @@ export class NodeDebugSession extends DebugSession {
 			this._stopped('break');
 			this._lastStoppedEvent = this._createStoppedEvent(event.body);
 			if (this._lastStoppedEvent.body.reason === NodeDebugSession.ENTRY_REASON) {
-				this._log('NodeDebugSession: supressed stop-on-entry event');
+				this.log('la', 'NodeDebugSession: supressed stop-on-entry event');
 			} else {
 				this.sendEvent(this._lastStoppedEvent);
 			}
@@ -261,11 +269,18 @@ export class NodeDebugSession extends DebugSession {
 		});
 	}
 
+	public log(category: string, message: string) {
+		if (this._trace && (this._traceAll || this._trace.indexOf(category) >= 0)) {
+			const s = process.pid + ": " + message + '\r\n';
+			this.sendEvent(new OutputEvent(s, 'stderr'));
+		}
+	}
+
 	/**
 	 * clear everything that is no longer valid after a new stopped event.
 	 */
 	private _stopped(reason: string): void {
-		this._log(`_stopped: got ${reason} event from node`);
+		this.log('la', `_stopped: got ${reason} event from node`);
 		this._exception = undefined;
 		this._variableHandles.reset();
 		this._frameHandles.reset();
@@ -276,7 +291,7 @@ export class NodeDebugSession extends DebugSession {
 	 * The debug session has terminated.
 	 */
 	private _terminated(reason: string): void {
-		this._log(`_terminated: ${reason}`);
+		this.log('la', `_terminated: ${reason}`);
 
 		if (this._terminalProcess) {
 			// if the debug adapter owns a terminal,
@@ -294,7 +309,7 @@ export class NodeDebugSession extends DebugSession {
 
 	protected initializeRequest(response: DebugProtocol.InitializeResponse, args: DebugProtocol.InitializeRequestArguments): void {
 
-		this._log(`initializeRequest: adapterID: ${args.adapterID}`);
+		this.log('la', `initializeRequest: adapterID: ${args.adapterID}`);
 
 		this._adapterID = args.adapterID;
 
@@ -379,11 +394,17 @@ export class NodeDebugSession extends DebugSession {
 
 		if (NodeDebugSession.isJavaScript(programPath)) {
 			if (this._sourceMaps) {
-				// source maps enabled indicates that a tool like Babel is used to transpile js to js
+				// if programPath is a JavaScript file and sourceMaps are enabled, we don't know whether
+				// programPath is the generated file or whether it is the source (and we need source mapping).
+				// Typically this happens if a tool like 'babel' or 'uglify' is used (because they both transpile js to js).
+				// We use the source maps to find a 'source' file for the given js file.
 				const generatedPath = this._sourceMaps.MapPathFromSource(programPath);
-				if (generatedPath) {
-					// there seems to be a generated file, so use that
+				if (generatedPath !== programPath) {
+					// programPath must be source because there seems to be a generated file for it
+					this.log('sm', `launchRequest: program '${programPath}' seems to be the source; launch the generated file '${generatedPath}' instead`);
 					programPath = generatedPath;
+				} else {
+					this.log('sm', `launchRequest: program '${programPath}' seems to be the generated file`);
 				}
 			}
 		} else {
@@ -397,6 +418,7 @@ export class NodeDebugSession extends DebugSession {
 				this.sendErrorResponse(response, 2003, "cannot launch program '{path}'; setting the 'outDir' attribute might help", { path: programPath });
 				return;
 			}
+			this.log('sm', `launchRequest: program '${programPath}' seems to be the source; launch the generated file '${generatedPath}' instead`);
 			programPath = generatedPath;
 		}
 
@@ -469,8 +491,6 @@ export class NodeDebugSession extends DebugSession {
 
 			this._captureOutput(cmd);
 
-			//cmd.stdin.end();	// close stdin because we do not support input for a target
-
 			this._attach(response, port);
 		}
 	}
@@ -500,6 +520,11 @@ export class NodeDebugSession extends DebugSession {
 
 	private _processCommonArgs(response: DebugProtocol.Response, args: CommonArguments): boolean {
 
+		if (typeof args.trace === 'string') {
+			this._trace = args.trace.split(',');
+			this._traceAll = this._trace.indexOf('all') >= 0;
+		}
+
 		this._stopOnEntry = (typeof args.stopOnEntry === 'boolean') && args.stopOnEntry;
 
 		if (!this._sourceMaps) {
@@ -511,7 +536,7 @@ export class NodeDebugSession extends DebugSession {
 					return true;
 				}
 
-				this._sourceMaps = new SourceMaps(generatedCodeDirectory);
+				this._sourceMaps = new SourceMaps(this, generatedCodeDirectory);
 			}
 		}
 
@@ -562,14 +587,14 @@ export class NodeDebugSession extends DebugSession {
 			timeout = NodeDebugSession.ATTACH_TIMEOUT;
 		}
 
-		this._log(`_attach: address: ${address} port: ${port}`);
+		this.log('la', `_attach: address: ${address} port: ${port}`);
 
 		let connected = false;
 		const socket = new Net.Socket();
 		socket.connect(port, address);
 
 		socket.on('connect', (err: any) => {
-			this._log('_attach: connected');
+			this.log('la', '_attach: connected');
 			connected = true;
 			this._node.startDispatch(socket, socket);
 			this._initialize(response);
@@ -586,7 +611,7 @@ export class NodeDebugSession extends DebugSession {
 					const now = new Date().getTime();
 					if (now < endTime) {
 						setTimeout(() => {
-							this._log('_attach: retry socket.connect');
+							this.log('la', '_attach: retry socket.connect');
 							socket.connect(port);
 						}, 200);		// retry after 200 ms
 					} else {
@@ -610,10 +635,10 @@ export class NodeDebugSession extends DebugSession {
 			let ok = resp.success;
 			if (resp.success) {
 				this._nodeProcessId = parseInt(resp.body.value);
-				this._log(`_initialize: got process id ${this._nodeProcessId} from node`);
+				this.log('la', `_initialize: got process id ${this._nodeProcessId} from node`);
 			} else {
 				if (resp.message.indexOf('process is not defined') >= 0) {
-					this._log('_initialize: process not defined error; got no pid');
+					this.log('la', '_initialize: process not defined error; got no pid');
 					ok = true; // continue and try to get process.pid later
 				}
 			}
@@ -637,7 +662,7 @@ export class NodeDebugSession extends DebugSession {
 					return;
 				}
 			} else {
-				this._log('_initialize: retrieving process id from node failed');
+				this.log('la', '_initialize: retrieving process id from node failed');
 
 				if (retryCount < 10) {
 					setTimeout(() => {
@@ -678,11 +703,11 @@ export class NodeDebugSession extends DebugSession {
 
 				this._node.command('evaluate', { expression: contents }, (resp: NodeV8Response) => {
 					if (resp.success) {
-						this._log('_extendDebugger: node code inject: OK');
+						this.log('la', '_extendDebugger: node code inject: OK');
 						this._nodeExtensionsAvailable = true;
 						callback(false);
 					} else {
-						this._log('_extendDebugger: node code inject: failed, try again...');
+						this.log('la', '_extendDebugger: node code inject: failed, try again...');
 						callback(true);
 					}
 				});
@@ -703,7 +728,7 @@ export class NodeDebugSession extends DebugSession {
 	private _startInitialize(stopped: boolean, n: number = 0): void {
 
 		if (n == 0) {
-			this._log(`_startInitialize: stopped: ${stopped}`);
+			this.log('la', `_startInitialize: stopped: ${stopped}`);
 		}
 
 		// wait at most 500ms for receiving the break on entry event
@@ -718,21 +743,21 @@ export class NodeDebugSession extends DebugSession {
 		}
 
 		if (this._gotEntryEvent) {
-			this._log(`_startInitialize: got break on entry event after ${n} retries`);
+			this.log('la', `_startInitialize: got break on entry event after ${n} retries`);
 			if (this._nodeProcessId <= 0) {
 				// if we haven't gotten a process pid so far, we try it again
 				this._node.command('evaluate', { expression: 'process.pid', global: true }, (resp: NodeV8Response) => {
 					if (resp.success) {
 						this._nodeProcessId = parseInt(resp.body.value);
-						this._log(`_initialize: got process id ${this._nodeProcessId} from node (2nd try)`);
+						this.log('la', `_initialize: got process id ${this._nodeProcessId} from node (2nd try)`);
 					}
-					this._middleInitialize(stopped);
+					this._startInitialize2(stopped);
 				});
 			} else {
-				this._middleInitialize(stopped);
+				this._startInitialize2(stopped);
 			}
 		} else {
-			this._log(`_startInitialize: no entry event after ${n} retries; giving up`);
+			this.log('la', `_startInitialize: no entry event after ${n} retries; giving up`);
 
 			this._gotEntryEvent = true;	// we pretend to got one so that no ENTRY_REASON event will show up later...
 
@@ -743,31 +768,31 @@ export class NodeDebugSession extends DebugSession {
 					this._rememberEntryLocation(s.name, resp.body.line, resp.body.column);
 				}
 
-				this._middleInitialize(stopped);
+				this._startInitialize2(stopped);
 			});
 		}
 	}
 
-	private _middleInitialize(stopped: boolean): void {
+	private _startInitialize2(stopped: boolean): void {
 		// request UI to send breakpoints
-		this._log('_middleInitialize: fire initialized event');
+		this.log('la', '_startInitialize2: fire initialized event');
 		this.sendEvent(new InitializedEvent());
 
 		// in attach-mode we don't know whether the debuggee has been launched in 'stop on entry' mode
 		// so we use the stopped state of the VM
 		if (this._attachMode) {
-			this._log(`_middleInitialize: in attach mode we guess stopOnEntry flag to be "${stopped}"`);
+			this.log('la', `_startInitialize2: in attach mode we guess stopOnEntry flag to be "${stopped}"`);
 			this._stopOnEntry = stopped;
 		}
 
 		if (this._stopOnEntry) {
 			// user has requested 'stop on entry' so send out a stop-on-entry
-			this._log('_middleInitialize: fire stop-on-entry event');
+			this.log('la', '_startInitialize2: fire stop-on-entry event');
 			this.sendEvent(new StoppedEvent(NodeDebugSession.ENTRY_REASON, NodeDebugSession.DUMMY_THREAD_ID));
 		}
 		else {
 			// since we are stopped but UI doesn't know about this, remember that we continue later in finishInitialize()
-			this._log('_middleInitialize: remember to do a "Continue" later');
+			this.log('la', '_startInitialize2: remember to do a "Continue" later');
 			this._needContinue = true;
 		}
 	}
@@ -808,7 +833,7 @@ export class NodeDebugSession extends DebugSession {
 				// kill the whole process tree either starting with the terminal or with the node process
 				let pid = this._terminalProcess ? this._terminalProcess.pid : this._nodeProcessId;
 				if (pid > 0) {
-					this._log('shutdown: kill debugee and sub-processes');
+					this.log('la', 'shutdown: kill debugee and sub-processes');
 					Terminal.killTree(pid).then(() => {
 						this._terminalProcess = null;
 						this._nodeProcessId = -1;
@@ -830,7 +855,7 @@ export class NodeDebugSession extends DebugSession {
 
 	protected setBreakPointsRequest(response: DebugProtocol.SetBreakpointsResponse, args: DebugProtocol.SetBreakpointsArguments): void {
 
-		this._log(`setBreakPointsRequest`);
+		this.log('bp', `setBreakPointsRequest: ${JSON.stringify(args.source)} ${JSON.stringify(args.breakpoints)}`);
 
 		// normalize the two types of input arguments into an internal datastructure
 		let lbs = new Array<InternalBreakpoint>();
@@ -917,6 +942,7 @@ export class NodeDebugSession extends DebugSession {
 		if (this._sourceMaps) {
 			generated = this._sourceMaps.MapPathFromSource(path);
 			if (generated === path) {   // if generated and source are the same we don't need a sourcemap
+				this.log('bp', `_mapSourceAndUpdateBreakpoints: source and generated are same -> ignore sourcemap`);
 				generated = null;
 			}
 		}
@@ -926,6 +952,7 @@ export class NodeDebugSession extends DebugSession {
 			for (let lb of lbs) {
 				const mapresult = this._sourceMaps.MapFromSource(path, lb.line, lb.column);
 				if (mapresult) {
+					this.log('sm', `_mapSourceAndUpdateBreakpoints: src: '${path}' ${lb.line}:${lb.column} -> gen: '${mapresult.path}' ${mapresult.line}:${mapresult.column}`);
 					if (mapresult.path !== generated) {
 						// this source line maps to a different destination file -> this is not supported, ignore breakpoint
 						lb.ignore = true;
@@ -934,7 +961,7 @@ export class NodeDebugSession extends DebugSession {
 						lb.column = mapresult.column;
 					}
 				} else {
-					// we couldn't map this breakpoint -> ignore it
+					this.log('sm', `_mapSourceAndUpdateBreakpoints: src: '${path}' ${lb.line}:${lb.column} -> gen: couldn't be mapped; breakpoint ignored`);
 					lb.ignore = true;
 				}
 			}
@@ -1035,7 +1062,7 @@ export class NodeDebugSession extends DebugSession {
 				breakpoints: breakpoints
 			};
 			this.sendResponse(response);
-            this._log(`_finishSetBreakpoints: sent response`);
+			this.log('bp', `_finishSetBreakpoints: result ${JSON.stringify(breakpoints)}`);
 		});
 	}
 
@@ -1056,12 +1083,11 @@ export class NodeDebugSession extends DebugSession {
 
 				if (sourcemap) {
 					// this source uses a sourcemap so we have to map js locations back to source locations
-					if (path && this._sourceMaps) {
-						const mapresult = this._sourceMaps.MapToSource(path, actualLine, actualColumn);
-						if (mapresult) {
-							actualLine = mapresult.line;
-							actualColumn = mapresult.column;
-						}
+					const mapresult = this._sourceMaps.MapToSource(path, actualLine, actualColumn);
+					if (mapresult) {
+						this.log('sm', `_setBreakpoints: bp verification gen: '${path}' ${actualLine}:${actualColumn} -> src: '${mapresult.path}' ${mapresult.line}:${mapresult.column}`);
+						actualLine = mapresult.line;
+						actualColumn = mapresult.column;
 					}
 				}
 				lbs[ix].verified = true;
@@ -1079,7 +1105,7 @@ export class NodeDebugSession extends DebugSession {
 					// we do not have to "continue" but we have to generate a stopped event instead
 					this._needContinue = false;
 					this._needBreakpointEvent = true;
-					this._log('_setBreakpoints: remember to fire a breakpoint event later');
+					this.log('la', '_setBreakpoints: remember to fire a breakpoint event later');
 				}
 			}
 
@@ -1112,7 +1138,6 @@ export class NodeDebugSession extends DebugSession {
 			column += NodeDebugSession.FIRST_LINE_OFFSET;
 		}
 
-		let info = path;
 		let a: any = {
 			line: line,
 			column: column
@@ -1123,7 +1148,6 @@ export class NodeDebugSession extends DebugSession {
 		if (scriptId > 0) {
 			a.type = 'scriptId';
 			a.target = scriptId;
-			info = '' + scriptId;
 		} else {
 			a.type = 'scriptRegExp';
 			a.target = this._pathToRegexp(path);
@@ -1131,7 +1155,7 @@ export class NodeDebugSession extends DebugSession {
 
 		this._node.command('setbreakpoint', a, (resp: NodeV8Response) => {
 
-			this._log(`_setBreakpoint: ${info}: ${resp.success}`);
+			this.log('bp', `_setBreakpoint: ${JSON.stringify(a)}: ${resp.success}`);
 
 			if (resp.success) {
 				let actualLine = lb.line;
@@ -1167,10 +1191,10 @@ export class NodeDebugSession extends DebugSession {
 
  		// check for drive letter
 		if (/^[a-zA-Z]:\\/.test(path)) {
-            const u = escPath.substring(0, 1).toUpperCase();
-            const l = u.toLowerCase();
+			const u = escPath.substring(0, 1).toUpperCase();
+			const l = u.toLowerCase();
 			escPath = '[' + l + u + ']' + escPath.substring(1);
-        }
+		}
 
 		/*
 		// support case-insensitive breakpoint paths
@@ -1197,7 +1221,7 @@ export class NodeDebugSession extends DebugSession {
 
 	protected setExceptionBreakPointsRequest(response: DebugProtocol.SetExceptionBreakpointsResponse, args: DebugProtocol.SetExceptionBreakpointsArguments): void {
 
-		this._log(`setExceptionBreakPointsRequest`);
+		this.log('bp', `setExceptionBreakPointsRequest: ${JSON.stringify(args.filters)}`);
 
 		let f: string;
 		const filters = args.filters;
@@ -1255,7 +1279,7 @@ export class NodeDebugSession extends DebugSession {
 			this.sendEvent(new StoppedEvent(NodeDebugSession.BREAKPOINT_REASON, NodeDebugSession.DUMMY_THREAD_ID));
 		}
 
-		this._log(`configurationDoneRequest: ${info}`);
+		this.log('la', `configurationDoneRequest: ${info}`);
 
 		this.sendResponse(response);
 	}
@@ -1365,7 +1389,7 @@ export class NodeDebugSession extends DebugSession {
 								// try to map
 								const mapresult = this._sourceMaps.MapToSource(localPath, line, column);
 								if (mapresult) {
-
+									this.log('sm', `_getStackFrames: gen: '${localPath}' ${line}:${column} -> src: '${mapresult.path}' ${mapresult.line}:${mapresult.column}`);
 									// verify that a file exists at path
 									if (FS.existsSync(mapresult.path)) {
 										// use this mapping
@@ -1375,8 +1399,7 @@ export class NodeDebugSession extends DebugSession {
 										column = mapresult.column;
 									} else {
 										// file doesn't exist at path
-
-										// if source map has inlined source,
+										// if source map has inlined source use it
 										const content = (<any>mapresult).content;
 										if (content) {
 											name = Path.basename(mapresult.path);
@@ -1387,8 +1410,13 @@ export class NodeDebugSession extends DebugSession {
 											src = new Source(name, null, sourceHandle, "inlined content from source map", adapterData);
 											line = mapresult.line;
 											column = mapresult.column;
+											this.log('sm', `_getStackFrames: source '${mapresult.path}' doesn't exist -> use inlined source`);
+										} else {
+											this.log('sm', `_getStackFrames: source doesn't exist and no inlined source -> use generated file`);
 										}
 									}
+								} else {
+									this.log('sm', `_getStackFrames: gen: '${localPath}' ${line}:${column} -> couldn't be mapped to source -> use generated file`);
 								}
 							}
 
@@ -1446,7 +1474,6 @@ export class NodeDebugSession extends DebugSession {
 
 			} else {
 				// error backtrace request
-				// stackframes.push(new StackFrame(frameIx, NodeDebugSession.LARGE_DATASTRUCTURE_TIMEOUT, null, 0, 0, []));
 				done();
 			}
 		});
@@ -1828,7 +1855,7 @@ export class NodeDebugSession extends DebugSession {
 	//--- pause request -------------------------------------------------------------------------------------------------------
 
 	protected pauseRequest(response: DebugProtocol.PauseResponse, args: DebugProtocol.PauseArguments) : void {
-    	this._node.command('suspend', null, (nodeResponse) => {
+		this._node.command('suspend', null, (nodeResponse) => {
 			if (nodeResponse.success) {
 				this._stopped('pause');
 				this._lastStoppedEvent = new StoppedEvent(NodeDebugSession.USER_REQUEST_REASON, NodeDebugSession.DUMMY_THREAD_ID);
@@ -1837,35 +1864,35 @@ export class NodeDebugSession extends DebugSession {
 			} else {
 				this._sendNodeResponse(response, nodeResponse);
 			}
-        });
+		});
 	}
 
 	//--- continue request ----------------------------------------------------------------------------------------------------
 
 	protected continueRequest(response: DebugProtocol.ContinueResponse, args: DebugProtocol.ContinueArguments): void {
-    	this._node.command('continue', null, (nodeResponse) => {
+		this._node.command('continue', null, (nodeResponse) => {
 			this._sendNodeResponse(response, nodeResponse);
-        });
+		});
 	}
 
 	//--- step request --------------------------------------------------------------------------------------------------------
 
 	protected stepInRequest(response: DebugProtocol.StepInResponse, args: DebugProtocol.StepInArguments) : void {
-    	this._node.command('continue', { stepaction: 'in' }, (nodeResponse) => {
+		this._node.command('continue', { stepaction: 'in' }, (nodeResponse) => {
 			this._sendNodeResponse(response, nodeResponse);
-        });
+		});
 	}
 
 	protected stepOutRequest(response: DebugProtocol.StepOutResponse, args: DebugProtocol.StepOutArguments) : void {
-    	this._node.command('continue', { stepaction: 'out' }, (nodeResponse) => {
+		this._node.command('continue', { stepaction: 'out' }, (nodeResponse) => {
 			this._sendNodeResponse(response, nodeResponse);
-        });
+		});
 	}
 
 	protected nextRequest(response: DebugProtocol.NextResponse, args: DebugProtocol.NextArguments): void {
-    	this._node.command('continue', { stepaction: 'next' }, (nodeResponse) => {
+		this._node.command('continue', { stepaction: 'next' }, (nodeResponse) => {
 			this._sendNodeResponse(response, nodeResponse);
-        });
+		});
 	}
 
 	//--- evaluate request ----------------------------------------------------------------------------------------------------
@@ -1958,36 +1985,46 @@ export class NodeDebugSession extends DebugSession {
 
 	/**
 	 * Tries to map a (local) VSCode path to a corresponding path on a remote host (where node is running).
-	 * The remote host might use a different OS so we have to make sure to create correct file pathes.
+	 * The remote host might use a different OS so we have to make sure to create correct file paths.
 	 */
-	private _localToRemote(path: string) : string {
+	private _localToRemote(localPath: string) : string {
 		if (this._remoteRoot && this._localRoot) {
 
-			let relPath = PathUtils.makeRelative2(this._localRoot, path);
-			path = PathUtils.join(this._remoteRoot, relPath);
+			let relPath = PathUtils.makeRelative2(this._localRoot, localPath);
+			let remotePath = PathUtils.join(this._remoteRoot, relPath);
 
 			if (/^[a-zA-Z]:[\/\\]/.test(this._remoteRoot)) {	// Windows
-				path = PathUtils.toWindows(path);
+				remotePath = PathUtils.toWindows(remotePath);
 			}
+
+			this.log('bp', `_localToRemote: ${localPath} -> ${remotePath}`);
+
+			return remotePath;
+		} else {
+			return localPath;
 		}
-		return path;
 	}
 
 	/**
 	 * Tries to map a path from the remote host (where node is running) to a corresponding local path.
-	 * The remote host might use a different OS so we have to make sure to create correct file pathes.
+	 * The remote host might use a different OS so we have to make sure to create correct file paths.
 	 */
-	private _remoteToLocal(path: string) : string {
+	private _remoteToLocal(remotePath: string) : string {
 		if (this._remoteRoot && this._localRoot) {
 
-			let relPath = PathUtils.makeRelative2(this._remoteRoot, path);
-			path = PathUtils.join(this._localRoot, relPath);
+			let relPath = PathUtils.makeRelative2(this._remoteRoot, remotePath);
+			let localPath = PathUtils.join(this._localRoot, relPath);
 
 			if (process.platform === 'win32') {	// local is Windows
-				relPath = PathUtils.toWindows(path);
+				localPath = PathUtils.toWindows(localPath);
 			}
+
+			this.log('bp', `_remoteToLocal: ${remotePath} -> ${localPath}`);
+
+			return localPath;
+		} else {
+			return remotePath;
 		}
-		return path;
 	}
 
 	private _sendNodeResponse(response: DebugProtocol.Response, nodeResponse: NodeV8Response): void {
@@ -2204,14 +2241,6 @@ export class NodeDebugSession extends DebugSession {
 		});
 	}
 
-	private _log(message: string) {
-		if (NodeDebugSession.TRACE) {
-			const s = process.pid + ": " + message + '\r\n';
-			//console.error(s);
-			this.sendEvent(new OutputEvent(s, 'stderr'));
-		}
-	}
-
 	//---- private static ---------------------------------------------------------------
 
 	private static isJavaScript(path: string): boolean {
@@ -2254,8 +2283,8 @@ export class NodeDebugSession extends DebugSession {
 
 		const i1 = parseInt(n1);
 		const i2 = parseInt(n2);
-        const isNum1 = !isNaN(i1);
-        const isNum2 = !isNaN(i2);
+		const isNum1 = !isNaN(i1);
+		const isNum2 = !isNaN(i2);
 
 		if (isNum1 && !isNum2) {
 			return 1;		// numbers after names
@@ -2282,7 +2311,7 @@ export class NodeDebugSession extends DebugSession {
 }
 
 function endsWith(str, suffix): boolean {
-    return str.indexOf(suffix, str.length - suffix.length) !== -1;
+	return str.indexOf(suffix, str.length - suffix.length) !== -1;
 }
 
 function random(low: number, high: number): number {
