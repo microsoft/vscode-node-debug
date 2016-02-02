@@ -74,6 +74,7 @@
 						"type": "node",
 						"request": "attach",
 						"port": 5858,
+						"address": "localhost",
 						"sourceMaps": false,
 						"outDir": null,
 						"localRoot": "${workspaceRoot}",
@@ -147,7 +148,7 @@
 							},
 							"address": {
 								"type": "string",
-								"description": "TCP/IP address of debug port (for node >= 5.0 only). Default is 'localhost'.",
+								"description": "TCP/IP address of process to be debugged (for node >= 5.0 only). Default is 'localhost'.",
 								"default": "localhost"
 							},
 							"timeout": {
@@ -172,12 +173,12 @@
 							},
 							"localRoot": {
 								"type": ["string", "null"],
-								"description": "The local source root that corresponds to the 'remoteRoot'.",
+								"description": "Path to the local directory containing the app.",
 								"default": null
 							},
 							"remoteRoot": {
 								"type": ["string", "null"],
-								"description": "The source root of the remote host.",
+								"description": "Absolute path to the remote directory containing the app.",
 								"default": null
 							}
 						}
