@@ -399,7 +399,7 @@ export class NodeDebugSession extends DebugSession {
 				// Typically this happens if a tool like 'babel' or 'uglify' is used (because they both transpile js to js).
 				// We use the source maps to find a 'source' file for the given js file.
 				const generatedPath = this._sourceMaps.MapPathFromSource(programPath);
-				if (generatedPath !== programPath) {
+				if (generatedPath && generatedPath !== programPath) {
 					// programPath must be source because there seems to be a generated file for it
 					this.log('sm', `launchRequest: program '${programPath}' seems to be the source; launch the generated file '${generatedPath}' instead`);
 					programPath = generatedPath;
