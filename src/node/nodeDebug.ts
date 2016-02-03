@@ -272,7 +272,7 @@ export class NodeDebugSession extends DebugSession {
 	public log(category: string, message: string) {
 		if (this._trace && (this._traceAll || this._trace.indexOf(category) >= 0)) {
 			const s = process.pid + ": " + message + '\r\n';
-			this.sendEvent(new OutputEvent(s, 'stderr'));
+			this.sendEvent(new OutputEvent(s));
 		}
 	}
 
@@ -506,7 +506,7 @@ export class NodeDebugSession extends DebugSession {
 			}
 			cli += ' ';
 		}
-		this.sendEvent(new OutputEvent(cli, 'console'));
+		this.sendEvent(new OutputEvent(cli));
 	}
 
 	private _captureOutput(process: CP.ChildProcess) {
