@@ -185,6 +185,21 @@ suite('Node Debug Adapter', () => {
 				runtimeArgs: [ "--nolazy" ]
 			}, JS_SOURCE, JS_LINE, TS_SOURCE, TS_LINE);
 		});
+
+		test.only('should stop on a breakpoint in TypeScript even if program\'s entry point is in JavaScript', () => {
+
+			const PROGRAM = Path.join(PROJECT_ROOT, 'src/tests/data/sourcemaps-js-entrypoint/src/entry.js');
+			const OUT_DIR = Path.join(PROJECT_ROOT, 'src/tests/data/sourcemaps-js-entrypoint/out');
+			const TS_SOURCE = Path.join(PROJECT_ROOT, 'src/tests/data/sourcemaps-js-entrypoint/src/classes.ts');
+			const TS_LINE = 17;
+
+			return dc.hitBreakpoint({
+				program: PROGRAM,
+				sourceMaps: true,
+				outDir: OUT_DIR,
+				runtimeArgs: [ "--nolazy" ]
+			}, TS_SOURCE, TS_LINE);
+		});
 	});
 
 	suite('setExceptionBreakpoints', () => {
