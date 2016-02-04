@@ -144,6 +144,10 @@ export class DebugClient extends ProtocolClient {
 		return this.send('setBreakpoints', args);
 	}
 
+	public setFunctionBreakpointsRequest(args: DebugProtocol.SetFunctionBreakpointsArguments): Promise<DebugProtocol.SetFunctionBreakpointsResponse> {
+		return this.send('setFunctionBreakpoints', args);
+	}
+
 	public setExceptionBreakpointsRequest(args: DebugProtocol.SetExceptionBreakpointsArguments): Promise<DebugProtocol.SetExceptionBreakpointsResponse> {
 		return this.send('setExceptionBreakpoints', args);
 	}
@@ -237,7 +241,7 @@ export class DebugClient extends ProtocolClient {
 		});
 	}
 
-	private configurationDone() : Promise<any> {
+	private configurationDone() : Promise<DebugProtocol.Response> {
 		if (this._supportsConfigurationDoneRequest) {
 			return this.configurationDoneRequest();
 		} else {
@@ -279,7 +283,7 @@ export class DebugClient extends ProtocolClient {
 				const e = <DebugProtocol.OutputEvent> event;
 				if (e.body.category === category) {
 					output += e.body.output;
-					if (output === expected) {
+					if (output.indexOf(expected) === 0) {
 						resolve(event);
 					} else if (expected.indexOf(output) !== 0) {
 						const sanitize = (s: string) => s.toString().replace(/\r/mg, '\\r').replace(/\n/mg, '\\n');

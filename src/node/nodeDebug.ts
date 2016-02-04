@@ -321,8 +321,8 @@ export class NodeDebugSession extends DebugSession {
 		// This debug adapter does not (yet) support a side effect free evaluate request for data hovers.
 		response.body.supportsEvaluateForHovers = true;
 
-		// This debug adapter does not (yet) support function breakpoints.
-		response.body.supportsFunctionBreakpoints = false;
+		// This debug adapter supports function breakpoints.
+		response.body.supportsFunctionBreakpoints = true;
 
 		this.sendResponse(response);
 	}
@@ -1215,6 +1215,109 @@ export class NodeDebugSession extends DebugSession {
 
 		const pathRegex = '^(.*[\\/\\\\])?' + escPath + '$';		// skips drive letters
 		return pathRegex;
+	}
+
+	//--- set function breakpoints request ------------------------------------------------------------------------------------
+
+	protected setFunctionBreakPointsRequest(response: DebugProtocol.SetFunctionBreakpointsResponse, args: DebugProtocol.SetFunctionBreakpointsArguments): void {
+
+		// clear all existing breakpoints for the given path or script ID
+		this._node.command('listbreakpoints', null, (nodeResponse: NodeV8Response) => {
+
+			if (nodeResponse.success) {
+				const toClear = new Array<number>();
+
+				// try to match breakpoints
+				for (let breakpoint of nodeResponse.body.breakpoints) {
+					switch (breakpoint.type) {
+					case 'function':
+						toClear.push(breakpoint.number);
+						break;
+					}
+				}
+
+				this._clearBreakpoints(toClear, 0, () => {
+					this._finishSetFunctionBreakpoints(response, args.breakpoints);
+				});
+
+			} else {
+				this._sendNodeResponse(response, nodeResponse);
+			}
+		});
+	}
+
+	/*
+	 * Finish the setBreakpointsRequest: set the breakpooints and send the verification response back to client
+	 */
+	private _finishSetFunctionBreakpoints(response: DebugProtocol.SetBreakpointsResponse, bps: DebugProtocol.FunctionBreakpoint[]): void {
+
+		const breakpoints = new Array<Breakpoint>();
+
+		this._setFunctionBreakpoints(0, bps, breakpoints, () => {
+
+			response.body = {
+				breakpoints: breakpoints
+			};
+			this.sendResponse(response);
+
+			this.log('bp', `_finishSetFunctionBreakpoints: result ${JSON.stringify(breakpoints)}`);
+		});
+	}
+
+	/**
+	 * Recursive function for setting function breakpoints.
+	 */
+	private _setFunctionBreakpoints(ix: number, bps: DebugProtocol.FunctionBreakpoint[], results: Breakpoint[], done: () => void) : void {
+
+		if (bps.length == 0) {	// nothing to do
+			done();
+			return;
+		}
+
+		this._setFunctionBreakpoint(bps[ix], (result: Breakpoint) => {
+
+			results[ix] = result;
+
+			if (ix+1 < bps.length) {
+				setImmediate(() => {
+					// recurse
+					this._setFunctionBreakpoints(ix+1, bps, results, done);
+				});
+			} else {
+				done();
+			}
+		});
+	}
+
+	/*
+	 * Register a single function breakpoint with node.
+	 */
+	private _setFunctionBreakpoint(fb: DebugProtocol.FunctionBreakpoint, done: (result: Breakpoint) => void): void {
+
+		let args: any = {
+			type: 'function',
+			target: fb.name
+		};
+		if (fb.condition) {
+			args.condition = fb.condition;
+		}
+
+		this._node.command('setbreakpoint', args, (resp: NodeV8Response) => {
+			this.log('bp', `_setFunctionBreakpoint: ${JSON.stringify(args)}: ${resp.success}`);
+			if (resp.success) {
+				const locations = resp.body.actual_locations;
+				if (locations && locations.length > 0) {
+					const actualLine = this.convertDebuggerLineToClient(locations[0].line);
+					const actualColumn = this.convertDebuggerColumnToClient(this._adjustColumn(actualLine, locations[0].column));
+					done(new Breakpoint(true, actualLine, actualColumn));	// TODO@AW add source
+				} else {
+					done(new Breakpoint(true));
+				}
+			} else {
+				// TODO@AW use message
+				done(new Breakpoint(false));
+			}
+		});
 	}
 
 	//--- set exception request -----------------------------------------------------------------------------------------------

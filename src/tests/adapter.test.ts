@@ -116,8 +116,7 @@ suite('Node Debug Adapter', () => {
 				dc.waitForEvent('initialized').then(event => {
 					return dc.setBreakpointsRequest({
 						breakpoints: [ { line: COND_BREAKPOINT_LINE, condition: "i === 3" } ],
-						source: { path: PROGRAM },
-
+						source: { path: PROGRAM }
 					});
 				}).then(response => {
 					assert.deepEqual(response.body.breakpoints[0], {
@@ -186,9 +185,9 @@ suite('Node Debug Adapter', () => {
 			}, JS_SOURCE, JS_LINE, TS_SOURCE, TS_LINE);
 		});
 
-		test.only('should stop on a breakpoint in TypeScript even if program\'s entry point is in JavaScript', () => {
+		test('should stop on a breakpoint in TypeScript even if program\'s entry point is in JavaScript', () => {
 
-			const PROGRAM = Path.join(PROJECT_ROOT, 'src/tests/data/sourcemaps-js-entrypoint/src/entry.js');
+			const PROGRAM = Path.join(PROJECT_ROOT, 'src/tests/data/sourcemaps-js-entrypoint/out/entry.js');
 			const OUT_DIR = Path.join(PROJECT_ROOT, 'src/tests/data/sourcemaps-js-entrypoint/out');
 			const TS_SOURCE = Path.join(PROJECT_ROOT, 'src/tests/data/sourcemaps-js-entrypoint/src/classes.ts');
 			const TS_LINE = 17;
@@ -199,6 +198,39 @@ suite('Node Debug Adapter', () => {
 				outDir: OUT_DIR,
 				runtimeArgs: [ "--nolazy" ]
 			}, TS_SOURCE, TS_LINE);
+		});
+	});
+
+	suite('function setBreakpoints', () => {
+
+		const PROGRAM = Path.join(PROJECT_ROOT, 'src/tests/data/programWithFunction.js');
+		const FUNCTION_NAME = 'foo';
+		const FUNCTION_LINE = 4;
+
+		test('should stop on a function breakpoint', () => {
+
+			return Promise.all<DebugProtocol.ProtocolMessage>([
+
+				dc.launch({ program: PROGRAM }),
+
+				dc.configurationSequence(),
+
+				// since we can only set a function breakpoint for *known* functions,
+				// we use the program output as an indication that function 'foo' has been defined.
+				dc.assertOutput('stdout', 'foo defined').then(event => {
+
+					return dc.setFunctionBreakpointsRequest({
+							breakpoints: [ { name: FUNCTION_NAME } ]
+						}).then(response => {
+							const bp = response.body.breakpoints[0];
+							assert.equal(bp.verified, true);
+							assert.equal(bp.line, FUNCTION_LINE);
+							return response;
+						});
+				}),
+
+				dc.assertStoppedLocation('breakpoint', PROGRAM, FUNCTION_LINE)
+			]);
 		});
 	});
 
@@ -255,8 +287,8 @@ suite('Node Debug Adapter', () => {
 			return Promise.all([
 				dc.configurationSequence(),
 				dc.launch({ program: PROGRAM }),
-				dc.assertOutput('stdout', "Hello stdout 0\nHello stdout 1\nHello stdout 2\n"),
-				//dc.assertOutput('stderr', "Hello stderr 0\nHello stderr 1\nHello stderr 2\n")
+				dc.assertOutput('stdout', 'Hello stdout 0\nHello stdout 1\nHello stdout 2\n'),
+				//dc.assertOutput('stderr', 'Hello stderr 0\nHello stderr 1\nHello stderr 2\n')
 			]);
 		});
 	});
