@@ -60,6 +60,7 @@
 						"stopOnEntry": false,
 						"args": [],
 						"cwd": "${workspaceRoot}",
+                        "preLaunchTask": "",
 						"runtimeExecutable": null,
 						"runtimeArgs": ["--nolazy"],
 						"env": {
