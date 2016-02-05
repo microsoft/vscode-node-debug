@@ -1536,58 +1536,46 @@ export class NodeDebugSession extends DebugSession {
 		const frameIx = frame.index;
 		const frameThis = this._getValueFromCache(frame.receiver);
 
-		this._node.command('scopes', { frame_index: frameIx, frameNumber: frameIx }, (scopesResponse: NodeV8Response) => {
+		this._node.command2('scopes', { frame_index: frameIx, frameNumber: frameIx }).then(response => {
 
-			if (scopesResponse.success) {
+			this._cacheRefs(response);
 
-				this._cacheRefs(scopesResponse);
+			const scopes : any[] = response.body.scopes;
 
-				const scopes = new Array<Scope>();
+			return Promise.all(scopes.map(scope => {
 
-				// exception scope
-				if (frameIx === 0 && this._exception) {
-					scopes.push(new Scope("Exception", this._variableHandles.create(new PropertyExpander(this._exception))));
-				}
+				const type: number = scope.type;
+				const scopeName = (type >= 0 && type < NodeDebugSession.SCOPE_NAMES.length) ? NodeDebugSession.SCOPE_NAMES[type] : ("Unknown Scope:" + type);
+				const extra = type === 1 ? frameThis : null;
+				const expensive = type === 0;	// global scope is expensive
 
-				this._getScope(scopes, 0, scopesResponse.body.scopes, frameThis, () => {
-					response.body = {
-						scopes: scopes
-					};
-					this.sendResponse(response);
+				return new Promise<Scope>((completeDispatch, errorDispatch) => {
+					this._getValue(scope.object, (scopeObject: any) => {
+						if (scopeObject) {
+							completeDispatch(new Scope(scopeName, this._variableHandles.create(new PropertyExpander(scopeObject, extra)), expensive));
+						} else {
+							errorDispatch(null);
+						}
+					});
 				});
+			}));
 
-			} else {
-				response.body = {
-					scopes: []
-				};
-				this.sendResponse(response);
+		}).then(scopes => {
+
+			// exception scope
+			if (frameIx === 0 && this._exception) {
+				scopes.unshift(new Scope("Exception", this._variableHandles.create(new PropertyExpander(this._exception))));
 			}
-		});
-	}
 
-	/**
-	 * Recursive function for creating scopes in top to bottom order.
-	 */
-	private _getScope(scopesResult: Array<Scope>, scopeIx: number, scopes: any[], this_val: any, done: () => void) {
+			response.body = {
+				scopes: scopes
+			};
+			this.sendResponse(response);
 
-		const scope = scopes[scopeIx];
-		const type: number = scope.type;
-		const scopeName = (type >= 0 && type < NodeDebugSession.SCOPE_NAMES.length) ? NodeDebugSession.SCOPE_NAMES[type] : ("Unknown Scope:" + type);
-		const extra = type === 1 ? this_val : null;
-		const expensive = type === 0;
-
-		this._getValue(scope.object, (scopeObject: any) => {
-			if (scopeObject) {
-				scopesResult.push(new Scope(scopeName, this._variableHandles.create(new PropertyExpander(scopeObject, extra)), expensive));
-			}
-			if (scopeIx+1 < scopes.length) {
-				setImmediate(() => {
-					// recurse
-					this._getScope(scopesResult, scopeIx+1, scopes, this_val, done);
-				});
-			} else {
-				done();
-			}
+		}).catch(error => {
+			// in case of error return empty scopes array
+			response.body = { scopes: [] };
+			this.sendResponse(response);
 		});
 	}
 
