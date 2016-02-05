@@ -1010,7 +1010,7 @@ export class NodeDebugSession extends DebugSession {
 					}
 				}
 
-				this._clearBreakpoints(toClear, 0, () => {
+				this._clearBreakpoints(toClear).then(() => {
 					this._finishSetBreakpoints(response, path, scriptId, lbs, sourcemap);
 				});
 
@@ -1021,29 +1021,14 @@ export class NodeDebugSession extends DebugSession {
 		});
 	}
 
-	/**
-	 * Recursive function for deleting node breakpoints.
+	/*
+	 * Clear breakpoints by their ids.
 	 */
-	private _clearBreakpoints(ids: Array<number>, ix: number, done: () => void) : void {
-
-		if (ids.length == 0) {
-			done();
+	private _clearBreakpoints(ids: Array<number>) : Promise<void> {
+		return Promise.all(ids.map(id => this._node.command2('clearbreakpoint', { breakpoint: id }))).then(() => {
 			return;
-		}
-
-		this._node.command('clearbreakpoint', { breakpoint: ids[ix] }, (nodeResponse: NodeV8Response) => {
-			if (!nodeResponse.success) {
-				// we ignore errors for now
-				// console.error('clearbreakpoint error: ' + rr.message);
-			}
-			if (ix+1 < ids.length) {
-				setImmediate(() => {
-					// recurse
-					this._clearBreakpoints(ids, ix+1, done);
-				});
-			} else {
-				done();
-			}
+		}).catch((e) => {
+			return;	// ignore errors
 		});
 	}
 
@@ -1223,7 +1208,7 @@ export class NodeDebugSession extends DebugSession {
 	protected setFunctionBreakPointsRequest(response: DebugProtocol.SetFunctionBreakpointsResponse, args: DebugProtocol.SetFunctionBreakpointsArguments): void {
 
 		// clear all existing function breakpoints
-		this._clearBreakpoints2(this._functionBreakpoints).then(() => {
+		this._clearBreakpoints(this._functionBreakpoints).then(() => {
 
 			this._functionBreakpoints.length = 0;	// clear array
 
@@ -1274,17 +1259,6 @@ export class NodeDebugSession extends DebugSession {
 				verified: false,
 				message: resp.message
 			};
-		});
-	}
-
-	/*
-	 * Clear breakpoints by their ids.
-	 */
-	private _clearBreakpoints2(ids: Array<number>) : Promise<boolean> {
-		return Promise.all(ids.map(id => this._node.command2('clearbreakpoint', { breakpoint: id }))).then(() => {
-			return true;
-		}).catch((e) => {
-			return true;
 		});
 	}
 
