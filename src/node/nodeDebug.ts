@@ -210,6 +210,7 @@ export class NodeDebugSession extends DebugSession {
 	private _frameHandles = new Handles<any>();
 	private _sourceHandles = new Handles<SourceSource>();
 	private _refCache = new Map<number, any>();
+	private _functionBreakpoints = new Array<number>();	// node function breakpoint ids
 
 	private _localRoot: string;
 	private _remoteRoot: string;
@@ -1221,102 +1222,69 @@ export class NodeDebugSession extends DebugSession {
 
 	protected setFunctionBreakPointsRequest(response: DebugProtocol.SetFunctionBreakpointsResponse, args: DebugProtocol.SetFunctionBreakpointsArguments): void {
 
-		// clear all existing breakpoints for the given path or script ID
-		this._node.command('listbreakpoints', null, (nodeResponse: NodeV8Response) => {
+		// clear all existing function breakpoints
+		this._clearBreakpoints2(this._functionBreakpoints).then(() => {
 
-			if (nodeResponse.success) {
-				const toClear = new Array<number>();
+			this._functionBreakpoints.length = 0;	// clear array
 
-				// try to match breakpoints
-				for (let breakpoint of nodeResponse.body.breakpoints) {
-					switch (breakpoint.type) {
-					case 'function':
-						toClear.push(breakpoint.number);
-						break;
-					}
-				}
+			// set new function breakpoints
+			return Promise.all(args.breakpoints.map(functionBreakpoint => this._setFunctionBreakpoint(functionBreakpoint)));
 
-				this._clearBreakpoints(toClear, 0, () => {
-					this._finishSetFunctionBreakpoints(response, args.breakpoints);
-				});
-
-			} else {
-				this._sendNodeResponse(response, nodeResponse);
-			}
-		});
-	}
-
-	/*
-	 * Finish the setBreakpointsRequest: set the breakpooints and send the verification response back to client
-	 */
-	private _finishSetFunctionBreakpoints(response: DebugProtocol.SetBreakpointsResponse, bps: DebugProtocol.FunctionBreakpoint[]): void {
-
-		const breakpoints = new Array<Breakpoint>();
-
-		this._setFunctionBreakpoints(0, bps, breakpoints, () => {
+		}).then(results => {
 
 			response.body = {
-				breakpoints: breakpoints
+				breakpoints: results
 			};
 			this.sendResponse(response);
 
-			this.log('bp', `_finishSetFunctionBreakpoints: result ${JSON.stringify(breakpoints)}`);
-		});
-	}
+			this.log('bp', `setFunctionBreakPointsRequest: result ${JSON.stringify(results)}`);
 
-	/**
-	 * Recursive function for setting function breakpoints.
-	 */
-	private _setFunctionBreakpoints(ix: number, bps: DebugProtocol.FunctionBreakpoint[], results: Breakpoint[], done: () => void) : void {
+		}).catch(nodeResponse => {
 
-		if (bps.length == 0) {	// nothing to do
-			done();
-			return;
-		}
-
-		this._setFunctionBreakpoint(bps[ix], (result: Breakpoint) => {
-
-			results[ix] = result;
-
-			if (ix+1 < bps.length) {
-				setImmediate(() => {
-					// recurse
-					this._setFunctionBreakpoints(ix+1, bps, results, done);
-				});
-			} else {
-				done();
-			}
+			this._sendNodeResponse(response, nodeResponse);
 		});
 	}
 
 	/*
 	 * Register a single function breakpoint with node.
+	 * Returns verification info about the breakpoint.
 	 */
-	private _setFunctionBreakpoint(fb: DebugProtocol.FunctionBreakpoint, done: (result: Breakpoint) => void): void {
+	private _setFunctionBreakpoint(functionBreakpoint: DebugProtocol.FunctionBreakpoint): Promise<Breakpoint> {
 
 		let args: any = {
 			type: 'function',
-			target: fb.name
+			target: functionBreakpoint.name
 		};
-		if (fb.condition) {
-			args.condition = fb.condition;
+		if (functionBreakpoint.condition) {
+			args.condition = functionBreakpoint.condition;
 		}
 
-		this._node.command('setbreakpoint', args, (resp: NodeV8Response) => {
-			this.log('bp', `_setFunctionBreakpoint: ${JSON.stringify(args)}: ${resp.success}`);
-			if (resp.success) {
-				const locations = resp.body.actual_locations;
-				if (locations && locations.length > 0) {
-					const actualLine = this.convertDebuggerLineToClient(locations[0].line);
-					const actualColumn = this.convertDebuggerColumnToClient(this._adjustColumn(actualLine, locations[0].column));
-					done(new Breakpoint(true, actualLine, actualColumn));	// TODO@AW add source
-				} else {
-					done(new Breakpoint(true));
-				}
+		return this._node.command2('setbreakpoint', args).then(resp => {
+			this._functionBreakpoints.push(resp.body.breakpoint);	// remember function breakpoint ids
+			const locations = resp.body.actual_locations;
+			if (locations && locations.length > 0) {
+				const actualLine = this.convertDebuggerLineToClient(locations[0].line);
+				const actualColumn = this.convertDebuggerColumnToClient(this._adjustColumn(actualLine, locations[0].column));
+				return new Breakpoint(true, actualLine, actualColumn);	// TODO@AW add source
 			} else {
-				// TODO@AW use message
-				done(new Breakpoint(false));
+				return new Breakpoint(true);
 			}
+		}).catch((resp: NodeV8Response) => {
+			return <DebugProtocol.Breakpoint> {
+				verified: false,
+				message: resp.message
+			};
+		});
+	}
+
+	/*
+	 * Clear breakpoints by their ids.
+	 */
+	private _clearBreakpoints2(ids: Array<number>) : Promise<boolean> {
+		return Promise.all(ids.map(id => this._node.command2('clearbreakpoint', { breakpoint: id }))).then(() => {
+			return true;
+		}).catch((e) => {
+			return true;
 		});
 	}
 

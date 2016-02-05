@@ -204,8 +204,11 @@ suite('Node Debug Adapter', () => {
 	suite('function setBreakpoints', () => {
 
 		const PROGRAM = Path.join(PROJECT_ROOT, 'src/tests/data/programWithFunction.js');
-		const FUNCTION_NAME = 'foo';
-		const FUNCTION_LINE = 4;
+		const FUNCTION_NAME_1 = 'foo';
+		const FUNCTION_LINE_1 = 4;
+		const FUNCTION_NAME_2 = 'bar';
+		const FUNCTION_LINE_2 = 8;
+		const FUNCTION_NAME_3 = 'xyz';
 
 		test('should stop on a function breakpoint', () => {
 
@@ -220,16 +223,27 @@ suite('Node Debug Adapter', () => {
 				dc.assertOutput('stdout', 'foo defined').then(event => {
 
 					return dc.setFunctionBreakpointsRequest({
-							breakpoints: [ { name: FUNCTION_NAME } ]
-						}).then(response => {
-							const bp = response.body.breakpoints[0];
-							assert.equal(bp.verified, true);
-							assert.equal(bp.line, FUNCTION_LINE);
-							return response;
+							breakpoints: [ { name: FUNCTION_NAME_2 } ]
+						}).then(() => {
+							return dc.setFunctionBreakpointsRequest({
+									breakpoints: [ { name: FUNCTION_NAME_1 }, { name: FUNCTION_NAME_2 }, { name: FUNCTION_NAME_3 } ]
+								}).then(response => {
+									const bp1 = response.body.breakpoints[0];
+									assert.equal(bp1.verified, true);
+									assert.equal(bp1.line, FUNCTION_LINE_1);
+
+									const bp2 = response.body.breakpoints[1];
+									assert.equal(bp2.verified, true);
+									assert.equal(bp2.line, FUNCTION_LINE_2);
+
+									const bp3 = response.body.breakpoints[2];
+									assert.equal(bp3.verified, false);
+									return response;
+								});
 						});
 				}),
 
-				dc.assertStoppedLocation('breakpoint', PROGRAM, FUNCTION_LINE)
+				dc.assertStoppedLocation('breakpoint', PROGRAM, FUNCTION_LINE_1)
 			]);
 		});
 	});
