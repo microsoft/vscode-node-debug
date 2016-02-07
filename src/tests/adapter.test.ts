@@ -103,8 +103,14 @@ suite('Node Debug Adapter', () => {
 
 	suite('setBreakpoints', () => {
 
+		const ENTRY_LINE = 1;
+
 		test('should stop on a breakpoint', () => {
 			return dc.hitBreakpoint({ program: PROGRAM, }, PROGRAM, BREAKPOINT_LINE);
+		});
+
+		test('should stop on a breakpoint identical to the entrypoint', () => {		// verifies the 'hide break on entry point' logic
+			return dc.hitBreakpoint({ program: PROGRAM, }, PROGRAM, ENTRY_LINE);
 		});
 
 		test('should stop on a conditional breakpoint', () => {
