@@ -82,30 +82,6 @@ export class ArrayExpander implements Expandable {
 }
 
 /**
- * This class represents an internal line/column breakpoint and its verification state.
- * It is only used temporarily in the setBreakpointsRequest.
- */
-export class InternalBreakpoint {
-
-	/** The requested breakpoint line location in the JavaScript file. */
-	line: number;
-	/** The requested breakpoint column location in the JavaScript file. */
-	column: number;
-	/** optional expression for conditional breakpoints. */
-	expression: string;
-
-	/** do not try to set this breakpoint (because source locations could not successfully be mapped to destination locations) */
-	ignore: boolean;
-
-	/** true if this breakpoint could be set and node.js returned an 'actual location' for it. */
-	verified: boolean;
-	/** The actual line location of this breakpoint in client coordinates. Contains the original client line if breakpoint could not be verified. */
-	actualLine: number;
-	/** the actual column location of this breakpoint in client coordinates. Contains the original client column if breakpoint could not be verified. */
-	actualColumn: number;
-}
-
-/**
  * A SourceSource represents the source contents of an internal module or of a source map with inlined contents.
  */
 class SourceSource {
@@ -444,7 +420,7 @@ export class NodeDebugSession extends DebugSession {
 
 		if (this._externalConsole) {
 
-			Terminal.launchInTerminal(workingDirectory, launchArgs, args.env).then((term: CP.ChildProcess) => {
+			Terminal.launchInTerminal(workingDirectory, launchArgs, args.env).then(term => {
 
 				if (term) {
 					// if we got a terminal process, we will track it
@@ -461,7 +437,7 @@ export class NodeDebugSession extends DebugSession {
 
 				this._attach(response, port);
 
-			}).catch((error) => {
+			}).catch(error => {
 				this.sendErrorResponse(response, 2011, "cannot launch target in terminal (reason: {_error})", { _error: error.message }, ErrorDestination.Telemetry | ErrorDestination.User );
 				this._terminated('terminal error: ' + error.message);
 			});
@@ -839,7 +815,7 @@ export class NodeDebugSession extends DebugSession {
 						this._terminalProcess = null;
 						this._nodeProcessId = -1;
 						super.shutdown();
-					}).catch((error) => {
+					}).catch(error => {
 						this._terminalProcess = null;
 						this._nodeProcessId = -1;
 						super.shutdown();
@@ -858,32 +834,20 @@ export class NodeDebugSession extends DebugSession {
 
 		this.log('bp', `setBreakPointsRequest: ${JSON.stringify(args.source)} ${JSON.stringify(args.breakpoints)}`);
 
-		// normalize the two types of input arguments into an internal datastructure
-		let lbs = new Array<InternalBreakpoint>();
-		if (args.breakpoints) {
-			// prefer the new API: array of breakpoints
-			for (let b of args.breakpoints) {
-				lbs.push({
-					line: this.convertClientLineToDebugger(b.line),
-					column: typeof b.column === 'number' ? this.convertClientColumnToDebugger(b.column) : 0,
-					expression: b.condition,
-					actualLine: b.line,
-					actualColumn: typeof b.column === 'number' ? b.column : this.convertDebuggerColumnToClient(1),
-					verified: false,
-					ignore: false
-				});
+		// prefer the new API: array of breakpoints
+		let lbs = args.breakpoints;
+		if (lbs) {
+			for (let b of lbs) {
+				b.line = this.convertClientLineToDebugger(b.line);
+				b.column = typeof b.column === 'number' ? this.convertClientColumnToDebugger(b.column) : 0;
 			}
 		} else {
+			lbs = new Array<DebugProtocol.SourceBreakpoint>();
 			// deprecated API: convert line number array
 			for (let l of args.lines) {
 				lbs.push({
 					line: this.convertClientLineToDebugger(l),
-					column: 0,	// hardcoded for now
-					expression: undefined,
-					actualLine: l,
-					actualColumn: this.convertDebuggerColumnToClient(1),	// hardcoded for now
-					verified: false,
-					ignore: false
+					column: 0
 				});
 			}
 		}
@@ -935,7 +899,7 @@ export class NodeDebugSession extends DebugSession {
 		this.sendErrorResponse(response, 2012, "no valid source specified", null, ErrorDestination.Telemetry);
 	}
 
-	private _mapSourceAndUpdateBreakpoints(response: DebugProtocol.SetBreakpointsResponse, path: string, lbs: InternalBreakpoint[]) {
+	private _mapSourceAndUpdateBreakpoints(response: DebugProtocol.SetBreakpointsResponse, path: string, lbs: DebugProtocol.SourceBreakpoint[]) {
 
 		let sourcemap = false;
 
@@ -955,15 +919,15 @@ export class NodeDebugSession extends DebugSession {
 				if (mapresult) {
 					this.log('sm', `_mapSourceAndUpdateBreakpoints: src: '${path}' ${lb.line}:${lb.column} -> gen: '${mapresult.path}' ${mapresult.line}:${mapresult.column}`);
 					if (mapresult.path !== generated) {
-						// this source line maps to a different destination file -> this is not supported, ignore breakpoint
-						lb.ignore = true;
+						// this source line maps to a different destination file -> this is not supported, ignore breakpoint by setting line to -1
+						lb.line = -1;
 					} else {
 						lb.line = mapresult.line;
 						lb.column = mapresult.column;
 					}
 				} else {
 					this.log('sm', `_mapSourceAndUpdateBreakpoints: src: '${path}' ${lb.line}:${lb.column} -> gen: couldn't be mapped; breakpoint ignored`);
-					lb.ignore = true;
+					lb.line = -1;
 				}
 			}
 			path = generated;
@@ -971,7 +935,7 @@ export class NodeDebugSession extends DebugSession {
 		else if (!NodeDebugSession.isJavaScript(path)) {
 			// ignore all breakpoints for this source
 			for (let lb of lbs) {
-				lb.ignore = true;
+				lb.line = -1;
 			}
 		}
 
@@ -982,42 +946,49 @@ export class NodeDebugSession extends DebugSession {
 	}
 
 	/*
-	 * Phase 2 of setBreakpointsRequest: clear and set all breakpoints of a given source
+	 * clear and set all breakpoints of a given source.
 	 */
-	private _updateBreakpoints(response: DebugProtocol.SetBreakpointsResponse, path: string, scriptId: number, lbs: InternalBreakpoint[], sourcemap: boolean = false): void {
+	private _updateBreakpoints(response: DebugProtocol.SetBreakpointsResponse, path: string, scriptId: number, lbs: DebugProtocol.SourceBreakpoint[], sourcemap: boolean = false): void {
 
 		// clear all existing breakpoints for the given path or script ID
-		this._node.command('listbreakpoints', null, (nodeResponse: NodeV8Response) => {
+		this._node.command2('listbreakpoints').then(nodeResponse => {
 
-			if (nodeResponse.success) {
-				const toClear = new Array<number>();
+			const toClear = new Array<number>();
 
-				const path_regexp = this._pathToRegexp(path);
+			const path_regexp = this._pathToRegexp(path);
 
-				// try to match breakpoints
-				for (let breakpoint of nodeResponse.body.breakpoints) {
-					switch (breakpoint.type) {
-					case 'scriptId':
-						if (scriptId === breakpoint.script_id) {
-							toClear.push(breakpoint.number);
-						}
-						break;
-					case 'scriptRegExp':
-						if (path_regexp === breakpoint.script_regexp) {
-							toClear.push(breakpoint.number);
-						}
-						break;
+			// try to match breakpoints
+			for (let breakpoint of nodeResponse.body.breakpoints) {
+				switch (breakpoint.type) {
+				case 'scriptId':
+					if (scriptId === breakpoint.script_id) {
+						toClear.push(breakpoint.number);
 					}
+					break;
+				case 'scriptRegExp':
+					if (path_regexp === breakpoint.script_regexp) {
+						toClear.push(breakpoint.number);
+					}
+					break;
 				}
-
-				this._clearBreakpoints(toClear).then(() => {
-					this._finishSetBreakpoints(response, path, scriptId, lbs, sourcemap);
-				});
-
-			} else {
-				this._sendNodeResponse(response, nodeResponse);
 			}
 
+			return this._clearBreakpoints(toClear);
+
+		}).then( () => {
+
+			return Promise.all(lbs.map(bp => this._setBreakpoint(scriptId, path, bp, sourcemap)));
+
+		}).then(result => {
+
+			response.body = {
+				breakpoints: result
+			};
+			this.sendResponse(response);
+			this.log('bp', `_updateBreakpoints: result ${JSON.stringify(result)}`);
+
+		}).catch(nodeResponse => {
+			this._sendNodeResponse(response, nodeResponse);
 		});
 	}
 
@@ -1033,52 +1004,48 @@ export class NodeDebugSession extends DebugSession {
 	}
 
 	/*
-	 * Finish the setBreakpointsRequest: set the breakpooints and send the verification response back to client
+	 * register a single breakpoint with node.
 	 */
-	private _finishSetBreakpoints(response: DebugProtocol.SetBreakpointsResponse, path: string, scriptId: number, lbs: InternalBreakpoint[], sourcemap: boolean): void {
+	private _setBreakpoint(scriptId: number, path: string, lb: DebugProtocol.SourceBreakpoint, sourcemap: boolean) : Promise<Breakpoint> {
 
-		this._setBreakpoints(0, path, scriptId, lbs, sourcemap, () => {
-
-			const breakpoints = new Array<Breakpoint>();
-			for (let lb of lbs) {
-				breakpoints.push(new Breakpoint(lb.verified, lb.actualLine, lb.actualColumn));
-			}
-
-			response.body = {
-				breakpoints: breakpoints
-			};
-			this.sendResponse(response);
-			this.log('bp', `_finishSetBreakpoints: result ${JSON.stringify(breakpoints)}`);
-		});
-	}
-
-	/**
-	 * Recursive function for setting node breakpoints.
-	 */
-	private _setBreakpoints(ix: number, path: string, scriptId: number, lbs: InternalBreakpoint[], sourcemap: boolean, done: () => void) : void {
-
-		if (lbs.length == 0) {	// nothing to do
-			done();
-			return;
+		if (lb.line < 0) {
+			// ignore this breakpoint because it couldn't be source mapped successfully
+			return Promise.resolve(new Breakpoint(false));
 		}
 
-		this._setBreakpoint(scriptId, path, lbs[ix], (success: boolean, actualLine: number, actualColumn: number) => {
+		if (lb.line === 0) {
+			lb.column += NodeDebugSession.FIRST_LINE_OFFSET;
+		}
 
-			if (success) {
-				// breakpoint successfully set and we've got an actual location
+		if (scriptId > 0) {
+			(<any>lb).type = 'scriptId';
+			(<any>lb).target = scriptId;
+		} else {
+			(<any>lb).type = 'scriptRegExp';
+			(<any>lb).target = this._pathToRegexp(path);
+		}
 
-				if (sourcemap) {
-					// this source uses a sourcemap so we have to map js locations back to source locations
-					const mapresult = this._sourceMaps.MapToSource(path, actualLine, actualColumn);
-					if (mapresult) {
-						this.log('sm', `_setBreakpoints: bp verification gen: '${path}' ${actualLine}:${actualColumn} -> src: '${mapresult.path}' ${mapresult.line}:${mapresult.column}`);
-						actualLine = mapresult.line;
-						actualColumn = mapresult.column;
-					}
+		return this._node.command2('setbreakpoint', lb).then(resp => {
+
+			this.log('bp', `_setBreakpoint: ${JSON.stringify(lb)}`);
+
+			let actualLine = lb.line;
+			let actualColumn = lb.column;
+
+			const al = resp.body.actual_locations;
+			if (al.length > 0) {
+				actualLine = al[0].line;
+				actualColumn = this._adjustColumn(actualLine, al[0].column);
+			}
+
+			if (sourcemap) {
+				// this source uses a sourcemap so we have to map js locations back to source locations
+				const mapresult = this._sourceMaps.MapToSource(path, actualLine, actualColumn);
+				if (mapresult) {
+					this.log('sm', `_setBreakpoints: bp verification gen: '${path}' ${actualLine}:${actualColumn} -> src: '${mapresult.path}' ${mapresult.line}:${mapresult.column}`);
+					actualLine = mapresult.line;
+					actualColumn = mapresult.column;
 				}
-				lbs[ix].verified = true;
-				lbs[ix].actualLine = this.convertDebuggerLineToClient(actualLine);
-				lbs[ix].actualColumn = this.convertDebuggerColumnToClient(actualColumn);
 			}
 
 			// nasty corner case: since we ignore the break-on-entry event we have to make sure that we
@@ -1087,7 +1054,7 @@ export class NodeDebugSession extends DebugSession {
 			// If yes, then we plan for hitting the breakpoint instead of "continue" over it!
 
 			if (!this._stopOnEntry && this._entryPath === path) {	// only relevant if we do not stop on entry and have a matching file
-				if (this._entryLine === lbs[ix].line && this._entryColumn === lbs[ix].column) {
+				if (this._entryLine === actualLine && this._entryColumn === actualColumn) {
 					// we do not have to "continue" but we have to generate a stopped event instead
 					this._needContinue = false;
 					this._needBreakpointEvent = true;
@@ -1095,73 +1062,10 @@ export class NodeDebugSession extends DebugSession {
 				}
 			}
 
-			if (ix+1 < lbs.length) {
-				setImmediate(() => {
-					// recurse
-					this._setBreakpoints(ix+1, path, scriptId, lbs, sourcemap, done);
-				});
-			} else {
-				done();
-			}
-		});
-	}
+			return new Breakpoint(true, this.convertDebuggerLineToClient(actualLine), this.convertDebuggerColumnToClient(actualColumn));
 
-	/*
-	 * register a single breakpoint with node.
-	 */
-	private _setBreakpoint(scriptId: number, path: string, lb: InternalBreakpoint, done: (success: boolean, actualLine?: number, actualColumn?: number) => void): void {
-
-		if (lb.ignore) {
-			// ignore this breakpoint because it couldn't be source mapped successfully
-			done(false);
-			return;
-		}
-
-		let line = lb.line;
-		let column = lb.column;
-
-		if (line === 0) {
-			column += NodeDebugSession.FIRST_LINE_OFFSET;
-		}
-
-		let a: any = {
-			line: line,
-			column: column
-		};
-		if (lb.expression) {
-			a.condition = lb.expression;
-		}
-		if (scriptId > 0) {
-			a.type = 'scriptId';
-			a.target = scriptId;
-		} else {
-			a.type = 'scriptRegExp';
-			a.target = this._pathToRegexp(path);
-		}
-
-		this._node.command('setbreakpoint', a, (resp: NodeV8Response) => {
-
-			this.log('bp', `_setBreakpoint: ${JSON.stringify(a)}: ${resp.success}`);
-
-			if (resp.success) {
-				let actualLine = lb.line;
-				let actualColumn = lb.column;
-
-				const al = resp.body.actual_locations;
-				if (al.length > 0) {
-					actualLine = al[0].line;
-					actualColumn = this._adjustColumn(actualLine, al[0].column);
-
-					if (actualLine !== lb.line) {
-						// console.error(`setbreakpoint: ${l} !== ${actualLine}`);
-					}
-				}
-				done(true, actualLine, actualColumn);
-				return;
-			}
-
-			done(false);
-			return;
+		}).catch((error) => {
+			return new Breakpoint(false);
 		});
 	}
 
@@ -1360,167 +1264,169 @@ export class NodeDebugSession extends DebugSession {
 	protected stackTraceRequest(response: DebugProtocol.StackTraceResponse, args: DebugProtocol.StackTraceArguments): void {
 
 		const threadReference = args.threadId;
-		const maxLevels = args.levels;
+		let maxLevels = args.levels;
 
 		if (threadReference !== NodeDebugSession.DUMMY_THREAD_ID) {
 			this.sendErrorResponse(response, 2014, "unexpected thread reference {_thread}", { _thread: threadReference }, ErrorDestination.Telemetry);
 			return;
 		}
 
-		const stackframes = new Array<StackFrame>();
+		// get first frame and the total number of frames
+		this._node.command2('backtrace', { fromFrame: 0, toFrame: 1 }).then(backtraceResponse => {
 
-		this._getStackFrames(stackframes, 0, maxLevels, () => {
+			let totalFrames = backtraceResponse.body.totalFrames;
+			if (!maxLevels || totalFrames < maxLevels) {
+				maxLevels = totalFrames;
+			}
+
+			return this._createStackFrame(backtraceResponse);
+
+		}).then(firstframe => {
+
+			const frames = new Array<Promise<StackFrame>>(Promise.resolve(firstframe));
+			// get the remaining frames
+			for (let frameIx = 1; frameIx < maxLevels; frameIx++) {
+				frames.push(this._getStackFrame(frameIx));
+			}
+			return Promise.all(frames);
+
+		}).then(stackframes => {
+
 			response.body = {
 				stackFrames: stackframes
 			};
 			this.sendResponse(response);
-		} );
+
+		}).catch(error => {
+
+			response.body = {
+				stackFrames: []
+			};
+			this.sendResponse(response);
+
+		});
 	}
 
-	/**
-	 * Recursive function for retrieving stackframes and their scopes in top to bottom order.
-	 */
-	private _getStackFrames(stackframes: Array<StackFrame>, frameIx: number, maxLevels: number, done: () => void): void {
+	private _getStackFrame(frameIx: number) : Promise<StackFrame> {
 
-		this._node.command('backtrace', { fromFrame: frameIx, toFrame: frameIx+1 }, (backtraceResponse: NodeV8Response) => {
+		return this._node.command2('backtrace', { fromFrame: frameIx, toFrame: frameIx+1 }).then(backtraceResponse => {
 
-			if (backtraceResponse.success) {
+			return this._createStackFrame(backtraceResponse);
 
-				this._cacheRefs(backtraceResponse);
+		}).catch((response) => {
+			// error backtrace request
+			return null;
+		});
+	}
 
-				let totalFrames = backtraceResponse.body.totalFrames;
-				if (maxLevels > 0 && totalFrames > maxLevels) {
-					totalFrames = maxLevels;
-				}
+	private _createStackFrame(backtraceResponse: any) : Promise<StackFrame> {
 
-				if (totalFrames === 0) {
-					// no stack frames (probably because a 'pause' stops node in non-javascript code)
-					done();
-					return;
-				}
+		this._cacheRefs(backtraceResponse);
 
-				const frame = backtraceResponse.body.frames[0];
+		const frame = backtraceResponse.body.frames[0];
 
-				// resolve some refs
-				this._getValues([ frame.script, frame.func, frame.receiver ], () => {
+		// resolve some refs
+		return this._getValues([ frame.script, frame.func, frame.receiver ]).then(() => {
 
-					let line = frame.line;
-					let column = this._adjustColumn(line, frame.column);
+			let line = frame.line;
+			let column = this._adjustColumn(line, frame.column);
 
-					let src: Source = null;
-					let origin = "content streamed from node";
-					let adapterData: any;
+			let src: Source = null;
+			let origin = "content streamed from node";
+			let adapterData: any;
 
-					const script_val = this._getValueFromCache(frame.script);
-					if (script_val) {
-						let name = script_val.name;
-						if (name && PathUtils.isAbsolutePath(name)) {
+			const script_val = this._getValueFromCache(frame.script);
+			if (script_val) {
+				let name = script_val.name;
+				if (name && PathUtils.isAbsolutePath(name)) {
 
-							let remotePath = name;		// with remote debugging path might come from a different OS
+					let remotePath = name;		// with remote debugging path might come from a different OS
 
-							// if launch.json defines localRoot and remoteRoot try to convert remote path back to a local path
-							let localPath = this._remoteToLocal(remotePath);
+					// if launch.json defines localRoot and remoteRoot try to convert remote path back to a local path
+					let localPath = this._remoteToLocal(remotePath);
 
-							if (localPath !== remotePath && this._attachMode) {
-								// assume attached to remote node process
-								origin = "content streamed from remote node";
-							}
+					if (localPath !== remotePath && this._attachMode) {
+						// assume attached to remote node process
+						origin = "content streamed from remote node";
+					}
 
-							name = Path.basename(localPath);
+					name = Path.basename(localPath);
 
-							// source mapping
-							if (this._sourceMaps) {
+					// source mapping
+					if (this._sourceMaps) {
 
-								// try to map
-								const mapresult = this._sourceMaps.MapToSource(localPath, line, column);
-								if (mapresult) {
-									this.log('sm', `_getStackFrames: gen: '${localPath}' ${line}:${column} -> src: '${mapresult.path}' ${mapresult.line}:${mapresult.column}`);
-									// verify that a file exists at path
-									if (FS.existsSync(mapresult.path)) {
-										// use this mapping
-										localPath = mapresult.path;
-										name = Path.basename(localPath);
-										line = mapresult.line;
-										column = mapresult.column;
-									} else {
-										// file doesn't exist at path
-										// if source map has inlined source use it
-										const content = (<any>mapresult).content;
-										if (content) {
-											name = Path.basename(mapresult.path);
-											const sourceHandle = this._sourceHandles.create(new SourceSource(0, content));
-											const adapterData = {
-												inlinePath: mapresult.path
-											};
-											src = new Source(name, null, sourceHandle, "inlined content from source map", adapterData);
-											line = mapresult.line;
-											column = mapresult.column;
-											this.log('sm', `_getStackFrames: source '${mapresult.path}' doesn't exist -> use inlined source`);
-										} else {
-											this.log('sm', `_getStackFrames: source doesn't exist and no inlined source -> use generated file`);
-										}
-									}
-								} else {
-									this.log('sm', `_getStackFrames: gen: '${localPath}' ${line}:${column} -> couldn't be mapped to source -> use generated file`);
-								}
-							}
-
-							if (src === null) {
-								if (FS.existsSync(localPath)) {
-									src = new Source(name, this.convertDebuggerPathToClient(localPath));
-								} else {
-									// source doesn't exist locally
-									adapterData = {
-										remotePath: remotePath	// assume it is a remote path
+						// try to map
+						const mapresult = this._sourceMaps.MapToSource(localPath, line, column);
+						if (mapresult) {
+							this.log('sm', `_getStackFrame: gen: '${localPath}' ${line}:${column} -> src: '${mapresult.path}' ${mapresult.line}:${mapresult.column}`);
+							// verify that a file exists at path
+							if (FS.existsSync(mapresult.path)) {
+								// use this mapping
+								localPath = mapresult.path;
+								name = Path.basename(localPath);
+								line = mapresult.line;
+								column = mapresult.column;
+							} else {
+								// file doesn't exist at path
+								// if source map has inlined source use it
+								const content = (<any>mapresult).content;
+								if (content) {
+									name = Path.basename(mapresult.path);
+									const sourceHandle = this._sourceHandles.create(new SourceSource(0, content));
+									const adapterData = {
+										inlinePath: mapresult.path
 									};
+									src = new Source(name, null, sourceHandle, "inlined content from source map", adapterData);
+									line = mapresult.line;
+									column = mapresult.column;
+									this.log('sm', `_getStackFrame: source '${mapresult.path}' doesn't exist -> use inlined source`);
+								} else {
+									this.log('sm', `_getStackFrame: source doesn't exist and no inlined source -> use generated file`);
 								}
 							}
 						} else {
-							origin = "core module";
-						}
-
-						if (src === null) {
-							// fall back: source not found locally -> prepare to stream source content from node backend.
-							const script_id:number = script_val.id;
-							if (script_id >= 0) {
-								const sourceHandle = this._sourceHandles.create(new SourceSource(script_id));
-								src = new Source(name, null, sourceHandle, origin, adapterData);
-							}
+							this.log('sm', `_getStackFrame: gen: '${localPath}' ${line}:${column} -> couldn't be mapped to source -> use generated file`);
 						}
 					}
 
-					let func_name: string;
-					const func_val = this._getValueFromCache(frame.func);
-					if (func_val) {
-						func_name = func_val.inferredName;
-						if (!func_name || func_name.length === 0) {
-							func_name = func_val.name;
+					if (src === null) {
+						if (FS.existsSync(localPath)) {
+							src = new Source(name, this.convertDebuggerPathToClient(localPath));
+						} else {
+							// source doesn't exist locally
+							adapterData = {
+								remotePath: remotePath	// assume it is a remote path
+							};
 						}
 					}
-					if (!func_name || func_name.length === 0) {
-						func_name = NodeDebugSession.ANON_FUNCTION;
+				} else {
+					origin = "core module";
+				}
+
+				if (src === null) {
+					// fall back: source not found locally -> prepare to stream source content from node backend.
+					const script_id:number = script_val.id;
+					if (script_id >= 0) {
+						const sourceHandle = this._sourceHandles.create(new SourceSource(script_id));
+						src = new Source(name, null, sourceHandle, origin, adapterData);
 					}
-
-					const frameReference = this._frameHandles.create(frame);
-					const sf = new StackFrame(frameReference, func_name, src, this.convertDebuggerLineToClient(line), this.convertDebuggerColumnToClient(column));
-
-					stackframes.push(sf);
-
-					if (frameIx+1 < totalFrames) {
-						// recurse
-						setImmediate(() => {
-							this._getStackFrames(stackframes, frameIx+1, maxLevels, done);
-						});
-					} else {
-						// we are done
-						done();
-					}
-				});
-
-			} else {
-				// error backtrace request
-				done();
+				}
 			}
+
+			let func_name: string;
+			const func_val = this._getValueFromCache(frame.func);
+			if (func_val) {
+				func_name = func_val.inferredName;
+				if (!func_name || func_name.length === 0) {
+					func_name = func_val.name;
+				}
+			}
+			if (!func_name || func_name.length === 0) {
+				func_name = NodeDebugSession.ANON_FUNCTION;
+			}
+
+			const frameReference = this._frameHandles.create(frame);
+			return new StackFrame(frameReference, func_name, src, this.convertDebuggerLineToClient(line), this.convertDebuggerColumnToClient(column));
 		});
 	}
 
@@ -1549,14 +1455,10 @@ export class NodeDebugSession extends DebugSession {
 				const extra = type === 1 ? frameThis : null;
 				const expensive = type === 0;	// global scope is expensive
 
-				return new Promise<Scope>((completeDispatch, errorDispatch) => {
-					this._getValue(scope.object, (scopeObject: any) => {
-						if (scopeObject) {
-							completeDispatch(new Scope(scopeName, this._variableHandles.create(new PropertyExpander(scopeObject, extra)), expensive));
-						} else {
-							errorDispatch(null);
-						}
-					});
+				return this._getValue2(scope.object).then(scopeObject => {
+					return new Scope(scopeName, this._variableHandles.create(new PropertyExpander(scopeObject, extra)), expensive);
+				}).catch(error => {
+					return new Scope(scopeName, 0);
 				});
 			}));
 
@@ -1692,7 +1594,10 @@ export class NodeDebugSession extends DebugSession {
 				// third pass: now lookup all refs at once
 				this._resolveToCache(needLookup, () => {
 					// build variables
-					this._addVariables(variables, selectedProperties, 0, done);
+					this._addVariables(selectedProperties).then(result => {
+						result.forEach(v => variables.push(v));
+						done();
+					});
 				});
 				return;
 			}
@@ -1700,57 +1605,41 @@ export class NodeDebugSession extends DebugSession {
 		done();
 	}
 
-	/**
-	 * Recursive function for creating variables for the properties.
-	 */
-	private _addVariables(variables: Array<Variable>, properties: Array<any>, ix: number, done: () => void) {
-
-		const property = properties[ix];
-		const val = this._getValueFromCache(property);
-
-		let name = property.name;
-		if (typeof name == 'number') {
-			name = `[${name}]`;
-		}
-
-		this._addVariable(variables, name, val, () => {
-			if (ix+1 < properties.length) {
-				setImmediate(() => {
-					// recurse
-					this._addVariables(variables, properties, ix+1, done);
-				});
-			} else {
-				done();
+	private _addVariables(properties: Array<any>) : Promise<Variable[]> {
+		return Promise.all<Variable>(properties.map(property => {
+			const val = this._getValueFromCache(property);
+			let name = property.name;
+			if (typeof name == 'number') {
+				name = `[${name}]`;
 			}
-		});
-	}
+			return this._addVariable2(name, val);
+		}));
+	};
 
 	private _addArrayElements(variables: Array<Variable>, array_ref: number, start: number, end: number, done: (message?: string) => void): void {
-		this._node.command('vscode_range', { handle: array_ref, from: start, to: end }, (resp: NodeV8Response) => {
+		this._node.command('vscode_range', { handle: array_ref, from: start, to: end }, resp => {
 			if (resp.success) {
-				this._addArrayElement(variables, start, resp.body.result, 0, done);
+				this._addArrayElement(start, resp.body.result).then(result => {
+					result.forEach(v => variables.push(v));
+					done();
+				}).catch((error) => {
+					done(error);
+				});
 			} else {
 				done(resp.message);
 			}
 		});
 	}
 
-	/**
-	 * Recursive function for creating variables for the given array items.
-	 */
-	private _addArrayElement(variables: Array<Variable>, start: number, items: Array<any>, ix: number, done: () => void) {
-		const name = `[${start+ix}]`;
-		this._createVariable(name, items[ix], (v: Variable) => {
-			variables.push(v);
-			if (ix+1 < items.length) {
-				setImmediate(() => {
-					// recurse
-					this._addArrayElement(variables, start, items, ix+1, done);
+	private _addArrayElement(start: number, items: Array<any>) : Promise<Variable[]> {
+		return Promise.all<Variable>(items.map((item, ix) => {
+			return new Promise<Variable>((completeDispatch, errorDispatch) => {
+				const name = `[${start+ix}]`;
+				this._createVariable(name, item, (v: Variable) => {
+					completeDispatch(v);
 				});
-			} else {
-				done();
-			}
-		});
+			});
+		}));
 	}
 
 	public _addVariable(variables: Array<Variable>, name: string, val: any, done: () => void): void {
@@ -1759,6 +1648,14 @@ export class NodeDebugSession extends DebugSession {
 				variables.push(result);
 			}
 			done();
+		});
+	}
+
+	public _addVariable2(name: string, val: any): Promise<Variable> {
+		return new Promise<Variable>((completeDispatch, errorDispatch) => {
+			this._createVariable(name, val, (result: Variable) => {
+				completeDispatch(result);
+			});
 		});
 	}
 
@@ -2103,15 +2000,16 @@ export class NodeDebugSession extends DebugSession {
 		this._refCache[handle] = o;
 	}
 
-	private _getValues(containers: any[], done: () => void): void {
+	private _getValues(containers: any[]) : Promise<any> {
 
-		const handles = [];
-		for (let container of containers) {
-			handles.push(container.ref);
-		}
-
-		this._resolveToCache(handles, () => {
-			done();
+		return new Promise((c, e) => {
+			const handles = [];
+			for (let container of containers) {
+				handles.push(container.ref);
+			}
+			this._resolveToCache(handles, () => {
+				c();
+			});
 		});
 	}
 
@@ -2125,6 +2023,20 @@ export class NodeDebugSession extends DebugSession {
 		} else {
 			done(null);
 		}
+	}
+
+	private _getValue2(container: any) : Promise<any> {
+		return new Promise((c, e) => {
+			if (container) {
+				const handle = container.ref;
+				this._resolveToCache([ handle ], () => {
+					const value = this._refCache[handle];
+					c(value);
+				});
+			} else {
+				c(null);
+			}
+		});
 	}
 
 	private _getValueFromCache(container: any): any {
