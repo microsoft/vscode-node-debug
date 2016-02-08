@@ -7,7 +7,7 @@
 
 import assert = require('assert');
 import * as Path from 'path';
-import {DebugClient} from './DebugClient';
+import {DebugClient} from './debugClient';
 import {DebugProtocol} from 'vscode-debugprotocol';
 
 suite('Node Debug Adapter', () => {
@@ -83,7 +83,7 @@ suite('Node Debug Adapter', () => {
 			return Promise.all([
 				dc.configurationSequence(),
 				dc.launch({ program: PROGRAM, stopOnEntry: true }),
-				dc.assertStoppedLocation('entry', PROGRAM, ENTRY_LINE)
+				dc.assertStoppedLocation('entry', { path: PROGRAM, line: ENTRY_LINE } )
 			]);
 		});
 
@@ -95,7 +95,7 @@ suite('Node Debug Adapter', () => {
 			return Promise.all([
 				dc.configurationSequence(),
 				dc.launch({ program: PROGRAM }),
-				dc.assertStoppedLocation('debugger statement', PROGRAM, DEBUGGER_LINE)
+				dc.assertStoppedLocation('debugger statement', { path: PROGRAM, line: DEBUGGER_LINE } )
 			]);
 		});
 
@@ -104,13 +104,20 @@ suite('Node Debug Adapter', () => {
 	suite('setBreakpoints', () => {
 
 		const ENTRY_LINE = 1;
+		const SINGLE_LINE_PROGRAM = Path.join(PROJECT_ROOT, 'src/tests/data/programSingleLine.js');
 
 		test('should stop on a breakpoint', () => {
-			return dc.hitBreakpoint({ program: PROGRAM, }, PROGRAM, BREAKPOINT_LINE);
+			return dc.hitBreakpoint({ program: PROGRAM }, { path: PROGRAM, line: BREAKPOINT_LINE} );
 		});
 
 		test('should stop on a breakpoint identical to the entrypoint', () => {		// verifies the 'hide break on entry point' logic
-			return dc.hitBreakpoint({ program: PROGRAM, }, PROGRAM, ENTRY_LINE);
+			return dc.hitBreakpoint({ program: PROGRAM }, { path: PROGRAM, line: ENTRY_LINE } );
+		});
+
+		test('should break on a specific column in a single line program', () => {
+			const LINE = 1;
+			const COLUMN = 55;
+			return dc.hitBreakpoint({ program: SINGLE_LINE_PROGRAM }, { path: SINGLE_LINE_PROGRAM, line: LINE, column: COLUMN } );
 		});
 
 		test('should stop on a conditional breakpoint', () => {
@@ -125,17 +132,16 @@ suite('Node Debug Adapter', () => {
 						source: { path: PROGRAM }
 					});
 				}).then(response => {
-					assert.deepEqual(response.body.breakpoints[0], {
-						verified: true,
-						line: COND_BREAKPOINT_LINE,
-						column: 0
-					});
+					const bp = response.body.breakpoints[0];
+					assert.equal(bp.verified, true, "breakpoint verification mismatch: verified");
+					assert.equal(bp.line, COND_BREAKPOINT_LINE, "breakpoint verification mismatch: line");
+					assert.equal(bp.column, 2, "breakpoint verification mismatch: column");
 					return dc.configurationDoneRequest();
 				}),
 
 				dc.launch({ program: PROGRAM }),
 
-				dc.assertStoppedLocation('breakpoint', PROGRAM, COND_BREAKPOINT_LINE).then(response => {
+				dc.assertStoppedLocation('breakpoint', { path: PROGRAM, line: COND_BREAKPOINT_LINE } ).then(response => {
 					const frame = response.body.stackFrames[0];
 					return dc.evaluateRequest({ context: "watch", frameId: frame.id, expression: "x" }).then(response => {
 						assert.equal(response.body.result, 9, "x !== 9");
@@ -156,7 +162,7 @@ suite('Node Debug Adapter', () => {
 				sourceMaps: true,
 				outDir: OUT_DIR,
 				runtimeArgs: [ "--nolazy" ]
-			}, PROGRAM, BREAKPOINT_LINE);
+			}, { path: PROGRAM, line: BREAKPOINT_LINE } );
 		});
 
 		test('should stop on a breakpoint in TypeScript source - Microsoft/vscode#2574', () => {
@@ -171,7 +177,7 @@ suite('Node Debug Adapter', () => {
 				sourceMaps: true,
 				outDir: OUT_DIR,
 				runtimeArgs: [ "--nolazy" ]
-			}, TS_SOURCE, TS_LINE);
+			}, { path: TS_SOURCE, line: TS_LINE } );
 		});
 
 		test('should stop on a breakpoint in TypeScript even if breakpoint was set in JavaScript - Microsoft/vscode-node-debug#43', () => {
@@ -188,7 +194,7 @@ suite('Node Debug Adapter', () => {
 				sourceMaps: true,
 				outDir: OUT_DIR,
 				runtimeArgs: [ "--nolazy" ]
-			}, JS_SOURCE, JS_LINE, TS_SOURCE, TS_LINE);
+			}, { path: JS_SOURCE, line: JS_LINE}, { path: TS_SOURCE, line: TS_LINE } );
 		});
 
 		test('should stop on a breakpoint in TypeScript even if program\'s entry point is in JavaScript', () => {
@@ -203,7 +209,7 @@ suite('Node Debug Adapter', () => {
 				sourceMaps: true,
 				outDir: OUT_DIR,
 				runtimeArgs: [ "--nolazy" ]
-			}, TS_SOURCE, TS_LINE);
+			}, { path: TS_SOURCE, line: TS_LINE } );
 		});
 	});
 
@@ -249,7 +255,7 @@ suite('Node Debug Adapter', () => {
 						});
 				}),
 
-				dc.assertStoppedLocation('breakpoint', PROGRAM, FUNCTION_LINE_1)
+				dc.assertStoppedLocation('breakpoint', { path: PROGRAM, line: FUNCTION_LINE_1 } )
 			]);
 		});
 	});
@@ -274,7 +280,7 @@ suite('Node Debug Adapter', () => {
 
 				dc.launch({ program: PROGRAM }),
 
-				dc.assertStoppedLocation('exception', PROGRAM, EXCEPTION_LINE)
+				dc.assertStoppedLocation('exception', { path: PROGRAM, line: EXCEPTION_LINE } )
 			]);
 		});
 
@@ -294,7 +300,7 @@ suite('Node Debug Adapter', () => {
 
 				dc.launch({ program: PROGRAM }),
 
-				dc.assertStoppedLocation('exception', PROGRAM, UNCAUGHT_EXCEPTION_LINE)
+				dc.assertStoppedLocation('exception', { path: PROGRAM, line: UNCAUGHT_EXCEPTION_LINE } )
 			]);
 		});
 	});
