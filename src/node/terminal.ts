@@ -12,7 +12,7 @@ export class Terminal
 {
 	private static _terminalService: ITerminalService;
 
-	public static launchInTerminal(dir: string, args: string[], envVars: { [key: string]: string; }): Promise<any> {
+	public static launchInTerminal(dir: string, args: string[], envVars: { [key: string]: string; }): Promise<CP.ChildProcess> {
 		return this.terminalService().launchInTerminal(dir, args, envVars);
 	}
 
