@@ -212,8 +212,13 @@ export class NodeDebugSession extends DebugSession {
 	private _entryLine: number;		// entry line in *.js file (not in the source file)
 	private _entryColumn: number;	// entry column in *.js file (not in the source file)
 
-	public constructor(debuggerLinesStartAt1: boolean, isServer: boolean = false) {
-		super(debuggerLinesStartAt1, isServer);
+	public constructor() {
+		super();
+
+		// this debugger uses zero-based lines and columns which is the default
+		// so the following two calls are not really necessary.
+		this.setDebuggerLinesStartAt1(false);
+		this.setDebuggerColumnsStartAt1(false);
 
 		this._node = new NodeV8Protocol();
 
