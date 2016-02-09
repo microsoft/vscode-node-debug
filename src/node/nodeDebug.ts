@@ -14,7 +14,9 @@ import * as CP from 'child_process';
 import * as Net from 'net';
 import * as Path from 'path';
 import * as FS from 'fs';
+import * as nls from 'vscode-nls';
 
+let localize = nls.config({ locale: 'de-DE', cache: true })();
 
 const RANGESIZE = 1000;
 

@@ -18,7 +18,8 @@
 	"dependencies": {
 		"vscode-debugprotocol": "~1.6.0-pre4",
 		"vscode-debugadapter": "~1.6.0-pre8",
-		"source-map": "*"
+		"source-map": "*",
+		"vscode-nls": "*"
 	},
 	"repository": {
 		"type": "git",
