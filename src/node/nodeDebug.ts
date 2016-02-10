@@ -1368,7 +1368,7 @@ export class NodeDebugSession extends DebugSession {
 
 						// try to map
 						let mapresult = this._sourceMaps.MapToSource(localPath, line, column, Bias.LEAST_UPPER_BOUND);
-						if (!mapresult) {
+						if (!mapresult) {	// try using the other bias option
 							mapresult = this._sourceMaps.MapToSource(localPath, line, column, Bias.GREATEST_LOWER_BOUND);
 						}
 						if (mapresult) {
