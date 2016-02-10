@@ -3,11 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import {DebugSession, Thread, Source, StackFrame, Scope, Variable, Breakpoint, TerminatedEvent, InitializedEvent, StoppedEvent, OutputEvent, Handles, ErrorDestination} from 'vscode-debugadapter';
+import {
+	DebugSession, Thread, Source, StackFrame, Scope, Variable, Breakpoint,
+	TerminatedEvent, InitializedEvent, StoppedEvent, OutputEvent,
+	Handles, ErrorDestination
+} from 'vscode-debugadapter';
 import {DebugProtocol} from 'vscode-debugprotocol';
 
 import {NodeV8Protocol, NodeV8Event, NodeV8Response} from './nodeV8Protocol';
-import {ISourceMaps, SourceMaps} from './sourceMaps';
+import {ISourceMaps, SourceMaps, Bias} from './sourceMaps';
 import {Terminal} from './terminal';
 import * as PathUtils from './pathUtilities';
 import * as CP from 'child_process';
@@ -1363,7 +1367,10 @@ export class NodeDebugSession extends DebugSession {
 					if (this._sourceMaps) {
 
 						// try to map
-						const mapresult = this._sourceMaps.MapToSource(localPath, line, column);
+						let mapresult = this._sourceMaps.MapToSource(localPath, line, column, Bias.LEAST_UPPER_BOUND);
+						if (!mapresult) {
+							mapresult = this._sourceMaps.MapToSource(localPath, line, column, Bias.GREATEST_LOWER_BOUND);
+						}
 						if (mapresult) {
 							this.log('sm', `_getStackFrame: gen: '${localPath}' ${line}:${column} -> src: '${mapresult.path}' ${mapresult.line}:${mapresult.column}`);
 							// verify that a file exists at path
