@@ -10,8 +10,7 @@ import {SourceMapConsumer} from 'source-map';
 import * as PathUtils from './pathUtilities';
 import {NodeDebugSession} from './nodeDebug';
 
-
-var util = require('../../node_modules/source-map/lib/util.js');
+const util = require('../../node_modules/source-map/lib/util.js');
 
 
 export interface MappingResult {
@@ -19,6 +18,11 @@ export interface MappingResult {
 	content?: string;	// optional content of source (source inlined in source map)
 	line: number;
 	column: number;
+}
+
+export enum Bias {
+	GREATEST_LOWER_BOUND = 1,
+	LEAST_UPPER_BOUND = 2
 }
 
 export interface ISourceMaps {
@@ -32,13 +36,13 @@ export interface ISourceMaps {
 	 * Map location in source language to location in generated code.
 	 * line and column are 0 based.
 	 */
-	MapFromSource(path: string, line: number, column: number): MappingResult;
+	MapFromSource(path: string, line: number, column: number, bias?: Bias): MappingResult;
 
 	/*
 	 * Map location in generated code to location in source language.
 	 * line and column are 0 based.
 	 */
-	MapToSource(path: string, line: number, column: number): MappingResult;
+	MapToSource(path: string, line: number, column: number, bias?: Bias): MappingResult;
 }
 
 
@@ -65,11 +69,11 @@ export class SourceMaps implements ISourceMaps {
 		return null;
 	}
 
-	public MapFromSource(pathToSource: string, line: number, column: number): MappingResult {
+	public MapFromSource(pathToSource: string, line: number, column: number, bias?: Bias): MappingResult {
 		const map = this._findSourceToGeneratedMapping(pathToSource);
 		if (map) {
 			line += 1;	// source map impl is 1 based
-			const mr = map.generatedPositionFor(pathToSource, line, column);
+			const mr = map.generatedPositionFor(pathToSource, line, column, bias);
 			if (mr && typeof mr.line === 'number') {
 				return {
 					path: map.generatedPath(),
@@ -81,11 +85,11 @@ export class SourceMaps implements ISourceMaps {
 		return null;
 	}
 
-	public MapToSource(pathToGenerated: string, line: number, column: number): MappingResult {
+	public MapToSource(pathToGenerated: string, line: number, column: number, bias?: Bias): MappingResult {
 		const map = this._findGeneratedToSourceMapping(pathToGenerated);
 		if (map) {
 			line += 1;	// source map impl is 1 based
-			const mr = map.originalPositionFor(line, column);
+			const mr = map.originalPositionFor(line, column, bias);
 			if (mr && mr.source) {
 				return {
 					path: mr.source,
@@ -326,11 +330,6 @@ export class SourceMaps implements ISourceMaps {
 	}
 }
 
-enum Bias {
-	GREATEST_LOWER_BOUND = 1,
-	LEAST_UPPER_BOUND = 2
-}
-
 class SourceMap {
 
 	private _sourcemapLocation: string;	// the directory where this sourcemap lives
@@ -461,7 +460,7 @@ class SourceMap {
 	 * Finds the nearest source location for the given location in the generated file.
 	 * Returns null if sourcemap is invalid.
 	 */
-	public originalPositionFor(line: number, column: number, bias: Bias = Bias.LEAST_UPPER_BOUND): SourceMap.MappedPosition {
+	public originalPositionFor(line: number, column: number, bias: Bias): SourceMap.MappedPosition {
 
 		if (!this._smc) {
 			return null;
@@ -470,7 +469,7 @@ class SourceMap {
 		var needle = {
 			line: line,
 			column: column,
-			bias: bias
+			bias: bias || Bias.LEAST_UPPER_BOUND
 		};
 
 		const mp = this._smc.originalPositionFor(needle);
@@ -498,7 +497,7 @@ class SourceMap {
 	 * Finds the nearest location in the generated file for the given source location.
 	 * Returns null if sourcemap is invalid.
 	 */
-	public generatedPositionFor(absPath: string, line: number, column: number, bias = Bias.LEAST_UPPER_BOUND): SourceMap.Position {
+	public generatedPositionFor(absPath: string, line: number, column: number, bias: Bias): SourceMap.Position {
 
 		if (!this._smc) {
 			return null;
@@ -511,7 +510,7 @@ class SourceMap {
 				source: source,
 				line: line,
 				column: column,
-				bias: bias
+				bias: bias || Bias.LEAST_UPPER_BOUND
 			};
 
 			return this._smc.generatedPositionFor(needle);
