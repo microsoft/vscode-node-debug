@@ -7,7 +7,7 @@
 		"target": "es5",
 		"sourceMap": true,
 		"outDir": "out",
-		"inlineSourceMap": true,
+		"inlineSourceMap": false,
 		"sourceRoot": "../../src"
 	}
 }
