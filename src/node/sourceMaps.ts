@@ -224,8 +224,8 @@ export class SourceMaps implements ISourceMaps {
 		const uri = this._findSourceMapUrlInFile(pathToGenerated);
 		if (uri) {
 			// if uri is data url source map is inlined in generated file
-			if (uri.indexOf("data:application/json;base64,") >= 0) {
-				const pos = uri.indexOf(',');
+			if (uri.indexOf("data:application/json") >= 0) {
+				const pos = uri.lastIndexOf(',');
 				if (pos > 0) {
 					const data = uri.substr(pos+1);
 					try {
