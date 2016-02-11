@@ -18,6 +18,7 @@ import * as CP from 'child_process';
 import * as Net from 'net';
 import * as Path from 'path';
 import * as FS from 'fs';
+import * as util from 'util';
 import * as nls from 'vscode-nls';
 
 let localize = nls.config({ locale: 'de-DE', cache: true })();
@@ -170,7 +171,8 @@ export class NodeDebugSession extends DebugSession {
 
 	private static NODE_SHEBANG_MATCHER = new RegExp('#! */usr/bin/env +node');
 
-	// stop reasons
+	//---- nls strings
+
 	private static ENTRY_REASON = "entry";
 	private static STEP_REASON = "step";
 	private static BREAKPOINT_REASON = "breakpoint";
@@ -181,8 +183,20 @@ export class NodeDebugSession extends DebugSession {
 	private static ANON_FUNCTION = "(anonymous function)";
 
 	private static SCOPE_NAMES = [ "Global", "Local", "With", "Closure", "Catch", "Block", "Script" ];
+	private static SCOPE_EXCEPTION = "Exception";
+	private static UNKNOWN_SCOPE = "Unknown Scope: %s";
 
-	private static LARGE_DATASTRUCTURE_TIMEOUT = "<...>"; // "<large data structure timeout>";
+	private static LARGE_DATASTRUCTURE_TIMEOUT = "<...>";
+
+	private static NOT_AVAILABLE = "not available";
+	private static INVALID_EXPRESSION = "invalid expression: %s";
+
+	private static CONTENT_STREAMED_FROM_NODE = "content streamed from node";
+	private static CONTENT_STREAMED_FROM_REMOTE_NODE = "content streamed from remote node";
+	private static INLINED_CONTENT_FROM_SOURCE_MAP = "inlined content from source map";
+	private static CORE_NODULE = "core module";
+
+	//---- end of nls strings
 
 	private _trace: string[];
 	private _traceAll = false;
@@ -259,8 +273,7 @@ export class NodeDebugSession extends DebugSession {
 
 	public log(category: string, message: string) {
 		if (this._trace && (this._traceAll || this._trace.indexOf(category) >= 0)) {
-			const s = process.pid + ": " + message + '\r\n';
-			this.sendEvent(new OutputEvent(s));
+			this.sendEvent(new OutputEvent(`${process.pid}: ${message}\r\n`));
 		}
 	}
 
@@ -709,9 +722,9 @@ export class NodeDebugSession extends DebugSession {
 
 	/*
 	 * start the initialization sequence:
-	 * 1. wait for "break-on-entry" (with timeout)
-	 * 2. send "inititialized" event in order to trigger setBreakpointEvents request from client
-	 * 3. prepare for sending "break-on-entry" or "continue" later in _finishInitialize()
+	 * 1. wait for 'break-on-entry' (with timeout)
+	 * 2. send 'inititialized' event in order to trigger setBreakpointEvents request from client
+	 * 3. prepare for sending 'break-on-entry' or 'continue' later in _finishInitialize()
 	 */
 	private _startInitialize(stopped: boolean, n: number = 0): void {
 
@@ -769,7 +782,7 @@ export class NodeDebugSession extends DebugSession {
 		// in attach-mode we don't know whether the debuggee has been launched in 'stop on entry' mode
 		// so we use the stopped state of the VM
 		if (this._attachMode) {
-			this.log('la', `_startInitialize2: in attach mode we guess stopOnEntry flag to be "${stopped}"`);
+			this.log('la', `_startInitialize2: in attach mode we guess stopOnEntry flag to be '${stopped}''`);
 			this._stopOnEntry = stopped;
 		}
 
@@ -780,7 +793,7 @@ export class NodeDebugSession extends DebugSession {
 		}
 		else {
 			// since we are stopped but UI doesn't know about this, remember that we continue later in finishInitialize()
-			this.log('la', '_startInitialize2: remember to do a "Continue" later');
+			this.log('la', `_startInitialize2: remember to do a 'Continue' later`);
 			this._needContinue = true;
 		}
 	}
@@ -1061,12 +1074,12 @@ export class NodeDebugSession extends DebugSession {
 
 			// nasty corner case: since we ignore the break-on-entry event we have to make sure that we
 			// stop in the entry point line if the user has an explicit breakpoint there.
-			// For this we check here whether a breakpoint is at the same location as the "break-on-entry" location.
-			// If yes, then we plan for hitting the breakpoint instead of "continue" over it!
+			// For this we check here whether a breakpoint is at the same location as the 'break-on-entry' location.
+			// If yes, then we plan for hitting the breakpoint instead of 'continue' over it!
 
 			if (!this._stopOnEntry && this._entryPath === path) {	// only relevant if we do not stop on entry and have a matching file
 				if (this._entryLine === actualLine && this._entryColumn === actualColumn) {
-					// we do not have to "continue" but we have to generate a stopped event instead
+					// we do not have to 'continue' but we have to generate a stopped event instead
 					this._needContinue = false;
 					this._needBreakpointEvent = true;
 					this.log('la', '_setBreakpoints: remember to fire a breakpoint event later');
@@ -1229,7 +1242,7 @@ export class NodeDebugSession extends DebugSession {
 
 		if (this._needContinue) {	// we do not break on entry
 			this._needContinue = false;
-			info = 'do a "Continue"';
+			info = 'do a \'Continue\'';
 			this._node.command('continue', null, (nodeResponse) => { });
 		}
 
@@ -1343,7 +1356,7 @@ export class NodeDebugSession extends DebugSession {
 			let column = this._adjustColumn(line, frame.column);
 
 			let src: Source = null;
-			let origin = "content streamed from node";
+			let origin = NodeDebugSession.CONTENT_STREAMED_FROM_NODE;
 			let adapterData: any;
 
 			const script_val = this._getValueFromCache(frame.script);
@@ -1358,7 +1371,7 @@ export class NodeDebugSession extends DebugSession {
 
 					if (localPath !== remotePath && this._attachMode) {
 						// assume attached to remote node process
-						origin = "content streamed from remote node";
+						origin = NodeDebugSession.CONTENT_STREAMED_FROM_REMOTE_NODE;
 					}
 
 					name = Path.basename(localPath);
@@ -1390,7 +1403,7 @@ export class NodeDebugSession extends DebugSession {
 									const adapterData = {
 										inlinePath: mapresult.path
 									};
-									src = new Source(name, null, sourceHandle, "inlined content from source map", adapterData);
+									src = new Source(name, null, sourceHandle, NodeDebugSession.INLINED_CONTENT_FROM_SOURCE_MAP, adapterData);
 									line = mapresult.line;
 									column = mapresult.column;
 									this.log('sm', `_getStackFrame: source '${mapresult.path}' doesn't exist -> use inlined source`);
@@ -1414,7 +1427,7 @@ export class NodeDebugSession extends DebugSession {
 						}
 					}
 				} else {
-					origin = "core module";
+					origin = NodeDebugSession.CORE_NODULE;
 				}
 
 				if (src === null) {
@@ -1465,7 +1478,9 @@ export class NodeDebugSession extends DebugSession {
 			return Promise.all(scopes.map(scope => {
 
 				const type: number = scope.type;
-				const scopeName = (type >= 0 && type < NodeDebugSession.SCOPE_NAMES.length) ? NodeDebugSession.SCOPE_NAMES[type] : ("Unknown Scope:" + type);
+				const scopeName = (type >= 0 && type < NodeDebugSession.SCOPE_NAMES.length)
+								? NodeDebugSession.SCOPE_NAMES[type]
+								: (util.format(NodeDebugSession.UNKNOWN_SCOPE, type));
 				const extra = type === 1 ? frameThis : null;
 				const expensive = type === 0;	// global scope is expensive
 
@@ -1480,7 +1495,7 @@ export class NodeDebugSession extends DebugSession {
 
 			// exception scope
 			if (frameIx === 0 && this._exception) {
-				scopes.unshift(new Scope("Exception", this._variableHandles.create(new PropertyExpander(this._exception))));
+				scopes.unshift(new Scope(NodeDebugSession.SCOPE_EXCEPTION, this._variableHandles.create(new PropertyExpander(this._exception))));
 			}
 
 			response.body = {
@@ -1519,9 +1534,9 @@ export class NodeDebugSession extends DebugSession {
 
 	/*
 	 * there are three modes:
-	 * "all": add all properties (indexed and named)
-	 * "range": add only the indexed properties between 'start' and 'end' (inclusive)
-	 * "named": add only the named properties.
+	 * 'all': add all properties (indexed and named)
+	 * 'range': add only the indexed properties between 'start' and 'end' (inclusive)
+	 * 'named': add only the named properties.
  	 */
 	public _addProperties(variables: Array<Variable>, obj: any, mode: string, start: number, end: number, done: (message?) => void): void {
 
@@ -1532,8 +1547,8 @@ export class NodeDebugSession extends DebugSession {
 			if (!properties) {       // if properties are missing, try to use size from vscode node extension
 
 				switch (mode) {
-					case "range":
-					case "all":
+					case 'range':
+					case 'all':
 						const size = obj.size;
 						if (size >= 0) {
 							const handle = obj.handle;
@@ -1542,10 +1557,10 @@ export class NodeDebugSession extends DebugSession {
 								return;
 							}
 						}
-						done("array size not found");
+						done('array size not found');
 						return;
 
-					case "named":
+					case 'named':
 						// can't add named properties because we don't have access to them yet.
 						break;
 				}
@@ -1568,15 +1583,15 @@ export class NodeDebugSession extends DebugSession {
 					}
 
 					switch (mode) {
-						case "all":
+						case 'all':
 							selectedProperties.push(property);
 							break;
-						case "named":
+						case 'named':
 							if (typeof name == 'string') {
 								selectedProperties.push(property);
 							}
 							break;
-						case "range":
+						case 'range':
 							if (typeof name == 'number' && name >= start && name <= end) {
 								selectedProperties.push(property);
 							}
@@ -1703,7 +1718,7 @@ export class NodeDebugSession extends DebugSession {
 							//val = this.getRef(val.ref);
 						}
 
-						let size = <number>val.size;     // probe for our own "size"
+						let size = <number>val.size;     // probe for our own 'size'
 						if (size) {
 							done(this._createArrayVariable(name, val, value, size));
 						} else {
@@ -1764,7 +1779,7 @@ export class NodeDebugSession extends DebugSession {
 				if (str_val) {
 					str_val = str_val.replace('\n', '\\n').replace('\r', '\\r');
 				}
-				done(new Variable(name, `"${str_val}"`));
+				done(new Variable(name, '"' + str_val + '"'));
 				return;
 
 			case 'boolean':
@@ -1872,17 +1887,17 @@ export class NodeDebugSession extends DebugSession {
 						};
 					} else {
 						response.success = false;
-						response.message = "not available";
+						response.message = NodeDebugSession.NOT_AVAILABLE;
 					}
 					this.sendResponse(response);
 				});
 			} else {
 				response.success = false;
 				if (resp.message.indexOf('ReferenceError: ') === 0 || resp.message === 'No frames') {
-					response.message = "not available";
+					response.message = NodeDebugSession.NOT_AVAILABLE;
 				} else if (resp.message.indexOf('SyntaxError: ') === 0) {
 					const m = resp.message.substring('SyntaxError: '.length).toLowerCase();
-					response.message = `invalid expression: ${m}`;
+					response.message = util.format(NodeDebugSession.INVALID_EXPRESSION, m);
 				} else {
 					response.message = resp.message;
 				}
@@ -2058,7 +2073,7 @@ export class NodeDebugSession extends DebugSession {
 		const value = this._refCache[handle];
 		if (value)
 			return value;
-		// console.error("ref not found cache");
+		// console.error('ref not found cache');
 		return null;
 	}
 
@@ -2072,7 +2087,7 @@ export class NodeDebugSession extends DebugSession {
 				if (handle >= 0) {
 					lookup.push(handle);
 				} else {
-					// console.error("shouldn't happen: cannot lookup transient objects");
+					// console.error('shouldn't happen: cannot lookup transient objects');
 				}
 			}
 		}
@@ -2156,7 +2171,7 @@ export class NodeDebugSession extends DebugSession {
 			}
 		}
 
-		// must be "step"!
+		// must be 'step'!
 		if (!reason) {
 			reason = NodeDebugSession.STEP_REASON;
 		}
