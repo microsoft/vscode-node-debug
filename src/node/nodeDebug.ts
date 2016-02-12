@@ -168,6 +168,7 @@ export class NodeDebugSession extends DebugSession {
 	private static DEBUG_EXTENSION = 'debugExtension.js';
 	private static NODE_TERMINATION_POLL_INTERVAL = 3000;
 	private static ATTACH_TIMEOUT = 10000;
+	private static STACKTRACE_TIMEOUT = 10000;
 
 	private static NODE_SHEBANG_MATCHER = new RegExp('#! */usr/bin/env +node');
 
@@ -1295,22 +1296,15 @@ export class NodeDebugSession extends DebugSession {
 			return;
 		}
 
-		// get first frame and the total number of frames
-		this._node.command2('backtrace', { fromFrame: 0, toFrame: 1 }).then(backtraceResponse => {
+		this._node.command2('backtrace', { fromFrame: 0, toFrame: maxLevels }, NodeDebugSession.STACKTRACE_TIMEOUT).then(backtraceResponse => {
 
-			let totalFrames = backtraceResponse.body.totalFrames;
-			if (!maxLevels || totalFrames < maxLevels) {
-				maxLevels = totalFrames;
-			}
+			this._cacheRefs(backtraceResponse);
 
-			return this._createStackFrame(backtraceResponse);
+			const responseFrames = backtraceResponse.body.frames;
 
-		}).then(firstframe => {
-
-			const frames = new Array<Promise<StackFrame>>(Promise.resolve(firstframe));
-			// get the remaining frames
-			for (let frameIx = 1; frameIx < maxLevels; frameIx++) {
-				frames.push(this._getStackFrame(frameIx));
+			const frames = new Array<Promise<StackFrame>>();
+			for (let i = 0; i < responseFrames.length; i++) {
+				frames.push(this._createStackFrame(responseFrames[i]));
 			}
 			return Promise.all(frames);
 
@@ -1331,23 +1325,7 @@ export class NodeDebugSession extends DebugSession {
 		});
 	}
 
-	private _getStackFrame(frameIx: number) : Promise<StackFrame> {
-
-		return this._node.command2('backtrace', { fromFrame: frameIx, toFrame: frameIx+1 }).then(backtraceResponse => {
-
-			return this._createStackFrame(backtraceResponse);
-
-		}).catch((response) => {
-			// error backtrace request
-			return null;
-		});
-	}
-
-	private _createStackFrame(backtraceResponse: any) : Promise<StackFrame> {
-
-		this._cacheRefs(backtraceResponse);
-
-		const frame = backtraceResponse.body.frames[0];
+	private _createStackFrame(frame: any) : Promise<StackFrame> {
 
 		// resolve some refs
 		return this._getValues([ frame.script, frame.func, frame.receiver ]).then(() => {
