@@ -66,7 +66,7 @@ export class NodeV8Protocol extends EE.EventEmitter {
 	public embeddedHostVersion: number = -1;
 
 
-	public startDispatch(inStream: NodeJS.ReadableStream, outStream: NodeJS.WritableStream): void {
+	public startDispatch(inStream: NodeJS.ReadableStream, outStream: NodeJS.WritableStream) : void {
 		this._sequence = 1;
 		this._writableStream = outStream;
 		this._newRes(null);
@@ -88,15 +88,43 @@ export class NodeV8Protocol extends EE.EventEmitter {
 		inStream.resume();
 	}
 
-	public stop(): void {
+	public stop() : void {
 		if (this._writableStream) {
 			this._writableStream.end();
 		}
 	}
 
-	public command(command: string, args?: any, cb?: (response: NodeV8Response) => void): void {
+	public command(command: string, args?: any, cb?: (response: NodeV8Response) => void) : void {
+		this._command(command, args, NodeV8Protocol.TIMEOUT, cb);
+	}
 
-		const timeout = NodeV8Protocol.TIMEOUT;
+	public command2(command: string, args?: any, timeout: number = NodeV8Protocol.TIMEOUT) : Promise<NodeV8Response> {
+		return new Promise((completeDispatch, errorDispatch) => {
+			this._command(command, args, timeout, (result: NodeV8Response) => {
+				if (result.success) {
+					completeDispatch(result);
+				} else {
+					errorDispatch(result);
+				}
+			});
+		});
+	}
+
+	public sendEvent(event: NodeV8Event) : void {
+		this.send('event', event);
+	}
+
+	public sendResponse(response: NodeV8Response) : void {
+		if (response.seq > 0) {
+			console.error('attempt to send more than one response for command {0}', response.command);
+		} else {
+			this.send('response', response);
+		}
+	}
+
+	// ---- private ------------------------------------------------------------
+
+	private _command(command: string, args: any, timeout: number, cb: (response: NodeV8Response) => void) : void {
 
 		const request: any = {
 			command: command
@@ -131,37 +159,11 @@ export class NodeV8Protocol extends EE.EventEmitter {
 		}
 	}
 
-	public command2(command: string, args?: any, timeout: number = NodeV8Protocol.TIMEOUT): Promise<NodeV8Response> {
-		return new Promise((completeDispatch, errorDispatch) => {
-			this.command(command, args, (result: NodeV8Response) => {
-				if (result.success) {
-					completeDispatch(result);
-				} else {
-					errorDispatch(result);
-				}
-			});
-		});
-	}
-
-	public sendEvent(event: NodeV8Event): void {
-		this.send('event', event);
-	}
-
-	public sendResponse(response: NodeV8Response): void {
-		if (response.seq > 0) {
-			console.error('attempt to send more than one response for command {0}', response.command);
-		} else {
-			this.send('response', response);
-		}
-	}
-
-	// ---- private ------------------------------------------------------------
-
 	private emitEvent(event: NodeV8Event) {
 		this.emit(event.event, event);
 	}
 
-	private send(typ: string, message: NodeV8Message): void {
+	private send(typ: string, message: NodeV8Message) : void {
 		message.type = typ;
 		message.seq = this._sequence++;
 		const json = JSON.stringify(message);
@@ -171,7 +173,7 @@ export class NodeV8Protocol extends EE.EventEmitter {
 		}
 	}
 
-	private _newRes(raw: string): void {
+	private _newRes(raw: string) : void {
 		this._res = {
 			raw: raw || '',
 			headers: {}
@@ -180,7 +182,7 @@ export class NodeV8Protocol extends EE.EventEmitter {
 		this.execute('');
 	}
 
-	private internalDispatch(message: NodeV8Message): void {
+	private internalDispatch(message: NodeV8Message) : void {
 		switch (message.type) {
 		case 'event':
 			const e = <NodeV8Event> message;
@@ -203,7 +205,7 @@ export class NodeV8Protocol extends EE.EventEmitter {
 		}
 	}
 
-	private execute(d): void {
+	private execute(d) : void {
 		const res = this._res;
 		res.raw += d;
 
