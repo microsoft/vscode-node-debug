@@ -166,6 +166,7 @@ export class NodeDebugSession extends DebugSession {
 	private static FIRST_LINE_OFFSET = 62;
 	private static PROTO = '__proto__';
 	private static DEBUG_EXTENSION = 'debugExtension.js';
+
 	private static NODE_TERMINATION_POLL_INTERVAL = 3000;
 	private static ATTACH_TIMEOUT = 10000;
 	private static STACKTRACE_TIMEOUT = 10000;
@@ -247,7 +248,7 @@ export class NodeDebugSession extends DebugSession {
 			this._stopped('break');
 			this._lastStoppedEvent = this._createStoppedEvent(event.body);
 			if (this._lastStoppedEvent.body.reason === NodeDebugSession.ENTRY_REASON) {
-				this.log('la', 'NodeDebugSession: supressed stop-on-entry event');
+				this.log('la', 'NodeDebugSession: suppressed stop-on-entry event');
 			} else {
 				this.sendEvent(this._lastStoppedEvent);
 			}
