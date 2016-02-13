@@ -21,7 +21,6 @@ import * as FS from 'fs';
 import * as util from 'util';
 import * as nls from 'vscode-nls';
 
-let localize = nls.config({ locale: 'de-DE', cache: true })();
 
 const RANGESIZE = 1000;
 
@@ -175,6 +174,8 @@ export class NodeDebugSession extends DebugSession {
 
 	//---- nls strings
 
+	private localize: nls.LocalizeFunc = nls.loadMessageBundle();
+
 	private static ENTRY_REASON = "entry";
 	private static STEP_REASON = "step";
 	private static BREAKPOINT_REASON = "breakpoint";
@@ -187,16 +188,6 @@ export class NodeDebugSession extends DebugSession {
 	private static SCOPE_NAMES = [ "Global", "Local", "With", "Closure", "Catch", "Block", "Script" ];
 	private static SCOPE_EXCEPTION = "Exception";
 	private static UNKNOWN_SCOPE = "Unknown Scope: %s";
-
-	private static LARGE_DATASTRUCTURE_TIMEOUT = "<...>";
-
-	private static NOT_AVAILABLE = "not available";
-	private static INVALID_EXPRESSION = "invalid expression: %s";
-
-	private static CONTENT_STREAMED_FROM_NODE = "content streamed from node";
-	private static CONTENT_STREAMED_FROM_REMOTE_NODE = "content streamed from remote node";
-	private static INLINED_CONTENT_FROM_SOURCE_MAP = "inlined content from source map";
-	private static CORE_NODULE = "core module";
 
 	//---- end of nls strings
 
@@ -233,6 +224,7 @@ export class NodeDebugSession extends DebugSession {
 	private _entryPath: string;
 	private _entryLine: number;		// entry line in *.js file (not in the source file)
 	private _entryColumn: number;	// entry column in *.js file (not in the source file)
+
 
 	public constructor() {
 		super();
@@ -314,6 +306,12 @@ export class NodeDebugSession extends DebugSession {
 
 		this.log('la', `initializeRequest: adapterID: ${args.adapterID}`);
 
+		if (args.locale) {
+			this.localize = nls.config({
+				locale: args.locale
+			})();
+		}
+
 		this._adapterID = args.adapterID;
 
 		//---- Send back feature and their options
@@ -345,12 +343,12 @@ export class NodeDebugSession extends DebugSession {
 		let runtimeExecutable = this.convertClientPathToDebugger(args.runtimeExecutable);
 		if (runtimeExecutable) {
 			if (!FS.existsSync(runtimeExecutable)) {
-				this.sendErrorResponse(response, 2006, "runtime executable '{path}' does not exist", { path: runtimeExecutable });
+				this.sendErrorResponse(response, 2006, this.localize('VSND2006', "runtime executable '{path}' does not exist"), { path: runtimeExecutable });
 				return;
 			}
 		} else {
 			if (!Terminal.isOnPath(NodeDebugSession.NODE)) {
-				this.sendErrorResponse(response, 2001, "cannot find runtime '{_runtime}' on PATH", { _runtime: NodeDebugSession.NODE });
+				this.sendErrorResponse(response, 2001, this.localize('VSND2001', "cannot find runtime '{_runtime}' on PATH"), { _runtime: NodeDebugSession.NODE });
 				return;
 			}
 			runtimeExecutable = NodeDebugSession.NODE;     // use node from PATH
@@ -383,15 +381,15 @@ export class NodeDebugSession extends DebugSession {
 			programPath = this.convertClientPathToDebugger(programPath);
 			programPath = Path.normalize(programPath);
 			if (!FS.existsSync(programPath)) {
-				this.sendErrorResponse(response, 2007, "program '{path}' does not exist", { path: programPath });
+				this.sendErrorResponse(response, 2007, this.localize('VSND2007', "program '{path}' does not exist"), { path: programPath });
 				return;
 			}
 			if (programPath != PathUtils.realPath(programPath)) {
-				this.sendErrorResponse(response, 2021, "program path uses differently cased character than file on disk; this might result in breakpoints not being hit");
+				this.sendErrorResponse(response, 2021, this.localize('VSND2021', "program path uses differently cased character than file on disk; this might result in breakpoints not being hit"));
 				return;
 			}
 		} else {
-			this.sendErrorResponse(response, 2005, "property 'program' is missing or empty");
+			this.sendErrorResponse(response, 2005, this.localize('VSND2005', "property 'program' is missing or empty"));
 			return;
 		}
 
@@ -413,12 +411,12 @@ export class NodeDebugSession extends DebugSession {
 		} else {
 			// node cannot execute the program directly
 			if (!this._sourceMaps) {
-				this.sendErrorResponse(response, 2002, "cannot launch program '{path}'; enabling source maps might help", { path: programPath });
+				this.sendErrorResponse(response, 2002, this.localize('VSND2002', "cannot launch program '{path}'; enabling source maps might help"), { path: programPath });
 				return;
 			}
 			const generatedPath = this._sourceMaps.MapPathFromSource(programPath);
 			if (!generatedPath) {	// cannot find generated file
-				this.sendErrorResponse(response, 2003, "cannot launch program '{path}'; setting the 'outDir' attribute might help", { path: programPath });
+				this.sendErrorResponse(response, 2003, this.localize('VSND2003', "cannot launch program '{path}'; setting the 'outDir' attribute might help"), { path: programPath });
 				return;
 			}
 			this.log('sm', `launchRequest: program '${programPath}' seems to be the source; launch the generated file '${generatedPath}' instead`);
@@ -429,7 +427,7 @@ export class NodeDebugSession extends DebugSession {
 		let workingDirectory = this.convertClientPathToDebugger(args.cwd);
 		if (workingDirectory) {
 			if (!FS.existsSync(workingDirectory)) {
-				this.sendErrorResponse(response, 2004, "working directory '{path}' does not exist", { path: workingDirectory });
+				this.sendErrorResponse(response, 2004, this.localize('VSND2004', "working directory '{path}' does not exist"), { path: workingDirectory });
 				return;
 			}
 			// if working dir is given and if the executable is within that folder, we make the executable path relative to the working dir
@@ -464,7 +462,7 @@ export class NodeDebugSession extends DebugSession {
 				this._attach(response, port);
 
 			}).catch(error => {
-				this.sendErrorResponse(response, 2011, "cannot launch target in terminal (reason: {_error})", { _error: error.message }, ErrorDestination.Telemetry | ErrorDestination.User );
+				this.sendErrorResponse(response, 2011, this.localize('VSND2011', "cannot launch target in terminal (reason: {_error})"), { _error: error.message }, ErrorDestination.Telemetry | ErrorDestination.User );
 				this._terminated('terminal error: ' + error.message);
 			});
 
@@ -482,7 +480,7 @@ export class NodeDebugSession extends DebugSession {
 
 			const cmd = CP.spawn(runtimeExecutable, launchArgs.slice(1), options);
 			cmd.on('error', (error) => {
-				this.sendErrorResponse(response, 2017, "cannot launch target (reason: {_error})", { _error: error.message }, ErrorDestination.Telemetry | ErrorDestination.User );
+				this.sendErrorResponse(response, 2017, this.localize('VSND2017', "cannot launch target (reason: {_error})"), { _error: error.message }, ErrorDestination.Telemetry | ErrorDestination.User );
 				this._terminated(`failed to launch target (${error})`);
 			});
 			cmd.on('exit', () => {
@@ -535,7 +533,7 @@ export class NodeDebugSession extends DebugSession {
 				const generatedCodeDirectory = args.outDir;
 
 				if (!FS.existsSync(generatedCodeDirectory)) {
-					this.sendErrorResponse(response, 2022, "attribute 'outDir' ('{path}') does not exist", { path: generatedCodeDirectory });
+					this.sendErrorResponse(response, 2022, this.localize('VSND2022', "attribute 'outDir' ('{path}') does not exist"), { path: generatedCodeDirectory });
 					return true;
 				}
 
@@ -563,7 +561,7 @@ export class NodeDebugSession extends DebugSession {
 
 		if (args.localRoot) {
 			if (!FS.existsSync(args.localRoot)) {
-				this.sendErrorResponse(response, 2023, "attribute 'localRoot' ('{path}') does not exist", { path: args.localRoot });
+				this.sendErrorResponse(response, 2023, this.localize('VSND2023', "attribute 'localRoot' ('{path}') does not exist"), { path: args.localRoot });
 				return;
 			}
 			this._localRoot = args.localRoot;
@@ -618,10 +616,10 @@ export class NodeDebugSession extends DebugSession {
 							socket.connect(port);
 						}, 200);		// retry after 200 ms
 					} else {
-						this.sendErrorResponse(response, 2009, "cannot connect to runtime process (timeout after {_timeout}ms)", { _timeout: timeout });
+						this.sendErrorResponse(response, 2009, this.localize('VSND2009', "cannot connect to runtime process (timeout after {_timeout}ms)"), { _timeout: timeout });
 					}
 				} else {
-					this.sendErrorResponse(response, 2010, "cannot connect to runtime process (reason: {_error})", { _error: err.message });
+					this.sendErrorResponse(response, 2010, this.localize('VSND2010', "cannot connect to runtime process (reason: {_error})"), { _error: err.message });
 				}
 			}
 		});
@@ -915,14 +913,14 @@ export class NodeDebugSession extends DebugSession {
 				if (scriptId >= 0) {
 					this._updateBreakpoints(response, null, scriptId, lbs);
 				} else {
-					this.sendErrorResponse(response, 2019, "internal module {_module} not found", { _module: source.name });
+					this.sendErrorResponse(response, 2019, this.localize('VSND2019', "internal module {_module} not found"), { _module: source.name });
 				}
 				return;
 			});
 			return;
 		}
 
-		this.sendErrorResponse(response, 2012, "no valid source specified", null, ErrorDestination.Telemetry);
+		this.sendErrorResponse(response, 2012, 'no valid source specified', null, ErrorDestination.Telemetry);
 	}
 
 	private _mapSourceAndUpdateBreakpoints(response: DebugProtocol.SetBreakpointsResponse, path: string, lbs: DebugProtocol.SourceBreakpoint[]) {
@@ -1293,7 +1291,7 @@ export class NodeDebugSession extends DebugSession {
 		let maxLevels = args.levels;
 
 		if (threadReference !== NodeDebugSession.DUMMY_THREAD_ID) {
-			this.sendErrorResponse(response, 2014, "unexpected thread reference {_thread}", { _thread: threadReference }, ErrorDestination.Telemetry);
+			this.sendErrorResponse(response, 2014, 'unexpected thread reference {_thread}', { _thread: threadReference }, ErrorDestination.Telemetry);
 			return;
 		}
 
@@ -1335,7 +1333,7 @@ export class NodeDebugSession extends DebugSession {
 			let column = this._adjustColumn(line, frame.column);
 
 			let src: Source = null;
-			let origin = NodeDebugSession.CONTENT_STREAMED_FROM_NODE;
+			let origin = this.localize('content.streamed.from.node', "content streamed from node");
 			let adapterData: any;
 
 			const script_val = this._getValueFromCache(frame.script);
@@ -1350,7 +1348,7 @@ export class NodeDebugSession extends DebugSession {
 
 					if (localPath !== remotePath && this._attachMode) {
 						// assume attached to remote node process
-						origin = NodeDebugSession.CONTENT_STREAMED_FROM_REMOTE_NODE;
+						origin = this.localize('content.streamed.from.remote.node', "content streamed from remote node");
 					}
 
 					name = Path.basename(localPath);
@@ -1382,7 +1380,7 @@ export class NodeDebugSession extends DebugSession {
 									const adapterData = {
 										inlinePath: mapresult.path
 									};
-									src = new Source(name, null, sourceHandle, NodeDebugSession.INLINED_CONTENT_FROM_SOURCE_MAP, adapterData);
+									src = new Source(name, null, sourceHandle, this.localize('content.from.source.map', "inlined content from source map"), adapterData);
 									line = mapresult.line;
 									column = mapresult.column;
 									this.log('sm', `_getStackFrame: source '${mapresult.path}' doesn't exist -> use inlined source`);
@@ -1406,7 +1404,7 @@ export class NodeDebugSession extends DebugSession {
 						}
 					}
 				} else {
-					origin = NodeDebugSession.CORE_NODULE;
+					origin = this.localize('core.module', "core module");
 				}
 
 				if (src === null) {
@@ -1442,7 +1440,7 @@ export class NodeDebugSession extends DebugSession {
 
 		const frame = this._frameHandles.get(args.frameId);
 		if (!frame) {
-			this.sendErrorResponse(response, 2020, "stack frame not valid");
+			this.sendErrorResponse(response, 2020, this.localize('VSND2020', "stack frame not valid"));
 			return;
 		}
 		const frameIx = frame.index;
@@ -1847,7 +1845,7 @@ export class NodeDebugSession extends DebugSession {
 		if (args.frameId > 0) {
 			const frame = this._frameHandles.get(args.frameId);
 			if (!frame) {
-				this.sendErrorResponse(response, 2020, "stack frame not valid");
+				this.sendErrorResponse(response, 2020, 'stack frame not valid', null, ErrorDestination.Telemetry);
 				return;
 			}
 			const frameIx = frame.index;
@@ -1866,17 +1864,17 @@ export class NodeDebugSession extends DebugSession {
 						};
 					} else {
 						response.success = false;
-						response.message = NodeDebugSession.NOT_AVAILABLE;
+						response.message = this.localize('eval.not.available', "not available");
 					}
 					this.sendResponse(response);
 				});
 			} else {
 				response.success = false;
 				if (resp.message.indexOf('ReferenceError: ') === 0 || resp.message === 'No frames') {
-					response.message = NodeDebugSession.NOT_AVAILABLE;
+					response.message = this.localize('eval.not.available', "not available");
 				} else if (resp.message.indexOf('SyntaxError: ') === 0) {
 					const m = resp.message.substring('SyntaxError: '.length).toLowerCase();
-					response.message = util.format(NodeDebugSession.INVALID_EXPRESSION, m);
+					response.message = this.localize('eval.invalid.expression', "invalid expression: {0}", m);
 				} else {
 					response.message = resp.message;
 				}
@@ -1906,7 +1904,7 @@ export class NodeDebugSession extends DebugSession {
 				if (nodeResponse.success) {
 					srcSource.source = nodeResponse.body[0].source;
 				} else {
-					srcSource.source = "<source not found>";
+					srcSource.source = this.localize('source.not.found', "<source not found>");
 				}
 				response.body = {
 					content: srcSource.source
@@ -1915,7 +1913,7 @@ export class NodeDebugSession extends DebugSession {
 			});
 
 		} else {
-			this.sendErrorResponse(response, 9999, "sourceRequest error");
+			this.sendErrorResponse(response, 9999, 'sourceRequest error', null, ErrorDestination.Telemetry);
 		}
 	}
 
@@ -1971,11 +1969,11 @@ export class NodeDebugSession extends DebugSession {
 		} else {
 			const errmsg = nodeResponse.message;
 			if (errmsg.indexOf('unresponsive') >= 0) {
-				this.sendErrorResponse(response, 2015, "request '{_request}' was cancelled because node is unresponsive", { _request: nodeResponse.command } );
+				this.sendErrorResponse(response, 2015, this.localize('VSND2015', "request '{_request}' was cancelled because node is unresponsive"), { _request: nodeResponse.command } );
 			} else if (errmsg.indexOf('timeout') >= 0) {
-				this.sendErrorResponse(response, 2016, "node did not repond to request '{_request}' in a reasonable amount of time", { _request: nodeResponse.command } );
+				this.sendErrorResponse(response, 2016, this.localize('VSND2016', "node did not repond to request '{_request}' in a reasonable amount of time"), { _request: nodeResponse.command } );
 			} else {
-				this.sendErrorResponse(response, 2013, "node request '{_request}' failed (reason: {_error})", { _request: nodeResponse.command, _error: errmsg }, ErrorDestination.Telemetry);
+				this.sendErrorResponse(response, 2013, 'node request \'{_request}\' failed (reason: {_error})', { _request: nodeResponse.command, _error: errmsg }, ErrorDestination.Telemetry);
 			}
 		}
 	}
@@ -2086,7 +2084,7 @@ export class NodeDebugSession extends DebugSession {
 				} else {
 					let val: any;
 					if (resp.message.indexOf('timeout') >= 0) {
-						val = { type: 'number', value: NodeDebugSession.LARGE_DATASTRUCTURE_TIMEOUT };
+						val = { type: 'number', value: '<...>' };
 					} else {
 						val = { type: 'number', value: `<data error: ${resp.message}>` };
 					}

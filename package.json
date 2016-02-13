@@ -16,10 +16,10 @@
 		"vscode": "^0.10.1"
 	},
 	"dependencies": {
-		"vscode-debugprotocol": "~1.6.0-pre5",
-		"vscode-debugadapter": "~1.6.0-pre9",
-		"source-map": "*",
-		"vscode-nls": "*"
+		"vscode-debugprotocol": "next",
+		"vscode-debugadapter": "next",
+		"source-map": "^0.5.3",
+		"vscode-nls": "^1.0.2"
 	},
 	"repository": {
 		"type": "git",
