@@ -311,6 +311,18 @@ export class NodeDebugSession extends DebugSession {
 		// This debug adapter does not (yet) support a side effect free evaluate request for data hovers.
 		response.body.supportsEvaluateForHovers = true;
 
+		// This debug adapter supports two excpetion breakpoint filters
+		response.body.exceptionBreakpointFilters = [
+			{
+				label: "All Exceptions",
+				filter: "all"
+			},
+			{
+				label: "Uncaught Exceptions",
+				filter: "uncaught"
+			}
+		];
+
 		this.sendResponse(response);
 	}
 
