@@ -19,10 +19,24 @@ import * as Net from 'net';
 import * as Path from 'path';
 import * as FS from 'fs';
 import * as util from 'util';
+
 import * as nls from 'vscode-nls';
+
+let nls_options = undefined;
+if (process.env.VSCODE_NLS_CONFIG) {
+	try {
+		nls_options = JSON.parse(process.env.VSCODE_NLS_CONFIG)
+	}
+	catch (e) {
+		nls_options = undefined;
+	}
+}
+
+const localize = nls.config(nls_options)();
 
 
 const RANGESIZE = 1000;
+
 
 export interface Expandable {
 	Expand(session: NodeDebugSession, results: Array<Variable>, done: () => void): void;
@@ -172,8 +186,6 @@ export class NodeDebugSession extends DebugSession {
 
 	private static NODE_SHEBANG_MATCHER = new RegExp('#! */usr/bin/env +node');
 
-	private _localize: nls.LocalizeFunc = nls.loadMessageBundle();
-
 	private _trace: string[];
 	private _traceAll = false;
 
@@ -222,7 +234,7 @@ export class NodeDebugSession extends DebugSession {
 		this._node.on('break', (event: NodeV8Event) => {
 			this._stopped('break');
 			this._lastStoppedEvent = this._createStoppedEvent(event.body);
-			if (this._lastStoppedEvent.body.reason === this._localize('reason.entry', "entry")) {
+			if (this._lastStoppedEvent.body.reason === localize('reason.entry', "entry")) {
 				this.log('la', 'NodeDebugSession: suppressed stop-on-entry event');
 			} else {
 				this.sendEvent(this._lastStoppedEvent);
@@ -289,12 +301,6 @@ export class NodeDebugSession extends DebugSession {
 
 		this.log('la', `initializeRequest: adapterID: ${args.adapterID}`);
 
-		if (args.locale) {
-			this._localize = nls.config({
-				locale: args.locale
-			})();
-		}
-
 		this._adapterID = args.adapterID;
 
 		//---- Send back feature and their options
@@ -314,11 +320,11 @@ export class NodeDebugSession extends DebugSession {
 		// This debug adapter supports two exception breakpoint filters
 		response.body.exceptionBreakpointFilters = [
 			{
-				label: this._localize('exceptions.all', "All Exceptions"),
+				label: localize('exceptions.all', "All Exceptions"),
 				filter: "all"
 			},
 			{
-				label: this._localize('exceptions.uncaught', "Uncaught Exceptions"),
+				label: localize('exceptions.uncaught', "Uncaught Exceptions"),
 				filter: "uncaught"
 			}
 		];
@@ -341,12 +347,12 @@ export class NodeDebugSession extends DebugSession {
 		let runtimeExecutable = this.convertClientPathToDebugger(args.runtimeExecutable);
 		if (runtimeExecutable) {
 			if (!FS.existsSync(runtimeExecutable)) {
-				this.sendErrorResponse(response, 2006, this._localize('VSND2006', "runtime executable '{path}' does not exist"), { path: runtimeExecutable });
+				this.sendErrorResponse(response, 2006, localize('VSND2006', "runtime executable '{path}' does not exist"), { path: runtimeExecutable });
 				return;
 			}
 		} else {
 			if (!Terminal.isOnPath(NodeDebugSession.NODE)) {
-				this.sendErrorResponse(response, 2001, this._localize('VSND2001', "cannot find runtime '{_runtime}' on PATH"), { _runtime: NodeDebugSession.NODE });
+				this.sendErrorResponse(response, 2001, localize('VSND2001', "cannot find runtime '{_runtime}' on PATH"), { _runtime: NodeDebugSession.NODE });
 				return;
 			}
 			runtimeExecutable = NodeDebugSession.NODE;     // use node from PATH
@@ -379,15 +385,15 @@ export class NodeDebugSession extends DebugSession {
 			programPath = this.convertClientPathToDebugger(programPath);
 			programPath = Path.normalize(programPath);
 			if (!FS.existsSync(programPath)) {
-				this.sendErrorResponse(response, 2007, this._localize('VSND2007', "program '{path}' does not exist"), { path: programPath });
+				this.sendErrorResponse(response, 2007, localize('VSND2007', "program '{path}' does not exist"), { path: programPath });
 				return;
 			}
 			if (programPath != PathUtils.realPath(programPath)) {
-				this.sendErrorResponse(response, 2021, this._localize('VSND2021', "program path uses differently cased character than file on disk; this might result in breakpoints not being hit"));
+				this.sendErrorResponse(response, 2021, localize('VSND2021', "program path uses differently cased character than file on disk; this might result in breakpoints not being hit"));
 				return;
 			}
 		} else {
-			this.sendErrorResponse(response, 2005, this._localize('VSND2005', "property 'program' is missing or empty"));
+			this.sendErrorResponse(response, 2005, localize('VSND2005', "property 'program' is missing or empty"));
 			return;
 		}
 
@@ -409,12 +415,12 @@ export class NodeDebugSession extends DebugSession {
 		} else {
 			// node cannot execute the program directly
 			if (!this._sourceMaps) {
-				this.sendErrorResponse(response, 2002, this._localize('VSND2002', "cannot launch program '{path}'; enabling source maps might help"), { path: programPath });
+				this.sendErrorResponse(response, 2002, localize('VSND2002', "cannot launch program '{path}'; enabling source maps might help"), { path: programPath });
 				return;
 			}
 			const generatedPath = this._sourceMaps.MapPathFromSource(programPath);
 			if (!generatedPath) {	// cannot find generated file
-				this.sendErrorResponse(response, 2003, this._localize('VSND2003', "cannot launch program '{path}'; setting the 'outDir' attribute might help"), { path: programPath });
+				this.sendErrorResponse(response, 2003, localize('VSND2003', "cannot launch program '{path}'; setting the 'outDir' attribute might help"), { path: programPath });
 				return;
 			}
 			this.log('sm', `launchRequest: program '${programPath}' seems to be the source; launch the generated file '${generatedPath}' instead`);
@@ -425,7 +431,7 @@ export class NodeDebugSession extends DebugSession {
 		let workingDirectory = this.convertClientPathToDebugger(args.cwd);
 		if (workingDirectory) {
 			if (!FS.existsSync(workingDirectory)) {
-				this.sendErrorResponse(response, 2004, this._localize('VSND2004', "working directory '{path}' does not exist"), { path: workingDirectory });
+				this.sendErrorResponse(response, 2004, localize('VSND2004', "working directory '{path}' does not exist"), { path: workingDirectory });
 				return;
 			}
 			// if working dir is given and if the executable is within that folder, we make the executable path relative to the working dir
@@ -460,7 +466,7 @@ export class NodeDebugSession extends DebugSession {
 				this._attach(response, port);
 
 			}).catch(error => {
-				this.sendErrorResponse(response, 2011, this._localize('VSND2011', "cannot launch target in terminal (reason: {_error})"), { _error: error.message }, ErrorDestination.Telemetry | ErrorDestination.User );
+				this.sendErrorResponse(response, 2011, localize('VSND2011', "cannot launch target in terminal (reason: {_error})"), { _error: error.message }, ErrorDestination.Telemetry | ErrorDestination.User );
 				this._terminated('terminal error: ' + error.message);
 			});
 
@@ -478,7 +484,7 @@ export class NodeDebugSession extends DebugSession {
 
 			const cmd = CP.spawn(runtimeExecutable, launchArgs.slice(1), options);
 			cmd.on('error', (error) => {
-				this.sendErrorResponse(response, 2017, this._localize('VSND2017', "cannot launch target (reason: {_error})"), { _error: error.message }, ErrorDestination.Telemetry | ErrorDestination.User );
+				this.sendErrorResponse(response, 2017, localize('VSND2017', "cannot launch target (reason: {_error})"), { _error: error.message }, ErrorDestination.Telemetry | ErrorDestination.User );
 				this._terminated(`failed to launch target (${error})`);
 			});
 			cmd.on('exit', () => {
@@ -531,7 +537,7 @@ export class NodeDebugSession extends DebugSession {
 				const generatedCodeDirectory = args.outDir;
 
 				if (!FS.existsSync(generatedCodeDirectory)) {
-					this.sendErrorResponse(response, 2022, this._localize('VSND2022', "attribute 'outDir' ('{path}') does not exist"), { path: generatedCodeDirectory });
+					this.sendErrorResponse(response, 2022, localize('VSND2022', "attribute 'outDir' ('{path}') does not exist"), { path: generatedCodeDirectory });
 					return true;
 				}
 
@@ -559,7 +565,7 @@ export class NodeDebugSession extends DebugSession {
 
 		if (args.localRoot) {
 			if (!FS.existsSync(args.localRoot)) {
-				this.sendErrorResponse(response, 2023, this._localize('VSND2023', "attribute 'localRoot' ('{path}') does not exist"), { path: args.localRoot });
+				this.sendErrorResponse(response, 2023, localize('VSND2023', "attribute 'localRoot' ('{path}') does not exist"), { path: args.localRoot });
 				return;
 			}
 			this._localRoot = args.localRoot;
@@ -614,10 +620,10 @@ export class NodeDebugSession extends DebugSession {
 							socket.connect(port);
 						}, 200);		// retry after 200 ms
 					} else {
-						this.sendErrorResponse(response, 2009, this._localize('VSND2009', "cannot connect to runtime process (timeout after {_timeout}ms)"), { _timeout: timeout });
+						this.sendErrorResponse(response, 2009, localize('VSND2009', "cannot connect to runtime process (timeout after {_timeout}ms)"), { _timeout: timeout });
 					}
 				} else {
-					this.sendErrorResponse(response, 2010, this._localize('VSND2010', "cannot connect to runtime process (reason: {_error})"), { _error: err.message });
+					this.sendErrorResponse(response, 2010, localize('VSND2010', "cannot connect to runtime process (reason: {_error})"), { _error: err.message });
 				}
 			}
 		});
@@ -787,7 +793,7 @@ export class NodeDebugSession extends DebugSession {
 		if (this._stopOnEntry) {
 			// user has requested 'stop on entry' so send out a stop-on-entry
 			this.log('la', '_startInitialize2: fire stop-on-entry event');
-			this.sendEvent(new StoppedEvent(this._localize('reason.entry', "entry"), NodeDebugSession.DUMMY_THREAD_ID));
+			this.sendEvent(new StoppedEvent(localize('reason.entry', "entry"), NodeDebugSession.DUMMY_THREAD_ID));
 		}
 		else {
 			// since we are stopped but UI doesn't know about this, remember that we continue later in finishInitialize()
@@ -911,7 +917,7 @@ export class NodeDebugSession extends DebugSession {
 				if (scriptId >= 0) {
 					this._updateBreakpoints(response, null, scriptId, lbs);
 				} else {
-					this.sendErrorResponse(response, 2019, this._localize('VSND2019', "internal module {_module} not found"), { _module: source.name });
+					this.sendErrorResponse(response, 2019, localize('VSND2019', "internal module {_module} not found"), { _module: source.name });
 				}
 				return;
 			});
@@ -1247,7 +1253,7 @@ export class NodeDebugSession extends DebugSession {
 		if (this._needBreakpointEvent) {	// we have to break on entry
 			this._needBreakpointEvent = false;
 			info = 'fire breakpoint event';
-			this.sendEvent(new StoppedEvent(this._localize('reason.breakpoint', "breakpoint"), NodeDebugSession.DUMMY_THREAD_ID));
+			this.sendEvent(new StoppedEvent(localize('reason.breakpoint', "breakpoint"), NodeDebugSession.DUMMY_THREAD_ID));
 		}
 
 		this.log('la', `configurationDoneRequest: ${info}`);
@@ -1331,7 +1337,7 @@ export class NodeDebugSession extends DebugSession {
 			let column = this._adjustColumn(line, frame.column);
 
 			let src: Source = null;
-			let origin = this._localize('content.streamed.from.node', "content streamed from node");
+			let origin = localize('content.streamed.from.node', "content streamed from node");
 			let adapterData: any;
 
 			const script_val = this._getValueFromCache(frame.script);
@@ -1346,7 +1352,7 @@ export class NodeDebugSession extends DebugSession {
 
 					if (localPath !== remotePath && this._attachMode) {
 						// assume attached to remote node process
-						origin = this._localize('content.streamed.from.remote.node', "content streamed from remote node");
+						origin = localize('content.streamed.from.remote.node', "content streamed from remote node");
 					}
 
 					name = Path.basename(localPath);
@@ -1378,7 +1384,7 @@ export class NodeDebugSession extends DebugSession {
 									const adapterData = {
 										inlinePath: mapresult.path
 									};
-									src = new Source(name, null, sourceHandle, this._localize('content.from.source.map', "inlined content from source map"), adapterData);
+									src = new Source(name, null, sourceHandle, localize('content.from.source.map', "inlined content from source map"), adapterData);
 									line = mapresult.line;
 									column = mapresult.column;
 									this.log('sm', `_getStackFrame: source '${mapresult.path}' doesn't exist -> use inlined source`);
@@ -1402,7 +1408,7 @@ export class NodeDebugSession extends DebugSession {
 						}
 					}
 				} else {
-					origin = this._localize('core.module', "core module");
+					origin = localize('core.module', "core module");
 				}
 
 				if (src === null) {
@@ -1424,7 +1430,7 @@ export class NodeDebugSession extends DebugSession {
 				}
 			}
 			if (!func_name || func_name.length === 0) {
-				func_name = this._localize('anonymous.function', "(anonymous function)");
+				func_name = localize('anonymous.function', "(anonymous function)");
 			}
 
 			const frameReference = this._frameHandles.create(frame);
@@ -1438,7 +1444,7 @@ export class NodeDebugSession extends DebugSession {
 
 		const frame = this._frameHandles.get(args.frameId);
 		if (!frame) {
-			this.sendErrorResponse(response, 2020, this._localize('VSND2020', "stack frame not valid"));
+			this.sendErrorResponse(response, 2020, localize('VSND2020', "stack frame not valid"));
 			return;
 		}
 		const frameIx = frame.index;
@@ -1459,28 +1465,28 @@ export class NodeDebugSession extends DebugSession {
 				let scopeName: string;
 				switch (type) {
 					case 0:
-						scopeName = this._localize('scope.global', "Global");
+						scopeName = localize('scope.global', "Global");
 						break;
-					case 0:
-						scopeName = this._localize('scope.local', "Local");
+					case 1:
+						scopeName = localize('scope.local', "Local");
 						break;
-					case 0:
-						scopeName = this._localize('scope.with', "With");
+					case 2:
+						scopeName = localize('scope.with', "With");
 						break;
-					case 0:
-						scopeName = this._localize('scope.closure', "Closure");
+					case 3:
+						scopeName = localize('scope.closure', "Closure");
 						break;
-					case 0:
-						scopeName = this._localize('scope.catch', "Catch");
+					case 4:
+						scopeName = localize('scope.catch', "Catch");
 						break;
-					case 0:
-						scopeName = this._localize('scope.block', "Block");
+					case 5:
+						scopeName = localize('scope.block', "Block");
 						break;
-					case 0:
-						scopeName = this._localize('scope.script', "Script");
+					case 6:
+						scopeName = localize('scope.script', "Script");
 						break;
 					default:
-						scopeName = this._localize('scope.unknown', "Unknown Scope: {0}", type)
+						scopeName = localize('scope.unknown', "Unknown Scope Type: {0}", type)
 						break;
 				}
 
@@ -1495,7 +1501,7 @@ export class NodeDebugSession extends DebugSession {
 
 			// exception scope
 			if (frameIx === 0 && this._exception) {
-				scopes.unshift(new Scope(this._localize('scope.exception', "Exception"), this._variableHandles.create(new PropertyExpander(this._exception))));
+				scopes.unshift(new Scope(localize('scope.exception', "Exception"), this._variableHandles.create(new PropertyExpander(this._exception))));
 			}
 
 			response.body = {
@@ -1817,7 +1823,7 @@ export class NodeDebugSession extends DebugSession {
 		this._node.command('suspend', null, (nodeResponse) => {
 			if (nodeResponse.success) {
 				this._stopped('pause');
-				this._lastStoppedEvent = new StoppedEvent(this._localize('reason.user.request', "user request"), NodeDebugSession.DUMMY_THREAD_ID);
+				this._lastStoppedEvent = new StoppedEvent(localize('reason.user.request', "user request"), NodeDebugSession.DUMMY_THREAD_ID);
 				this.sendResponse(response);
 				this.sendEvent(this._lastStoppedEvent);
 			} else {
@@ -1887,17 +1893,17 @@ export class NodeDebugSession extends DebugSession {
 						};
 					} else {
 						response.success = false;
-						response.message = this._localize('eval.not.available', "not available");
+						response.message = localize('eval.not.available', "not available");
 					}
 					this.sendResponse(response);
 				});
 			} else {
 				response.success = false;
 				if (resp.message.indexOf('ReferenceError: ') === 0 || resp.message === 'No frames') {
-					response.message = this._localize('eval.not.available', "not available");
+					response.message = localize('eval.not.available', "not available");
 				} else if (resp.message.indexOf('SyntaxError: ') === 0) {
 					const m = resp.message.substring('SyntaxError: '.length).toLowerCase();
-					response.message = this._localize('eval.invalid.expression', "invalid expression: {0}", m);
+					response.message = localize('eval.invalid.expression', "invalid expression: {0}", m);
 				} else {
 					response.message = resp.message;
 				}
@@ -1927,7 +1933,7 @@ export class NodeDebugSession extends DebugSession {
 				if (nodeResponse.success) {
 					srcSource.source = nodeResponse.body[0].source;
 				} else {
-					srcSource.source = this._localize('source.not.found', "<source not found>");
+					srcSource.source = localize('source.not.found', "<source not found>");
 				}
 				response.body = {
 					content: srcSource.source
@@ -1992,9 +1998,9 @@ export class NodeDebugSession extends DebugSession {
 		} else {
 			const errmsg = nodeResponse.message;
 			if (errmsg.indexOf('unresponsive') >= 0) {
-				this.sendErrorResponse(response, 2015, this._localize('VSND2015', "request '{_request}' was cancelled because node is unresponsive"), { _request: nodeResponse.command } );
+				this.sendErrorResponse(response, 2015, localize('VSND2015', "request '{_request}' was cancelled because node is unresponsive"), { _request: nodeResponse.command } );
 			} else if (errmsg.indexOf('timeout') >= 0) {
-				this.sendErrorResponse(response, 2016, this._localize('VSND2016', "node did not repond to request '{_request}' in a reasonable amount of time"), { _request: nodeResponse.command } );
+				this.sendErrorResponse(response, 2016, localize('VSND2016', "node did not repond to request '{_request}' in a reasonable amount of time"), { _request: nodeResponse.command } );
 			} else {
 				this.sendErrorResponse(response, 2013, 'node request \'{_request}\' failed (reason: {_error})', { _request: nodeResponse.command, _error: errmsg }, ErrorDestination.Telemetry);
 			}
@@ -2146,7 +2152,7 @@ export class NodeDebugSession extends DebugSession {
 		if (body.exception) {
 			this._exception = body.exception;
 			exception_text = body.exception.text;
-			reason = this._localize('reason.exception', "exception");
+			reason = localize('reason.exception', "exception");
 		}
 
 		// is breakpoint?
@@ -2155,10 +2161,10 @@ export class NodeDebugSession extends DebugSession {
 			if (isArray(breakpoints) && breakpoints.length > 0) {
 				const id = breakpoints[0];
 				if (!this._gotEntryEvent && id === 1) {	// 'stop on entry point' is implemented as a breakpoint with id 1
-					reason = this._localize('reason.entry', "entry");
+					reason = localize('reason.entry', "entry");
 					this._rememberEntryLocation(body.script.name, body.sourceLine, body.sourceColumn);
 				} else {
-					reason = this._localize('reason.breakpoint', "breakpoint");
+					reason = localize('reason.breakpoint', "breakpoint");
 				}
 			}
 		}
@@ -2167,13 +2173,13 @@ export class NodeDebugSession extends DebugSession {
 		if (!reason) {
 			const sourceLine = body.sourceLineText;
 			if (sourceLine && sourceLine.indexOf('debugger') >= 0) {
-				reason = this._localize('reason.debugger.statement', "debugger statement");
+				reason = localize('reason.debugger.statement', "debugger statement");
 			}
 		}
 
 		// must be 'step'!
 		if (!reason) {
-			reason = this._localize('reason.step', "step");
+			reason = localize('reason.step', "step");
 		}
 
 		return new StoppedEvent(reason, NodeDebugSession.DUMMY_THREAD_ID, exception_text);
