@@ -52,6 +52,7 @@
 				"enableBreakpointsFor": { "languageIds": ["javascript", "javascriptreact"] },
 				"program": "./out/node/nodeDebug.js",
 				"runtime": "node",
+				"aiKey": "8aa6e059-82b6-46f6-8138-5a43aa3dd621",
 				"initialConfigurations": [
 					{
 						"name": "Launch",
