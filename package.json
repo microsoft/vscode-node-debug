@@ -1,8 +1,9 @@
 {
 	"name": "node-debug",
+	"displayName": "%extension.displayName%",
 	"version": "0.10.4",
 	"publisher": "andreweinand",
-	"description": "Visual Studio Code debug adapter for node.js",
+	"description": "%extension.description%",
 	"author": {
 		"name": "Microsoft Corporation"
 	},
@@ -19,7 +20,7 @@
 		"vscode-debugprotocol": "next",
 		"vscode-debugadapter": "next",
 		"source-map": "^0.5.3",
-		"vscode-nls": "^1.0.3"
+		"vscode-nls": "^1.0.4"
 	},
 	"repository": {
 		"type": "git",

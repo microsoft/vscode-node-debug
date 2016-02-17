@@ -1,4 +1,7 @@
 {
+	"extension.displayName": "Node Debug",
+	"extension.description": "Visual Studio Code debug adapter for Node.js",
+
 	"node.label": "Node.js",
 
 	"node.sourceMaps.description": "Use JavaScript source maps (if they exist).",

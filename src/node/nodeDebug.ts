@@ -19,21 +19,9 @@ import * as Net from 'net';
 import * as Path from 'path';
 import * as FS from 'fs';
 import * as util from 'util';
-
 import * as nls from 'vscode-nls';
 
-let nls_options = undefined;
-if (process.env.VSCODE_NLS_CONFIG) {
-	try {
-		nls_options = JSON.parse(process.env.VSCODE_NLS_CONFIG)
-	}
-	catch (e) {
-		nls_options = undefined;
-	}
-}
-
-const localize = nls.config(nls_options)();
-
+const localize = nls.config(process.env.VSCODE_NLS_CONFIG)();
 
 const RANGESIZE = 1000;
 
