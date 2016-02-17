@@ -77,6 +77,7 @@ gulp.task('internal-zip', function(callback) {
 		'node_modules/vscode-debugadapter/**/*',
 		'node_modules/vscode-nls/**/*',
 		'package.json',
+		'package.nls.json',
 		'ThirdPartyNotices.txt',
 		'LICENSE.txt'
 	], { base: '.' }).pipe(vzip.dest(uploadDest + '/node-debug.zip'));
