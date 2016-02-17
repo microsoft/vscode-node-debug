@@ -1026,7 +1026,9 @@ export class NodeDebugSession extends DebugSession {
 
 		if (lb.line < 0) {
 			// ignore this breakpoint because it couldn't be source mapped successfully
-			return Promise.resolve(new Breakpoint(false));
+			const bp = new Breakpoint(false);
+			(<any>bp).message = localize('sourcemapping.fail.message', "Breakpoint ignored because generated code not found (source map problem?).");
+			return Promise.resolve(bp);
 		}
 
 		if (lb.line === 0) {
