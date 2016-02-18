@@ -22,8 +22,7 @@
 			"stopOnEntry": false,
 			"runtimeArgs": [ "--nolazy" ],
 			"args": [ "--server=4711" ],
-			//"env": { "VSCODE_NLS_CONFIG": "{\"locale\":\"pseudo\",\"availableLanguages\":{}}" },
-			"externalConsole": true,
+			"externalConsole": false,
 			"sourceMaps": true,
 			"outDir": "${workspaceRoot}/out"
 		},

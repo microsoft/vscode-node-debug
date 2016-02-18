@@ -151,7 +151,8 @@ export interface AttachRequestArguments extends CommonArguments {
 	address?: string;
 	/** Retry for this number of milliseconds to connect to the node runtime. */
 	timeout?: number;
-
+	/** Request frontend to restart session on termination. */
+	restart?: boolean;
 	/** Node's root directory. */
 	remoteRoot?: string;
 	/** VS Code's root directory. */
@@ -189,6 +190,7 @@ export class NodeDebugSession extends DebugSession {
 	private _externalConsole: boolean;
 	private _isTerminated: boolean;
 	private _inShutdown: boolean;
+	private _restartMode = false;
 	private _terminalProcess: CP.ChildProcess;		// the terminal process or undefined
 	private _pollForNodeProcess = false;
 	private _nodeProcessId: number = -1; 		// pid of the node runtime
@@ -279,7 +281,11 @@ export class NodeDebugSession extends DebugSession {
 
 		if (!this._isTerminated) {
 			this._isTerminated = true;
-			this.sendEvent(new TerminatedEvent());
+			if (this._restartMode) {
+				this.sendEvent(new TerminatedEvent(true));
+			} else {
+				this.sendEvent(new TerminatedEvent());
+			}
 		}
 	}
 
@@ -549,6 +555,10 @@ export class NodeDebugSession extends DebugSession {
 			this._attachMode = false;
 		} else {
 			this._attachMode = true;
+		}
+
+		if (typeof args.restart === 'boolean') {
+			this._restartMode = args.restart;
 		}
 
 		if (args.localRoot) {

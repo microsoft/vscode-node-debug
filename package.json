@@ -17,8 +17,8 @@
 		"vscode": "^0.10.1"
 	},
 	"dependencies": {
-		"vscode-debugprotocol": "next",
-		"vscode-debugadapter": "next",
+		"vscode-debugprotocol": "1.6.0-pre8",
+		"vscode-debugadapter": "1.6.0-pre12",
 		"source-map": "^0.5.3",
 		"vscode-nls": "^1.0.4"
 	},
@@ -78,6 +78,8 @@
 						"type": "node",
 						"request": "attach",
 						"port": 5858,
+						"address": "localhost",
+						"restart": false,
 						"sourceMaps": false,
 						"outDir": null,
 						"localRoot": "${workspaceRoot}",
@@ -158,6 +160,11 @@
 								"type": "number",
 								"description": "%node.attach.timeout.description%",
 								"default": 10000
+							},
+							"restart": {
+								"type": "boolean",
+								"description": "%node.attach.restart.description%",
+								"default": true
 							},
 							"sourceMaps": {
 								"type": "boolean",
