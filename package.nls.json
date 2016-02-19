@@ -11,7 +11,7 @@
 	"node.launch.program.description": "Absolute path to the program.",
 	"node.launch.externalConsole.description": "Launch debug target in external console.",
 	"node.launch.args.description": "Command line arguments passed to the program.",
-	"node.launch.cwd.description": "Command line arguments passed to the program.",
+	"node.launch.cwd.description": "Absolute path to the working directory of the program being debugged.",
 	"node.launch.runtimeExecutable.description": "Absolute path to the runtime executable to be used. Default is the runtime executable on the PATH.",
 	"node.launch.runtimeArgs.description": "Optional arguments passed to the runtime executable.",
 	"node.launch.env.description": "Environment variables passed to the program.",
