@@ -95,10 +95,19 @@ export class DebugClient extends ProtocolClient {
 	}
 
 	/**
-	 * Shutdown the debug adapter (or disconnect if in server mode).
+	 * Shutdown the debuggee and the debug adapter (or disconnect if in server mode).
 	 */
 	public stop(done) {
+		this.disconnectRequest().then(()=>{
+			this.stopAdapter();
+			done();
+		}).catch(()=>{
+			this.stopAdapter();
+			done();
+		});
+	}
 
+	private stopAdapter() {
 		if (this._adapterProcess) {
 			this._adapterProcess.kill();
 			this._adapterProcess = null;
@@ -107,7 +116,6 @@ export class DebugClient extends ProtocolClient {
 			this._socket.end();
 			this._socket = null;
 		}
-		done();
 	}
 
 	// ---- protocol requests -------------------------------------------------------------------------------------------------
@@ -136,7 +144,7 @@ export class DebugClient extends ProtocolClient {
 		return this.send('attach', args);
 	}
 
-	public disconnectRequest(args: DebugProtocol.DisconnectArguments): Promise<DebugProtocol.DisconnectResponse> {
+	public disconnectRequest(args?: DebugProtocol.DisconnectArguments): Promise<DebugProtocol.DisconnectResponse> {
 		return this.send('disconnect', args);
 	}
 
