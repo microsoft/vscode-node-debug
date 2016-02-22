@@ -154,4 +154,18 @@ suite('pathUtilities', () => {
 		}
 	});
 
+	suite('normalizeDriveLetter', () => {
+
+		test('should return an unmodified path if there is no drive letter', () => {
+			assert.equal(PathUtils.normalizeDriveLetter('/a/b/c/d'), '/a/b/c/d');
+			assert.equal(PathUtils.normalizeDriveLetter('C/hello/world'), 'C/hello/world');
+		});
+
+		test('should return a path with lower case drive letter', () => {
+			assert.equal(PathUtils.normalizeDriveLetter('C:/hello/world'), 'c:/hello/world');
+			assert.equal(PathUtils.normalizeDriveLetter('c:/hello/world'), 'c:/hello/world');
+			assert.equal(PathUtils.normalizeDriveLetter('C:\\hello\\world'), 'c:\\hello\\world');
+			assert.equal(PathUtils.normalizeDriveLetter('c:\\hello\\world'), 'c:\\hello\\world');
+		});
+	});
 });
