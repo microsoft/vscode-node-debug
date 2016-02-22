@@ -250,9 +250,9 @@ export class NodeDebugSession extends DebugSession {
 		});
 	}
 
-	public log(category: string, message: string) {
-		if (this._trace && (this._traceAll || this._trace.indexOf(category) >= 0)) {
-			this.sendEvent(new OutputEvent(`${process.pid}: ${message}\r\n`));
+	public log(traceCategory: string, message: string) {
+		if (this._trace && (this._traceAll || this._trace.indexOf(traceCategory) >= 0)) {
+			this.outLine(`${process.pid}: ${message}`);
 		}
 	}
 
@@ -383,8 +383,7 @@ export class NodeDebugSession extends DebugSession {
 				return;
 			}
 			if (PathUtils.normalizeDriveLetter(programPath) != PathUtils.realPath(programPath)) {
-				this.sendErrorResponse(response, 2021, localize('VSND2021', "program path uses differently cased character than file on disk; this might result in breakpoints not being hit"));
-				return;
+				this.outLine(localize('program.path.case.mismatch.warning', "Program path uses differently cased character as file on disk; this might result in breakpoints not being hit."));
 			}
 		} else {
 			this.sendErrorResponse(response, 2005, localize('VSND2005', "property 'program' is missing or empty"));
@@ -505,7 +504,7 @@ export class NodeDebugSession extends DebugSession {
 			}
 			cli += ' ';
 		}
-		this.sendEvent(new OutputEvent(cli));
+		this.outLine(cli);
 	}
 
 	private _captureOutput(process: CP.ChildProcess) {
@@ -1947,6 +1946,13 @@ export class NodeDebugSession extends DebugSession {
 	}
 
 	//---- private helpers ----------------------------------------------------------------------------------------------------
+
+	/**
+	 * send a line of text to an output channel.
+	 */
+	private outLine(message: string, category?: string) {
+		this.sendEvent(new OutputEvent(message + '\n', category ? category : 'console'));
+	}
 
 	/**
 	 * Tries to map a (local) VSCode path to a corresponding path on a remote host (where node is running).
