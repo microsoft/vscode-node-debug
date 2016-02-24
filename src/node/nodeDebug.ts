@@ -281,7 +281,7 @@ export class NodeDebugSession extends DebugSession {
 
 		if (!this._isTerminated) {
 			this._isTerminated = true;
-			if (this._restartMode) {
+			if (this._restartMode && !this._inShutdown) {
 				this.sendEvent(new TerminatedEvent(true));
 			} else {
 				this.sendEvent(new TerminatedEvent());
