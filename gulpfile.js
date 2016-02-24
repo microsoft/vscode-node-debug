@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 var gulp = require('gulp');
-var path = require('path');
 var tsb = require('gulp-tsb');
 var log = require('gulp-util').log;
 var tslint = require("gulp-tslint");
@@ -15,7 +14,7 @@ var del = require('del');
 var runSequence = require('run-sequence');
 var vzip = require('gulp-vinyl-zip');
 
-var compilation = tsb.create(path.join(__dirname, 'tsconfig.json'), true);
+var compilation = tsb.create(require('./tsconfig.json'), true);
 
 var sources = [
 	'src/**/*.ts',
