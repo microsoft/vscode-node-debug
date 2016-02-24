@@ -338,15 +338,19 @@ export class NodeDebugSession extends DebugSession {
 
 		var port = random(3000, 50000);
 
-		let runtimeExecutable = this.convertClientPathToDebugger(args.runtimeExecutable);
+		let runtimeExecutable = args.runtimeExecutable;
 		if (runtimeExecutable) {
+			if (!Path.isAbsolute(runtimeExecutable)) {
+				this.sendErrorResponse(response, 2025, localize('VSND2025', "Runtime executable '{path}' is not an absolute path; consider '${workspaceRoot}/' as a prefix to make it absolute."), { path: runtimeExecutable });
+				return;
+			}
 			if (!FS.existsSync(runtimeExecutable)) {
-				this.sendErrorResponse(response, 2006, localize('VSND2006', "runtime executable '{path}' does not exist"), { path: runtimeExecutable });
+				this.sendErrorResponse(response, 2006, localize('VSND2006', "Runtime executable '{path}' does not exist."), { path: runtimeExecutable });
 				return;
 			}
 		} else {
 			if (!Terminal.isOnPath(NodeDebugSession.NODE)) {
-				this.sendErrorResponse(response, 2001, localize('VSND2001', "cannot find runtime '{_runtime}' on PATH"), { _runtime: NodeDebugSession.NODE });
+				this.sendErrorResponse(response, 2001, localize('VSND2001', "Cannot find runtime '{_runtime}' on PATH."), { _runtime: NodeDebugSession.NODE });
 				return;
 			}
 			runtimeExecutable = NodeDebugSession.NODE;     // use node from PATH
@@ -376,17 +380,20 @@ export class NodeDebugSession extends DebugSession {
 
 		let programPath = args.program;
 		if (programPath) {
-			programPath = this.convertClientPathToDebugger(programPath);
-			programPath = Path.normalize(programPath);
-			if (!FS.existsSync(programPath)) {
-				this.sendErrorResponse(response, 2007, localize('VSND2007', "program '{path}' does not exist"), { path: programPath });
+			if (!Path.isAbsolute(programPath)) {
+				this.sendErrorResponse(response, 2024, localize('VSND2024', "Program '{path}' is not an absolute path; consider '${workspaceRoot}/' as a prefix to make it absolute."), { path: programPath });
 				return;
 			}
+			if (!FS.existsSync(programPath)) {
+				this.sendErrorResponse(response, 2007, localize('VSND2007', "Program '{path}' does not exist."), { path: programPath });
+				return;
+			}
+			programPath = Path.normalize(programPath);
 			if (PathUtils.normalizeDriveLetter(programPath) != PathUtils.realPath(programPath)) {
 				this.outLine(localize('program.path.case.mismatch.warning', "Program path uses differently cased character as file on disk; this might result in breakpoints not being hit."));
 			}
 		} else {
-			this.sendErrorResponse(response, 2005, localize('VSND2005', "property 'program' is missing or empty"));
+			this.sendErrorResponse(response, 2005, localize('VSND2005', "Property 'program' is missing or empty."));
 			return;
 		}
 
@@ -408,12 +415,12 @@ export class NodeDebugSession extends DebugSession {
 		} else {
 			// node cannot execute the program directly
 			if (!this._sourceMaps) {
-				this.sendErrorResponse(response, 2002, localize('VSND2002', "cannot launch program '{path}'; enabling source maps might help"), { path: programPath });
+				this.sendErrorResponse(response, 2002, localize('VSND2002', "Cannot launch program '{path}'; enabling source maps might help."), { path: programPath });
 				return;
 			}
 			const generatedPath = this._sourceMaps.MapPathFromSource(programPath);
 			if (!generatedPath) {	// cannot find generated file
-				this.sendErrorResponse(response, 2003, localize('VSND2003', "cannot launch program '{path}'; setting the 'outDir' attribute might help"), { path: programPath });
+				this.sendErrorResponse(response, 2003, localize('VSND2003', "Cannot launch program '{path}'; setting the 'outDir' attribute might help."), { path: programPath });
 				return;
 			}
 			this.log('sm', `launchRequest: program '${programPath}' seems to be the source; launch the generated file '${generatedPath}' instead`);
@@ -421,10 +428,14 @@ export class NodeDebugSession extends DebugSession {
 		}
 
 		let program: string;
-		let workingDirectory = this.convertClientPathToDebugger(args.cwd);
+		let workingDirectory = args.cwd;
 		if (workingDirectory) {
+			if (!Path.isAbsolute(workingDirectory)) {
+				this.sendErrorResponse(response, 2026, localize('VSND2026', "Working directory '{path}' is not an absolute path; consider '${workspaceRoot}/' as a prefix to make it absolute."), { path: workingDirectory });
+				return;
+			}
 			if (!FS.existsSync(workingDirectory)) {
-				this.sendErrorResponse(response, 2004, localize('VSND2004', "working directory '{path}' does not exist"), { path: workingDirectory });
+				this.sendErrorResponse(response, 2004, localize('VSND2004', "Working directory '{path}' does not exist."), { path: workingDirectory });
 				return;
 			}
 			// if working dir is given and if the executable is within that folder, we make the executable path relative to the working dir
@@ -459,7 +470,7 @@ export class NodeDebugSession extends DebugSession {
 				this._attach(response, port);
 
 			}).catch(error => {
-				this.sendErrorResponse(response, 2011, localize('VSND2011', "cannot launch target in terminal (reason: {_error})"), { _error: error.message }, ErrorDestination.Telemetry | ErrorDestination.User );
+				this.sendErrorResponse(response, 2011, localize('VSND2011', "Cannot launch target in terminal (reason: {_error})."), { _error: error.message }, ErrorDestination.Telemetry | ErrorDestination.User );
 				this._terminated('terminal error: ' + error.message);
 			});
 
@@ -477,7 +488,7 @@ export class NodeDebugSession extends DebugSession {
 
 			const cmd = CP.spawn(runtimeExecutable, launchArgs.slice(1), options);
 			cmd.on('error', (error) => {
-				this.sendErrorResponse(response, 2017, localize('VSND2017', "cannot launch target (reason: {_error})"), { _error: error.message }, ErrorDestination.Telemetry | ErrorDestination.User );
+				this.sendErrorResponse(response, 2017, localize('VSND2017', "Cannot launch target (reason: {_error})."), { _error: error.message }, ErrorDestination.Telemetry | ErrorDestination.User );
 				this._terminated(`failed to launch target (${error})`);
 			});
 			cmd.on('exit', () => {
@@ -528,9 +539,12 @@ export class NodeDebugSession extends DebugSession {
 		if (!this._sourceMaps) {
 			if (typeof args.sourceMaps === 'boolean' && args.sourceMaps) {
 				const generatedCodeDirectory = args.outDir;
-
+				if (!Path.isAbsolute(generatedCodeDirectory)) {
+					this.sendErrorResponse(response, 2027, localize('VSND2027', "Attribute 'outDir' ('{path}') is not an absolute path; consider '${workspaceRoot}/' as a prefix to make it absolute."), { path: generatedCodeDirectory });
+					return;
+				}
 				if (!FS.existsSync(generatedCodeDirectory)) {
-					this.sendErrorResponse(response, 2022, localize('VSND2022', "attribute 'outDir' ('{path}') does not exist"), { path: generatedCodeDirectory });
+					this.sendErrorResponse(response, 2022, localize('VSND2022', "Attribute 'outDir' ('{path}') does not exist."), { path: generatedCodeDirectory });
 					return true;
 				}
 
@@ -561,11 +575,16 @@ export class NodeDebugSession extends DebugSession {
 		}
 
 		if (args.localRoot) {
-			if (!FS.existsSync(args.localRoot)) {
-				this.sendErrorResponse(response, 2023, localize('VSND2023', "attribute 'localRoot' ('{path}') does not exist"), { path: args.localRoot });
+			const localRoot = args.localRoot;
+			if (!Path.isAbsolute(localRoot)) {
+				this.sendErrorResponse(response, 2027, localize('VSND2027', "Attribute 'outDir' ('{path}') is not an absolute path; consider '${workspaceRoot}/' as a prefix to make it absolute."), { path: localRoot });
 				return;
 			}
-			this._localRoot = args.localRoot;
+			if (!FS.existsSync(localRoot)) {
+				this.sendErrorResponse(response, 2023, localize('VSND2023', "Attribute 'localRoot' ('{path}') does not exist."), { path: localRoot });
+				return;
+			}
+			this._localRoot = localRoot;
 		}
 		this._remoteRoot = args.remoteRoot;
 
@@ -617,10 +636,10 @@ export class NodeDebugSession extends DebugSession {
 							socket.connect(port);
 						}, 200);		// retry after 200 ms
 					} else {
-						this.sendErrorResponse(response, 2009, localize('VSND2009', "cannot connect to runtime process (timeout after {_timeout}ms)"), { _timeout: timeout });
+						this.sendErrorResponse(response, 2009, localize('VSND2009', "Cannot connect to runtime process (timeout after {_timeout}ms)."), { _timeout: timeout });
 					}
 				} else {
-					this.sendErrorResponse(response, 2010, localize('VSND2010', "cannot connect to runtime process (reason: {_error})"), { _error: err.message });
+					this.sendErrorResponse(response, 2010, localize('VSND2010', "Cannot connect to runtime process (reason: {_error})."), { _error: err.message });
 				}
 			}
 		});
@@ -914,14 +933,14 @@ export class NodeDebugSession extends DebugSession {
 				if (scriptId >= 0) {
 					this._updateBreakpoints(response, null, scriptId, lbs);
 				} else {
-					this.sendErrorResponse(response, 2019, localize('VSND2019', "internal module {_module} not found"), { _module: source.name });
+					this.sendErrorResponse(response, 2019, localize('VSND2019', "Internal module {_module} not found."), { _module: source.name });
 				}
 				return;
 			});
 			return;
 		}
 
-		this.sendErrorResponse(response, 2012, 'no valid source specified', null, ErrorDestination.Telemetry);
+		this.sendErrorResponse(response, 2012, 'No valid source specified.', null, ErrorDestination.Telemetry);
 	}
 
 	private _mapSourceAndUpdateBreakpoints(response: DebugProtocol.SetBreakpointsResponse, path: string, lbs: DebugProtocol.SourceBreakpoint[]) {
@@ -1294,7 +1313,7 @@ export class NodeDebugSession extends DebugSession {
 		let maxLevels = args.levels;
 
 		if (threadReference !== NodeDebugSession.DUMMY_THREAD_ID) {
-			this.sendErrorResponse(response, 2014, 'unexpected thread reference {_thread}', { _thread: threadReference }, ErrorDestination.Telemetry);
+			this.sendErrorResponse(response, 2014, 'Unexpected thread reference {_thread}.', { _thread: threadReference }, ErrorDestination.Telemetry);
 			return;
 		}
 
@@ -1443,7 +1462,7 @@ export class NodeDebugSession extends DebugSession {
 
 		const frame = this._frameHandles.get(args.frameId);
 		if (!frame) {
-			this.sendErrorResponse(response, 2020, localize('VSND2020', "stack frame not valid"));
+			this.sendErrorResponse(response, 2020, localize('VSND2020', "Stack frame not valid."));
 			return;
 		}
 		const frameIx = frame.index;
@@ -2004,11 +2023,11 @@ export class NodeDebugSession extends DebugSession {
 		} else {
 			const errmsg = nodeResponse.message;
 			if (errmsg.indexOf('unresponsive') >= 0) {
-				this.sendErrorResponse(response, 2015, localize('VSND2015', "request '{_request}' was cancelled because node is unresponsive"), { _request: nodeResponse.command } );
+				this.sendErrorResponse(response, 2015, localize('VSND2015', "Request '{_request}' was cancelled because node is unresponsive."), { _request: nodeResponse.command } );
 			} else if (errmsg.indexOf('timeout') >= 0) {
-				this.sendErrorResponse(response, 2016, localize('VSND2016', "node did not repond to request '{_request}' in a reasonable amount of time"), { _request: nodeResponse.command } );
+				this.sendErrorResponse(response, 2016, localize('VSND2016', "Node.js did not repond to request '{_request}' in a reasonable amount of time."), { _request: nodeResponse.command } );
 			} else {
-				this.sendErrorResponse(response, 2013, 'node request \'{_request}\' failed (reason: {_error})', { _request: nodeResponse.command, _error: errmsg }, ErrorDestination.Telemetry);
+				this.sendErrorResponse(response, 2013, 'Node.js request \'{_request}\' failed (reason: {_error}).', { _request: nodeResponse.command, _error: errmsg }, ErrorDestination.Telemetry);
 			}
 		}
 	}
