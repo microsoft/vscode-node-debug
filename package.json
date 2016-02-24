@@ -43,7 +43,7 @@
 		"gulp-vinyl-zip": "*",
 		"mocha": "^2.3.4",
 		"tslint": "^3.2.2",
-		"typescript": "^1.7.3"
+		"typescript": "1.7.5"
 	},
 	"contributes": {
 		"debuggers": [
