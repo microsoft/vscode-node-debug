@@ -315,11 +315,11 @@ export class NodeDebugSession extends DebugSession {
 		response.body.exceptionBreakpointFilters = [
 			{
 				label: localize('exceptions.all', "All Exceptions"),
-				filter: "all"
+				filter: 'all'
 			},
 			{
 				label: localize('exceptions.uncaught', "Uncaught Exceptions"),
-				filter: "uncaught"
+				filter: 'uncaught'
 			}
 		];
 
@@ -341,7 +341,7 @@ export class NodeDebugSession extends DebugSession {
 		let runtimeExecutable = args.runtimeExecutable;
 		if (runtimeExecutable) {
 			if (!Path.isAbsolute(runtimeExecutable)) {
-				this.sendErrorResponse(response, 2025, localize('VSND2025', "Runtime executable '{path}' is not an absolute path; consider '${workspaceRoot}/' as a prefix to make it absolute."), { path: runtimeExecutable });
+				this.sendErrorResponse(response, 2025, localize('VSND2025', "Runtime executable '{path}' is not an absolute path; consider adding '${workspaceRoot}/' as a prefix to make it absolute."), { path: runtimeExecutable });
 				return;
 			}
 			if (!FS.existsSync(runtimeExecutable)) {
@@ -381,7 +381,7 @@ export class NodeDebugSession extends DebugSession {
 		let programPath = args.program;
 		if (programPath) {
 			if (!Path.isAbsolute(programPath)) {
-				this.sendErrorResponse(response, 2024, localize('VSND2024', "Program '{path}' is not an absolute path; consider '${workspaceRoot}/' as a prefix to make it absolute."), { path: programPath });
+				this.sendErrorResponse(response, 2024, localize('VSND2024', "Program '{path}' is not an absolute path; consider adding '${workspaceRoot}/' as a prefix to make it absolute."), { path: programPath });
 				return;
 			}
 			if (!FS.existsSync(programPath)) {
@@ -431,7 +431,7 @@ export class NodeDebugSession extends DebugSession {
 		let workingDirectory = args.cwd;
 		if (workingDirectory) {
 			if (!Path.isAbsolute(workingDirectory)) {
-				this.sendErrorResponse(response, 2026, localize('VSND2026', "Working directory '{path}' is not an absolute path; consider '${workspaceRoot}/' as a prefix to make it absolute."), { path: workingDirectory });
+				this.sendErrorResponse(response, 2026, localize('VSND2026', "Working directory '{path}' is not an absolute path; consider adding '${workspaceRoot}/' as a prefix to make it absolute."), { path: workingDirectory });
 				return;
 			}
 			if (!FS.existsSync(workingDirectory)) {
@@ -540,7 +540,7 @@ export class NodeDebugSession extends DebugSession {
 			if (typeof args.sourceMaps === 'boolean' && args.sourceMaps) {
 				const generatedCodeDirectory = args.outDir;
 				if (!Path.isAbsolute(generatedCodeDirectory)) {
-					this.sendErrorResponse(response, 2027, localize('VSND2027', "Attribute 'outDir' ('{path}') is not an absolute path; consider '${workspaceRoot}/' as a prefix to make it absolute."), { path: generatedCodeDirectory });
+					this.sendErrorResponse(response, 2027, localize('VSND2027', "Attribute 'outDir' ('{path}') is not an absolute path; consider adding '${workspaceRoot}/' as a prefix to make it absolute."), { path: generatedCodeDirectory });
 					return;
 				}
 				if (!FS.existsSync(generatedCodeDirectory)) {
@@ -577,7 +577,7 @@ export class NodeDebugSession extends DebugSession {
 		if (args.localRoot) {
 			const localRoot = args.localRoot;
 			if (!Path.isAbsolute(localRoot)) {
-				this.sendErrorResponse(response, 2027, localize('VSND2027', "Attribute 'outDir' ('{path}') is not an absolute path; consider '${workspaceRoot}/' as a prefix to make it absolute."), { path: localRoot });
+				this.sendErrorResponse(response, 2027, localize('VSND2027', "Attribute 'outDir' ('{path}') is not an absolute path; consider adding '${workspaceRoot}/' as a prefix to make it absolute."), { path: localRoot });
 				return;
 			}
 			if (!FS.existsSync(localRoot)) {
