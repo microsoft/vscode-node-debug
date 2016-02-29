@@ -5,7 +5,7 @@
 
 var gulp = require('gulp');
 var path = require('path');
-var tsb = require('gulp-tsb');
+var ts = require('gulp-typescript');
 var log = require('gulp-util').log;
 var tslint = require("gulp-tslint");
 var filter = require('gulp-filter');
@@ -15,7 +15,7 @@ var del = require('del');
 var runSequence = require('run-sequence');
 var vzip = require('gulp-vinyl-zip');
 
-var compilation = tsb.create(path.join(__dirname, 'tsconfig.json'), true);
+var tsProject = ts.createProject('./src/tsconfig.json');
 
 var sources = [
 	'src/**/*.ts',
@@ -64,8 +64,8 @@ gulp.task('internal-copy-scripts', function() {
 });
 
 gulp.task('internal-compile', function() {
-	return gulp.src(sources, { base: '.' })
-		.pipe(compilation())
+	return tsProject.src()
+		.pipe(ts(tsProject)).js
 		.pipe(gulp.dest(outDest));
 });
 

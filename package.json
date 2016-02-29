@@ -17,8 +17,8 @@
 		"vscode": "^0.10.1"
 	},
 	"dependencies": {
-		"vscode-debugprotocol": "1.6.0-pre8",
-		"vscode-debugadapter": "1.6.0-pre12",
+		"vscode-debugprotocol": "^1.6.1",
+		"vscode-debugadapter": "^1.6.1",
 		"source-map": "^0.5.3",
 		"vscode-nls": "^1.0.4"
 	},
@@ -32,7 +32,7 @@
 	"devDependencies": {
 		"gulp": "^3.9.0",
 		"gulp-util": "^3.0.5",
-		"gulp-tsb": "*",
+		"gulp-typescript": "^2.12.0",
 		"gulp-filter": "^3.0.1",
 		"gulp-azure-storage": "*",
 		"gulp-tslint": "^4.3.0",
@@ -41,9 +41,9 @@
 		"del": "*",
 		"run-sequence": "*",
 		"gulp-vinyl-zip": "*",
-		"mocha": "^2.3.4",
+		"mocha": "^2.4.5",
 		"tslint": "^3.2.2",
-		"typescript": "1.7.5"
+		"typescript": "1.8.2"
 	},
 	"contributes": {
 		"debuggers": [

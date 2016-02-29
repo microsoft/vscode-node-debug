@@ -30,7 +30,7 @@
 			"name": "Run Tests",
 			"type": "node",
 			"request": "launch",
-			"preLaunchTask": "build",
+			// "preLaunchTask": "build",
 			"cwd": "${workspaceRoot}",
 			"program": "${workspaceRoot}/node_modules/mocha/bin/_mocha",
 			"runtimeArgs": [ "--nolazy" ],
