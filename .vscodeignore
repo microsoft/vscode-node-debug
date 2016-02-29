@@ -2,10 +2,7 @@
 .gitignore
 src/**/*
 out/tests/**/*
-typings/**/*
-**/*.js.map
 gulpfile.js
-tsconfig.json
 tsd.json
+tslint.json
 README.md
-!node_modules/source-map/*
