@@ -5,10 +5,7 @@
 		"noImplicitAny": false,
 		"removeComments": false,
 		"preserveConstEnums": true,
-		"target": "es5",
-		"outDir": "../out",
-		"sourceMap": true,
-		"sourceRoot": "../../src"
+		"target": "es5"
 	},
 	"exclude": [
 		"tests/data"

@@ -6,6 +6,7 @@
 var gulp = require('gulp');
 var path = require('path');
 var ts = require('gulp-typescript');
+var sourcemaps = require('gulp-sourcemaps');
 var log = require('gulp-util').log;
 var tslint = require("gulp-tslint");
 var filter = require('gulp-filter');
@@ -17,13 +18,35 @@ var vzip = require('gulp-vinyl-zip');
 
 var tsProject = ts.createProject('./src/tsconfig.json');
 
-var sources = [
-	'src/**/*.ts',
+const inlineMap = true;
+const inlineSource = false;
+
+var watchedSources = [
+	'src/**/*',
 	'!src/tests/data/**',
 	'typings/**/*.ts'
 ];
 
+var scripts = [
+	'src/node/debugExtension.js',
+	'src/node/terminateProcess.sh',
+	'src/node/TerminalHelper.scpt'
+];
+
 var outDest = 'out';
+
+var BOM = [
+	outDest + '/node/*',
+	'node_modules/source-map/**/*',
+	'node_modules/vscode-debugprotocol/**/*',
+	'node_modules/vscode-debugadapter/**/*',
+	'node_modules/vscode-nls/**/*',
+	'package.json',
+	'package.nls.json',
+	'ThirdPartyNotices.txt',
+	'LICENSE.txt'
+];
+
 var uploadDest = 'upload/' + git.short();
 
 gulp.task('default', function(callback) {
@@ -48,7 +71,7 @@ gulp.task('clean', function() {
 
 gulp.task('ts-watch', ['internal-build'], function(cb) {
 	log('Watching build sources...');
-	gulp.watch(sources, ['internal-compile']);
+	gulp.watch(watchedSources, ['internal-compile']);
 });
 
 //---- internal
@@ -59,28 +82,32 @@ gulp.task('internal-build', function(callback) {
 });
 
 gulp.task('internal-copy-scripts', function() {
-	return gulp.src(['src/node/terminateProcess.sh', 'src/node/TerminalHelper.scpt'])
+	return gulp.src(scripts)
 		.pipe(gulp.dest(outDest + '/node'));
 });
 
 gulp.task('internal-compile', function() {
-	return tsProject.src()
-		.pipe(ts(tsProject)).js
-		.pipe(gulp.dest(outDest));
+	var r = tsProject.src()
+		.pipe(sourcemaps.init())
+		.pipe(ts(tsProject)).js;
+
+	if (inlineMap && inlineSource) {
+		r = r.pipe(sourcemaps.write());
+	} else {
+		r = r.pipe(sourcemaps.write("../out", {
+			// no inlined source
+			includeContent: inlineSource,
+			// Return relative source map root directories per file.
+			sourceRoot: "../../src"
+		}));
+	}
+
+	return r.pipe(gulp.dest(outDest));
 });
 
 gulp.task('internal-zip', function(callback) {
-	return gulp.src([
-		outDest + '/node/*',
-		'node_modules/source-map/**/*',
-		'node_modules/vscode-debugprotocol/**/*',
-		'node_modules/vscode-debugadapter/**/*',
-		'node_modules/vscode-nls/**/*',
-		'package.json',
-		'package.nls.json',
-		'ThirdPartyNotices.txt',
-		'LICENSE.txt'
-	], { base: '.' }).pipe(vzip.dest(uploadDest + '/node-debug.zip'));
+	return gulp.src(BOM, { base: '.' })
+		.pipe(vzip.dest(uploadDest + '/node-debug.zip'));
 });
 
 gulp.task('internal-upload', function() {
