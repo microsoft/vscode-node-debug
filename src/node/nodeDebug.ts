@@ -12,7 +12,7 @@ import {DebugProtocol} from 'vscode-debugprotocol';
 
 import {NodeV8Protocol, NodeV8Event, NodeV8Response} from './nodeV8Protocol';
 import {ISourceMaps, SourceMaps, Bias} from './sourceMaps';
-import {Terminal} from './terminal';
+import {Terminal, TerminalError} from './terminal';
 import * as PathUtils from './pathUtilities';
 import * as CP from 'child_process';
 import * as Net from 'net';
@@ -469,8 +469,8 @@ export class NodeDebugSession extends DebugSession {
 
 				this._attach(response, port);
 
-			}).catch(error => {
-				this.sendErrorResponse(response, 2011, localize('VSND2011', "Cannot launch target in terminal (reason: {_error})."), { _error: error.message }, ErrorDestination.Telemetry | ErrorDestination.User );
+			}).catch((error: TerminalError) => {
+				this.sendErrorResponseWithInfoLink(response, 2011, localize('VSND2011', "Cannot launch target in terminal (reason: {_error})."), { _error: error.message }, error.linkId );
 				this._terminated('terminal error: ' + error.message);
 			});
 

@@ -6,7 +6,9 @@
 import * as Path from 'path';
 import * as FS from 'fs';
 import * as CP from 'child_process';
+import * as nls from 'vscode-nls';
 
+const localize = nls.loadMessageBundle();
 
 export class Terminal
 {
@@ -44,6 +46,16 @@ export class Terminal
 	}
 }
 
+export class TerminalError extends Error {
+
+	public linkId: number;
+
+	constructor(message: string, linkId?: number) {
+		super(message);
+		this.linkId = linkId;
+	}
+}
+
 interface ITerminalService {
 	launchInTerminal(dir: string, args: string[], envVars: { [key: string]: string; }): Promise<CP.ChildProcess>;
 	killTree(pid: number) : Promise<any>;
@@ -52,12 +64,14 @@ interface ITerminalService {
 
 class DefaultTerminalService implements ITerminalService {
 
-	protected static TERMINAL_TITLE = "VS Code Console";
+	protected static TERMINAL_TITLE = localize('console.title', "VS Code Console");
 	private static WHICH = '/usr/bin/which';
 	private static WHERE = 'where';
 
 	public launchInTerminal(dir: string, args: string[], envVars: { [key: string]: string; }): Promise<CP.ChildProcess> {
-		throw new Error('launchInTerminal not implemented');
+		return new Promise<CP.ChildProcess>( (resolve, reject) => {
+			reject(new TerminalError(localize('external.console.not.implemented', "External console not implemented on '{0}'.", process.platform)));
+		});
 	}
 
 	public killTree(pid: number): Promise<any> {
@@ -153,14 +167,14 @@ class WindowsTerminalService extends DefaultTerminalService {
 class LinuxTerminalService extends DefaultTerminalService {
 
 	private static LINUX_TERM = '/usr/bin/gnome-terminal';	//private const string LINUX_TERM = "/usr/bin/x-terminal-emulator";
-	private static WAIT_MESSAGE = "Press any key to continue...";
+	private static WAIT_MESSAGE = localize('press.any.key', "Press any key to continue...");
 
 	public launchInTerminal(dir: string, args: string[], envVars: { [key: string]: string; }): Promise<CP.ChildProcess> {
 
 		return new Promise<CP.ChildProcess>( (resolve, reject) => {
 
 			if (!FS.existsSync(LinuxTerminalService.LINUX_TERM)) {
-				reject(new Error(`Cannot find '${LinuxTerminalService.LINUX_TERM}' for launching the node program. See http://go.microsoft.com/fwlink/?linkID=534832#_20002`));
+				reject(new TerminalError(localize('program.not.found', "{0} not found", LinuxTerminalService.LINUX_TERM), 20002));
 				return;
 			}
 
@@ -185,7 +199,7 @@ class LinuxTerminalService extends DefaultTerminalService {
 				if (code === 0) {	// OK
 					resolve();	// since cmd is not the terminal process but just a launcher, we do not pass it in the resolve to the caller
 				} else {
-					reject(new Error("exit code: " + code));
+					reject(new TerminalError(localize('program.failed', "{0} failed with exit code {1}", LinuxTerminalService.LINUX_TERM, code)));
 				}
 			});
 		});
@@ -235,9 +249,9 @@ class MacTerminalService extends DefaultTerminalService {
 					resolve();	// since cmd is not the terminal process but just the osa tool, we do not pass it in the resolve to the caller
 				} else {
 					if (stderr)
-						reject(new Error(stderr));
+						reject(new TerminalError(stderr));
 					else
-						reject(new Error("exit code: " + code));
+						reject(new TerminalError(localize('program.failed', "{0} failed with exit code {1}", MacTerminalService.OSASCRIPT, code)));
 				}
 			});
 		});
