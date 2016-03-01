@@ -27,7 +27,7 @@
 
 	"node.attach.config.name": "Attach",
 
-	"extensionHost.label": "Extension Development",
+	"extensionHost.label": "VSCode Extension Development",
 
 	"extensionHost.launch.runtimeExecutable.description": "Absolute path to VS Code.",
 	"extensionHost.launch.args.description": "Absolute path to VS Code.",
