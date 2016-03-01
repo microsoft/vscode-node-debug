@@ -224,7 +224,7 @@ export class NodeDebugSession extends DebugSession {
 		this._node.on('break', (event: NodeV8Event) => {
 			this._stopped('break');
 			this._lastStoppedEvent = this._createStoppedEvent(event.body);
-			if (this._lastStoppedEvent.body.reason === localize('reason.entry', "entry")) {
+			if (this._lastStoppedEvent.body.reason === localize('reason.entry', "entry")) {		// TODO@AW
 				this.log('la', 'NodeDebugSession: suppressed stop-on-entry event');
 			} else {
 				this.sendEvent(this._lastStoppedEvent);
@@ -341,11 +341,11 @@ export class NodeDebugSession extends DebugSession {
 		let runtimeExecutable = args.runtimeExecutable;
 		if (runtimeExecutable) {
 			if (!Path.isAbsolute(runtimeExecutable)) {
-				this.sendErrorResponseWithInfoLink(response, 2025, localize('VSND2025', "Runtime executable '{path}' is not an absolute path; consider adding '${workspaceRoot}/' as a prefix to make it absolute."), { path: runtimeExecutable }, 20003);
+				this.sendRelativePathErrorResponse(response, 'runtimeExecutable', runtimeExecutable);
 				return;
 			}
 			if (!FS.existsSync(runtimeExecutable)) {
-				this.sendErrorResponse(response, 2006, localize('VSND2006', "Runtime executable '{path}' does not exist."), { path: runtimeExecutable });
+				this.sendNotExistErrorResponse(response, 'runtimeExecutable', runtimeExecutable);
 				return;
 			}
 		} else {
@@ -381,11 +381,11 @@ export class NodeDebugSession extends DebugSession {
 		let programPath = args.program;
 		if (programPath) {
 			if (!Path.isAbsolute(programPath)) {
-				this.sendErrorResponseWithInfoLink(response, 2024, localize('VSND2024', "Program '{path}' is not an absolute path; consider adding '${workspaceRoot}/' as a prefix to make it absolute."), { path: programPath }, 20003);
+				this.sendRelativePathErrorResponse(response, 'program', programPath);
 				return;
 			}
 			if (!FS.existsSync(programPath)) {
-				this.sendErrorResponse(response, 2007, localize('VSND2007', "Program '{path}' does not exist."), { path: programPath });
+				this.sendNotExistErrorResponse(response, 'program', programPath);
 				return;
 			}
 			programPath = Path.normalize(programPath);
@@ -393,7 +393,7 @@ export class NodeDebugSession extends DebugSession {
 				this.outLine(localize('program.path.case.mismatch.warning', "Program path uses differently cased character as file on disk; this might result in breakpoints not being hit."));
 			}
 		} else {
-			this.sendErrorResponse(response, 2005, localize('VSND2005', "Property 'program' is missing or empty."));
+			this.sendAttributeMissingErrorResponse(response, 'program');
 			return;
 		}
 
@@ -420,7 +420,7 @@ export class NodeDebugSession extends DebugSession {
 			}
 			const generatedPath = this._sourceMaps.MapPathFromSource(programPath);
 			if (!generatedPath) {	// cannot find generated file
-				this.sendErrorResponse(response, 2003, localize('VSND2003', "Cannot launch program '{path}'; setting the 'outDir' attribute might help."), { path: programPath });
+				this.sendErrorResponse(response, 2003, localize('VSND2003', "Cannot launch program '{path}'; setting the '{0}' attribute might help.", 'outDir'), { path: programPath });
 				return;
 			}
 			this.log('sm', `launchRequest: program '${programPath}' seems to be the source; launch the generated file '${generatedPath}' instead`);
@@ -431,11 +431,11 @@ export class NodeDebugSession extends DebugSession {
 		let workingDirectory = args.cwd;
 		if (workingDirectory) {
 			if (!Path.isAbsolute(workingDirectory)) {
-				this.sendErrorResponseWithInfoLink(response, 2026, localize('VSND2026', "Working directory '{path}' is not an absolute path; consider adding '${workspaceRoot}/' as a prefix to make it absolute."), { path: workingDirectory }, 20003);
+				this.sendRelativePathErrorResponse(response, 'cwd', workingDirectory);
 				return;
 			}
 			if (!FS.existsSync(workingDirectory)) {
-				this.sendErrorResponse(response, 2004, localize('VSND2004', "Working directory '{path}' does not exist."), { path: workingDirectory });
+				this.sendNotExistErrorResponse(response, 'cwd', workingDirectory);
 				return;
 			}
 			// if working dir is given and if the executable is within that folder, we make the executable path relative to the working dir
@@ -470,7 +470,7 @@ export class NodeDebugSession extends DebugSession {
 				this._attach(response, port);
 
 			}).catch((error: TerminalError) => {
-				this.sendErrorResponseWithInfoLink(response, 2011, localize('VSND2011', "Cannot launch target in terminal (reason: {_error})."), { _error: error.message }, error.linkId );
+				this.sendErrorResponseWithInfoLink(response, 2011, localize('VSND2011', "Cannot launch debug target in terminal ({_error})."), { _error: error.message }, error.linkId );
 				this._terminated('terminal error: ' + error.message);
 			});
 
@@ -488,7 +488,7 @@ export class NodeDebugSession extends DebugSession {
 
 			const cmd = CP.spawn(runtimeExecutable, launchArgs.slice(1), options);
 			cmd.on('error', (error) => {
-				this.sendErrorResponse(response, 2017, localize('VSND2017', "Cannot launch target (reason: {_error})."), { _error: error.message }, ErrorDestination.Telemetry | ErrorDestination.User );
+				this.sendErrorResponse(response, 2017, localize('VSND2017', "Cannot launch debug target ({_error})."), { _error: error.message }, ErrorDestination.Telemetry | ErrorDestination.User );
 				this._terminated(`failed to launch target (${error})`);
 			});
 			cmd.on('exit', () => {
@@ -540,11 +540,11 @@ export class NodeDebugSession extends DebugSession {
 			if (typeof args.sourceMaps === 'boolean' && args.sourceMaps) {
 				const generatedCodeDirectory = args.outDir;
 				if (!Path.isAbsolute(generatedCodeDirectory)) {
-					this.sendErrorResponseWithInfoLink(response, 2027, localize('VSND2027', "Attribute 'outDir' ('{path}') is not an absolute path; consider adding '${workspaceRoot}/' as a prefix to make it absolute."), { path: generatedCodeDirectory }, 20003);
+					this.sendRelativePathErrorResponse(response, 'outDir', generatedCodeDirectory);
 					return;
 				}
 				if (!FS.existsSync(generatedCodeDirectory)) {
-					this.sendErrorResponse(response, 2022, localize('VSND2022', "Attribute 'outDir' ('{path}') does not exist."), { path: generatedCodeDirectory });
+					this.sendNotExistErrorResponse(response, 'outDir', generatedCodeDirectory);
 					return true;
 				}
 
@@ -577,11 +577,11 @@ export class NodeDebugSession extends DebugSession {
 		if (args.localRoot) {
 			const localRoot = args.localRoot;
 			if (!Path.isAbsolute(localRoot)) {
-				this.sendErrorResponseWithInfoLink(response, 2027, localize('VSND2027', "Attribute 'outDir' ('{path}') is not an absolute path; consider adding '${workspaceRoot}/' as a prefix to make it absolute."), { path: localRoot }, 20003);
+				this.sendRelativePathErrorResponse(response, 'localRoot', localRoot);
 				return;
 			}
 			if (!FS.existsSync(localRoot)) {
-				this.sendErrorResponse(response, 2023, localize('VSND2023', "Attribute 'localRoot' ('{path}') does not exist."), { path: localRoot });
+				this.sendNotExistErrorResponse(response, 'localRoot', localRoot);
 				return;
 			}
 			this._localRoot = localRoot;
@@ -1965,6 +1965,29 @@ export class NodeDebugSession extends DebugSession {
 	}
 
 	//---- private helpers ----------------------------------------------------------------------------------------------------
+
+	/**
+	 * 'Attribute missing' error
+	 */
+	private sendAttributeMissingErrorResponse(response: DebugProtocol.Response, attribute: string) {
+		this.sendErrorResponse(response, 2005, localize('attribute.missing', "Attribute '{0}' is missing or empty.", attribute));
+	}
+
+	/**
+	 * 'Path does not exist' error
+	 */
+	private sendNotExistErrorResponse(response: DebugProtocol.Response, attribute: string, path: string) {
+		this.sendErrorResponse(response, 2007, localize('attribute.path.not.exist', "Attribute '{0}' does not exist ('{1}').", attribute, '{path}'), { path: path });
+	}
+
+	/**
+	 * 'Path not absolute' error with 'More Information' link.
+	 */
+	private sendRelativePathErrorResponse(response: DebugProtocol.Response, attribute: string, path: string) {
+
+		const format = localize('attribute.path.not.absolute', "Attribute '{0}' is not absolute ('{1}'); consider adding '{2}' as a prefix to make it absolute.", attribute, '{path}', '${workspaceRoot}/');
+		this.sendErrorResponseWithInfoLink(response, 2008, format, { path: path }, 20003);
+	}
 
 	/**
 	 * Send error response with 'More Information' link.
