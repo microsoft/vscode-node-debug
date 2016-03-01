@@ -341,7 +341,7 @@ export class NodeDebugSession extends DebugSession {
 		let runtimeExecutable = args.runtimeExecutable;
 		if (runtimeExecutable) {
 			if (!Path.isAbsolute(runtimeExecutable)) {
-				this.sendErrorResponse(response, 2025, localize('VSND2025', "Runtime executable '{path}' is not an absolute path; consider adding '${workspaceRoot}/' as a prefix to make it absolute."), { path: runtimeExecutable });
+				this.sendErrorResponseWithInfoLink(response, 2025, localize('VSND2025', "Runtime executable '{path}' is not an absolute path; consider adding '${workspaceRoot}/' as a prefix to make it absolute."), { path: runtimeExecutable }, 20003);
 				return;
 			}
 			if (!FS.existsSync(runtimeExecutable)) {
@@ -381,7 +381,7 @@ export class NodeDebugSession extends DebugSession {
 		let programPath = args.program;
 		if (programPath) {
 			if (!Path.isAbsolute(programPath)) {
-				this.sendErrorResponse(response, 2024, localize('VSND2024', "Program '{path}' is not an absolute path; consider adding '${workspaceRoot}/' as a prefix to make it absolute."), { path: programPath });
+				this.sendErrorResponseWithInfoLink(response, 2024, localize('VSND2024', "Program '{path}' is not an absolute path; consider adding '${workspaceRoot}/' as a prefix to make it absolute."), { path: programPath }, 20003);
 				return;
 			}
 			if (!FS.existsSync(programPath)) {
@@ -431,7 +431,7 @@ export class NodeDebugSession extends DebugSession {
 		let workingDirectory = args.cwd;
 		if (workingDirectory) {
 			if (!Path.isAbsolute(workingDirectory)) {
-				this.sendErrorResponse(response, 2026, localize('VSND2026', "Working directory '{path}' is not an absolute path; consider adding '${workspaceRoot}/' as a prefix to make it absolute."), { path: workingDirectory });
+				this.sendErrorResponseWithInfoLink(response, 2026, localize('VSND2026', "Working directory '{path}' is not an absolute path; consider adding '${workspaceRoot}/' as a prefix to make it absolute."), { path: workingDirectory }, 20003);
 				return;
 			}
 			if (!FS.existsSync(workingDirectory)) {
@@ -540,7 +540,7 @@ export class NodeDebugSession extends DebugSession {
 			if (typeof args.sourceMaps === 'boolean' && args.sourceMaps) {
 				const generatedCodeDirectory = args.outDir;
 				if (!Path.isAbsolute(generatedCodeDirectory)) {
-					this.sendErrorResponse(response, 2027, localize('VSND2027', "Attribute 'outDir' ('{path}') is not an absolute path; consider adding '${workspaceRoot}/' as a prefix to make it absolute."), { path: generatedCodeDirectory });
+					this.sendErrorResponseWithInfoLink(response, 2027, localize('VSND2027', "Attribute 'outDir' ('{path}') is not an absolute path; consider adding '${workspaceRoot}/' as a prefix to make it absolute."), { path: generatedCodeDirectory }, 20003);
 					return;
 				}
 				if (!FS.existsSync(generatedCodeDirectory)) {
@@ -577,7 +577,7 @@ export class NodeDebugSession extends DebugSession {
 		if (args.localRoot) {
 			const localRoot = args.localRoot;
 			if (!Path.isAbsolute(localRoot)) {
-				this.sendErrorResponse(response, 2027, localize('VSND2027', "Attribute 'outDir' ('{path}') is not an absolute path; consider adding '${workspaceRoot}/' as a prefix to make it absolute."), { path: localRoot });
+				this.sendErrorResponseWithInfoLink(response, 2027, localize('VSND2027', "Attribute 'outDir' ('{path}') is not an absolute path; consider adding '${workspaceRoot}/' as a prefix to make it absolute."), { path: localRoot }, 20003);
 				return;
 			}
 			if (!FS.existsSync(localRoot)) {
@@ -1965,6 +1965,21 @@ export class NodeDebugSession extends DebugSession {
 	}
 
 	//---- private helpers ----------------------------------------------------------------------------------------------------
+
+	/**
+	 * Send error response with 'More Information' link.
+	 */
+	private sendErrorResponseWithInfoLink(response: DebugProtocol.Response, code: number, format: string, variables: any, infoId: number) {
+
+		this.sendErrorResponse(response, <DebugProtocol.Message> {
+			id: code,
+			format: format,
+			variables: variables,
+			showUser: true,
+			url: 'http://go.microsoft.com/fwlink/?linkID=534832#_' + infoId.toString(),
+			urlLabel: localize('more.information', "More Information")
+		});
+	}
 
 	/**
 	 * send a line of text to an output channel.
