@@ -139,6 +139,8 @@ export interface LaunchRequestArguments extends CommonArguments {
 	env?: { [key: string]: string; };
 	/** If true launch the target in an external console. */
 	externalConsole?: boolean;
+	/** If true just launch but do not debug. */
+	noDebug?: boolean;
 }
 
 /**
@@ -184,7 +186,7 @@ export class NodeDebugSession extends DebugSession {
 	private _sourceHandles = new Handles<SourceSource>();
 	private _refCache = new Map<number, any>();
 	private _functionBreakpoints = new Array<number>();	// node function breakpoint ids
-
+	private _noDebug = false;
 	private _localRoot: string;
 	private _remoteRoot: string;
 	private _externalConsole: boolean;
@@ -334,6 +336,8 @@ export class NodeDebugSession extends DebugSession {
 			return;
 		}
 
+		this._noDebug = (typeof args.noDebug === 'boolean') && args.noDebug;
+
 		this._externalConsole = (typeof args.externalConsole === 'boolean') && args.externalConsole;
 
 		var port = random(3000, 50000);
@@ -448,7 +452,11 @@ export class NodeDebugSession extends DebugSession {
 		}
 
 		// we always break on entry (but if user did not request this, we will not stop in the UI).
-		const launchArgs = [ runtimeExecutable, `--debug-brk=${port}` ].concat(runtimeArgs, [ program ], programArgs);
+		let launchArgs = [ runtimeExecutable ];
+		if (! this._noDebug) {
+			launchArgs.push(`--debug-brk=${port}`);
+		}
+		launchArgs = launchArgs.concat(runtimeArgs, [ program ], programArgs);
 
 		if (this._externalConsole) {
 
@@ -467,7 +475,11 @@ export class NodeDebugSession extends DebugSession {
 				// plan for polling after we have gotten the process pid.
 				this._pollForNodeProcess = true;
 
-				this._attach(response, port);
+				if (this._noDebug) {
+					this.sendResponse(response);
+				} else {
+					this._attach(response, port);
+				}
 
 			}).catch((error: TerminalError) => {
 				this.sendErrorResponseWithInfoLink(response, 2011, localize('VSND2011', "Cannot launch debug target in terminal ({0}).", '{_error}'), { _error: error.message }, error.linkId );
@@ -500,7 +512,11 @@ export class NodeDebugSession extends DebugSession {
 
 			this._captureOutput(cmd);
 
-			this._attach(response, port);
+			if (this._noDebug) {
+				this.sendResponse(response);
+			} else {
+				this._attach(response, port);
+			}
 		}
 	}
 
