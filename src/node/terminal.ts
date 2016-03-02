@@ -46,12 +46,14 @@ export class Terminal
 	}
 }
 
-export class TerminalError extends Error {
 
+export class TerminalError {
+
+	public message: string;
 	public linkId: number;
 
 	constructor(message: string, linkId?: number) {
-		super(message);
+		this.message = message;
 		this.linkId = linkId;
 	}
 }
@@ -174,7 +176,7 @@ class LinuxTerminalService extends DefaultTerminalService {
 		return new Promise<CP.ChildProcess>( (resolve, reject) => {
 
 			if (!FS.existsSync(LinuxTerminalService.LINUX_TERM)) {
-				reject(new TerminalError(localize('program.not.found', "{0} not found", LinuxTerminalService.LINUX_TERM), 20002));
+				reject(new TerminalError(localize('program.not.found', "'{0}' not found", LinuxTerminalService.LINUX_TERM), 20002));
 				return;
 			}
 

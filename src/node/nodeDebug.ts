@@ -350,7 +350,7 @@ export class NodeDebugSession extends DebugSession {
 			}
 		} else {
 			if (!Terminal.isOnPath(NodeDebugSession.NODE)) {
-				this.sendErrorResponse(response, 2001, localize('VSND2001', "Cannot find runtime '{_runtime}' on PATH."), { _runtime: NodeDebugSession.NODE });
+				this.sendErrorResponse(response, 2001, localize('VSND2001', "Cannot find runtime '{0}' on PATH.", '{_runtime}'), { _runtime: NodeDebugSession.NODE });
 				return;
 			}
 			runtimeExecutable = NodeDebugSession.NODE;     // use node from PATH
@@ -415,12 +415,12 @@ export class NodeDebugSession extends DebugSession {
 		} else {
 			// node cannot execute the program directly
 			if (!this._sourceMaps) {
-				this.sendErrorResponse(response, 2002, localize('VSND2002', "Cannot launch program '{path}'; enabling source maps might help."), { path: programPath });
+				this.sendErrorResponse(response, 2002, localize('VSND2002', "Cannot launch program '{0}'; enabling source maps might help.", '{path}'), { path: programPath });
 				return;
 			}
 			const generatedPath = this._sourceMaps.MapPathFromSource(programPath);
 			if (!generatedPath) {	// cannot find generated file
-				this.sendErrorResponse(response, 2003, localize('VSND2003', "Cannot launch program '{path}'; setting the '{0}' attribute might help.", 'outDir'), { path: programPath });
+				this.sendErrorResponse(response, 2003, localize('VSND2003', "Cannot launch program '{0}'; setting the '{1}' attribute might help.", '{path}', 'outDir'), { path: programPath });
 				return;
 			}
 			this.log('sm', `launchRequest: program '${programPath}' seems to be the source; launch the generated file '${generatedPath}' instead`);
@@ -470,7 +470,7 @@ export class NodeDebugSession extends DebugSession {
 				this._attach(response, port);
 
 			}).catch((error: TerminalError) => {
-				this.sendErrorResponseWithInfoLink(response, 2011, localize('VSND2011', "Cannot launch debug target in terminal ({_error})."), { _error: error.message }, error.linkId );
+				this.sendErrorResponseWithInfoLink(response, 2011, localize('VSND2011', "Cannot launch debug target in terminal ({0}).", '{_error}'), { _error: error.message }, error.linkId );
 				this._terminated('terminal error: ' + error.message);
 			});
 
@@ -488,7 +488,7 @@ export class NodeDebugSession extends DebugSession {
 
 			const cmd = CP.spawn(runtimeExecutable, launchArgs.slice(1), options);
 			cmd.on('error', (error) => {
-				this.sendErrorResponse(response, 2017, localize('VSND2017', "Cannot launch debug target ({_error})."), { _error: error.message }, ErrorDestination.Telemetry | ErrorDestination.User );
+				this.sendErrorResponse(response, 2017, localize('VSND2017', "Cannot launch debug target ({0}).", '{_error}'), { _error: error.message }, ErrorDestination.Telemetry | ErrorDestination.User );
 				this._terminated(`failed to launch target (${error})`);
 			});
 			cmd.on('exit', () => {
@@ -636,10 +636,10 @@ export class NodeDebugSession extends DebugSession {
 							socket.connect(port);
 						}, 200);		// retry after 200 ms
 					} else {
-						this.sendErrorResponse(response, 2009, localize('VSND2009', "Cannot connect to runtime process (timeout after {_timeout}ms)."), { _timeout: timeout });
+						this.sendErrorResponse(response, 2009, localize('VSND2009', "Cannot connect to runtime process (timeout after {0} ms).", '{_timeout}'), { _timeout: timeout });
 					}
 				} else {
-					this.sendErrorResponse(response, 2010, localize('VSND2010', "Cannot connect to runtime process (reason: {_error})."), { _error: err.message });
+					this.sendErrorResponse(response, 2010, localize('VSND2010', "Cannot connect to runtime process (reason: {0}).", '{_error}'), { _error: err.message });
 				}
 			}
 		});
@@ -933,7 +933,7 @@ export class NodeDebugSession extends DebugSession {
 				if (scriptId >= 0) {
 					this._updateBreakpoints(response, null, scriptId, lbs);
 				} else {
-					this.sendErrorResponse(response, 2019, localize('VSND2019', "Internal module {_module} not found."), { _module: source.name });
+					this.sendErrorResponse(response, 2019, localize('VSND2019', "Internal module {0} not found.", '{_module}'), { _module: source.name });
 				}
 				return;
 			});
@@ -1462,7 +1462,7 @@ export class NodeDebugSession extends DebugSession {
 
 		const frame = this._frameHandles.get(args.frameId);
 		if (!frame) {
-			this.sendErrorResponse(response, 2020, localize('VSND2020', "Stack frame not valid."));
+			this.sendErrorResponse(response, 2020, 'stack frame not valid', null, ErrorDestination.Telemetry);
 			return;
 		}
 		const frameIx = frame.index;
