@@ -543,6 +543,9 @@ export class NodeDebugSession extends DebugSession {
 		});
 	}
 
+	/**
+	 * returns true on error.
+	 */
 	private _processCommonArgs(response: DebugProtocol.Response, args: CommonArguments): boolean {
 
 		if (typeof args.trace === 'string') {
@@ -555,15 +558,16 @@ export class NodeDebugSession extends DebugSession {
 		if (!this._sourceMaps) {
 			if (typeof args.sourceMaps === 'boolean' && args.sourceMaps) {
 				const generatedCodeDirectory = args.outDir;
-				if (!Path.isAbsolute(generatedCodeDirectory)) {
-					this.sendRelativePathErrorResponse(response, 'outDir', generatedCodeDirectory);
-					return;
+				if (generatedCodeDirectory) {
+					if (!Path.isAbsolute(generatedCodeDirectory)) {
+						this.sendRelativePathErrorResponse(response, 'outDir', generatedCodeDirectory);
+						return true;
+					}
+					if (!FS.existsSync(generatedCodeDirectory)) {
+						this.sendNotExistErrorResponse(response, 'outDir', generatedCodeDirectory);
+						return true;
+					}
 				}
-				if (!FS.existsSync(generatedCodeDirectory)) {
-					this.sendNotExistErrorResponse(response, 'outDir', generatedCodeDirectory);
-					return true;
-				}
-
 				this._sourceMaps = new SourceMaps(this, generatedCodeDirectory);
 			}
 		}
