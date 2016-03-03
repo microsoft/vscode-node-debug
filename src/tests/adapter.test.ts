@@ -188,6 +188,23 @@ suite('Node Debug Adapter', () => {
 			});
 		});
 
+		test('should stop on a breakpoint in TypeScript source with spaces in paths', () => {
+
+			const PROGRAM = Path.join(DATA_ROOT, 'sourcemaps with spaces', 'the source/classes.ts');
+			const OUT_DIR = Path.join(DATA_ROOT, 'sourcemaps with spaces/the distribution');
+			const BREAKPOINT_LINE = 17;
+
+			return dc.hitBreakpoint({
+				program: PROGRAM,
+				sourceMaps: true,
+				outDir: OUT_DIR,
+				runtimeArgs: [ "--nolazy" ]
+			}, {
+				path: PROGRAM,
+				line: BREAKPOINT_LINE
+			});
+		});
+
 		test('should stop on a breakpoint in TypeScript source - Microsoft/vscode#2574', () => {
 
 			const PROGRAM = Path.join(DATA_ROOT, 'sourcemaps-2574/out/classes.js');
