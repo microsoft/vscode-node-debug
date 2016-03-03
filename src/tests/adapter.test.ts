@@ -113,6 +113,14 @@ suite('Node Debug Adapter', () => {
 			return dc.hitBreakpoint({ program: PROGRAM }, { path: PROGRAM, line: BREAKPOINT_LINE} );
 		});
 
+		test('should stop on a breakpoint in file with spaces in its name', () => {
+
+			const PROGRAM = Path.join(DATA_ROOT, 'folder with spaces', 'file with spaces.js');
+			const BREAKPOINT_LINE = 2;
+
+			return dc.hitBreakpoint({ program: PROGRAM }, { path: PROGRAM, line: BREAKPOINT_LINE} );
+		});
+
 		test('should stop on a breakpoint identical to the entrypoint', () => {		// verifies the 'hide break on entry point' logic
 
 			const PROGRAM = Path.join(DATA_ROOT, 'program.js');
