@@ -4,6 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as EE from 'events';
+import * as nls from 'vscode-nls';
+
+const localize = nls.loadMessageBundle();
 
 export class NodeV8Message {
 	seq: number;
@@ -116,7 +119,7 @@ export class NodeV8Protocol extends EE.EventEmitter {
 
 	public sendResponse(response: NodeV8Response) : void {
 		if (response.seq > 0) {
-			console.error('attempt to send more than one response for command {0}', response.command);
+			// console.error('attempt to send more than one response for command {0}', response.command);
 		} else {
 			this.send('response', response);
 		}
@@ -133,9 +136,14 @@ export class NodeV8Protocol extends EE.EventEmitter {
 			request.arguments = args;
 		}
 
+		if (!this._writableStream) {
+			cb(new NodeV8Response(request, localize('not.connected', "not connected to runtime")));
+			return;
+		}
+
 		if (this._unresponsiveMode) {
 			if (cb) {
-				cb(new NodeV8Response(request, 'cancelled because node is unresponsive'));
+				cb(new NodeV8Response(request, localize('runtime.unresponsive', "cancelled because node is unresponsive")));
 			}
 			return;
 		}
@@ -150,7 +158,7 @@ export class NodeV8Protocol extends EE.EventEmitter {
 				const clb = this._pendingRequests[request.seq];
 				if (clb) {
 					delete this._pendingRequests[request.seq];
-					clb(new NodeV8Response(request, 'timeout after ' + timeout + 'ms'));
+					clb(new NodeV8Response(request, localize('runtime.timeout', "timeout after {0} ms", timeout)));
 
 					this._unresponsiveMode = true;
 					this.emitEvent(new NodeV8Event('diagnostic', { reason: 'unresponsive ' + command }));
