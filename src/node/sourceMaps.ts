@@ -341,7 +341,7 @@ class SourceMap {
 
 	public constructor(mapPath: string, generatedPath: string, json: string) {
 
-		this._sourcemapLocation = this.toUrl(Path.dirname(mapPath));
+		this._sourcemapLocation = this.fixPath(Path.dirname(mapPath));
 
 		const sm = JSON.parse(json);
 
@@ -354,17 +354,11 @@ class SourceMap {
 
 		this._generatedFile = generatedPath;
 
-
-		// try to fix all embedded paths because:
-		// - source map sources are URLs, so even on Windows they should be using forward slashes.
-		// - the source-map library expects forward slashes and their relative path logic
-		//   (specifically the "normalize" function) gives incorrect results when passing in backslashes.
-		// - paths starting with drive letters are not recognized as absolute by the source-map library
-
-		sm.sourceRoot = this.toUrl(sm.sourceRoot, '');
+		// fix all paths for use with the source-map npm module.
+		sm.sourceRoot = this.fixPath(sm.sourceRoot, '');
 
 		for (let i = 0; i < sm.sources.length; i++) {
-			sm.sources[i] = this.toUrl(sm.sources[i]);
+			sm.sources[i] = this.fixPath(sm.sources[i]);
 		}
 
 		this._sourceRoot = sm.sourceRoot;
@@ -384,23 +378,40 @@ class SourceMap {
 		}
 	}
 
-	private toUrl(path: string, dflt?: string) : string {
+	/**
+	 * fix a path for use with the source-map npm module because:
+	 * - source map sources are URLs, so even on Windows they should be using forward slashes.
+	 * - the source-map library expects forward slashes and their relative path logic
+	 *   (specifically the "normalize" function) gives incorrect results when passing in backslashes.
+	 * - paths starting with drive letters are not recognized as absolute by the source-map library.
+	 */
+	private fixPath(path: string, dflt?: string) : string {
 		if (path) {
 			path = path.replace(/\\/g, '/');
 
-			// if path starts with a drive letter convert path to a file:/// url so that the source-map library can handle it
+			// if path starts with a drive letter convert path to a file url so that the source-map library can handle it
 			if (/^[a-zA-Z]\:\//.test(path)) {
-				path = 'file:///' + path;
-			}
-
-			// if path contains upper case drive letter convert to lower case
-			if (/^file\:\/\/\/[A-Z]\:\//.test(path)) {
-				const dl = path[8];
-				path = path.replace(dl, dl.toLowerCase());
+				// Windows drive letter must be prefixed with a slash
+				path = encodeURI('file:///' + path);
 			}
 			return path;
 		}
 		return dflt;
+	}
+
+	/**
+	 * undo the fix
+	 */
+	private unfixPath(path: string) : string {
+		const prefix = 'file://';
+		if (path.indexOf(prefix) === 0) {
+			path = path.substr(prefix.length);
+			path = decodeURI(path);
+			if (/^\/[a-zA-Z]\:\//.test(path)) {
+				path = path.substr(1);	// remove additional '/'
+			}
+		}
+		return path;
 	}
 
 	/*
@@ -430,8 +441,8 @@ class SourceMap {
 			if (!util.isAbsolute(name)) {
 				name = util.join(this._sourceRoot, name);
 			}
-			let url = this.absolutePath(name);
-			if (absPath === url) {
+			let path = this.absolutePath(name);
+			if (absPath === path) {
 				return name;
 			}
 		}
@@ -446,14 +457,7 @@ class SourceMap {
 		if (!util.isAbsolute(path)) {
 			path = util.join(this._sourcemapLocation, path);
 		}
-		const prefix = 'file://';
-		if (path.indexOf(prefix) === 0) {
-			path = path.substr(prefix.length);
-			if (/^\/[a-zA-Z]\:\//.test(path)) {
-				path = path.substr(1);
-			}
-		}
-		return path;
+		return this.unfixPath(path);
 	}
 
 	/*
