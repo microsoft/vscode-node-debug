@@ -137,7 +137,7 @@ suite('pathUtilities', () => {
 				const real = PathUtils.realPath(upper);
 
 				assert.notEqual(real, upper);
-				assert.equal(real, path);
+				assert.equal(real, PathUtils.normalizeDriveLetter(path));		// make sure that drive letter is normalized on both
 				assert.equal(real.toUpperCase(), upper);
 			});
 
@@ -149,7 +149,6 @@ suite('pathUtilities', () => {
 				const real = PathUtils.realPath(path);
 
 				assert.equal(real, path);
-
 			});
 		}
 	});
