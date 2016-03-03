@@ -539,15 +539,16 @@ export class NodeDebugSession extends DebugSession {
 		if (!this._sourceMaps) {
 			if (typeof args.sourceMaps === 'boolean' && args.sourceMaps) {
 				const generatedCodeDirectory = args.outDir;
-				if (!Path.isAbsolute(generatedCodeDirectory)) {
-					this.sendErrorResponse(response, 2027, localize('VSND2027', "Attribute 'outDir' ('{path}') is not an absolute path; consider adding '${workspaceRoot}/' as a prefix to make it absolute."), { path: generatedCodeDirectory });
-					return;
+				if (generatedCodeDirectory) {
+					if (!Path.isAbsolute(generatedCodeDirectory)) {
+						this.sendErrorResponse(response, 2027, localize('VSND2027', "Attribute 'outDir' ('{path}') is not an absolute path; consider adding '${workspaceRoot}/' as a prefix to make it absolute."), { path: generatedCodeDirectory });
+						return true;
+					}
+					if (!FS.existsSync(generatedCodeDirectory)) {
+						this.sendErrorResponse(response, 2022, localize('VSND2022', "Attribute 'outDir' ('{path}') does not exist."), { path: generatedCodeDirectory });
+						return true;
+					}
 				}
-				if (!FS.existsSync(generatedCodeDirectory)) {
-					this.sendErrorResponse(response, 2022, localize('VSND2022', "Attribute 'outDir' ('{path}') does not exist."), { path: generatedCodeDirectory });
-					return true;
-				}
-
 				this._sourceMaps = new SourceMaps(this, generatedCodeDirectory);
 			}
 		}
