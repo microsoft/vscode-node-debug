@@ -317,11 +317,13 @@ export class NodeDebugSession extends DebugSession {
 		response.body.exceptionBreakpointFilters = [
 			{
 				label: localize('exceptions.all', "All Exceptions"),
-				filter: 'all'
+				filter: 'all',
+				default: false
 			},
 			{
 				label: localize('exceptions.uncaught', "Uncaught Exceptions"),
-				filter: 'uncaught'
+				filter: 'uncaught',
+				default: true
 			}
 		];
 
