@@ -1,6 +1,9 @@
 install:
   - ps: Install-Product node 4.1.1 x64
-  - npm install -g gulp mocha
+  - npm install
+
+build_script:
+  - npm run-script build
 
 test_script:
   - npm test

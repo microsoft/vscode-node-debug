@@ -10,6 +10,7 @@
 	"private": true,
 	"scripts": {
 		"prepublish": "gulp build",
+		"build": "gulp build",
 		"test": "node ./node_modules/mocha/bin/mocha -u tdd ./out/tests/"
 	},
 	"engines": {
