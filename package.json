@@ -44,7 +44,9 @@
 		"gulp-vinyl-zip": "*",
 		"mocha": "^2.4.5",
 		"tslint": "^3.2.2",
-		"typescript": "1.8.2"
+		"typescript": "1.8.2",
+		"vscode-nls-dev": "^1.0.3",
+		"event-stream": "^3.3.2"
 	},
 	"contributes": {
 		"debuggers": [
