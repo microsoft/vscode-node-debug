@@ -3,7 +3,6 @@ install:
   - npm install
 
 build_script:
-  - npm run-script build
 
 test_script:
   - npm test
