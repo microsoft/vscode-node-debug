@@ -180,7 +180,7 @@ class LinuxTerminalService extends DefaultTerminalService {
 				return;
 			}
 
-			const bashCommand = `cd "${dir}"; "${args.join('" "')}"; echo; read -p "${LinuxTerminalService.WAIT_MESSAGE}" -n1;`;
+			const bashCommand = `"${args.join('" "')}"; echo; read -p "${LinuxTerminalService.WAIT_MESSAGE}" -n1;`;
 
 			const termArgs = [
 				'--title', `"${LinuxTerminalService.TERMINAL_TITLE}"`,
@@ -192,6 +192,7 @@ class LinuxTerminalService extends DefaultTerminalService {
 			const env = extendObject(extendObject( { }, process.env), envVars);
 
 			const options: any = {
+				cwd: dir,
 				env: env
 			};
 
