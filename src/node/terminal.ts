@@ -29,7 +29,6 @@ export class Terminal
 		return this.terminalService().isOnPath(program);
 	}
 
-
 	private static terminalService(): ITerminalService {
 		if (!this._terminalService) {
 			if (process.platform === 'win32')
@@ -68,7 +67,6 @@ class DefaultTerminalService implements ITerminalService {
 
 	protected static TERMINAL_TITLE = localize('console.title', "VS Code Console");
 	private static WHICH = '/usr/bin/which';
-	private static WHERE = 'where';
 
 	public launchInTerminal(dir: string, args: string[], envVars: { [key: string]: string; }): Promise<CP.ChildProcess> {
 		return new Promise<CP.ChildProcess>( (resolve, reject) => {
@@ -97,21 +95,13 @@ class DefaultTerminalService implements ITerminalService {
 
 	public isOnPath(program: string): boolean {
 
-		var which: string;
-		if (process.platform === 'win32') {
-			which = DefaultTerminalService.WHERE;
-		} else if (FS.existsSync(DefaultTerminalService.WHICH)) {
-			which = DefaultTerminalService.WHICH;
-		} else {
-			return true;	// return success anyway
-		}
-
 		try {
-			CP.execSync(`${which} ${program}`);
+			if (!FS.existsSync(DefaultTerminalService.WHICH)) {
+				CP.execSync(`${DefaultTerminalService.WHICH} '${program}'`);
+			}
 			return true;
 		}
 		catch (Exception) {
-			// ignore
 		}
 		return false;
 	}
@@ -120,6 +110,7 @@ class DefaultTerminalService implements ITerminalService {
 class WindowsTerminalService extends DefaultTerminalService {
 
 	private static CMD = 'cmd.exe';
+	private static WHERE = 'where';
 
 	public launchInTerminal(dir: string, args: string[], envVars: { [key: string]: string; }): Promise<CP.ChildProcess> {
 
@@ -164,6 +155,18 @@ class WindowsTerminalService extends DefaultTerminalService {
 				reject(err);
 			}
 		});
+	}
+
+	public isOnPath(program: string): boolean {
+
+		try {
+			CP.execSync(`${WindowsTerminalService.WHERE} ${program}`);
+			return true;
+		}
+		catch (Exception) {
+			// ignore
+		}
+		return false;
 	}
 }
 
