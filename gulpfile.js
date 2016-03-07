@@ -15,8 +15,10 @@ var git = require('git-rev-sync');
 var del = require('del');
 var runSequence = require('run-sequence');
 var vzip = require('gulp-vinyl-zip');
+var es = require('event-stream');
 
 var tsProject = ts.createProject('./src/tsconfig.json');
+var nls = require('vscode-nls-dev');
 
 const inlineMap = true;
 const inlineSource = false;
@@ -53,8 +55,12 @@ gulp.task('default', function(callback) {
 	runSequence('build', callback);
 });
 
-gulp.task('build', function(callback) {
+gulp.task('compile', function(callback) {
 	runSequence('clean', 'internal-build', callback);
+});
+
+gulp.task('build', function(callback) {
+	runSequence('clean', 'internal-nls-build', callback);
 });
 
 gulp.task('zip', function(callback) {
@@ -81,15 +87,20 @@ gulp.task('internal-build', function(callback) {
 	runSequence('internal-compile', 'internal-copy-scripts', callback);
 });
 
+gulp.task('internal-nls-build', function(callback) {
+	runSequence('internal-nls-compile', 'internal-copy-scripts', callback);
+});
+
 gulp.task('internal-copy-scripts', function() {
 	return gulp.src(scripts)
 		.pipe(gulp.dest(outDest + '/node'));
 });
 
-gulp.task('internal-compile', function() {
+function compile(buildNls) {
 	var r = tsProject.src()
 		.pipe(sourcemaps.init())
-		.pipe(ts(tsProject)).js;
+		.pipe(ts(tsProject)).js
+		.pipe(buildNls ? nls.rewriteLocalizeCalls() : es.through());
 
 	if (inlineMap && inlineSource) {
 		r = r.pipe(sourcemaps.write());
@@ -102,7 +113,15 @@ gulp.task('internal-compile', function() {
 		}));
 	}
 
-	return r.pipe(gulp.dest(outDest));
+	return r.pipe(gulp.dest(outDest));	
+}
+
+gulp.task('internal-compile', function() {
+	return compile(false);
+});
+
+gulp.task('internal-nls-compile', function() {
+	return compile(true);
 });
 
 gulp.task('internal-zip', function(callback) {
