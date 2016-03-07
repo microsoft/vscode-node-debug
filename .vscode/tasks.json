@@ -1,6 +1,9 @@
 {
 	"version": "0.1.0",
-	"command": "./node_modules/gulp/bin/gulp.js",
+	"command": "node_modules/.bin/gulp",
+	"windows": {
+		"command": "node_modules\\.bin\\gulp"
+	},
 	"isShellCommand": true,
 	"tasks": [
 		{
