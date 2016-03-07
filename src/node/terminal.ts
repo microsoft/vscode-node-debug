@@ -98,16 +98,16 @@ class DefaultTerminalService implements ITerminalService {
 	public isOnPath(program: string): boolean {
 
 		var which: string;
-		if (FS.existsSync(DefaultTerminalService.WHICH)) {
-			which = DefaultTerminalService.WHICH;
-		} else if (FS.existsSync(DefaultTerminalService.WHERE)) {
+		if (process.platform === 'win32') {
 			which = DefaultTerminalService.WHERE;
+		} else if (FS.existsSync(DefaultTerminalService.WHICH)) {
+			which = DefaultTerminalService.WHICH;
 		} else {
-			return true;	// try anyway
+			return true;	// return success anyway
 		}
 
 		try {
-			CP.execSync(`${which} '${program}'`);
+			CP.execSync(`${which} ${program}`);
 			return true;
 		}
 		catch (Exception) {
