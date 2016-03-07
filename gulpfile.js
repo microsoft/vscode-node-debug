@@ -20,8 +20,8 @@ var es = require('event-stream');
 var tsProject = ts.createProject('./src/tsconfig.json');
 var nls = require('vscode-nls-dev');
 
-const inlineMap = true;
-const inlineSource = false;
+var inlineMap = true;
+var inlineSource = false;
 
 var watchedSources = [
 	'src/**/*',
@@ -49,7 +49,7 @@ var BOM = [
 	'LICENSE.txt'
 ];
 
-var uploadDest = 'upload/' + git.short();
+var uploadDest = 'upload';
 
 gulp.task('default', function(callback) {
 	runSequence('build', callback);
@@ -113,7 +113,7 @@ function compile(buildNls) {
 		}));
 	}
 
-	return r.pipe(gulp.dest(outDest));	
+	return r.pipe(gulp.dest(outDest));
 }
 
 gulp.task('internal-compile', function() {
@@ -125,8 +125,15 @@ gulp.task('internal-nls-compile', function() {
 });
 
 gulp.task('internal-zip', function(callback) {
+	var dest = uploadDest;
+	try {
+		dest += '/' + git.short();
+	}
+	catch(e) {
+		// silently ignore
+	}
 	return gulp.src(BOM, { base: '.' })
-		.pipe(vzip.dest(uploadDest + '/node-debug.zip'));
+		.pipe(vzip.dest(dest + '/node-debug.zip'));
 });
 
 gulp.task('internal-upload', function() {
