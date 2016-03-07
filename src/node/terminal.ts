@@ -180,12 +180,12 @@ class LinuxTerminalService extends DefaultTerminalService {
 				return;
 			}
 
-			const bashCommand = `"${args.join('" "')}"; echo; read -p "${LinuxTerminalService.WAIT_MESSAGE}" -n1;`;
+			const bashCommand = `${quote(args)}; echo; read -p "${LinuxTerminalService.WAIT_MESSAGE}" -n1;`;
 
 			const termArgs = [
 				'--title', `"${LinuxTerminalService.TERMINAL_TITLE}"`,
 				'-x', 'bash', '-c',
-				`\'\'${bashCommand}\'\'` 	// wrapping argument in two sets of ' because node is so "friendly" that it removes one set...
+				`''${bashCommand}''` 	// wrapping argument in two sets of ' because node is so "friendly" that it removes one set...
 			];
 
 			// merge environment variables into a copy of the process.env
@@ -262,6 +262,22 @@ class MacTerminalService extends DefaultTerminalService {
 }
 
 // ---- private utilities ----
+
+/**
+ * Quote args if necessary and combine into a space separated string.
+ */
+function quote(args: string[]): string {
+	let r = '';
+	for (var a of args) {
+		if (a.indexOf(' ') >= 0) {
+			r += '"' + a + '"';
+		} else {
+			r += a;
+		}
+		r += ' ';
+	}
+	return r;
+}
 
 function extendObject<T> (objectCopy: T, object: T): T {
 
