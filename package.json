@@ -2,11 +2,15 @@
 	"name": "node-debug",
 	"displayName": "%extension.displayName%",
 	"version": "0.10.4",
-	"publisher": "andreweinand",
+	"publisher": "ms-vscode",
 	"description": "%extension.description%",
+	"categories": [
+		"Debuggers"
+	],
 	"author": {
 		"name": "Microsoft Corporation"
 	},
+	"license": "MIT",
 	"private": true,
 	"scripts": {
 		"prepublish": "node ./node_modules/gulp/bin/gulp.js build",
