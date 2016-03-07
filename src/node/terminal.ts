@@ -96,23 +96,24 @@ class DefaultTerminalService implements ITerminalService {
 	}
 
 	public isOnPath(program: string): boolean {
-		/*
-		var which = FS.existsSync(DefaultTerminalService.WHICH) ? DefaultTerminalService.WHICH : DefaultTerminalService.WHERE;
-		var cmd = Utils.format('{0} \'{1}\'', which, program);
+
+		var which: string;
+		if (FS.existsSync(DefaultTerminalService.WHICH)) {
+			which = DefaultTerminalService.WHICH;
+		} else if (FS.existsSync(DefaultTerminalService.WHERE)) {
+			which = DefaultTerminalService.WHERE;
+		} else {
+			return true;	// try anyway
+		}
 
 		try {
-			CP.execSync(cmd);
-
-			return process.ExitCode == 0;
+			CP.execSync(`${which} '${program}'`);
+			return true;
 		}
 		catch (Exception) {
 			// ignore
 		}
-
 		return false;
-		*/
-
-		return true;
 	}
 }
 
