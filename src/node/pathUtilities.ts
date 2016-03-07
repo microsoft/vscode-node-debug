@@ -87,10 +87,11 @@ export function realPath(path: string): string {
 			}
 		} else if (found.length > 1) {
 			// must be a case sensitive filesystem
-			if (found.indexOf(name) >= 0) {	// case sensitive
+			const ix = found.indexOf(name);
+			if (ix >= 0) {	// case sensitive
 				let prefix = realPath(dir);   // recurse
 				if (prefix) {
-					return Path.join(prefix, found[0]);
+					return Path.join(prefix, found[ix]);
 				}
 			}
 		}
