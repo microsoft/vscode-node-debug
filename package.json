@@ -121,7 +121,7 @@
 							"cwd": {
 								"type": "string",
 								"description": "%node.launch.cwd.description%",
-								"default": "${workspaceRoot}"
+								"default": "."
 							},
 							"runtimeExecutable": {
 								"type": ["string", "null"],
