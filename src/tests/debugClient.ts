@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-"use strict";
 
 import cp = require('child_process');
 import assert = require('assert');
@@ -37,7 +36,7 @@ export class DebugClient extends ProtocolClient {
 	 *     dc.stop(done);
 	 * });
 	 * test('should stop on a breakpoint', () => {
-	 *     return dc.hitBreakpoint({ program: "test.js" }, "test.js", 15);
+	 *     return dc.hitBreakpoint({ program: 'test.js' }, 'test.js', 15);
 	 * });
 	 */
 	constructor(runtime: string, executable: string, debugType: string) {
@@ -59,7 +58,7 @@ export class DebugClient extends ProtocolClient {
 	 */
 	public start(done, port?: number) {
 
-		if (typeof port === "number") {
+		if (typeof port === 'number') {
 			this._socket = net.createConnection(port, '127.0.0.1', () => {
 				this.connect(this._socket, this._socket);
 				done();
@@ -85,7 +84,7 @@ export class DebugClient extends ProtocolClient {
 			});
 			this._adapterProcess.on('exit', (code: number, signal: string) => {
 				if (code) {
-					// done(new Error("debug adapter exit code: " + code));
+					// done(new Error('debug adapter exit code: ' + code));
 				}
 			});
 
@@ -127,7 +126,7 @@ export class DebugClient extends ProtocolClient {
 				linesStartAt1: true,
 				columnsStartAt1: true,
 				pathFormat: 'path'
-			}
+			};
 		}
 		return this.send('initialize', args);
 	}
@@ -221,7 +220,7 @@ export class DebugClient extends ProtocolClient {
 					reject(new Error(`no event '${eventType}' received after ${timeout} ms`));
 				}, timeout);
 			}
-		})
+		});
 	}
 
 	/*
@@ -273,13 +272,13 @@ export class DebugClient extends ProtocolClient {
 		}).then(response => {
 			const frame = response.body.stackFrames[0];
 			if (typeof expected.path === 'string') {
-				assert.equal(frame.source.path, expected.path, "stopped location: path mismatch");
+				assert.equal(frame.source.path, expected.path, 'stopped location: path mismatch');
 			}
 			if (typeof expected.line === 'number') {
-				assert.equal(frame.line, expected.line, "stopped location: line mismatch");
+				assert.equal(frame.line, expected.line, 'stopped location: line mismatch');
 			}
 			if (typeof expected.column === 'number') {
-				assert.equal(frame.column, expected.column, "stopped location: column mismatch");
+				assert.equal(frame.column, expected.column, 'stopped location: column mismatch');
 			}
 			return response;
 		});
@@ -311,7 +310,7 @@ export class DebugClient extends ProtocolClient {
 					reject(new Error(`not enough output data received after ${timeout} ms`));
 				}, timeout);
 			}
-		})
+		});
 	}
 
 	// ---- scenarios ---------------------------------------------------------------------------------------------------------
@@ -336,16 +335,16 @@ export class DebugClient extends ProtocolClient {
 				const bp = response.body.breakpoints[0];
 
 				const verified = (typeof location.verified === 'boolean') ? location.verified : true;
-				assert.equal(bp.verified, verified, "breakpoint verification mismatch: verified");
+				assert.equal(bp.verified, verified, 'breakpoint verification mismatch: verified');
 
 				if (bp.source && bp.source.path) {
-					assert.equal(bp.source.path, location.path, "breakpoint verification mismatch: path");
+					assert.equal(bp.source.path, location.path, 'breakpoint verification mismatch: path');
 				}
 				if (typeof bp.line === 'number') {
-					assert.equal(bp.line, location.line, "breakpoint verification mismatch: line");
+					assert.equal(bp.line, location.line, 'breakpoint verification mismatch: line');
 				}
 				if (typeof location.column === 'number' && typeof bp.column === 'number') {
-					assert.equal(bp.column, location.column, "breakpoint verification mismatch: column");
+					assert.equal(bp.column, location.column, 'breakpoint verification mismatch: column');
 				}
 				return this.configurationDone();
 			}),

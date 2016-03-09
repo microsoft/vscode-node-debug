@@ -18,7 +18,6 @@ import * as CP from 'child_process';
 import * as Net from 'net';
 import * as Path from 'path';
 import * as FS from 'fs';
-import * as util from 'util';
 import * as nls from 'vscode-nls';
 
 const localize = nls.config(process.env.VSCODE_NLS_CONFIG)();
@@ -399,7 +398,7 @@ export class NodeDebugSession extends DebugSession {
 				return;
 			}
 			programPath = Path.normalize(programPath);
-			if (PathUtils.normalizeDriveLetter(programPath) != PathUtils.realPath(programPath)) {
+			if (PathUtils.normalizeDriveLetter(programPath) !== PathUtils.realPath(programPath)) {
 				this.outLine(localize('program.path.case.mismatch.warning', "Program path uses differently cased character as file on disk; this might result in breakpoints not being hit."));
 			}
 		} else {
@@ -774,7 +773,7 @@ export class NodeDebugSession extends DebugSession {
 	 */
 	private _startInitialize(stopped: boolean, n: number = 0): void {
 
-		if (n == 0) {
+		if (n === 0) {
 			this.log('la', `_startInitialize: stopped: ${stopped}`);
 		}
 
@@ -1146,8 +1145,9 @@ export class NodeDebugSession extends DebugSession {
 	 */
 	private _pathToRegexp(path: string): string {
 
-		if (!path)
+		if (!path) {
 			return path;
+		}
 
 		let escPath = path.replace(/([/\\.?*()^${}|[\]])/g, '\\$1');
 
@@ -1530,7 +1530,7 @@ export class NodeDebugSession extends DebugSession {
 						scopeName = localize('scope.script', "Script");
 						break;
 					default:
-						scopeName = localize('scope.unknown', "Unknown Scope Type: {0}", type)
+						scopeName = localize('scope.unknown', "Unknown Scope Type: {0}", type);
 						break;
 				}
 
@@ -1602,7 +1602,7 @@ export class NodeDebugSession extends DebugSession {
 						const size = obj.size;
 						if (size >= 0) {
 							const handle = obj.handle;
-							if (typeof handle === 'number' && handle != 0) {
+							if (typeof handle === 'number' && handle !== 0) {
 								this._addArrayElements(variables, handle, start, end, done);
 								return;
 							}
@@ -1637,12 +1637,12 @@ export class NodeDebugSession extends DebugSession {
 							selectedProperties.push(property);
 							break;
 						case 'named':
-							if (typeof name == 'string') {
+							if (typeof name === 'string') {
 								selectedProperties.push(property);
 							}
 							break;
 						case 'range':
-							if (typeof name == 'number' && name >= start && name <= end) {
+							if (typeof name === 'number' && name >= start && name <= end) {
 								selectedProperties.push(property);
 							}
 							break;
@@ -1688,7 +1688,7 @@ export class NodeDebugSession extends DebugSession {
 		return Promise.all<Variable>(properties.map(property => {
 			const val = this._getValueFromCache(property);
 			let name = property.name;
-			if (typeof name == 'number') {
+			if (typeof name === 'number') {
 				name = `[${name}]`;
 			}
 			return this._addVariable2(name, val);
@@ -2166,8 +2166,9 @@ export class NodeDebugSession extends DebugSession {
 	private _getValueFromCache(container: any): any {
 		const handle = container.ref;
 		const value = this._refCache[handle];
-		if (value)
+		if (value) {
 			return value;
+		}
 		// console.error('ref not found cache');
 		return null;
 	}

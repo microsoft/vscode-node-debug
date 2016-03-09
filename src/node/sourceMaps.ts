@@ -5,7 +5,6 @@
 
 import * as Path from 'path';
 import * as FS from 'fs';
-import * as URL from 'url';
 import {SourceMapConsumer} from 'source-map';
 import * as PathUtils from './pathUtilities';
 import {NodeDebugSession} from './nodeDebug';
@@ -48,7 +47,7 @@ export interface ISourceMaps {
 
 export class SourceMaps implements ISourceMaps {
 
-	private static SOURCE_MAPPING_MATCHER = new RegExp("//[#@] ?sourceMappingURL=(.+)$");
+	private static SOURCE_MAPPING_MATCHER = new RegExp('//[#@] ?sourceMappingURL=(.+)$');
 
 	private _session: NodeDebugSession;
 	private _allSourceMaps: { [id: string] : SourceMap; } = {};			// map file path -> SourceMap
@@ -64,8 +63,9 @@ export class SourceMaps implements ISourceMaps {
 
 	public MapPathFromSource(pathToSource: string): string {
 		var map = this._findSourceToGeneratedMapping(pathToSource);
-		if (map)
+		if (map) {
 			return map.generatedPath();
+		}
 		return null;
 	}
 
@@ -175,7 +175,7 @@ export class SourceMaps implements ISourceMaps {
 				if (map) {
 					break;
 				}
-				rest = PathUtils.removeFirstSegment(rest)
+				rest = PathUtils.removeFirstSegment(rest);
 			}
 		}
 
@@ -224,7 +224,7 @@ export class SourceMaps implements ISourceMaps {
 		const uri = this._findSourceMapUrlInFile(pathToGenerated);
 		if (uri) {
 			// if uri is data url source map is inlined in generated file
-			if (uri.indexOf("data:application/json") >= 0) {
+			if (uri.indexOf('data:application/json') >= 0) {
 				const pos = uri.lastIndexOf(',');
 				if (pos > 0) {
 					const data = uri.substr(pos+1);

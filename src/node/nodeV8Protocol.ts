@@ -220,8 +220,9 @@ export class NodeV8Protocol extends EE.EventEmitter {
 		switch (this._state) {
 			case 'headers':
 				const endHeaderIndex = res.raw.indexOf('\r\n\r\n');
-				if (endHeaderIndex < 0)
+				if (endHeaderIndex < 0) {
 					break;
+				}
 
 				const rawHeader = res.raw.slice(0, endHeaderIndex);
 				const endHeaderByteIndex = Buffer.byteLength(rawHeader, 'utf8');
@@ -230,7 +231,7 @@ export class NodeV8Protocol extends EE.EventEmitter {
 					const kv = lines[i].split(/: +/);
 					res.headers[kv[0]] = kv[1];
 					if (kv[0] === 'Embedding-Host') {
-						const match = kv[1].match(/node\sv(\d+)\.\d+\.\d+/)
+						const match = kv[1].match(/node\sv(\d+)\.\d+\.\d+/);
 						if (match && match.length === 2) {
 							this.embeddedHostVersion = parseInt(match[1]);
 						} else if (kv[1] === 'Electron') {

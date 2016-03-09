@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-"use strict";
 
 import assert = require('assert');
 import * as Path from 'path';
@@ -34,7 +33,7 @@ suite('Node Debug Adapter', () => {
 
 		test('unknown request should produce error', done => {
 			dc.send('illegal_request').then(() => {
-				done(new Error("does not report error on unknown request"));
+				done(new Error('does not report error on unknown request'));
 			}).catch(() => {
 				done();
 			});
@@ -56,7 +55,7 @@ suite('Node Debug Adapter', () => {
 				columnsStartAt1: true,
 				pathFormat: 'url'
 			}).then(response => {
-				done(new Error("does not report error on invalid 'pathFormat' attribute"));
+				done(new Error('does not report error on invalid \'pathFormat\' attribute'));
 			}).catch(err => {
 				// error expected
 				done();
@@ -148,14 +147,14 @@ suite('Node Debug Adapter', () => {
 
 				dc.waitForEvent('initialized').then(event => {
 					return dc.setBreakpointsRequest({
-						breakpoints: [ { line: COND_BREAKPOINT_LINE, condition: "i === 3" } ],
+						breakpoints: [ { line: COND_BREAKPOINT_LINE, condition: 'i === 3' } ],
 						source: { path: PROGRAM }
 					});
 				}).then(response => {
 					const bp = response.body.breakpoints[0];
-					assert.equal(bp.verified, true, "breakpoint verification mismatch: verified");
-					assert.equal(bp.line, COND_BREAKPOINT_LINE, "breakpoint verification mismatch: line");
-					assert.equal(bp.column, COND_BREAKPOINT_COLUMN, "breakpoint verification mismatch: column");
+					assert.equal(bp.verified, true, 'breakpoint verification mismatch: verified');
+					assert.equal(bp.line, COND_BREAKPOINT_LINE, 'breakpoint verification mismatch: line');
+					assert.equal(bp.column, COND_BREAKPOINT_COLUMN, 'breakpoint verification mismatch: column');
 					return dc.configurationDoneRequest();
 				}),
 
@@ -163,8 +162,8 @@ suite('Node Debug Adapter', () => {
 
 				dc.assertStoppedLocation('breakpoint', { path: PROGRAM, line: COND_BREAKPOINT_LINE } ).then(response => {
 					const frame = response.body.stackFrames[0];
-					return dc.evaluateRequest({ context: "watch", frameId: frame.id, expression: "x" }).then(response => {
-						assert.equal(response.body.result, 9, "x !== 9");
+					return dc.evaluateRequest({ context: 'watch', frameId: frame.id, expression: 'x' }).then(response => {
+						assert.equal(response.body.result, 9, 'x !== 9');
 						return response;
 					});
 				})
@@ -181,7 +180,7 @@ suite('Node Debug Adapter', () => {
 				program: PROGRAM,
 				sourceMaps: true,
 				outDir: OUT_DIR,
-				runtimeArgs: [ "--nolazy" ]
+				runtimeArgs: [ '--nolazy' ]
 			}, {
 				path: PROGRAM,
 				line: BREAKPOINT_LINE
@@ -198,7 +197,7 @@ suite('Node Debug Adapter', () => {
 				program: PROGRAM,
 				sourceMaps: true,
 				outDir: OUT_DIR,
-				runtimeArgs: [ "--nolazy" ]
+				runtimeArgs: [ '--nolazy' ]
 			}, {
 				path: PROGRAM,
 				line: BREAKPOINT_LINE
@@ -216,7 +215,7 @@ suite('Node Debug Adapter', () => {
 				program: PROGRAM,
 				sourceMaps: true,
 				outDir: OUT_DIR,
-				runtimeArgs: [ "--nolazy" ]
+				runtimeArgs: [ '--nolazy' ]
 			}, {
 				path: TS_SOURCE,
 				line: TS_LINE
@@ -236,7 +235,7 @@ suite('Node Debug Adapter', () => {
 				program: PROGRAM,
 				sourceMaps: true,
 				outDir: OUT_DIR,
-				runtimeArgs: [ "--nolazy" ]
+				runtimeArgs: [ '--nolazy' ]
 			}, {
 				path: JS_SOURCE,
 				line: JS_LINE
@@ -257,7 +256,7 @@ suite('Node Debug Adapter', () => {
 				program: PROGRAM,
 				sourceMaps: true,
 				outDir: OUT_DIR,
-				runtimeArgs: [ "--nolazy" ]
+				runtimeArgs: [ '--nolazy' ]
 			}, { path: TS_SOURCE, line: TS_LINE } );
 		});
 	});

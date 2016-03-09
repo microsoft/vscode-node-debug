@@ -31,13 +31,13 @@ export class Terminal
 
 	private static terminalService(): ITerminalService {
 		if (!this._terminalService) {
-			if (process.platform === 'win32')
+			if (process.platform === 'win32') {
 				this._terminalService = new WindowsTerminalService();
-			else if (process.platform === 'darwin')
+			} else if (process.platform === 'darwin') {
 				this._terminalService = new MacTerminalService();
-			else if (process.platform === 'linux')
+			} else if (process.platform === 'linux') {
 				this._terminalService = new LinuxTerminalService();
-			else {
+			} else {
 				this._terminalService = new DefaultTerminalService();
 			}
 		}
@@ -255,10 +255,11 @@ class MacTerminalService extends DefaultTerminalService {
 				if (code === 0) {	// OK
 					resolve();	// since cmd is not the terminal process but just the osa tool, we do not pass it in the resolve to the caller
 				} else {
-					if (stderr)
+					if (stderr) {
 						reject(new TerminalError(stderr));
-					else
+					} else {
 						reject(new TerminalError(localize('program.failed', "{0} failed with exit code {1}", MacTerminalService.OSASCRIPT, code)));
+					}
 				}
 			});
 		});
