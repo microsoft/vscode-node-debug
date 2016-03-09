@@ -14,7 +14,7 @@ suite('Node Debug Adapter', () => {
 	const DEBUG_ADAPTER = './out/node/nodeDebug.js';
 
 	const PROJECT_ROOT = Path.join(__dirname, '../../');
-	const DATA_ROOT = Path.join(PROJECT_ROOT, 'src/tests/data/');
+	const DATA_ROOT = Path.join(PROJECT_ROOT, 'testdata/');
 
 
 	let dc: DebugClient;

@@ -6,8 +6,5 @@
 		"removeComments": false,
 		"preserveConstEnums": true,
 		"target": "es5"
-	},
-	"exclude": [
-		"tests/data"
-	]
+	}
 }
