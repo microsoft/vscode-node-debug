@@ -9,6 +9,7 @@
 		"class-name": true,
 		"semicolon": true,
 		"triple-equals": true,
+		"no-var-keyword": true,
 		"no-unexternalized-strings": [
 			true,
 			{

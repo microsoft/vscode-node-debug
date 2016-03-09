@@ -341,7 +341,7 @@ export class NodeDebugSession extends DebugSession {
 
 		this._externalConsole = (typeof args.externalConsole === 'boolean') && args.externalConsole;
 
-		var port = random(3000, 50000);
+		const port = random(3000, 50000);
 
 		let runtimeExecutable = args.runtimeExecutable;
 		if (runtimeExecutable) {
@@ -528,7 +528,7 @@ export class NodeDebugSession extends DebugSession {
 	private _sendLaunchCommandToConsole(args: string[]) {
 		// print the command to launch the target to the debug console
 		let cli = '';
-		for (var a of args) {
+		for (let a of args) {
 			if (a.indexOf(' ') >= 0) {
 				cli += '\'' + a + '\'';
 			} else {
@@ -2300,7 +2300,7 @@ export class NodeDebugSession extends DebugSession {
 	private _findModule(name: string, done: (id: number) => void): void {
 		this._node.command('scripts', { types: 1 + 2 + 4, filter: name }, (resp: NodeV8Response) => {
 			if (resp.success) {
-				for (var result of resp.body) {
+				for (let result of resp.body) {
 					if (result.name === name) {	// return the first exact match
 						done(result.id);
 						return;

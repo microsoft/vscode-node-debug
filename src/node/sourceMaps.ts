@@ -62,7 +62,7 @@ export class SourceMaps implements ISourceMaps {
 	}
 
 	public MapPathFromSource(pathToSource: string): string {
-		var map = this._findSourceToGeneratedMapping(pathToSource);
+		const map = this._findSourceToGeneratedMapping(pathToSource);
 		if (map) {
 			return map.generatedPath();
 		}
@@ -318,7 +318,7 @@ export class SourceMaps implements ISourceMaps {
 	}
 
 	private _registerSourceMap(map: SourceMap): SourceMap {
-		var gp = map.generatedPath();
+		const gp = map.generatedPath();
 		if (gp) {
 			this._generatedToSourceMaps[gp] = map;
 		}
@@ -470,7 +470,7 @@ class SourceMap {
 			return null;
 		}
 
-		var needle = {
+		const needle = {
 			line: line,
 			column: column,
 			bias: bias || Bias.LEAST_UPPER_BOUND

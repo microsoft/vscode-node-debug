@@ -233,19 +233,19 @@ class MacTerminalService extends DefaultTerminalService {
 				'-w', dir,
 			];
 
-			for (var a of args) {
+			for (let a of args) {
 				osaArgs.push('-pa');
 				osaArgs.push(a);
 			}
 
 			if (envVars) {
-				for (var key in envVars) {
+				for (let key in envVars) {
 					osaArgs.push('-e');
 					osaArgs.push(key + '=' + envVars[key]);
 				}
 			}
 
-			var stderr = '';
+			let stderr = '';
 			const osa = CP.spawn(MacTerminalService.OSASCRIPT, osaArgs);
 			osa.on('error', reject);
 			osa.stderr.on('data', (data) => {
@@ -273,7 +273,7 @@ class MacTerminalService extends DefaultTerminalService {
  */
 function quote(args: string[]): string {
 	let r = '';
-	for (var a of args) {
+	for (let a of args) {
 		if (a.indexOf(' ') >= 0) {
 			r += '"' + a + '"';
 		} else {

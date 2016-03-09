@@ -50,7 +50,7 @@ export function makeRelative(target: string, path: string): string {
  * Returns a path with a lower case drive letter.
  */
 export function normalizeDriveLetter(path: string): string {
-	var regex = /^([A-Z])(\:[\\\/].*)$/;
+	const regex = /^([A-Z])(\:[\\\/].*)$/;
 	if (regex.test(path)) {
 		path = path.replace(regex, (s, s1, s2) => s1.toLowerCase() + s2);
 	}
@@ -169,15 +169,15 @@ export function makeRelative2(from: string, to: string): string {
 	from = normalize(from);
 	to = normalize(to);
 
-	var froms = from.substr(1).split('/');
-	var tos = to.substr(1).split('/');
+	const froms = from.substr(1).split('/');
+	const tos = to.substr(1).split('/');
 
 	while (froms.length > 0 && tos.length > 0 && froms[0] === tos[0]) {
 		froms.shift();
 		tos.shift();
 	}
 
-	var l = froms.length - tos.length;
+	let l = froms.length - tos.length;
 	if (l === 0) {
 		l = tos.length - 1;
 	}
