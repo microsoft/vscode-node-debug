@@ -41,6 +41,15 @@
 			],
 			"sourceMaps": true,
 			"outDir": "${workspaceRoot}/out"
+		},
+		{
+			"name": "Nodemon Attach",
+			"type": "node",
+			"request": "attach",
+			"restart": true,
+			"port": 5858,
+			"sourceMaps": true,
+			"outDir": "${workspaceRoot}/out"
 		}
 	]
 }

@@ -15,7 +15,8 @@
 	"scripts": {
 		"prepublish": "node ./node_modules/gulp/bin/gulp.js build",
 		"build": "node ./node_modules/gulp/bin/gulp.js build",
-		"test": "node ./node_modules/mocha/bin/mocha -u tdd ./out/tests/"
+		"test": "node ./node_modules/mocha/bin/mocha -u tdd ./out/tests/",
+		"nodemon": "./node_modules/.bin/nodemon --debug --nolazy ./out/node/nodeDebug.js --server=4711"
 	},
 	"engines": {
 		"node": ">= 0.12.0",
@@ -48,10 +49,11 @@
 		"run-sequence": "*",
 		"gulp-vinyl-zip": "*",
 		"mocha": "^2.4.5",
-		"tslint": "^3.2.2",
-		"typescript": "1.8.2",
+		"tslint": "^3.5.0",
+		"typescript": "^1.8.2",
 		"vscode-nls-dev": "^1.0.3",
-		"event-stream": "^3.3.2"
+		"event-stream": "^3.3.2",
+		"nodemon": "^1.9.1"
 	},
 	"contributes": {
 		"debuggers": [
