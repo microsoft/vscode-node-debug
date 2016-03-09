@@ -100,7 +100,8 @@ function compile(buildNls) {
 	var r = tsProject.src()
 		.pipe(sourcemaps.init())
 		.pipe(ts(tsProject)).js
-		.pipe(buildNls ? nls.rewriteLocalizeCalls() : es.through());
+		.pipe(buildNls ? nls.rewriteLocalizeCalls() : es.through())
+		.pipe(buildNls ? nls.createAdditionalLanguageFiles(nls.coreLanguages, 'i18n') : es.through());
 
 	if (inlineMap && inlineSource) {
 		r = r.pipe(sourcemaps.write());
@@ -132,7 +133,11 @@ gulp.task('internal-zip', function(callback) {
 	catch(e) {
 		// silently ignore
 	}
+	var f = filter(['package.nls.json'], { restore: true });
 	return gulp.src(BOM, { base: '.' })
+		.pipe(f)
+		.pipe(nls.createAdditionalLanguageFiles(nls.coreLanguages, 'i18n'))
+		.pipe(f.restore)
 		.pipe(vzip.dest(dest + '/node-debug.zip'));
 });
 
