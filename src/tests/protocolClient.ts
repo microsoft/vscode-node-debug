@@ -31,12 +31,12 @@ export class ProtocolClient extends ee.EventEmitter {
 		this.outputStream = writable;
 
 		readable.on('data', (data: Buffer) => {
-			this.rawData = Buffer.concat([this.rawData, data]);
-			this.handleData();
+			this.handleData(data);
 		});
 	}
 
 	public send(command: string, args?: any): Promise<DebugProtocol.Response> {
+
 		return new Promise((completeDispatch, errorDispatch) => {
 			this.doSend(command, args, (result: DebugProtocol.Response) => {
 				if (result.success) {
@@ -63,13 +63,13 @@ export class ProtocolClient extends ee.EventEmitter {
 		this.pendingRequests[request.seq] = clb;
 
 		const json = JSON.stringify(request);
-		const length = Buffer.byteLength(json, 'utf8');
-
-		this.outputStream.write('Content-Length: ' + length.toString() + ProtocolClient.TWO_CRLF, 'utf8');
-		this.outputStream.write(json, 'utf8');
+		this.outputStream.write(`Content-Length: ${Buffer.byteLength(json, 'utf8')}\r\n\r\n${json}`, 'utf8');
 	}
 
-	private handleData(): void {
+	private handleData(data: Buffer): void {
+
+		this.rawData = Buffer.concat([this.rawData, data]);
+
 		while (true) {
 			if (this.contentLength >= 0) {
 				if (this.rawData.length >= this.contentLength) {
@@ -82,15 +82,18 @@ export class ProtocolClient extends ee.EventEmitter {
 					continue;	// there may be more complete messages to process
 				}
 			} else {
-				const s = this.rawData.toString('utf8', 0, this.rawData.length);
-				const idx = s.indexOf(ProtocolClient.TWO_CRLF);
+				const idx = this.rawData.indexOf(ProtocolClient.TWO_CRLF);
 				if (idx !== -1) {
-					const match = /Content-Length: (\d+)/.exec(s);
-					if (match && match[1]) {
-						this.contentLength = Number(match[1]);
-						this.rawData = this.rawData.slice(idx + ProtocolClient.TWO_CRLF.length);
-						continue;	// try to handle a complete message
+					const header = this.rawData.toString('utf8', 0, idx);
+					const lines = header.split('\r\n');
+					for (let i = 0; i < lines.length; i++) {
+						const pair = lines[i].split(/: +/);
+						if (pair[0] == 'Content-Length') {
+							this.contentLength = +pair[1];
+						}
 					}
+					this.rawData = this.rawData.slice(idx + ProtocolClient.TWO_CRLF.length);
+					continue;
 				}
 			}
 			break;
@@ -98,6 +101,7 @@ export class ProtocolClient extends ee.EventEmitter {
 	}
 
 	private dispatch(body: string): void {
+
 		const rawData = JSON.parse(body);
 
 		if (typeof rawData.event !== 'undefined') {
