@@ -10,9 +10,9 @@ const localize = nls.loadMessageBundle();
 
 export class NodeV8Message {
 	seq: number;
-	type: string;
+	type: 'request' | 'response' | 'event';
 
-	public constructor(type: string) {
+	public constructor(type: 'request' | 'response' | 'event') {
 		this.seq = 0;
 		this.type = type;
 	}
@@ -56,11 +56,10 @@ export class NodeV8Event extends NodeV8Message {
 export class NodeV8Protocol extends EE.EventEmitter {
 
 	private static TIMEOUT = 3000;
+	private static TWO_CRLF = '\r\n\r\n';
 
-	private _state: string;
+	private _rawData: Buffer;
 	private _contentLength: number;
-	private _bodyStartByteIndex: number;
-	private _res: any;
 	private _sequence: number;
 	private _writableStream: NodeJS.WritableStream;
 	private _pendingRequests = new Map<number, NodeV8Response>();
@@ -72,11 +71,8 @@ export class NodeV8Protocol extends EE.EventEmitter {
 	public startDispatch(inStream: NodeJS.ReadableStream, outStream: NodeJS.WritableStream) : void {
 		this._sequence = 1;
 		this._writableStream = outStream;
-		this._newRes(null);
 
-		inStream.setEncoding('utf8');
-
-		inStream.on('data', (data) => this.execute(data));
+		inStream.on('data', (data: Buffer) => this.execute(data));
 		inStream.on('close', () => {
 			this.emitEvent(new NodeV8Event('close'));
 		});
@@ -171,7 +167,7 @@ export class NodeV8Protocol extends EE.EventEmitter {
 		this.emit(event.event, event);
 	}
 
-	private send(typ: string, message: NodeV8Message) : void {
+	private send(typ: 'request' | 'response' | 'event', message: NodeV8Message) : void {
 		message.type = typ;
 		message.seq = this._sequence++;
 		const json = JSON.stringify(message);
@@ -179,15 +175,6 @@ export class NodeV8Protocol extends EE.EventEmitter {
 		if (this._writableStream) {
 			this._writableStream.write(data);
 		}
-	}
-
-	private _newRes(raw: string) : void {
-		this._res = {
-			raw: raw || '',
-			headers: {}
-		};
-		this._state = 'headers';
-		this.execute('');
 	}
 
 	private internalDispatch(message: NodeV8Message) : void {
@@ -213,55 +200,51 @@ export class NodeV8Protocol extends EE.EventEmitter {
 		}
 	}
 
-	private execute(d) : void {
-		const res = this._res;
-		res.raw += d;
+	private execute(data: Buffer): void {
 
-		switch (this._state) {
-			case 'headers':
-				const endHeaderIndex = res.raw.indexOf('\r\n\r\n');
-				if (endHeaderIndex < 0) {
-					break;
-				}
+		this._rawData = this._rawData ? Buffer.concat([this._rawData, data]) : data;
 
-				const rawHeader = res.raw.slice(0, endHeaderIndex);
-				const endHeaderByteIndex = Buffer.byteLength(rawHeader, 'utf8');
-				const lines = rawHeader.split('\r\n');
-				for (let i = 0; i < lines.length; i++) {
-					const kv = lines[i].split(/: +/);
-					res.headers[kv[0]] = kv[1];
-					if (kv[0] === 'Embedding-Host') {
-						const match = kv[1].match(/node\sv(\d+)\.\d+\.\d+/);
-						if (match && match.length === 2) {
-							this.embeddedHostVersion = parseInt(match[1]);
-						} else if (kv[1] === 'Electron') {
-							this.embeddedHostVersion = 4;
+		while (true) {
+			if (this._contentLength >= 0) {
+				if (this._rawData.length >= this._contentLength) {
+					const message = this._rawData.toString('utf8', 0, this._contentLength);
+					this._rawData = this._rawData.slice(this._contentLength);
+					this._contentLength = -1;
+					if (message.length > 0) {
+						try {
+							this.internalDispatch(JSON.parse(message));
+						}
+						catch (e) {
 						}
 					}
+					continue;	// there may be more complete messages to process
 				}
-
-				this._contentLength = +res.headers['Content-Length'];
-				this._bodyStartByteIndex = endHeaderByteIndex + 4;
-
-				this._state = 'body';
-
-				const len = Buffer.byteLength(res.raw, 'utf8');
-				if (len - this._bodyStartByteIndex < this._contentLength) {
-					break;
+			} else {
+				const idx = this._rawData.indexOf(NodeV8Protocol.TWO_CRLF);
+				if (idx !== -1) {
+					const header = this._rawData.toString('utf8', 0, idx);
+					const lines = header.split('\r\n');
+					for (let i = 0; i < lines.length; i++) {
+						const pair = lines[i].split(/: +/);
+						switch (pair[0]) {
+							case 'Embedding-Host':
+								const match = pair[1].match(/node\sv(\d+)\.\d+\.\d+/);
+								if (match && match.length === 2) {
+									this.embeddedHostVersion = parseInt(match[1]);
+								} else if (pair[1] === 'Electron') {
+									this.embeddedHostVersion = 4;
+								}
+								break;
+							case 'Content-Length':
+								this._contentLength = +pair[1];
+								break;
+						}
+					}
+					this._rawData = this._rawData.slice(idx + NodeV8Protocol.TWO_CRLF.length);
+					continue;	// try to handle a complete message
 				}
-			// pass thru
-
-			case 'body':
-				const resRawByteLength = Buffer.byteLength(res.raw, 'utf8');
-				if (resRawByteLength - this._bodyStartByteIndex >= this._contentLength) {
-					const buf = new Buffer(resRawByteLength);
-					buf.write(res.raw, 0, resRawByteLength, 'utf8');
-					res.body = buf.slice(this._bodyStartByteIndex, this._bodyStartByteIndex + this._contentLength).toString('utf8');
-					res.body = res.body.length ? JSON.parse(res.body) : {};
-					this.internalDispatch(res.body);
-					this._newRes(buf.slice(this._bodyStartByteIndex + this._contentLength).toString('utf8'));
-				}
-				break;
+			}
+			break;
 		}
 	}
 }
