@@ -1,5 +1,4 @@
 // Place your settings in this file to overwrite default and user settings.
 {
-	"explorer.workingFiles.maxVisible": 30,
 	"tslint.rulesDirectory": "node_modules/tslint-microsoft-contrib"
 }
