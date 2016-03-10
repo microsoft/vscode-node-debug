@@ -119,10 +119,10 @@ class WindowsTerminalService extends DefaultTerminalService {
 			const title = `"${dir} - ${WindowsTerminalService.TERMINAL_TITLE}"`;
 			const command = `""${args.join('" "')}" & pause"`; // use '|' to only pause on non-zero exit code
 
-            const cmdArgs = [
-                '/c', 'start', title, '/wait',
-                'cmd.exe', '/c', command
-            ];
+			const cmdArgs = [
+				'/c', 'start', title, '/wait',
+				'cmd.exe', '/c', command
+			];
 
 			// merge environment variables into a copy of the process.env
 			const env = extendObject(extendObject( { }, process.env), envVars);
@@ -286,11 +286,11 @@ function quote(args: string[]): string {
 
 function extendObject<T> (objectCopy: T, object: T): T {
 
-    for (let key in object) {
-        if (object.hasOwnProperty(key)) {
-            objectCopy[key] = object[key];
-        }
-    }
+	for (let key in object) {
+		if (object.hasOwnProperty(key)) {
+			objectCopy[key] = object[key];
+		}
+	}
 
-    return objectCopy;
+	return objectCopy;
 }
