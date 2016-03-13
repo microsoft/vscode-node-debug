@@ -1591,7 +1591,7 @@ export class NodeDebugSession extends DebugSession {
 	public _addProperties(variables: Array<Variable>, obj: any, mode: string, start: number, end: number, done: (message?) => void): void {
 
 		const type = <string> obj.type;
-		if (type === 'object' || type === 'function' || type === 'error' || type === 'regexp' || type === 'map' || type === 'set') {
+		if (type === 'object' || type === 'function' || type === 'error' || type === 'regexp' || type === 'promise' ||type === 'map' || type === 'set') {
 
 			const properties = obj.properties;
 			if (!properties) {       // if properties are missing, try to use size from vscode node extension
@@ -1751,6 +1751,7 @@ export class NodeDebugSession extends DebugSession {
 			case 'object':
 			case 'function':
 			case 'regexp':
+			case 'promise':
 			case 'error':
 				// indirect value
 
@@ -1803,6 +1804,11 @@ export class NodeDebugSession extends DebugSession {
 									value = constructor_name;
 								}
 							}
+
+							if (val.promiseValue && val.status) {
+								value += ` { ${val.status} }`;
+							}
+
 							done(new Variable(name, value, this._variableHandles.create(new PropertyExpander(val))));
 						});
 						return;
