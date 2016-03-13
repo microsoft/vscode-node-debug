@@ -101,7 +101,7 @@ function compile(buildNls) {
 		.pipe(sourcemaps.init())
 		.pipe(ts(tsProject)).js
 		.pipe(buildNls ? nls.rewriteLocalizeCalls() : es.through())
-		.pipe(buildNls ? nls.createAdditionalLanguageFiles(nls.coreLanguages, 'i18n') : es.through());
+		.pipe(buildNls ? nls.createAdditionalLanguageFiles(nls.coreLanguages, 'i18n', 'out') : es.through());
 
 	if (inlineMap && inlineSource) {
 		r = r.pipe(sourcemaps.write());
