@@ -503,19 +503,21 @@ export class NodeDebugSession extends DebugSession {
 				env: env
 			};
 
-			const cmd = CP.spawn(runtimeExecutable, launchArgs.slice(1), options);
-			cmd.on('error', (error) => {
+			const nodeProcess = CP.spawn(runtimeExecutable, launchArgs.slice(1), options);
+			nodeProcess.on('error', (error) => {
 				this.sendErrorResponse(response, 2017, localize('VSND2017', "Cannot launch debug target ({0}).", '{_error}'), { _error: error.message }, ErrorDestination.Telemetry | ErrorDestination.User );
 				this._terminated(`failed to launch target (${error})`);
 			});
-			cmd.on('exit', () => {
+			nodeProcess.on('exit', () => {
 				this._terminated('target exited');
 			});
-			cmd.on('close', (code) => {
+			nodeProcess.on('close', (code) => {
 				this._terminated('target closed');
 			});
 
-			this._captureOutput(cmd);
+			this._nodeProcessId = nodeProcess.pid;
+
+			this._captureOutput(nodeProcess);
 
 			if (this._noDebug) {
 				this.sendResponse(response);
