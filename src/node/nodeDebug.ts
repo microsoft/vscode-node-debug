@@ -1583,7 +1583,8 @@ export class NodeDebugSession extends DebugSession {
 	}
 
 	/*
-	 * there are three modes:
+	 * Adds indexed or named properties for the given structured object to the variables array.
+	 * There are three modes:
 	 * 'all': add all properties (indexed and named)
 	 * 'range': add only the indexed properties between 'start' and 'end' (inclusive)
 	 * 'named': add only the named properties.
@@ -1764,10 +1765,6 @@ export class NodeDebugSession extends DebugSession {
 					case 'Int16Array': case 'Uint16Array':
 					case 'Int32Array': case 'Uint32Array':
 					case 'Float32Array': case 'Float64Array':
-
-						if (val.ref) {
-							//val = this.getRef(val.ref);
-						}
 
 						let size = <number>val.size;     // probe for our own 'size'
 						if (size) {
