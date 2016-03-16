@@ -133,7 +133,9 @@ export class NodeV8Protocol extends EE.EventEmitter {
 		}
 
 		if (!this._writableStream) {
-			cb(new NodeV8Response(request, localize('not.connected', "not connected to runtime")));
+			if (cb) {
+				cb(new NodeV8Response(request, localize('not.connected', "not connected to runtime")));
+			}
 			return;
 		}
 
