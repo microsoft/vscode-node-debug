@@ -1756,13 +1756,14 @@ export class NodeDebugSession extends DebugSession {
 
 	//--- ES6 map support -----------------------------------------------------------------------------------------------------
 
-	private _createMapVariable(mapHandle: number, name: string, done: (variable: Variable) => void) : void {
+	private _createMapVariable(name: string, map: any, done: (variable: Variable) => void) : void {
 
 		const args = {
 			// initially we need only the size of the map
-			"expression": "map.size",
-			"additional_context": [
-				{ "name": "map", "handle": mapHandle }
+			expression: "map.size",
+			disable_break: true,
+			additional_context: [
+				{ name: "map", handle: map.handle }
 			]
 		}
 
@@ -1773,7 +1774,7 @@ export class NodeDebugSession extends DebugSession {
 				const size = +response.body.value;
 
 				const expander = new Expander((variables: Array<Variable>, done: () => void) => {
-					this._addMapElements(variables, mapHandle, 0, size, done);
+					this._addMapElements(variables, map.handle, 0, size, done);
 				});
 
 				done(new Variable(name, `Map(${size})`, this._variableHandles.create(expander)));
@@ -1786,9 +1787,10 @@ export class NodeDebugSession extends DebugSession {
 	private _addMapElements(variables: Array<Variable>, mapHandle: number, start: number, end: number, done) : void {
 
 		const args = {
-			"expression": "var r = []; map.forEach((v,k) => { r.push(k.toString() + ' → ' + v.toString()); r.push(k); r.push(v); }); r",
-			"additional_context": [
-				{ "name": "map", "handle": mapHandle }
+			expression: "var r = []; map.forEach((v,k) => { r.push(k.toString() + ' → ' + v.toString()); r.push(k); r.push(v); }); r",
+			disable_break: true,
+			additional_context: [
+				{ name: "map", handle: mapHandle }
 			]
 		}
 
@@ -1949,7 +1951,7 @@ export class NodeDebugSession extends DebugSession {
 				return;
 
 			case 'map':
-				this._createMapVariable(val.handle, name, (variable) => {
+				this._createMapVariable(name, val, (variable) => {
 					done(variable);
 				});
 				return;
