@@ -1756,6 +1756,85 @@ export class NodeDebugSession extends DebugSession {
 		});
 	}
 
+	//--- ES6 Set support -----------------------------------------------------------------------------------------------------
+
+	private _createSetVariable(name: string, set: any, done: (variable: Variable) => void) : void {
+
+		const args = {
+			// initially we need only the size of the set
+			expression: "set.size",
+			disable_break: true,
+			additional_context: [
+				{ name: "set", handle: set.handle }
+			]
+		}
+
+		this._node.command('evaluate', args, (response: NodeV8Response) => {
+			if (response.success) {
+				this._cacheRefs(response);
+
+				const size = +response.body.value;
+
+				const expander = new Expander((variables: Array<Variable>, done: () => void) => {
+					this._addSetElements(variables, set, 0, size, done);
+				});
+
+				done(new Variable(name, `Set(${size})`, this._variableHandles.create(expander)));
+			} else {
+				done(null);
+			}
+		});
+	}
+
+	private _addSetElements(variables: Array<Variable>, set: any, start: number, end: number, done) : void {
+
+		const args = {
+			expression: "Array.from(set.keys())",
+			disable_break: true,
+			additional_context: [
+				{ name: "set", handle: set.handle }
+			]
+		}
+
+		this._node.command('evaluate', args, (response: NodeV8Response) => {
+			if (response.success) {
+
+				this._cacheRefs(response);
+
+				const properties = response.body.properties;
+				const selectedProperties = new Array<any>();
+				const needLookup = new Array<number>();
+
+				for (let property of properties) {
+					const name = property.name;
+					if (typeof name === 'number' && name >= start && name < end*3) {
+						selectedProperties.push(property);
+						if (!property.value && property.ref) {
+							if (needLookup.indexOf(property.ref) < 0) {
+								needLookup.push(property.ref);
+							}
+						}
+					}
+				}
+
+				if (selectedProperties.length > 0) {
+					this._resolveToCache(needLookup, () => {
+						// build variables
+						this._addVariables(null, selectedProperties).then(result => {
+							result.forEach(v => variables.push(v));
+							done();
+						});
+					});
+				} else {
+					done();
+				}
+
+			} else {
+				done(null);
+			}
+		});
+	}
+
 	//--- ES6 map support -----------------------------------------------------------------------------------------------------
 
 	private _createMapVariable(name: string, map: any, done: (variable: Variable) => void) : void {
@@ -1776,7 +1855,7 @@ export class NodeDebugSession extends DebugSession {
 				const size = +response.body.value;
 
 				const expander = new Expander((variables: Array<Variable>, done: () => void) => {
-					this._addMapElements(variables, map.handle, 0, size, done);
+					this._addMapElements(variables, map, 0, size, done);
 				});
 
 				done(new Variable(name, `Map(${size})`, this._variableHandles.create(expander)));
@@ -1786,13 +1865,13 @@ export class NodeDebugSession extends DebugSession {
 		});
 	}
 
-	private _addMapElements(variables: Array<Variable>, mapHandle: number, start: number, end: number, done) : void {
+	private _addMapElements(variables: Array<Variable>, map: any, start: number, end: number, done) : void {
 
 		const args = {
 			expression: "var r = []; map.forEach((v,k) => { r.push(k.toString() + ' → ' + v.toString()); r.push(k); r.push(v); }); r",
 			disable_break: true,
 			additional_context: [
-				{ name: "map", handle: mapHandle }
+				{ name: "map", handle: map.handle }
 			]
 		}
 
@@ -2019,13 +2098,18 @@ export class NodeDebugSession extends DebugSession {
 				done(new Variable(name, val.value.toString().toLowerCase()));	// node returns these boolean values capitalized
 				return;
 
+			case 'set':
+				this._createSetVariable(name, val, (variable) => {
+					done(variable);
+				});
+				return;
+
 			case 'map':
 				this._createMapVariable(name, val, (variable) => {
 					done(variable);
 				});
 				return;
 
-			case 'set':
 			case 'null':
 				// type is only info we have
 				done(new Variable(name, type));
