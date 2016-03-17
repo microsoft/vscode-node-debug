@@ -56,6 +56,19 @@ export class PropertyExpander implements Expandable {
 	}
 }
 
+export class Expander implements Expandable {
+
+	private _expanderFunction : (variables: Array<Variable>, done: () => void) => void;
+
+	public constructor(func: (variables: Array<Variable>, done: () => void) => void) {
+		this._expanderFunction = func;
+	}
+
+	public Expand(session: NodeDebugSession, variables: Array<Variable>, done: () => void): void {
+		this._expanderFunction(variables, done);
+	}
+}
+
 export class PropertyRangeExpander extends PropertyExpander {
 	public constructor(obj: any, start: number, end: number) {
 		super(obj, null);
