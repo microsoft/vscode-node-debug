@@ -1691,7 +1691,7 @@ export class NodeDebugSession extends DebugSession {
 				// third pass: now lookup all refs at once
 				this._resolveToCache(needLookup, () => {
 					// build variables
-					this._addVariables(selectedProperties).then(result => {
+					this._addVariables(obj, selectedProperties).then(result => {
 						result.forEach(v => variables.push(v));
 						done();
 					});
@@ -1702,14 +1702,14 @@ export class NodeDebugSession extends DebugSession {
 		done();
 	}
 
-	private _addVariables(properties: Array<any>) : Promise<Variable[]> {
+	private _addVariables(obj: any, properties: Array<any>) : Promise<Variable[]> {
 		return Promise.all<Variable>(properties.map(property => {
 			const val = this._getValueFromCache(property);
 			let name = property.name;
 			if (typeof name === 'number') {
 				name = `[${name}]`;
 			}
-			return this._addVariable2(name, val);
+			return this._addVariable2(name, obj, val);
 		}));
 	};
 
@@ -1732,7 +1732,7 @@ export class NodeDebugSession extends DebugSession {
 		return Promise.all<Variable>(items.map((item, ix) => {
 			return new Promise<Variable>((completeDispatch, errorDispatch) => {
 				const name = `[${start+ix}]`;
-				this._createVariable(name, item, (v: Variable) => {
+				this._createVariable(name, null, item, (v: Variable) => {
 					completeDispatch(v);
 				});
 			});
@@ -1740,7 +1740,7 @@ export class NodeDebugSession extends DebugSession {
 	}
 
 	public _addVariable(variables: Array<Variable>, name: string, val: any, done: () => void): void {
-		this._createVariable(name, val, (result: Variable) => {
+		this._createVariable(name, null, val, (result: Variable) => {
 			if (result) {
 				variables.push(result);
 			}
@@ -1748,9 +1748,9 @@ export class NodeDebugSession extends DebugSession {
 		});
 	}
 
-	public _addVariable2(name: string, val: any): Promise<Variable> {
+	public _addVariable2(name: string, obj: any, val: any): Promise<Variable> {
 		return new Promise<Variable>((completeDispatch, errorDispatch) => {
-			this._createVariable(name, val, (result: Variable) => {
+			this._createVariable(name, obj, val, (result: Variable) => {
 				completeDispatch(result);
 			});
 		});
@@ -1827,9 +1827,9 @@ export class NodeDebugSession extends DebugSession {
 							const val = this._getValueFromCache(selectedProperties[i+2]);
 
 							const expander = new Expander((variables: Array<Variable>, done: () => void) => {
-								this._createVariable("key", key, (result: Variable) => {
+								this._createVariable("key", null, key, (result: Variable) => {
 									variables.push(result);
-									this._createVariable("value", val, (result: Variable) => {
+									this._createVariable("value", null, val, (result: Variable) => {
 										variables.push(result);
 										done();
 									});
@@ -1886,14 +1886,46 @@ export class NodeDebugSession extends DebugSession {
 		return new Variable(name, `"${s}"`);
 	}
 
+	//--- getter support ------------------------------------------------------------------------------------------------------
+
+	private _createUndefinedVariable(name: string, obj: any, val: any, done: (variable: Variable) => void) : void {
+
+		let value = val.value;
+
+		if (! val.value && obj) {
+
+			const args = {
+				expression: `obj.${name}`,
+				additional_context: [
+					{ name: "obj", handle: obj.handle }
+				],
+				disable_break: true,
+				maxStringLength: NodeDebugSession.MAX_STRING_LENGTH
+			}
+
+			this._node.command('evaluate', args, (response: NodeV8Response) => {
+				if (response.success) {
+					this._cacheRefs(response);
+					value = response.body;
+					this._createVariable(name, null, value, done);
+				} else {
+					done(new Variable(name, 'undefined'));
+				}
+			});
+
+		} else {
+			done(new Variable(name, 'undefined'));
+		}
+	}
+
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	private _createVariable(name: string, val: any, done: (result: Variable) => void): void {
+	private _createVariable(name: string, obj: any, val: any, done: (result: Variable) => void): void {
 		if (!val) {
 			done(null);
 			return;
 		}
-		let str_val = val.value;
+
 		const type = <string> val.type;
 
 		switch (type) {
@@ -1984,7 +2016,7 @@ export class NodeDebugSession extends DebugSession {
 				return;
 
 			case 'boolean':
-				done(new Variable(name, str_val.toString().toLowerCase()));	// node returns these boolean values capitalized
+				done(new Variable(name, val.value.toString().toLowerCase()));	// node returns these boolean values capitalized
 				return;
 
 			case 'map':
@@ -1994,10 +2026,15 @@ export class NodeDebugSession extends DebugSession {
 				return;
 
 			case 'set':
-			case 'undefined':
 			case 'null':
 				// type is only info we have
 				done(new Variable(name, type));
+				return;
+
+			case 'undefined':
+				this._createUndefinedVariable(name, obj, val, (variable) => {
+					done(variable);
+				});
 				return;
 
 			case 'number':
@@ -2006,7 +2043,7 @@ export class NodeDebugSession extends DebugSession {
 
 			case 'frame':
 			default:
-				done(new Variable(name, str_val ? str_val.toString() : 'undefined'));
+				done(new Variable(name, val.value ? val.value.toString() : 'undefined'));
 				return;
 		}
 	}
@@ -2085,7 +2122,7 @@ export class NodeDebugSession extends DebugSession {
 
 		this._node.command(this._nodeExtensionsAvailable ? 'vscode_evaluate' : 'evaluate', evalArgs, (resp: NodeV8Response) => {
 			if (resp.success) {
-				this._createVariable('evaluate', resp.body, (v: Variable) => {
+				this._createVariable('evaluate', null, resp.body, (v: Variable) => {
 					if (v) {
 						response.body = {
 							result: v.value,
