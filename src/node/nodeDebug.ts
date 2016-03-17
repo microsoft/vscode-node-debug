@@ -1627,7 +1627,7 @@ export class NodeDebugSession extends DebugSession {
 			let found_proto = false;
 			for (let property of properties) {
 
-				if ('name' in property) {	// bug #19654: only extract properties with a node
+				if ('name' in property) {	// bug #19654: only extract properties with a name
 
 					const name = property.name;
 
