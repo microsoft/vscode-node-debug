@@ -1603,7 +1603,7 @@ export class NodeDebugSession extends DebugSession {
 	 * 'all': add all properties (indexed and named)
 	 * 'range': add only the indexed properties between 'start' and 'end' (inclusive)
 	 * 'named': add only the named properties.
- 	 */
+	 */
 	public _addProperties(variables: Array<Variable>, obj: any, mode: string, start: number, end: number, done: (message?) => void): void {
 
 		const type = <string> obj.type;
@@ -1754,6 +1754,100 @@ export class NodeDebugSession extends DebugSession {
 		});
 	}
 
+	//--- ES6 map support -----------------------------------------------------------------------------------------------------
+
+	private _createMapVariable(mapHandle: number, name: string, done: (variable: Variable) => void) : void {
+
+		const args = {
+			// initially we need only the size of the map
+			"expression": "map.size",
+			"additional_context": [
+				{ "name": "map", "handle": mapHandle }
+			]
+		}
+
+		this._node.command('evaluate', args, (response: NodeV8Response) => {
+			if (response.success) {
+				this._cacheRefs(response);
+
+				const size = +response.body.value;
+
+				const expander = new Expander((variables: Array<Variable>, done: () => void) => {
+					this._addMapElements(variables, mapHandle, 0, size, done);
+				});
+
+				done(new Variable(name, `Map(${size})`, this._variableHandles.create(expander)));
+			} else {
+				done(null);
+			}
+		});
+	}
+
+	private _addMapElements(variables: Array<Variable>, mapHandle: number, start: number, end: number, done) : void {
+
+		const args = {
+			"expression": "var r = []; map.forEach((v,k) => { r.push(k.toString() + ' → ' + v.toString()); r.push(k); r.push(v); }); r",
+			"additional_context": [
+				{ "name": "map", "handle": mapHandle }
+			]
+		}
+
+		this._node.command('evaluate', args, (response: NodeV8Response) => {
+			if (response.success) {
+
+				this._cacheRefs(response);
+
+				const properties = response.body.properties;
+				const selectedProperties = new Array<any>();
+				const needLookup = new Array<number>();
+
+				// first pass: determine properties
+				for (let property of properties) {
+					const name = property.name;
+					if (typeof name === 'number' && name >= start && name < end*3) {
+						selectedProperties.push(property);
+						if (!property.value && property.ref) {
+							if (needLookup.indexOf(property.ref) < 0) {
+								needLookup.push(property.ref);
+							}
+						}
+					}
+				}
+
+				if (selectedProperties.length > 0) {
+					// third pass: now lookup all refs at once
+					this._resolveToCache(needLookup, () => {
+						for (let i = 0; i < selectedProperties.length; i += 3) {
+
+							const key = this._getValueFromCache(selectedProperties[i+1]);
+							const val = this._getValueFromCache(selectedProperties[i+2]);
+
+							const expander = new Expander((variables: Array<Variable>, done: () => void) => {
+								this._createVariable("key", key, (result: Variable) => {
+									variables.push(result);
+									this._createVariable("value", val, (result: Variable) => {
+										variables.push(result);
+										done();
+									});
+								});
+							});
+
+							variables.push(new Variable('' + (i/3), this._getValueFromCache(selectedProperties[i]).value, this._variableHandles.create(expander)));
+						}
+						done();
+					});
+				} else {
+					done();
+				}
+
+			} else {
+				done(null);
+			}
+		});
+	}
+
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 	private _createVariable(name: string, val: any, done: (result: Variable) => void): void {
 		if (!val) {
 			done(null);
@@ -1855,6 +1949,11 @@ export class NodeDebugSession extends DebugSession {
 				return;
 
 			case 'map':
+				this._createMapVariable(val.handle, name, (variable) => {
+					done(variable);
+				});
+				return;
+
 			case 'set':
 			case 'undefined':
 			case 'null':
