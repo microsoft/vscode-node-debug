@@ -183,11 +183,13 @@ export class NodeDebugSession extends DebugSession {
 	private static PROTO = '__proto__';
 	private static DEBUG_EXTENSION = 'debugExtension.js';
 
+	private static MAX_STRING_LENGTH = 10000;	// max string size to return in 'evaluate' request
 	private static NODE_TERMINATION_POLL_INTERVAL = 3000;
 	private static ATTACH_TIMEOUT = 10000;
 	private static STACKTRACE_TIMEOUT = 10000;
 
 	private static NODE_SHEBANG_MATCHER = new RegExp('#! */usr/bin/env +node');
+	private static LONG_STRING_MATCHER = /\.\.\. \(length: [0-9]+\)$/;
 
 	private _trace: string[];
 	private _traceAll = false;
@@ -1848,6 +1850,42 @@ export class NodeDebugSession extends DebugSession {
 		});
 	}
 
+	//--- long string support -------------------------------------------------------------------------------------------------
+
+	private _createStringVariable(name: string, val: any, done: (variable: Variable) => void) : void {
+		let str_val: string = val.value;
+
+		if (NodeDebugSession.LONG_STRING_MATCHER.exec(str_val)) {
+
+			const args = {
+				expression: "str",
+				disable_break: true,
+				maxStringLength: NodeDebugSession.MAX_STRING_LENGTH,
+				additional_context: [
+					{ name: "str", handle: val.handle }
+				]
+			}
+
+			this._node.command('evaluate', args, (response: NodeV8Response) => {
+				if (response.success) {
+					this._cacheRefs(response);
+					str_val = response.body.value;
+				}
+				done(this._createStringVariable2(name, str_val));
+			});
+
+		} else {
+			done(this._createStringVariable2(name, str_val));
+		}
+	}
+
+	private _createStringVariable2(name, s: string) {
+		if (s) {
+			s = s.replace('\n', '\\n').replace('\r', '\\r');
+		}
+		return new Variable(name, `"${s}"`);
+	}
+
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 	private _createVariable(name: string, val: any, done: (result: Variable) => void): void {
@@ -1940,10 +1978,9 @@ export class NodeDebugSession extends DebugSession {
 				return;
 
 			case 'string':      // direct value
-				if (str_val) {
-					str_val = str_val.replace('\n', '\\n').replace('\r', '\\r');
-				}
-				done(new Variable(name, '"' + str_val + '"'));
+				this._createStringVariable(name, val, (variable) => {
+					done(variable);
+				});
 				return;
 
 			case 'boolean':
@@ -2032,7 +2069,7 @@ export class NodeDebugSession extends DebugSession {
 		const evalArgs = {
 			expression: expression,
 			disable_break: true,
-			maxStringLength: 10000
+			maxStringLength: NodeDebugSession.MAX_STRING_LENGTH
 		};
 		if (args.frameId > 0) {
 			const frame = this._frameHandles.get(args.frameId);
