@@ -56,53 +56,48 @@ export class DebugClient extends ProtocolClient {
 	 * a debug adapter running in server mode is established. This is useful for debugging
 	 * the adapter while running tests. For this reason all timeouts are disabled in server mode.
 	 */
-	public start(done, port?: number) {
+	public start(port?: number): Promise<void> {
 
-		if (typeof port === 'number') {
-			this._socket = net.createConnection(port, '127.0.0.1', () => {
-				this.connect(this._socket, this._socket);
-				done();
-			});
-		} else {
-			this._adapterProcess = cp.spawn(this._runtime, [ this._executable ], {
-					stdio: [
-						'pipe', 	// stdin
-						'pipe', 	// stdout
-						'pipe'	// stderr
-					],
-				}
-			);
-			const sanitize = (s: string) => s.toString().replace(/\r?\n$/mg, '');
-			this._adapterProcess.stderr.on('data', (data: string) => {
-				if (this._enableStderr) {
-					console.log(sanitize(data));
-				}
-			});
+		return new Promise<void>((resolve, reject) => {
+			if (typeof port === 'number') {
+				this._socket = net.createConnection(port, '127.0.0.1', () => {
+					this.connect(this._socket, this._socket);
+					resolve();
+				});
+			} else {
+				this._adapterProcess = cp.spawn(this._runtime, [ this._executable ]);
+				const sanitize = (s: string) => s.toString().replace(/\r?\n$/mg, '');
+				this._adapterProcess.stderr.on('data', (data: string) => {
+					if (this._enableStderr) {
+						console.log(sanitize(data));
+					}
+				});
 
-			this._adapterProcess.on('error', (err) => {
-				console.log(err);
-			});
-			this._adapterProcess.on('exit', (code: number, signal: string) => {
-				if (code) {
-					// done(new Error('debug adapter exit code: ' + code));
-				}
-			});
+				this._adapterProcess.on('error', (err) => {
+					console.log(err);
+					reject(err);
+				});
+				this._adapterProcess.on('exit', (code: number, signal: string) => {
+					if (code) {
+						// done(new Error('debug adapter exit code: ' + code));
+					}
+				});
 
-			this.connect(this._adapterProcess.stdout, this._adapterProcess.stdin);
-			done();
-		}
+				this.connect(this._adapterProcess.stdout, this._adapterProcess.stdin);
+				resolve();
+			}
+		});
 	}
 
 	/**
 	 * Shutdown the debuggee and the debug adapter (or disconnect if in server mode).
 	 */
-	public stop(done) {
-		this.disconnectRequest().then(()=>{
+	public stop(): Promise<void> {
+
+		return this.disconnectRequest().then(()=>{
 			this.stopAdapter();
-			done();
-		}).catch(()=>{
+		}).catch(() => {
 			this.stopAdapter();
-			done();
 		});
 	}
 
@@ -179,7 +174,7 @@ export class DebugClient extends ProtocolClient {
 		return this.send('pause', args);
 	}
 
-	public stacktraceRequest(args: DebugProtocol.StackTraceArguments): Promise<DebugProtocol.StackTraceResponse> {
+	public stackTraceRequest(args: DebugProtocol.StackTraceArguments): Promise<DebugProtocol.StackTraceResponse> {
 		return this.send('stackTrace', args);
 	}
 
@@ -266,7 +261,7 @@ export class DebugClient extends ProtocolClient {
 
 		return this.waitForEvent('stopped').then(event => {
 			assert.equal(event.body.reason, reason);
-			return this.stacktraceRequest({
+			return this.stackTraceRequest({
 				threadId: event.body.threadId
 			});
 		}).then(response => {

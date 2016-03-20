@@ -20,13 +20,13 @@ suite('Node Debug Adapter', () => {
 	let dc: DebugClient;
 
 
-	setup(done => {
+	setup(_ => {
 		dc = new DebugClient('node', DEBUG_ADAPTER, 'node');
-		dc.start(done);
+		return dc.start();
 	});
 
-	teardown(done => {
-		dc.stop(done);
+	teardown(_ => {
+		return dc.stop();
 	});
 
 	suite('basic', () => {

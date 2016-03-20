@@ -14,16 +14,14 @@ export class ProtocolClient extends ee.EventEmitter {
 
 	private outputStream: stream.Writable;
 	private sequence: number;
-	private pendingRequests: { [id: number]: (e: DebugProtocol.Response) => void; };
-	private rawData: Buffer;
+	private pendingRequests = new Map<number, (e: DebugProtocol.Response) => void>();
+	private rawData = new Buffer(0);
 	private contentLength: number;
 
 	constructor() {
 		super();
 		this.sequence = 1;
 		this.contentLength = -1;
-		this.pendingRequests = {};
-		this.rawData = new Buffer(0);
 	}
 
 	protected connect(readable: stream.Readable, writable: stream.Writable): void {
@@ -60,7 +58,7 @@ export class ProtocolClient extends ee.EventEmitter {
 		}
 
 		// store callback for this request
-		this.pendingRequests[request.seq] = clb;
+		this.pendingRequests.set(request.seq, clb);
 
 		const json = JSON.stringify(request);
 		this.outputStream.write(`Content-Length: ${Buffer.byteLength(json, 'utf8')}\r\n\r\n${json}`, 'utf8');
@@ -88,7 +86,7 @@ export class ProtocolClient extends ee.EventEmitter {
 					const lines = header.split('\r\n');
 					for (let i = 0; i < lines.length; i++) {
 						const pair = lines[i].split(/: +/);
-						if (pair[0] == 'Content-Length') {
+						if (pair[0] === 'Content-Length') {
 							this.contentLength = +pair[1];
 						}
 					}
@@ -109,9 +107,9 @@ export class ProtocolClient extends ee.EventEmitter {
 			this.emit(event.event, event);
 		} else {
 			const response = <DebugProtocol.Response> rawData;
-			const clb = this.pendingRequests[response.request_seq];
+			const clb = this.pendingRequests.get(response.request_seq);
 			if (clb) {
-				delete this.pendingRequests[response.request_seq];
+				delete this.pendingRequests.delete(response.request_seq);
 				clb(response);
 			}
 		}
