@@ -52,6 +52,7 @@
 		"tslint": "^3.5.0",
 		"typescript": "^1.8.2",
 		"vscode-nls-dev": "^1.0.3",
+		"vscode-debugadapter-testsupport": "1.7.0-pre.6",
 		"event-stream": "^3.3.2",
 		"nodemon": "^1.9.1"
 	},

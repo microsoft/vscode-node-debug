@@ -6,8 +6,8 @@
 
 import assert = require('assert');
 import * as Path from 'path';
-import {DebugClient} from './debugClient';
 import {DebugProtocol} from 'vscode-debugprotocol';
+import {DebugClient} from 'vscode-debugadapter-testsupport';
 
 suite('Node Debug Adapter', () => {
 
@@ -21,6 +21,7 @@ suite('Node Debug Adapter', () => {
 
 
 	setup(done => {
+
 		dc = new DebugClient('node', DEBUG_ADAPTER, 'node');
 		dc.start().then(() => {
 			done();
@@ -30,6 +31,7 @@ suite('Node Debug Adapter', () => {
 	});
 
 	teardown(done => {
+
 		return dc.stop().then(() => {
 			done();
 		}).catch(err => {
