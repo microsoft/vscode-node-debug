@@ -1,7 +1,7 @@
 {
 	"name": "node-debug",
 	"displayName": "%extension.displayName%",
-	"version": "0.10.4",
+	"version": "0.10.12",
 	"publisher": "ms-vscode",
 	"description": "%extension.description%",
 	"categories": [
@@ -23,8 +23,8 @@
 		"vscode": "^0.10.1"
 	},
 	"dependencies": {
-		"vscode-debugprotocol": "1.7.0-pre.4",
-		"vscode-debugadapter": "1.7.0-pre.4",
+		"vscode-debugprotocol": "^1.7.0",
+		"vscode-debugadapter": "^1.7.0",
 		"source-map": "^0.5.3",
 		"vscode-nls": "^1.0.4"
 	},
@@ -52,7 +52,7 @@
 		"tslint": "^3.5.0",
 		"typescript": "^1.8.2",
 		"vscode-nls-dev": "^1.0.3",
-		"vscode-debugadapter-testsupport": "1.7.0-pre.6",
+		"vscode-debugadapter-testsupport": "^1.7.0",
 		"event-stream": "^3.3.2",
 		"nodemon": "^1.9.1"
 	},
