@@ -15,7 +15,7 @@
 	"scripts": {
 		"prepublish": "node ./node_modules/gulp/bin/gulp.js build",
 		"build": "node ./node_modules/gulp/bin/gulp.js build",
-		"test": "node ./node_modules/mocha/bin/mocha -u tdd ./out/tests/",
+		"test": "node ./node_modules/mocha/bin/mocha --timeout 10000 -u tdd ./out/tests/",
 		"nodemon": "./node_modules/.bin/nodemon --debug --nolazy ./out/node/nodeDebug.js --server=4711"
 	},
 	"engines": {
