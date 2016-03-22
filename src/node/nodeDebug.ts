@@ -225,7 +225,7 @@ export class NodeDebugSession extends DebugSession {
 		this._node.on('break', (event: NodeV8Event) => {
 			this._stopped('break');
 			this._lastStoppedEvent = this._createStoppedEvent(event.body);
-			if (this._lastStoppedEvent.body.reason === localize('reason.entry', "entry")) {		// TODO@AW
+			if (this._lastStoppedEvent.body.reason === localize({ key: 'reason.entry', comment: ['see https://github.com/Microsoft/vscode/issues/4568'] }, "entry")) {		// TODO@AW
 				this.log('la', 'NodeDebugSession: suppressed stop-on-entry event');
 			} else {
 				this.sendEvent(this._lastStoppedEvent);
@@ -836,7 +836,7 @@ export class NodeDebugSession extends DebugSession {
 		if (this._stopOnEntry) {
 			// user has requested 'stop on entry' so send out a stop-on-entry
 			this.log('la', '_startInitialize2: fire stop-on-entry event');
-			this.sendEvent(new StoppedEvent(localize('reason.entry', "entry"), NodeDebugSession.DUMMY_THREAD_ID));
+			this.sendEvent(new StoppedEvent(localize({ key: 'reason.entry', comment: ['https://github.com/Microsoft/vscode/issues/4568'] }, "entry"), NodeDebugSession.DUMMY_THREAD_ID));
 		}
 		else {
 			// since we are stopped but UI doesn't know about this, remember that we continue later in finishInitialize()
@@ -1299,7 +1299,7 @@ export class NodeDebugSession extends DebugSession {
 		if (this._needBreakpointEvent) {	// we have to break on entry
 			this._needBreakpointEvent = false;
 			info = 'fire breakpoint event';
-			this.sendEvent(new StoppedEvent(localize('reason.breakpoint', "breakpoint"), NodeDebugSession.DUMMY_THREAD_ID));
+			this.sendEvent(new StoppedEvent(localize({ key: 'reason.breakpoint', comment: ['https://github.com/Microsoft/vscode/issues/4568'] }, "breakpoint"), NodeDebugSession.DUMMY_THREAD_ID));
 		}
 
 		this.log('la', `configurationDoneRequest: ${info}`);
@@ -1383,7 +1383,7 @@ export class NodeDebugSession extends DebugSession {
 			let column = this._adjustColumn(line, frame.column);
 
 			let src: Source = null;
-			let origin = localize('content.streamed.from.node', "content streamed from node");
+			let origin = localize('content.streamed.from.node', "content streamed from Node.js");
 			let adapterData: any;
 
 			const script_val = this._getValueFromCache(frame.script);
@@ -1398,7 +1398,7 @@ export class NodeDebugSession extends DebugSession {
 
 					if (localPath !== remotePath && this._attachMode) {
 						// assume attached to remote node process
-						origin = localize('content.streamed.from.remote.node', "content streamed from remote node");
+						origin = localize('content.streamed.from.remote.node', "content streamed from remote Node.js");
 					}
 
 					name = Path.basename(localPath);
@@ -1511,25 +1511,25 @@ export class NodeDebugSession extends DebugSession {
 				let scopeName: string;
 				switch (type) {
 					case 0:
-						scopeName = localize('scope.global', "Global");
+						scopeName = localize({ key: 'scope.global', comment: ['https://github.com/Microsoft/vscode/issues/4569'] }, "Global");
 						break;
 					case 1:
-						scopeName = localize('scope.local', "Local");
+						scopeName = localize({ key: 'scope.local', comment: ['https://github.com/Microsoft/vscode/issues/4569'] }, "Local");
 						break;
 					case 2:
-						scopeName = localize('scope.with', "With");
+						scopeName = localize({ key: 'scope.with', comment: ['https://github.com/Microsoft/vscode/issues/4569'] }, "With");
 						break;
 					case 3:
-						scopeName = localize('scope.closure', "Closure");
+						scopeName = localize({ key: 'scope.closure', comment: ['https://github.com/Microsoft/vscode/issues/4569'] }, "Closure");
 						break;
 					case 4:
-						scopeName = localize('scope.catch', "Catch");
+						scopeName = localize({ key: 'scope.catch', comment: ['https://github.com/Microsoft/vscode/issues/4569'] }, "Catch");
 						break;
 					case 5:
-						scopeName = localize('scope.block', "Block");
+						scopeName = localize({ key: 'scope.block', comment: ['https://github.com/Microsoft/vscode/issues/4569'] }, "Block");
 						break;
 					case 6:
-						scopeName = localize('scope.script', "Script");
+						scopeName = localize({ key: 'scope.script', comment: ['https://github.com/Microsoft/vscode/issues/4569'] }, "Script");
 						break;
 					default:
 						scopeName = localize('scope.unknown', "Unknown Scope Type: {0}", type);
@@ -1547,7 +1547,7 @@ export class NodeDebugSession extends DebugSession {
 
 			// exception scope
 			if (frameIx === 0 && this._exception) {
-				scopes.unshift(new Scope(localize('scope.exception', "Exception"), this._variableHandles.create(new PropertyExpander(this._exception))));
+				scopes.unshift(new Scope(localize({ key: 'scope.exception', comment: ['https://github.com/Microsoft/vscode/issues/4569'] }, "Exception"), this._variableHandles.create(new PropertyExpander(this._exception))));
 			}
 
 			response.body = {
@@ -1872,7 +1872,7 @@ export class NodeDebugSession extends DebugSession {
 		this._node.command('suspend', null, (nodeResponse) => {
 			if (nodeResponse.success) {
 				this._stopped('pause');
-				this._lastStoppedEvent = new StoppedEvent(localize('reason.user.request', "user request"), NodeDebugSession.DUMMY_THREAD_ID);
+				this._lastStoppedEvent = new StoppedEvent(localize({ key: 'reason.user_request', comment: ['https://github.com/Microsoft/vscode/issues/4568'] }, "user request"), NodeDebugSession.DUMMY_THREAD_ID);
 				this.sendResponse(response);
 				this.sendEvent(this._lastStoppedEvent);
 			} else {
@@ -2092,7 +2092,7 @@ export class NodeDebugSession extends DebugSession {
 		} else {
 			const errmsg = nodeResponse.message;
 			if (errmsg.indexOf('unresponsive') >= 0) {
-				this.sendErrorResponse(response, 2015, localize('VSND2015', "Request '{_request}' was cancelled because node is unresponsive."), { _request: nodeResponse.command } );
+				this.sendErrorResponse(response, 2015, localize('VSND2015', "Request '{_request}' was cancelled because Node.js is unresponsive."), { _request: nodeResponse.command } );
 			} else if (errmsg.indexOf('timeout') >= 0) {
 				this.sendErrorResponse(response, 2016, localize('VSND2016', "Node.js did not repond to request '{_request}' in a reasonable amount of time."), { _request: nodeResponse.command } );
 			} else {
@@ -2247,7 +2247,7 @@ export class NodeDebugSession extends DebugSession {
 		if (body.exception) {
 			this._exception = body.exception;
 			exception_text = body.exception.text;
-			reason = localize('reason.exception', "exception");
+			reason = localize({ key: 'reason.exception', comment: ['https://github.com/Microsoft/vscode/issues/4568'] }, "exception");
 		}
 
 		// is breakpoint?
@@ -2256,10 +2256,10 @@ export class NodeDebugSession extends DebugSession {
 			if (isArray(breakpoints) && breakpoints.length > 0) {
 				const id = breakpoints[0];
 				if (!this._gotEntryEvent && id === 1) {	// 'stop on entry point' is implemented as a breakpoint with id 1
-					reason = localize('reason.entry', "entry");
+					reason = localize({ key: 'reason.entry', comment: ['https://github.com/Microsoft/vscode/issues/4568'] }, "entry");
 					this._rememberEntryLocation(body.script.name, body.sourceLine, body.sourceColumn);
 				} else {
-					reason = localize('reason.breakpoint', "breakpoint");
+					reason = localize({ key: 'reason.breakpoint', comment: ['https://github.com/Microsoft/vscode/issues/4568'] }, "breakpoint");
 				}
 			}
 		}
@@ -2268,13 +2268,13 @@ export class NodeDebugSession extends DebugSession {
 		if (!reason) {
 			const sourceLine = body.sourceLineText;
 			if (sourceLine && sourceLine.indexOf('debugger') >= 0) {
-				reason = localize('reason.debugger.statement', "debugger statement");
+				reason = localize({ key: 'reason.debugger_statement', comment: ['https://github.com/Microsoft/vscode/issues/4568'] }, "debugger statement");
 			}
 		}
 
 		// must be 'step'!
 		if (!reason) {
-			reason = localize('reason.step', "step");
+			reason = localize({ key: 'reason.step', comment: ['https://github.com/Microsoft/vscode/issues/4568'] }, "step");
 		}
 
 		return new StoppedEvent(reason, NodeDebugSession.DUMMY_THREAD_ID, exception_text);

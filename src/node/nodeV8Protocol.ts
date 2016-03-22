@@ -141,7 +141,7 @@ export class NodeV8Protocol extends EE.EventEmitter {
 
 		if (this._unresponsiveMode) {
 			if (cb) {
-				cb(new NodeV8Response(request, localize('runtime.unresponsive', "cancelled because node is unresponsive")));
+				cb(new NodeV8Response(request, localize('runtime.unresponsive', "cancelled because Node.js is unresponsive")));
 			}
 			return;
 		}
