@@ -1807,7 +1807,7 @@ export class NodeDebugSession extends DebugSession {
 
 				for (let property of properties) {
 					const name = property.name;
-					if (typeof name === 'number' && name >= start && name < end*3) {
+					if (typeof name === 'number' && name >= start && name < end) {
 						selectedProperties.push(property);
 						if (!property.value && property.ref) {
 							if (needLookup.indexOf(property.ref) < 0) {
