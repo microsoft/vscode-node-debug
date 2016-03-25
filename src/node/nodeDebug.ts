@@ -26,77 +26,42 @@ const RANGESIZE = 1000;
 
 
 export interface Expandable {
-	Expand(session: NodeDebugSession, results: Array<Variable>, done: () => void): void;
+	Expand(session: NodeDebugSession): Promise<Variable[]>;
+}
+
+export class Expander implements Expandable {
+
+	private _expanderFunction : () => Promise<Variable[]>;
+
+	public constructor(func: () => Promise<Variable[]>) {
+		this._expanderFunction = func;
+	}
+
+	public Expand(session: NodeDebugSession) : Promise<Variable[]> {
+		return this._expanderFunction();
+	}
 }
 
 export class PropertyExpander implements Expandable {
 
 	private _object: any;
 	private _this: any;
-	protected _mode: string;
-	protected _start: number;
-	protected _end: number;
 
 	public constructor(obj: any, ths?: any) {
 		this._object = obj;
 		this._this = ths;
-		this._mode = 'all';
-		this._start = 0;
-		this._end = -1;
 	}
 
-	public Expand(session: NodeDebugSession, variables: Array<Variable>, done: () => void): void {
-		session._addProperties(variables, this._object, this._mode, this._start, this._end, () => {
+	public Expand(session: NodeDebugSession) : Promise<Variable[]> {
+		return session._addProperties(this._object, 'all', 0, -1).then(variables => {
 			if (this._this) {
-				session._addVariable(variables, 'this', this._this, done);
+				return session._createVariable('this', this._this).then(variable => {
+					variables.push(variable);
+					return variables;
+				});
 			} else {
-				done();
+				return variables;
 			}
-		});
-	}
-}
-
-export class Expander implements Expandable {
-
-	private _expanderFunction : (variables: Array<Variable>, done: () => void) => void;
-
-	public constructor(func: (variables: Array<Variable>, done: () => void) => void) {
-		this._expanderFunction = func;
-	}
-
-	public Expand(session: NodeDebugSession, variables: Array<Variable>, done: () => void): void {
-		this._expanderFunction(variables, done);
-	}
-}
-
-export class PropertyRangeExpander extends PropertyExpander {
-	public constructor(obj: any, start: number, end: number) {
-		super(obj, null);
-		this._mode = 'range';
-		this._start = start;
-		this._end = end;
-	}
-}
-
-export class ArrayExpander implements Expandable {
-
-	private _object: any;
-	private _size: number;
-
-	public constructor(obj: any, size: number) {
-		this._object = obj;
-		this._size = size;
-	}
-
-	public Expand(session: NodeDebugSession, variables: Array<Variable>, done: () => void): void {
-		// first add named properties
-		session._addProperties(variables, this._object, 'named', 0, -1, () => {
-			// then add indexed properties as ranges
-			for (let start = 0; start < this._size; start += RANGESIZE) {
-				let end = Math.min(start + RANGESIZE, this._size)-1;
-				variables.push(new Variable(`[${start}..${end}]`, ' ', session._variableHandles.create(new PropertyRangeExpander(this._object, start, end))));
-			}
-			done();
 		});
 	}
 }
@@ -194,6 +159,11 @@ export class NodeDebugSession extends DebugSession {
 	private _trace: string[];
 	private _traceAll = false;
 
+	// options
+	private _tryToExtendNode = true;
+	private _largeArrays = false;
+
+
 	private _adapterID: string;
 	public _variableHandles = new Handles<Expandable>();
 	private _frameHandles = new Handles<any>();
@@ -213,14 +183,12 @@ export class NodeDebugSession extends DebugSession {
 	private _node: NodeV8Protocol;
 	private _exception;
 	private _lastStoppedEvent;
-	private _nodeExtensionsAvailable: boolean = false;
-	private _tryToExtendNode: boolean = true;
+	private _nodeExtensionsAvailable = false;
 	private _attachMode: boolean = false;
 	private _sourceMaps: ISourceMaps;
 	private _stopOnEntry: boolean;
 	private _needContinue: boolean;
 	private _needBreakpointEvent: boolean;
-
 	private _gotEntryEvent: boolean;
 	private _entryPath: string;
 	private _entryLine: number;		// entry line in *.js file (not in the source file)
@@ -971,7 +939,7 @@ export class NodeDebugSession extends DebugSession {
 
 		if (source.name) {
 			// a core module
-			this._findModule(source.name, (scriptId: number) => {
+			this._findModule(source.name).then(scriptId => {
 				if (scriptId >= 0) {
 					this._updateBreakpoints(response, null, scriptId, lbs);
 				} else {
@@ -1392,7 +1360,7 @@ export class NodeDebugSession extends DebugSession {
 	private _createStackFrame(frame: any) : Promise<StackFrame> {
 
 		// resolve some refs
-		return this._getValues([ frame.script, frame.func, frame.receiver ]).then(() => {
+		return this._resolveValues([ frame.script, frame.func, frame.receiver ]).then(() => {
 
 			let line = frame.line;
 			let column = this._adjustColumn(line, frame.column);
@@ -1551,8 +1519,8 @@ export class NodeDebugSession extends DebugSession {
 						break;
 				}
 
-				return this._getValue2(scope.object).then(scopeObject => {
-					return new Scope(scopeName, this._variableHandles.create(new PropertyExpander(scopeObject, extra)), expensive);
+				return this._resolveValues( [ scope.object ] ).then(resolved => {
+					return new Scope(scopeName, this._variableHandles.create(new PropertyExpander(resolved[0], extra)), expensive);
 				}).catch(error => {
 					return new Scope(scopeName, 0);
 				});
@@ -1583,15 +1551,21 @@ export class NodeDebugSession extends DebugSession {
 		const reference = args.variablesReference;
 		const expander = this._variableHandles.get(reference);
 		if (expander) {
-			const variables = new Array<Variable>();
-			expander.Expand(this, variables, () => {
+			expander.Expand(this).then(variables => {
 				variables.sort(NodeDebugSession.compareVariableNames);
 				response.body = {
 					variables: variables
 				};
 				this.sendResponse(response);
+			}).catch(err => {
+				// in case of error return empty variables array
+				response.body = {
+					variables: []
+				};
+				this.sendResponse(response);
 			});
 		} else {
+			// in case of error return empty variables array
 			response.body = {
 				variables: []
 			};
@@ -1600,13 +1574,13 @@ export class NodeDebugSession extends DebugSession {
 	}
 
 	/*
-	 * Adds indexed or named properties for the given structured object to the variables array.
+	 * Returns indexed or named properties for the given structured object as a variables array.
 	 * There are three modes:
 	 * 'all': add all properties (indexed and named)
 	 * 'range': add only the indexed properties between 'start' and 'end' (inclusive)
 	 * 'named': add only the named properties.
 	 */
-	public _addProperties(variables: Array<Variable>, obj: any, mode: string, start: number, end: number, done: (message?) => void): void {
+	public _addProperties(obj: any, mode: string, start: number, end: number) : Promise<Variable[]> {
 
 		const type = <string> obj.type;
 		if (type === 'object' || type === 'function' || type === 'error' || type === 'regexp' || type === 'promise' ||type === 'map' || type === 'set') {
@@ -1621,19 +1595,21 @@ export class NodeDebugSession extends DebugSession {
 						if (size >= 0) {
 							const handle = obj.handle;
 							if (typeof handle === 'number' && handle !== 0) {
-								this._addArrayElements(variables, handle, start, end, done);
-								return;
+								return this._node.command2('vscode_range', { handle: handle, from: start, to: end }).then(resp => {
+									const items = resp.body.result;
+									return Promise.all<Variable>(items.map((item, ix) => {
+										return this._createVariable(`[${start+ix}]`, item);
+									}));
+								});
 							}
 						}
-						done('array size not found');
-						return;
+						break;
 
 					case 'named':
 						// can't add named properties because we don't have access to them yet.
 						break;
 				}
-				done();
-				return;
+				return Promise.resolve([]);	// no Variables
 			}
 
 			const selectedProperties = new Array<any>();
@@ -1677,88 +1653,88 @@ export class NodeDebugSession extends DebugSession {
 				}
 			}
 
-			// second pass: find properties where additional value lookup is required
-			const needLookup = new Array<number>();
-			for (let property of selectedProperties) {
-				if (!property.value && property.ref) {
-					if (needLookup.indexOf(property.ref) < 0) {
-						needLookup.push(property.ref);
-					}
+			return this._createVariables(selectedProperties);
+		}
+	}
+
+	//--- long array support
+
+	private _createArrayVariable(name: string, array: any, special: boolean) : Promise<Variable> {
+
+		const args = {
+			// initially we need only the length of the array
+			expression: "array.length",
+			disable_break: true,
+			additional_context: [
+				{ name: "array", handle: array.handle }
+			]
+		}
+
+		return this._node.command2('evaluate', args).then((response: NodeV8Response) => {
+			this._cacheRefs(response);
+
+			const length = +response.body.value;
+
+			let expander: Expandable;
+
+			if (length > RANGESIZE) {
+				expander = new Expander(() => {
+					// first add named properties then add ranges
+					return this._addProperties(array, 'named', 0, -1).then(variables => {
+						for (let start = 0; start < length; start += RANGESIZE) {
+							let end = Math.min(start + RANGESIZE, length)-1;
+
+							let expander2: Expandable;
+							if (this._largeArrays) {
+								expander2 = new Expander(() => this._addLongArrayElements(array, start, end, special));
+							} else {
+								expander2 = new Expander(() => this._addProperties(array, 'range', start, end));
+							}
+
+							variables.push(new Variable(`[${start}..${end}]`, ' ', this._variableHandles.create(expander2)));
+						}
+						return variables;
+					});
+				});
+			} else {
+				expander = new PropertyExpander(array);
+			}
+
+			return new Variable(name, `${array.className}[${(length >= 0) ? length.toString() : ''}]`, this._variableHandles.create(expander));
+		});
+	}
+
+	private _addLongArrayElements(array: any, start: number, end: number, special: boolean) : Promise<Variable[]> {
+
+		const args = {
+			expression: `array.slice(${start}, ${end+1})`,
+			disable_break: true,
+			additional_context: [
+				{ name: "array", handle: array.handle }
+			]
+		}
+
+		return this._node.command2('evaluate', args).then(response => {
+
+			this._cacheRefs(response);
+
+			const properties = response.body.properties;
+			const selectedProperties = new Array<any>();
+
+			for (let property of properties) {
+				const name = property.name;
+				if (typeof name === 'number' && name >= 0 && name <= (end-start)) {
+					selectedProperties.push(property);
 				}
 			}
 
-			if (selectedProperties.length > 0) {
-				// third pass: now lookup all refs at once
-				this._resolveToCache(needLookup, () => {
-					// build variables
-					this._addVariables(obj, selectedProperties).then(result => {
-						result.forEach(v => variables.push(v));
-						done();
-					});
-				});
-				return;
-			}
-		}
-		done();
-	}
-
-	private _addVariables(obj: any, properties: Array<any>) : Promise<Variable[]> {
-		return Promise.all<Variable>(properties.map(property => {
-			const val = this._getValueFromCache(property);
-			let name = property.name;
-			if (typeof name === 'number') {
-				name = `[${name}]`;
-			}
-			return this._addVariable2(name, obj, val);
-		}));
-	};
-
-	private _addArrayElements(variables: Array<Variable>, array_ref: number, start: number, end: number, done: (message?: string) => void): void {
-		this._node.command('vscode_range', { handle: array_ref, from: start, to: end }, resp => {
-			if (resp.success) {
-				this._addArrayElement(start, resp.body.result).then(result => {
-					result.forEach(v => variables.push(v));
-					done();
-				}).catch((error) => {
-					done(error);
-				});
-			} else {
-				done(resp.message);
-			}
+			return this._createVariables(selectedProperties);
 		});
 	}
 
-	private _addArrayElement(start: number, items: Array<any>) : Promise<Variable[]> {
-		return Promise.all<Variable>(items.map((item, ix) => {
-			return new Promise<Variable>((completeDispatch, errorDispatch) => {
-				const name = `[${start+ix}]`;
-				this._createVariable(name, null, item, (v: Variable) => {
-					completeDispatch(v);
-				});
-			});
-		}));
-	}
+	//--- ES6 Set support
 
-	public _addVariable(variables: Array<Variable>, name: string, val: any, done: () => void): void {
-		this._createVariable(name, null, val, (result: Variable) => {
-			if (result) {
-				variables.push(result);
-			}
-			done();
-		});
-	}
-
-	public _addVariable2(name: string, obj: any, val: any): Promise<Variable> {
-		return new Promise<Variable>((completeDispatch, errorDispatch) => {
-			this._createVariable(name, obj, val, (result: Variable) => {
-				completeDispatch(result);
-			});
-		});
-	}
-
-	//--- ES6 Set support -----------------------------------------------------------------------------------------------------
-
-	private _createSetVariable(name: string, set: any, done: (variable: Variable) => void) : void {
+	private _createSetVariable(name: string, set: any) : Promise<Variable> {
 
 		const args = {
 			// initially we need only the size of the set
@@ -1769,24 +1745,16 @@ export class NodeDebugSession extends DebugSession {
 			]
 		}
 
-		this._node.command('evaluate', args, (response: NodeV8Response) => {
-			if (response.success) {
-				this._cacheRefs(response);
+		return this._node.command2('evaluate', args).then((response: NodeV8Response) => {
+			this._cacheRefs(response);
 
-				const size = +response.body.value;
-
-				const expander = new Expander((variables: Array<Variable>, done: () => void) => {
-					this._addSetElements(variables, set, 0, size, done);
-				});
-
-				done(new Variable(name, `Set(${size})`, this._variableHandles.create(expander)));
-			} else {
-				done(null);
-			}
+			const size = +response.body.value;
+			const expander = new Expander(() => this._addSetElements(set, 0, size));
+			return new Variable(name, `Set(${size})`, this._variableHandles.create(expander));
 		});
 	}
 
-	private _addSetElements(variables: Array<Variable>, set: any, start: number, end: number, done) : void {
+	private _addSetElements(set: any, start: number, end: number) : Promise<Variable[]> {
 
 		const args = {
 			expression: "Array.from(set.keys())",
@@ -1796,48 +1764,27 @@ export class NodeDebugSession extends DebugSession {
 			]
 		}
 
-		this._node.command('evaluate', args, (response: NodeV8Response) => {
-			if (response.success) {
+		return this._node.command2('evaluate', args).then(response => {
 
-				this._cacheRefs(response);
+			this._cacheRefs(response);
 
-				const properties = response.body.properties;
-				const selectedProperties = new Array<any>();
-				const needLookup = new Array<number>();
+			const properties = response.body.properties;
+			const selectedProperties = new Array<any>();
 
-				for (let property of properties) {
-					const name = property.name;
-					if (typeof name === 'number' && name >= start && name < end) {
-						selectedProperties.push(property);
-						if (!property.value && property.ref) {
-							if (needLookup.indexOf(property.ref) < 0) {
-								needLookup.push(property.ref);
-							}
-						}
-					}
+			for (let property of properties) {
+				const name = property.name;
+				if (typeof name === 'number' && name >= start && name < end) {
+					selectedProperties.push(property);
 				}
-
-				if (selectedProperties.length > 0) {
-					this._resolveToCache(needLookup, () => {
-						// build variables
-						this._addVariables(null, selectedProperties).then(result => {
-							result.forEach(v => variables.push(v));
-							done();
-						});
-					});
-				} else {
-					done();
-				}
-
-			} else {
-				done(null);
 			}
+
+			return this._createVariables(selectedProperties);
 		});
 	}
 
-	//--- ES6 map support -----------------------------------------------------------------------------------------------------
+	//--- ES6 map support
 
-	private _createMapVariable(name: string, map: any, done: (variable: Variable) => void) : void {
+	private _createMapVariable(name: string, map: any) : Promise<Variable> {
 
 		const args = {
 			// initially we need only the size of the map
@@ -1848,24 +1795,17 @@ export class NodeDebugSession extends DebugSession {
 			]
 		}
 
-		this._node.command('evaluate', args, (response: NodeV8Response) => {
-			if (response.success) {
-				this._cacheRefs(response);
+		return this._node.command2('evaluate', args).then((response: NodeV8Response) => {
+			this._cacheRefs(response);
 
-				const size = +response.body.value;
+			const size = +response.body.value;
 
-				const expander = new Expander((variables: Array<Variable>, done: () => void) => {
-					this._addMapElements(variables, map, 0, size, done);
-				});
-
-				done(new Variable(name, `Map(${size})`, this._variableHandles.create(expander)));
-			} else {
-				done(null);
-			}
+			const expander = new Expander(() => this._addMapElements(map, 0, size));
+			return new Variable(name, `Map(${size})`, this._variableHandles.create(expander));
 		});
 	}
 
-	private _addMapElements(variables: Array<Variable>, map: any, start: number, end: number, done) : void {
+	private _addMapElements(map: any, start: number, end: number) : Promise<Variable[]> {
 
 		const args = {
 			expression: "var r = []; map.forEach((v,k) => { r.push(k.toString() + ' → ' + v.toString()); r.push(k); r.push(v); }); r",
@@ -1875,63 +1815,44 @@ export class NodeDebugSession extends DebugSession {
 			]
 		}
 
-		this._node.command('evaluate', args, (response: NodeV8Response) => {
-			if (response.success) {
+		return this._node.command2('evaluate', args).then(response => {
 
-				this._cacheRefs(response);
+			this._cacheRefs(response);
 
-				const properties = response.body.properties;
-				const selectedProperties = new Array<any>();
-				const needLookup = new Array<number>();
+			const properties = response.body.properties;
+			const selectedProperties = new Array<any>();
 
-				// first pass: determine properties
-				for (let property of properties) {
-					const name = property.name;
-					if (typeof name === 'number' && name >= start && name < end*3) {
-						selectedProperties.push(property);
-						if (!property.value && property.ref) {
-							if (needLookup.indexOf(property.ref) < 0) {
-								needLookup.push(property.ref);
-							}
-						}
-					}
+			for (let property of properties) {
+				const name = property.name;
+				if (typeof name === 'number' && name >= start && name < end*3) {
+					selectedProperties.push(property);
 				}
-
-				if (selectedProperties.length > 0) {
-					// third pass: now lookup all refs at once
-					this._resolveToCache(needLookup, () => {
-						for (let i = 0; i < selectedProperties.length; i += 3) {
-
-							const key = this._getValueFromCache(selectedProperties[i+1]);
-							const val = this._getValueFromCache(selectedProperties[i+2]);
-
-							const expander = new Expander((variables: Array<Variable>, done: () => void) => {
-								this._createVariable("key", null, key, (result: Variable) => {
-									variables.push(result);
-									this._createVariable("value", null, val, (result: Variable) => {
-										variables.push(result);
-										done();
-									});
-								});
-							});
-
-							variables.push(new Variable('' + (i/3), this._getValueFromCache(selectedProperties[i]).value, this._variableHandles.create(expander)));
-						}
-						done();
-					});
-				} else {
-					done();
-				}
-
-			} else {
-				done(null);
 			}
+
+			return this._resolveValues(selectedProperties).then(() => {
+				const variables = [];
+				for (let i = 0; i < selectedProperties.length; i += 3) {
+
+					const key = this._getValueFromCache(selectedProperties[i+1]);
+					const val = this._getValueFromCache(selectedProperties[i+2]);
+
+					const expander = new Expander(() => {
+						return Promise.all([
+							this._createVariable("key", key),
+							this._createVariable("value", val)
+						]);
+					});
+
+					variables.push(new Variable('' + (i/3), this._getValueFromCache(selectedProperties[i]).value, this._variableHandles.create(expander)));
+				}
+				return variables;
+			});
 		});
 	}
 
-	//--- long string support -------------------------------------------------------------------------------------------------
+	//--- long string support
 
-	private _createStringVariable(name: string, val: any, done: (variable: Variable) => void) : void {
+	private _createStringVariable(name: string, val: any) : Promise<Variable> {
 		let str_val: string = val.value;
 
 		if (NodeDebugSession.LONG_STRING_MATCHER.exec(str_val)) {
@@ -1945,16 +1866,16 @@ export class NodeDebugSession extends DebugSession {
 				]
 			}
 
-			this._node.command('evaluate', args, (response: NodeV8Response) => {
+			return this._node.command2('evaluate', args).then((response: NodeV8Response) => {
 				if (response.success) {
 					this._cacheRefs(response);
 					str_val = response.body.value;
 				}
-				done(this._createStringVariable2(name, str_val));
+				return this._createStringVariable2(name, str_val);
 			});
 
 		} else {
-			done(this._createStringVariable2(name, str_val));
+			return Promise.resolve(this._createStringVariable2(name, str_val));
 		}
 	}
 
@@ -1965,13 +1886,26 @@ export class NodeDebugSession extends DebugSession {
 		return new Variable(name, `"${s}"`);
 	}
 
-	//--- getter support ------------------------------------------------------------------------------------------------------
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	private _createUndefinedVariable(name: string, obj: any, val: any, done: (variable: Variable) => void) : void {
+	private _createVariables(mirrors: any[]) : Promise<Variable[]> {
+		return this._resolveValues(mirrors).then(() => {
+			return Promise.all<Variable>(mirrors.map(property => {
+				const val = this._getValueFromCache(property);
+				let name = property.name;
+				if (typeof name === 'number') {
+					name = `[${name}]`;
+				}
+				return this._createVariable2(name, null, val);
+			}));
+		});
+	}
 
-		let value = val.value;
+	private _createVariable2(name: string, obj: any, val: any) : Promise<Variable> {
 
-		if (! val.value && obj) {
+		if (val.type == 'undefined' && !val.value && obj) {
+
+			// getter support
 
 			const args = {
 				expression: `obj.${name}`,
@@ -1982,32 +1916,25 @@ export class NodeDebugSession extends DebugSession {
 				maxStringLength: NodeDebugSession.MAX_STRING_LENGTH
 			}
 
-			this._node.command('evaluate', args, (response: NodeV8Response) => {
-				if (response.success) {
-					this._cacheRefs(response);
-					value = response.body;
-					this._createVariable(name, null, value, done);
-				} else {
-					done(new Variable(name, 'undefined'));
-				}
+			return this._node.command2('evaluate', args).then((response: NodeV8Response) => {
+				this._cacheRefs(response);
+				return this._createVariable(name, response.body);
+			}).catch(() => {
+				return new Variable(name, 'undefined');
 			});
 
 		} else {
-			done(new Variable(name, 'undefined'));
+			return this._createVariable(name, val);
 		}
 	}
 
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	public _createVariable(name: string, val: any) : Promise<Variable> {
 
-	private _createVariable(name: string, obj: any, val: any, done: (result: Variable) => void): void {
 		if (!val) {
-			done(null);
-			return;
+			return Promise.resolve(null);
 		}
 
-		const type = <string> val.type;
-
-		switch (type) {
+		switch (val.type) {
 
 			case 'object':
 			case 'function':
@@ -2020,43 +1947,24 @@ export class NodeDebugSession extends DebugSession {
 				let text = <string> val.text;
 
 				switch (value) {
-					case 'Array': case 'Buffer':
+
+					case 'Array':
+					case 'Buffer':
+						return this._createArrayVariable(name, val, false);
+
 					case 'Int8Array': case 'Uint8Array': case 'Uint8ClampedArray':
 					case 'Int16Array': case 'Uint16Array':
 					case 'Int32Array': case 'Uint32Array':
 					case 'Float32Array': case 'Float64Array':
-
-						let size = <number>val.size;     // probe for our own 'size'
-						if (size) {
-							done(this._createArrayVariable(name, val, value, size));
-						} else {
-							const l = val.properties[0];
-							if (l) {
-								size = l.value;
-								if (size) {
-									done(this._createArrayVariable(name, val, value, size));
-								} else {
-									// the first property of arrays is the length
-									this._getValue(l, (length_val: any) => {
-										let size = -1;
-										if (length_val) {
-											size = length_val.value;
-										}
-										done(this._createArrayVariable(name, val, value, size));
-									});
-								}
-							}
-						}
-						return;
+						return this._createArrayVariable(name, val, true);
 
 					case 'RegExp':
-						done(new Variable(name, text, this._variableHandles.create(new PropertyExpander(val))));
-						return;
+						return Promise.resolve(new Variable(name, text, this._variableHandles.create(new PropertyExpander(val))));
 
 					case 'Object':
-						this._getValue(val.constructorFunction, (constructor_val) => {
-							if (constructor_val) {
-								const constructor_name = <string>constructor_val.name;
+						return this._resolveValues( [ val.constructorFunction ] ).then(resolved => {
+							if (resolved[0]) {
+								const constructor_name = <string>resolved[0].name;
 								if (constructor_name) {
 									value = constructor_name;
 								}
@@ -2066,9 +1974,8 @@ export class NodeDebugSession extends DebugSession {
 								value += ` { ${val.status} }`;
 							}
 
-							done(new Variable(name, value, this._variableHandles.create(new PropertyExpander(val))));
+							return new Variable(name, value, this._variableHandles.create(new PropertyExpander(val)));
 						});
-						return;
 
 					case 'Function':
 					case 'Error':
@@ -2085,57 +1992,32 @@ export class NodeDebugSession extends DebugSession {
 						}
 						break;
 				}
-				done(new Variable(name, value, this._variableHandles.create(new PropertyExpander(val))));
-				return;
+				return Promise.resolve(new Variable(name, value, this._variableHandles.create(new PropertyExpander(val))));
 
 			case 'string':      // direct value
-				this._createStringVariable(name, val, (variable) => {
-					done(variable);
-				});
-				return;
+				return this._createStringVariable(name, val);
 
 			case 'boolean':
-				done(new Variable(name, val.value.toString().toLowerCase()));	// node returns these boolean values capitalized
-				return;
+				return Promise.resolve(new Variable(name, val.value.toString().toLowerCase()));	// node returns these boolean values capitalized
 
 			case 'set':
-				this._createSetVariable(name, val, (variable) => {
-					done(variable);
-				});
-				return;
+				return this._createSetVariable(name, val);
 
 			case 'map':
-				this._createMapVariable(name, val, (variable) => {
-					done(variable);
-				});
-				return;
-
-			case 'null':
-				// type is only info we have
-				done(new Variable(name, type));
-				return;
+				return this._createMapVariable(name, val);
 
 			case 'undefined':
-				this._createUndefinedVariable(name, obj, val, (variable) => {
-					done(variable);
-				});
-				return;
+			case 'null':
+				// type is only info we have
+				return Promise.resolve(new Variable(name, val.type));
 
 			case 'number':
-				done(new Variable(name, '' + val.value));
-				return;
+				return Promise.resolve(new Variable(name, '' + val.value));
 
 			case 'frame':
 			default:
-				done(new Variable(name, val.value ? val.value.toString() : 'undefined'));
-				return;
+				return Promise.resolve(new Variable(name, val.value ? val.value.toString() : 'undefined'));
 		}
-	}
-
-	private _createArrayVariable(name: string, val: any, value: string, size: number): Variable {
-		value += (size >= 0) ? `[${size}]` : '[]';
-		const expander = (size > RANGESIZE) ? new ArrayExpander(val, size) : new PropertyExpander(val); // new PropertyRangeExpander(val, 0, size-1);
-		return new Variable(name, value, this._variableHandles.create(expander));
 	}
 
 	//--- pause request -------------------------------------------------------------------------------------------------------
@@ -2206,7 +2088,7 @@ export class NodeDebugSession extends DebugSession {
 
 		this._node.command(this._nodeExtensionsAvailable ? 'vscode_evaluate' : 'evaluate', evalArgs, (resp: NodeV8Response) => {
 			if (resp.success) {
-				this._createVariable('evaluate', null, resp.body, (v: Variable) => {
+				this._createVariable('evaluate', resp.body).then((v: Variable) => {
 					if (v) {
 						response.body = {
 							result: v.value,
@@ -2401,45 +2283,6 @@ export class NodeDebugSession extends DebugSession {
 		this._refCache[handle] = o;
 	}
 
-	private _getValues(containers: any[]) : Promise<any> {
-
-		return new Promise((c, e) => {
-			const handles = [];
-			for (let container of containers) {
-				handles.push(container.ref);
-			}
-			this._resolveToCache(handles, () => {
-				c();
-			});
-		});
-	}
-
-	private _getValue(container: any, done: (result: any) => void): void {
-		if (container) {
-			const handle = container.ref;
-			this._resolveToCache([ handle ], () => {
-				const value = this._refCache[handle];
-				done(value);
-			});
-		} else {
-			done(null);
-		}
-	}
-
-	private _getValue2(container: any) : Promise<any> {
-		return new Promise((c, e) => {
-			if (container) {
-				const handle = container.ref;
-				this._resolveToCache([ handle ], () => {
-					const value = this._refCache[handle];
-					c(value);
-				});
-			} else {
-				c(null);
-			}
-		});
-	}
-
 	private _getValueFromCache(container: any): any {
 		const handle = container.ref;
 		const value = this._refCache[handle];
@@ -2450,7 +2293,25 @@ export class NodeDebugSession extends DebugSession {
 		return null;
 	}
 
-	private _resolveToCache(handles: number[], done: () => void): void {
+	private _resolveValues(mirrors: any[]) : Promise<any[]> {
+
+		const needLookup = new Array<number>();
+		for (let mirror of mirrors) {
+			if (!mirror.value && mirror.ref) {
+				if (needLookup.indexOf(mirror.ref) < 0) {
+					needLookup.push(mirror.ref);
+				}
+			}
+		}
+
+		if (needLookup.length > 0) {
+			return this._resolveToCache(needLookup);
+		} else {
+			return Promise.resolve(mirrors);
+		}
+	}
+
+	private _resolveToCache(handles: number[]) : Promise<any[]> {
 
 		const lookup = new Array<number>();
 
@@ -2466,38 +2327,40 @@ export class NodeDebugSession extends DebugSession {
 		}
 
 		if (lookup.length > 0) {
-			this._node.command(this._nodeExtensionsAvailable ? 'vscode_lookup' : 'lookup', { handles: lookup }, (resp: NodeV8Response) => {
+			return this._node.command2(this._nodeExtensionsAvailable ? 'vscode_lookup' : 'lookup', { handles: lookup }, 100000).then(resp => {
 
-				if (resp.success) {
-					this._cacheRefs(resp);
+				this._cacheRefs(resp);
 
-					for (let key in resp.body) {
-						const obj = resp.body[key];
-						const handle: number = obj.handle;
-						this._cache(handle, obj);
-					}
+				for (let key in resp.body) {
+					const obj = resp.body[key];
+					const handle: number = obj.handle;
+					this._cache(handle, obj);
+				}
 
+				return handles.map(handle => this._refCache[handle]);
+
+			}).catch(resp => {
+
+				let val: any;
+				if (resp.message.indexOf('timeout') >= 0) {
+					val = { type: 'number', value: '<...>' };
 				} else {
-					let val: any;
-					if (resp.message.indexOf('timeout') >= 0) {
-						val = { type: 'number', value: '<...>' };
-					} else {
-						val = { type: 'number', value: `<data error: ${resp.message}>` };
-					}
+					val = { type: 'number', value: `<data error: ${resp.message}>` };
+				}
 
-					// store error value in cache
-					for (let i = 0; i < handles.length; i++) {
-						const handle = handles[i];
-						const r = this._refCache[handle];
-						if (!r) {
-							this._cache(handle, val);
-						}
+				// store error value in cache
+				for (let i = 0; i < handles.length; i++) {
+					const handle = handles[i];
+					const r = this._refCache[handle];
+					if (!r) {
+						this._cache(handle, val);
 					}
 				}
-				done();
+
+				return handles.map(handle => this._refCache[handle]);
 			});
 		} else {
-			done();
+			return Promise.resolve(handles.map(handle => this._refCache[handle]));
 		}
 	}
 
@@ -2574,17 +2437,16 @@ export class NodeDebugSession extends DebugSession {
 		return column;
 	}
 
-	private _findModule(name: string, done: (id: number) => void): void {
-		this._node.command('scripts', { types: 1 + 2 + 4, filter: name }, (resp: NodeV8Response) => {
-			if (resp.success) {
-				for (let result of resp.body) {
-					if (result.name === name) {	// return the first exact match
-						done(result.id);
-						return;
-					}
+	private _findModule(name: string) : Promise<number> {
+		return this._node.command2('scripts', { types: 1 + 2 + 4, filter: name }).then(resp => {
+			for (let result of resp.body) {
+				if (result.name === name) {	// return the first exact match
+					return result.id;
 				}
 			}
-			done(-1);	// not found
+			return -1;	// not found
+		}).catch(err => {
+			return -1;	// error
 		});
 	}
 
