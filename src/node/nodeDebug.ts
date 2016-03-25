@@ -1663,10 +1663,10 @@ export class NodeDebugSession extends DebugSession {
 
 		const args = {
 			// initially we need only the length of the array
-			expression: "array.length",
+			expression: `array.length`,
 			disable_break: true,
 			additional_context: [
-				{ name: "array", handle: array.handle }
+				{ name: 'array', handle: array.handle }
 			]
 		}
 
@@ -1710,7 +1710,7 @@ export class NodeDebugSession extends DebugSession {
 			expression: `array.slice(${start}, ${end+1})`,
 			disable_break: true,
 			additional_context: [
-				{ name: "array", handle: array.handle }
+				{ name: 'array', handle: array.handle }
 			]
 		}
 
@@ -1738,10 +1738,10 @@ export class NodeDebugSession extends DebugSession {
 
 		const args = {
 			// initially we need only the size of the set
-			expression: "set.size",
+			expression: `set.size`,
 			disable_break: true,
 			additional_context: [
-				{ name: "set", handle: set.handle }
+				{ name: 'set', handle: set.handle }
 			]
 		}
 
@@ -1750,17 +1750,17 @@ export class NodeDebugSession extends DebugSession {
 
 			const size = +response.body.value;
 			const expander = new Expander(() => this._addSetElements(set, 0, size));
-			return new Variable(name, `Set(${size})`, this._variableHandles.create(expander));
+			return new Variable(name, `Set[${size}]`, this._variableHandles.create(expander));
 		});
 	}
 
 	private _addSetElements(set: any, start: number, end: number) : Promise<Variable[]> {
 
 		const args = {
-			expression: "Array.from(set.keys())",
+			expression: `Array.from(set.keys())`,
 			disable_break: true,
 			additional_context: [
-				{ name: "set", handle: set.handle }
+				{ name: 'set', handle: set.handle }
 			]
 		}
 
@@ -1788,10 +1788,10 @@ export class NodeDebugSession extends DebugSession {
 
 		const args = {
 			// initially we need only the size of the map
-			expression: "map.size",
+			expression: `map.size`,
 			disable_break: true,
 			additional_context: [
-				{ name: "map", handle: map.handle }
+				{ name: 'map', handle: map.handle }
 			]
 		}
 
@@ -1799,19 +1799,18 @@ export class NodeDebugSession extends DebugSession {
 			this._cacheRefs(response);
 
 			const size = +response.body.value;
-
 			const expander = new Expander(() => this._addMapElements(map, 0, size));
-			return new Variable(name, `Map(${size})`, this._variableHandles.create(expander));
+			return new Variable(name, `Map[${size}]`, this._variableHandles.create(expander));
 		});
 	}
 
 	private _addMapElements(map: any, start: number, end: number) : Promise<Variable[]> {
 
 		const args = {
-			expression: "var r = []; map.forEach((v,k) => { r.push(k.toString() + ' → ' + v.toString()); r.push(k); r.push(v); }); r",
+			expression: `var r = []; map.forEach((v,k) => { r.push(k.toString() + ' → ' + v.toString()); r.push(k); r.push(v); }); r`,
 			disable_break: true,
 			additional_context: [
-				{ name: "map", handle: map.handle }
+				{ name: 'map', handle: map.handle }
 			]
 		}
 
@@ -1838,8 +1837,8 @@ export class NodeDebugSession extends DebugSession {
 
 					const expander = new Expander(() => {
 						return Promise.all([
-							this._createVariable("key", key),
-							this._createVariable("value", val)
+							this._createVariable('key', key),
+							this._createVariable('value', val)
 						]);
 					});
 
@@ -1853,22 +1852,24 @@ export class NodeDebugSession extends DebugSession {
 	//--- long string support
 
 	private _createStringVariable(name: string, val: any) : Promise<Variable> {
-		let str_val: string = val.value;
+
+		let str_val = val.value;
 
 		if (NodeDebugSession.LONG_STRING_MATCHER.exec(str_val)) {
 
 			const args = {
-				expression: "str",
+				expression: `str`,
 				disable_break: true,
 				maxStringLength: NodeDebugSession.MAX_STRING_LENGTH,
 				additional_context: [
-					{ name: "str", handle: val.handle }
+					{ name: 'str', handle: val.handle }
 				]
 			}
 
 			return this._node.command2('evaluate', args).then((response: NodeV8Response) => {
 				if (response.success) {
 					this._cacheRefs(response);
+
 					str_val = response.body.value;
 				}
 				return this._createStringVariable2(name, str_val);
@@ -1889,6 +1890,7 @@ export class NodeDebugSession extends DebugSession {
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 	private _createVariables(mirrors: any[]) : Promise<Variable[]> {
+
 		return this._resolveValues(mirrors).then(() => {
 			return Promise.all<Variable>(mirrors.map(property => {
 				const val = this._getValueFromCache(property);
@@ -1916,7 +1918,7 @@ export class NodeDebugSession extends DebugSession {
 				maxStringLength: NodeDebugSession.MAX_STRING_LENGTH
 			}
 
-			return this._node.command2('evaluate', args).then((response: NodeV8Response) => {
+			return this._node.command2('evaluate', args).then(response => {
 				this._cacheRefs(response);
 				return this._createVariable(name, response.body);
 			}).catch(() => {
@@ -1994,7 +1996,7 @@ export class NodeDebugSession extends DebugSession {
 				}
 				return Promise.resolve(new Variable(name, value, this._variableHandles.create(new PropertyExpander(val))));
 
-			case 'string':      // direct value
+			case 'string':
 				return this._createStringVariable(name, val);
 
 			case 'boolean':
@@ -2008,7 +2010,6 @@ export class NodeDebugSession extends DebugSession {
 
 			case 'undefined':
 			case 'null':
-				// type is only info we have
 				return Promise.resolve(new Variable(name, val.type));
 
 			case 'number':
@@ -2305,7 +2306,9 @@ export class NodeDebugSession extends DebugSession {
 		}
 
 		if (needLookup.length > 0) {
-			return this._resolveToCache(needLookup);
+			return this._resolveToCache(needLookup).then(() => {
+				return mirrors.map(m => this._refCache[m.ref || m.handle]);
+			});
 		} else {
 			return Promise.resolve(mirrors);
 		}
@@ -2327,7 +2330,7 @@ export class NodeDebugSession extends DebugSession {
 		}
 
 		if (lookup.length > 0) {
-			return this._node.command2(this._nodeExtensionsAvailable ? 'vscode_lookup' : 'lookup', { handles: lookup }, 100000).then(resp => {
+			return this._node.command2(this._nodeExtensionsAvailable ? 'vscode_lookup' : 'lookup', { handles: lookup }).then(resp => {
 
 				this._cacheRefs(resp);
 
