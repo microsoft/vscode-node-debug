@@ -22,8 +22,6 @@ import * as nls from 'vscode-nls';
 
 const localize = nls.config(process.env.VSCODE_NLS_CONFIG)();
 
-const RANGESIZE = 1000;
-
 
 export interface Expandable {
 	Expand(session: NodeDebugSession): Promise<Variable[]>;
@@ -53,7 +51,7 @@ export class PropertyExpander implements Expandable {
 	}
 
 	public Expand(session: NodeDebugSession) : Promise<Variable[]> {
-		return session._addProperties(this._object, 'all', 0, -1).then(variables => {
+		return session._createProperties(this._object, 'all', 0, -1).then(variables => {
 			if (this._this) {
 				return session._createVariable('this', this._this).then(variable => {
 					variables.push(variable);
@@ -141,6 +139,14 @@ export interface AttachRequestArguments extends CommonArguments {
 
 export class NodeDebugSession extends DebugSession {
 
+	private static RANGESIZE = 1000;	// chunk size for large data structures
+	private static MAX_STRING_LENGTH = 10000;	// max string size to return in 'evaluate' request
+
+	private static NODE_TERMINATION_POLL_INTERVAL = 3000;
+	private static ATTACH_TIMEOUT = 10000;
+	private static STACKTRACE_TIMEOUT = 10000;
+	private static LARGE_DATASTRUCTURE_TIMEOUT = 60000;
+
 	private static NODE = 'node';
 	private static DUMMY_THREAD_ID = 1;
 	private static DUMMY_THREAD_NAME = 'Node';
@@ -148,13 +154,9 @@ export class NodeDebugSession extends DebugSession {
 	private static PROTO = '__proto__';
 	private static DEBUG_EXTENSION = 'debugExtension.js';
 
-	private static MAX_STRING_LENGTH = 10000;	// max string size to return in 'evaluate' request
-	private static NODE_TERMINATION_POLL_INTERVAL = 3000;
-	private static ATTACH_TIMEOUT = 10000;
-	private static STACKTRACE_TIMEOUT = 10000;
-
 	private static NODE_SHEBANG_MATCHER = new RegExp('#! */usr/bin/env +node');
 	private static LONG_STRING_MATCHER = /\.\.\. \(length: [0-9]+\)$/;
+
 
 	private _trace: string[];
 	private _traceAll = false;
@@ -734,11 +736,11 @@ export class NodeDebugSession extends DebugSession {
 
 				this._node.command('evaluate', { expression: contents }, (resp: NodeV8Response) => {
 					if (resp.success) {
-						this.log('la', '_extendDebugger: node code inject: OK');
-						this._nodeExtensionsAvailable = true;
+			this.log('la', '_extendDebugger: node code inject: OK');
+			this._nodeExtensionsAvailable = true;
 						callback(false);
 					} else {
-						this.log('la', '_extendDebugger: node code inject: failed, try again...');
+			this.log('la', '_extendDebugger: node code inject: failed, try again...');
 						callback(true);
 					}
 				});
@@ -1580,7 +1582,7 @@ export class NodeDebugSession extends DebugSession {
 	 * 'range': add only the indexed properties between 'start' and 'end' (inclusive)
 	 * 'named': add only the named properties.
 	 */
-	public _addProperties(obj: any, mode: string, start: number, end: number) : Promise<Variable[]> {
+	public _createProperties(obj: any, mode: string, start: number, end: number) : Promise<Variable[]> {
 
 		const type = <string> obj.type;
 		if (type === 'object' || type === 'function' || type === 'error' || type === 'regexp' || type === 'promise' ||type === 'map' || type === 'set') {
@@ -1677,18 +1679,18 @@ export class NodeDebugSession extends DebugSession {
 
 			let expander: Expandable;
 
-			if (length > RANGESIZE) {
+			if (length > NodeDebugSession.RANGESIZE) {
 				expander = new Expander(() => {
 					// first add named properties then add ranges
-					return this._addProperties(array, 'named', 0, -1).then(variables => {
-						for (let start = 0; start < length; start += RANGESIZE) {
-							let end = Math.min(start + RANGESIZE, length)-1;
+					return this._createProperties(array, 'named', 0, -1).then(variables => {
+						for (let start = 0; start < length; start += NodeDebugSession.RANGESIZE) {
+							let end = Math.min(start + NodeDebugSession.RANGESIZE, length)-1;
 
 							let expander2: Expandable;
 							if (this._largeArrays) {
-								expander2 = new Expander(() => this._addLongArrayElements(array, start, end, special));
+								expander2 = new Expander(() => this._createLargeArrayElements(array, start, end, special));
 							} else {
-								expander2 = new Expander(() => this._addProperties(array, 'range', start, end));
+								expander2 = new Expander(() => this._createProperties(array, 'range', start, end));
 							}
 
 							variables.push(new Variable(`[${start}..${end}]`, ' ', this._variableHandles.create(expander2)));
@@ -1704,7 +1706,7 @@ export class NodeDebugSession extends DebugSession {
 		});
 	}
 
-	private _addLongArrayElements(array: any, start: number, end: number, special: boolean) : Promise<Variable[]> {
+	private _createLargeArrayElements(array: any, start: number, end: number, special: boolean) : Promise<Variable[]> {
 
 		const args = {
 			expression: `array.slice(${start}, ${end+1})`,
@@ -1749,15 +1751,30 @@ export class NodeDebugSession extends DebugSession {
 			this._cacheRefs(response);
 
 			const size = +response.body.value;
-			const expander = new Expander(() => this._addSetElements(set, 0, size));
-			return new Variable(name, `Set[${size}]`, this._variableHandles.create(expander));
+
+			let expandFunc;
+			if (size > NodeDebugSession.RANGESIZE) {
+				expandFunc = () => {
+					const variables = [];
+					for (let start = 0; start < size; start += NodeDebugSession.RANGESIZE) {
+						let end = Math.min(start + NodeDebugSession.RANGESIZE, size)-1;
+						let rangeExpander = new Expander(() => this._createSetElements(set, start, end));
+						variables.push(new Variable(`${start}..${end}`, ' ', this._variableHandles.create(rangeExpander)));
+					}
+					return Promise.resolve(variables);
+				};
+			} else {
+				expandFunc = () => this._createSetElements(set, 0, size);
+			}
+
+			return new Variable(name, `Set[${size}]`, this._variableHandles.create(new Expander(expandFunc)));
 		});
 	}
 
-	private _addSetElements(set: any, start: number, end: number) : Promise<Variable[]> {
+	private _createSetElements(set: any, start: number, end: number) : Promise<Variable[]> {
 
 		const args = {
-			expression: `Array.from(set.keys())`,
+			expression: `var r = [], i = 0; set.forEach(v => { if (i >= ${start} && i <= ${end}) r.push(v); i++; }); r`,
 			disable_break: true,
 			additional_context: [
 				{ name: 'set', handle: set.handle }
@@ -1773,12 +1790,12 @@ export class NodeDebugSession extends DebugSession {
 
 			for (let property of properties) {
 				const name = property.name;
-				if (typeof name === 'number' && name >= start && name < end) {
+				if (typeof name === 'number' && name >= 0 && name <= end-start) {
 					selectedProperties.push(property);
 				}
 			}
 
-			return this._createVariables(selectedProperties);
+			return this._createVariables(selectedProperties, start, true);
 		});
 	}
 
@@ -1799,22 +1816,37 @@ export class NodeDebugSession extends DebugSession {
 			this._cacheRefs(response);
 
 			const size = +response.body.value;
-			const expander = new Expander(() => this._addMapElements(map, 0, size));
-			return new Variable(name, `Map[${size}]`, this._variableHandles.create(expander));
+
+			let expandFunc;
+			if (size > NodeDebugSession.RANGESIZE) {
+				expandFunc = () => {
+					const variables = [];
+					for (let start = 0; start < size; start += NodeDebugSession.RANGESIZE) {
+						let end = Math.min(start + NodeDebugSession.RANGESIZE, size)-1;
+						let rangeExpander = new Expander(() => this._createMapElements(map, start, end));
+						variables.push(new Variable(`${start}..${end}`, ' ', this._variableHandles.create(rangeExpander)));
+					}
+					return Promise.resolve(variables);
+				};
+			} else {
+				expandFunc = () => this._createMapElements(map, 0, size);
+			}
+
+			return new Variable(name, `Map[${size}]`, this._variableHandles.create(new Expander(expandFunc)));
 		});
 	}
 
-	private _addMapElements(map: any, start: number, end: number) : Promise<Variable[]> {
+	private _createMapElements(map: any, start: number, end: number) : Promise<Variable[]> {
 
 		const args = {
-			expression: `var r = []; map.forEach((v,k) => { r.push(k.toString() + ' → ' + v.toString()); r.push(k); r.push(v); }); r`,
+			expression: `var r=[],i=0; map.forEach((v,k) => { if (i>=${start} && i<=${end}) { r.push(k+' → '+v); r.push(k); r.push(v);} i++; }); r`,
 			disable_break: true,
 			additional_context: [
 				{ name: 'map', handle: map.handle }
 			]
 		}
 
-		return this._node.command2('evaluate', args).then(response => {
+		return this._node.command2('evaluate', args, NodeDebugSession.LARGE_DATASTRUCTURE_TIMEOUT).then(response => {
 
 			this._cacheRefs(response);
 
@@ -1823,7 +1855,7 @@ export class NodeDebugSession extends DebugSession {
 
 			for (let property of properties) {
 				const name = property.name;
-				if (typeof name === 'number' && name >= start && name < end*3) {
+				if (typeof name === 'number' && name >= 0 && name <= (end-start)*3+2) {
 					selectedProperties.push(property);
 				}
 			}
@@ -1842,7 +1874,7 @@ export class NodeDebugSession extends DebugSession {
 						]);
 					});
 
-					variables.push(new Variable('' + (i/3), this._getValueFromCache(selectedProperties[i]).value, this._variableHandles.create(expander)));
+					variables.push(new Variable((start + (i/3)).toString(), this._getValueFromCache(selectedProperties[i]).value, this._variableHandles.create(expander)));
 				}
 				return variables;
 			});
@@ -1889,14 +1921,18 @@ export class NodeDebugSession extends DebugSession {
 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	private _createVariables(mirrors: any[]) : Promise<Variable[]> {
+	private _createVariables(mirrors: any[], start?: number, noBrackets?: boolean) : Promise<Variable[]> {
+
+		if (typeof start !== 'number') {
+			start = 0;
+		}
 
 		return this._resolveValues(mirrors).then(() => {
 			return Promise.all<Variable>(mirrors.map(property => {
 				const val = this._getValueFromCache(property);
 				let name = property.name;
 				if (typeof name === 'number') {
-					name = `[${name}]`;
+					name = noBrackets ? `${start+name}` : `[${start+name}]`;
 				}
 				return this._createVariable2(name, null, val);
 			}));
@@ -1912,7 +1948,7 @@ export class NodeDebugSession extends DebugSession {
 			const args = {
 				expression: `obj.${name}`,
 				additional_context: [
-					{ name: "obj", handle: obj.handle }
+					{ name: 'obj', handle: obj.handle }
 				],
 				disable_break: true,
 				maxStringLength: NodeDebugSession.MAX_STRING_LENGTH
@@ -1920,8 +1956,9 @@ export class NodeDebugSession extends DebugSession {
 
 			return this._node.command2('evaluate', args).then(response => {
 				this._cacheRefs(response);
+
 				return this._createVariable(name, response.body);
-			}).catch(() => {
+			}).catch(err => {
 				return new Variable(name, 'undefined');
 			});
 
