@@ -165,7 +165,7 @@ export class NodeDebugSession extends DebugSession {
 
 
 	private _adapterID: string;
-	public _variableHandles = new Handles<Expandable>();
+	private _variableHandles = new Handles<Expandable>();
 	private _frameHandles = new Handles<any>();
 	private _sourceHandles = new Handles<SourceSource>();
 	private _refCache = new Map<number, any>();
