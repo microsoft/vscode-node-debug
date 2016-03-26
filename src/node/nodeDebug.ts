@@ -183,8 +183,8 @@ export class NodeDebugSession extends DebugSession {
 	private _pollForNodeProcess = false;
 	private _nodeProcessId: number = -1; 		// pid of the node runtime
 	private _node: NodeV8Protocol;
-	private _exception;
-	private _lastStoppedEvent;
+	private _exception: any;
+	private _lastStoppedEvent: DebugProtocol.StoppedEvent;
 	private _nodeExtensionsAvailable = false;
 	private _attachMode: boolean = false;
 	private _sourceMaps: ISourceMaps;
@@ -2318,12 +2318,11 @@ export class NodeDebugSession extends DebugSession {
 	}
 
 	private _cache(handle: number, o: any): void {
-		this._refCache[handle] = o;
+		this._refCache.set(handle, o);
 	}
 
 	private _getValueFromCache(container: any): any {
-		const handle = container.ref;
-		const value = this._refCache[handle];
+		const value = this._refCache.get(container.ref);
 		if (value) {
 			return value;
 		}
@@ -2344,7 +2343,7 @@ export class NodeDebugSession extends DebugSession {
 
 		if (needLookup.length > 0) {
 			return this._resolveToCache(needLookup).then(() => {
-				return mirrors.map(m => this._refCache[m.ref || m.handle]);
+				return mirrors.map(m => this._refCache.get(m.ref || m.handle));
 			});
 		} else {
 			return Promise.resolve(mirrors);
@@ -2356,7 +2355,7 @@ export class NodeDebugSession extends DebugSession {
 		const lookup = new Array<number>();
 
 		for (let handle of handles) {
-			const val = this._refCache[handle];
+			const val = this._refCache.get(handle);
 			if (!val) {
 				if (handle >= 0) {
 					lookup.push(handle);
@@ -2377,7 +2376,7 @@ export class NodeDebugSession extends DebugSession {
 					this._cache(handle, obj);
 				}
 
-				return handles.map(handle => this._refCache[handle]);
+				return handles.map(handle => this._refCache.get(handle));
 
 			}).catch(resp => {
 
@@ -2391,16 +2390,16 @@ export class NodeDebugSession extends DebugSession {
 				// store error value in cache
 				for (let i = 0; i < handles.length; i++) {
 					const handle = handles[i];
-					const r = this._refCache[handle];
+					const r = this._refCache.get(handle);
 					if (!r) {
 						this._cache(handle, val);
 					}
 				}
 
-				return handles.map(handle => this._refCache[handle]);
+				return handles.map(handle => this._refCache.get(handle));
 			});
 		} else {
-			return Promise.resolve(handles.map(handle => this._refCache[handle]));
+			return Promise.resolve(handles.map(handle => this._refCache.get(handle)));
 		}
 	}
 
