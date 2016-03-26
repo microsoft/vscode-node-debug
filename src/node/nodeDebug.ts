@@ -80,7 +80,7 @@ class SourceSource {
 /**
  * Arguments shared between Launch and Attach requests.
  */
-export interface CommonArguments {
+interface CommonArguments {
 	/** comma separated list of trace selectors. Supported:
 	 * 'all': all
 	 * 'la': launch/attach
@@ -99,7 +99,7 @@ export interface CommonArguments {
 /**
  * This interface should always match the schema found in the node-debug extension manifest.
  */
-export interface LaunchRequestArguments extends CommonArguments {
+interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArguments, CommonArguments {
 	/** An absolute path to the program to debug. */
 	program: string;
 	/** Optional arguments passed to the debuggee. */
@@ -114,14 +114,12 @@ export interface LaunchRequestArguments extends CommonArguments {
 	env?: { [key: string]: string; };
 	/** If true launch the target in an external console. */
 	externalConsole?: boolean;
-	/** If true just launch but do not debug. */
-	noDebug?: boolean;
 }
 
 /**
  * This interface should always match the schema found in the node-debug extension manifest.
  */
-export interface AttachRequestArguments extends CommonArguments {
+interface AttachRequestArguments extends DebugProtocol.AttachRequestArguments, CommonArguments {
 	/** The debug port to attach to. */
 	port: number;
 	/** The TCP/IP address of the port (remote addresses only supported for node >= 5.0). */
