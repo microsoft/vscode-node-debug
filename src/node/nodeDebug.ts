@@ -1332,13 +1332,8 @@ export class NodeDebugSession extends DebugSession {
 
 			this._cacheRefs(backtraceResponse);
 
-			const responseFrames = backtraceResponse.body.frames;
-
-			const frames = new Array<Promise<StackFrame>>();
-			for (let i = 0; i < responseFrames.length; i++) {
-				frames.push(this._createStackFrame(responseFrames[i]));
-			}
-			return Promise.all(frames);
+			const frames = backtraceResponse.body.frames;
+			return Promise.all<StackFrame>(frames.map(frame => this._createStackFrame(frame)));
 
 		}).then(stackframes => {
 
@@ -1353,7 +1348,6 @@ export class NodeDebugSession extends DebugSession {
 				stackFrames: []
 			};
 			this.sendResponse(response);
-
 		});
 	}
 
