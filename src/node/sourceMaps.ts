@@ -41,7 +41,7 @@ export interface ISourceMaps {
 	 * Map location in generated code to location in source language.
 	 * line and column are 0 based.
 	 */
-	MapToSource(path: string, line: number, column: number, bias?: Bias): MappingResult;
+	MapToSource(path: string, content: string, line: number, column: number, bias?: Bias): MappingResult;
 }
 
 
@@ -85,8 +85,8 @@ export class SourceMaps implements ISourceMaps {
 		return null;
 	}
 
-	public MapToSource(pathToGenerated: string, line: number, column: number, bias?: Bias): MappingResult {
-		const map = this._findGeneratedToSourceMapping(pathToGenerated);
+	public MapToSource(pathToGenerated: string, content: string, line: number, column: number, bias?: Bias): MappingResult {
+		const map = this._findGeneratedToSourceMapping(pathToGenerated, content);
 		if (map) {
 			line += 1;	// source map impl is 1 based
 			const mr = map.originalPositionFor(line, column, bias);
@@ -209,7 +209,7 @@ export class SourceMaps implements ISourceMaps {
 	 * This is simple if the generated file has the 'sourceMappingURL' at the end.
 	 * If not, we are using some heuristics...
 	 */
-	private _findGeneratedToSourceMapping(pathToGenerated: string): SourceMap {
+	private _findGeneratedToSourceMapping(pathToGenerated: string, content?: string): SourceMap {
 
 		if (!pathToGenerated) {
 			return null;
@@ -221,7 +221,7 @@ export class SourceMaps implements ISourceMaps {
 
 		// try to find a source map URL in the generated file
 		let map_path: string = null;
-		const uri = this._findSourceMapUrlInFile(pathToGenerated);
+		const uri = this._findSourceMapUrlInFile(pathToGenerated, content);
 		if (uri) {
 			// if uri is data url source map is inlined in generated file
 			if (uri.indexOf('data:application/json') >= 0) {
@@ -269,10 +269,10 @@ export class SourceMaps implements ISourceMaps {
 	 * try to find the 'sourceMappingURL' in the file with the given path.
 	 * Returns null in case of errors.
 	 */
-	private _findSourceMapUrlInFile(pathToGenerated: string): string {
+	private _findSourceMapUrlInFile(pathToGenerated: string, content: string): string {
 
 		try {
-			const contents = FS.readFileSync(pathToGenerated).toString();
+			const contents = content || FS.readFileSync(pathToGenerated).toString();
 			const lines = contents.split('\n');
 			for (let line of lines) {
 				const matches = SourceMaps.SOURCE_MAPPING_MATCHER.exec(line);

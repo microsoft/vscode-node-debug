@@ -1096,7 +1096,7 @@ export class NodeDebugSession extends DebugSession {
 
 			if (sourcemap) {
 				// this source uses a sourcemap so we have to map js locations back to source locations
-				const mapresult = this._sourceMaps.MapToSource(path, actualLine, actualColumn);
+				const mapresult = this._sourceMaps.MapToSource(path, null, actualLine, actualColumn);
 				if (mapresult) {
 					this.log('sm', `_setBreakpoints: bp verification gen: '${path}' ${actualLine}:${actualColumn} -> src: '${mapresult.path}' ${mapresult.line}:${mapresult.column}`);
 					actualLine = mapresult.line;
@@ -1359,13 +1359,17 @@ export class NodeDebugSession extends DebugSession {
 			let line = frame.line;
 			let column = this._adjustColumn(line, frame.column);
 
-			let src: Source = null;
 			let origin = localize('content.streamed.from.node', "content streamed from Node.js");
-			let adapterData: any;
 
 			const script_val = this._getValueFromCache(frame.script);
 			if (script_val) {
 				let name = script_val.name;
+
+				// system.js generates script names that are file urls
+				if (name.indexOf('file://') === 0) {
+					name = name.replace('file://', '');
+				}
+
 				if (name && PathUtils.isAbsolutePath(name)) {
 
 					let remotePath = name;		// with remote debugging path might come from a different OS
@@ -1383,82 +1387,110 @@ export class NodeDebugSession extends DebugSession {
 					// source mapping
 					if (this._sourceMaps) {
 
-						// try to map
-						let mapresult = this._sourceMaps.MapToSource(localPath, line, column, Bias.LEAST_UPPER_BOUND);
-						if (!mapresult) {	// try using the other bias option
-							mapresult = this._sourceMaps.MapToSource(localPath, line, column, Bias.GREATEST_LOWER_BOUND);
+						if (!FS.existsSync(localPath)) {
+							const script_val = this._getValueFromCache(frame.script);
+							const script_id = script_val.id;
+
+							return this._node.command2('scripts', { types: 1+2+4, includeSource: true, ids: [ script_id ] }).then(nodeResponse => {
+								const content = nodeResponse.body[0].source;
+								return this._sourceMapSource(frame, content, name, localPath, remotePath, origin, line, column);
+							});
 						}
-						if (mapresult) {
-							this.log('sm', `_getStackFrame: gen: '${localPath}' ${line}:${column} -> src: '${mapresult.path}' ${mapresult.line}:${mapresult.column}`);
-							// verify that a file exists at path
-							if (FS.existsSync(mapresult.path)) {
-								// use this mapping
-								localPath = mapresult.path;
-								name = Path.basename(localPath);
-								line = mapresult.line;
-								column = mapresult.column;
-							} else {
-								// file doesn't exist at path
-								// if source map has inlined source use it
-								const content = (<any>mapresult).content;
-								if (content) {
-									name = Path.basename(mapresult.path);
-									const sourceHandle = this._sourceHandles.create(new SourceSource(0, content));
-									const adapterData = {
-										inlinePath: mapresult.path
-									};
-									src = new Source(name, null, sourceHandle, localize('content.from.source.map', "inlined content from source map"), adapterData);
-									line = mapresult.line;
-									column = mapresult.column;
-									this.log('sm', `_getStackFrame: source '${mapresult.path}' doesn't exist -> use inlined source`);
-								} else {
-									this.log('sm', `_getStackFrame: source doesn't exist and no inlined source -> use generated file`);
-								}
-							}
-						} else {
-							this.log('sm', `_getStackFrame: gen: '${localPath}' ${line}:${column} -> couldn't be mapped to source -> use generated file`);
-						}
+
+						return this._sourceMapSource(frame, null, name, localPath, remotePath, origin, line, column);
 					}
 
-					if (src === null) {
-						if (FS.existsSync(localPath)) {
-							src = new Source(name, this.convertDebuggerPathToClient(localPath));
-						} else {
-							// source doesn't exist locally
-							adapterData = {
-								remotePath: remotePath	// assume it is a remote path
-							};
-						}
-					}
-				} else {
-					origin = localize('core.module', "core module");
+					return this._createStackFrame3(frame, name, localPath, remotePath, origin, line, column);
 				}
 
-				if (src === null) {
-					// fall back: source not found locally -> prepare to stream source content from node backend.
-					const script_id:number = script_val.id;
-					if (script_id >= 0) {
-						const sourceHandle = this._sourceHandles.create(new SourceSource(script_id));
-						src = new Source(name, null, sourceHandle, origin, adapterData);
-					}
-				}
+				// fall back: source not found locally -> prepare to stream source content from node backend.
+				const script_id:number = script_val.id;
+				const sourceHandle = this._sourceHandles.create(new SourceSource(script_id));
+				origin = localize('core.module', "core module");
+				const src = new Source(name, null, sourceHandle, origin);
+				return this._createStackFrame2(frame, src, line, column);
 			}
 
-			let func_name: string;
-			const func_val = this._getValueFromCache(frame.func);
-			if (func_val) {
-				func_name = func_val.inferredName;
-				if (!func_name || func_name.length === 0) {
-					func_name = func_val.name;
-				}
-			}
-			if (!func_name || func_name.length === 0) {
-				func_name = localize('anonymous.function', "(anonymous function)");
-			}
-
-			const frameReference = this._frameHandles.create(frame);
-			return new StackFrame(frameReference, func_name, src, this.convertDebuggerLineToClient(line), this.convertDebuggerColumnToClient(column));
+			return this._createStackFrame2(frame, null, line, column);
 		});
+	}
+
+	private _sourceMapSource(frame: any, content: string, name: string, localPath: string, remotePath: string, origin: string, line: number, column: number) : StackFrame {
+
+		// try to map
+		let mapresult = this._sourceMaps.MapToSource(localPath, content, line, column, Bias.LEAST_UPPER_BOUND);
+		if (!mapresult) {	// try using the other bias option
+			mapresult = this._sourceMaps.MapToSource(localPath, content, line, column, Bias.GREATEST_LOWER_BOUND);
+		}
+		if (mapresult) {
+			this.log('sm', `_createStackFrame: gen: '${localPath}' ${line}:${column} -> src: '${mapresult.path}' ${mapresult.line}:${mapresult.column}`);
+
+			// verify that a file exists at path
+			if (FS.existsSync(mapresult.path)) {
+				// use this mapping
+				localPath = mapresult.path;
+				name = Path.basename(localPath);
+				line = mapresult.line;
+				column = mapresult.column;
+				const src = new Source(name, this.convertDebuggerPathToClient(localPath));
+				return this._createStackFrame2(frame, src, line, column);
+
+			} else {
+				// file doesn't exist at path
+				// if source map has inlined source use it
+				const content = (<any>mapresult).content;
+				if (content) {
+					this.log('sm', `_createStackFrame: source '${mapresult.path}' doesn't exist -> use inlined source`);
+					name = Path.basename(mapresult.path);
+					const sourceHandle = this._sourceHandles.create(new SourceSource(0, content));
+					line = mapresult.line;
+					column = mapresult.column;
+					origin = localize('content.from.source.map', "inlined content from source map");
+					const src = new Source(name, null, sourceHandle, origin, { inlinePath: mapresult.path });
+					return this._createStackFrame2(frame, src, line, column);
+
+				} else {
+					this.log('sm', `_createStackFrame: source doesn't exist and no inlined source -> use generated file`);
+					return this._createStackFrame3(frame, name, localPath, remotePath, origin, line, column);
+				}
+			}
+		} else {
+			this.log('sm', `_createStackFrame: gen: '${localPath}' ${line}:${column} -> couldn't be mapped to source -> use generated file`);
+			return this._createStackFrame3(frame, name, localPath, remotePath, origin, line, column);
+		}
+	}
+
+	private _createStackFrame3(frame: any, name: string, localPath: string, remotePath: string, origin: string, line: number, column: number) : StackFrame {
+		let src: Source;
+		if (FS.existsSync(localPath)) {
+			src = new Source(name, this.convertDebuggerPathToClient(localPath));
+		} else {
+			// source doesn't exist locally
+			// fall back: source not found locally -> prepare to stream source content from node backend.
+			const script_val = this._getValueFromCache(frame.script);
+			const script_id = script_val.id;
+			const sourceHandle = this._sourceHandles.create(new SourceSource(script_id));
+			src = new Source(name, null, sourceHandle, origin, { remotePath: remotePath	});	// assume it is a remote path
+		}
+		return this._createStackFrame2(frame, src, line, column);
+	}
+
+	private _createStackFrame2(frame: any, src: Source, line: number, column: number) : StackFrame {
+
+		let func_name: string;
+		const func_val = this._getValueFromCache(frame.func);
+		if (func_val) {
+			func_name = func_val.inferredName;
+			if (!func_name || func_name.length === 0) {
+				func_name = func_val.name;
+			}
+		}
+		if (!func_name || func_name.length === 0) {
+			func_name = localize('anonymous.function', "(anonymous function)");
+		}
+
+		const frameReference = this._frameHandles.create(frame);
+		return new StackFrame(frameReference, func_name, src, this.convertDebuggerLineToClient(line), this.convertDebuggerColumnToClient(column));
 	}
 
 	//--- scopes request ------------------------------------------------------------------------------------------------------
@@ -2402,7 +2434,7 @@ export class NodeDebugSession extends DebugSession {
 			let path = body.script.name;
 			if (path && PathUtils.isAbsolutePath(path)) {
 				path = this._remoteToLocal(path);
-				this._sourceMaps.MapToSource(path, 0, 0);
+				this._sourceMaps.MapToSource(path, null, 0, 0);
 			}
 		}
 
