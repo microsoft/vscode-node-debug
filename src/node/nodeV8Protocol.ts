@@ -230,9 +230,9 @@ export class NodeV8Protocol extends EE.EventEmitter {
 						const pair = lines[i].split(/: +/);
 						switch (pair[0]) {
 							case 'Embedding-Host':
-								const match = pair[1].match(/node\sv(\d+)\.\d+\.\d+/);
-								if (match && match.length === 2) {
-									this.embeddedHostVersion = parseInt(match[1]);
+								const match = pair[1].match(/node\sv(\d+)\.(\d+)\.(\d+)/);
+								if (match && match.length === 4) {
+									this.embeddedHostVersion = (parseInt(match[1])*100 + parseInt(match[2]))*100 + parseInt(match[3]);
 								} else if (pair[1] === 'Electron') {
 									this.embeddedHostVersion = 4;
 								}

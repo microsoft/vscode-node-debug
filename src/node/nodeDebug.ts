@@ -680,9 +680,10 @@ export class NodeDebugSession extends DebugSession {
 					this._pollForNodeTermination();
 				}
 
-				const runtimeSupportsExtension = this._node.embeddedHostVersion === 0; // node version 0.x.x (io.js has version >= 1)
+				const v = this._node.embeddedHostVersion;
+				const runtimeSupportsExtension = v < 10000 || (v >= 40302 && v < 50000);
 				if (this._tryToExtendNode && runtimeSupportsExtension) {
-					this._extendDebugger((success: boolean) => {
+					this._injectDebuggerExtensions((success: boolean) => {
 						this.sendResponse(response);
 						this._startInitialize(!resp.running);
 						return;
@@ -726,7 +727,7 @@ export class NodeDebugSession extends DebugSession {
 	/*
 	 * Inject code into node.js to fix timeout issues with large data structures.
 	 */
-	private _extendDebugger(done: (success: boolean) => void) : void {
+	private _injectDebuggerExtensions(done: (success: boolean) => void) : void {
 		try {
 			const contents = FS.readFileSync(Path.join(__dirname, NodeDebugSession.DEBUG_EXTENSION), 'utf8');
 
@@ -734,11 +735,11 @@ export class NodeDebugSession extends DebugSession {
 
 				this._node.command('evaluate', { expression: contents }, (resp: NodeV8Response) => {
 					if (resp.success) {
-			this.log('la', '_extendDebugger: node code inject: OK');
-			this._nodeExtensionsAvailable = true;
+						this.log('la', '_extendDebugger: node code inject: OK');
+						this._nodeExtensionsAvailable = true;
 						callback(false);
 					} else {
-			this.log('la', '_extendDebugger: node code inject: failed, try again...');
+						this.log('la', '_extendDebugger: node code inject: failed, try again...');
 						callback(true);
 					}
 				});
