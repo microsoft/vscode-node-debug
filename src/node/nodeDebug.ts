@@ -732,7 +732,7 @@ export class NodeDebugSession extends DebugSession {
 	}
 
 	/*
-	 * Inject code into node.js to fix timeout issues with large data structures.
+	 * Inject code into node.js to slowness issues when inspecting large data structures.
 	 */
 	private _injectDebuggerExtensions(done: (success: boolean) => void) : void {
 		try {
@@ -1619,85 +1619,79 @@ export class NodeDebugSession extends DebugSession {
 	 */
 	public _createProperties(obj: any, mode: string, start: number, end: number) : Promise<Variable[]> {
 
-		const type = <string> obj.type;
-		if (type === 'object' || type === 'function' || type === 'error' || type === 'regexp' || type === 'promise' ||type === 'map' || type === 'set') {
+		if (!obj.properties) {       // if properties are missing, this is an indication that our injected code is doing its duty
 
-			const properties = obj.properties;
-
-			if (!properties) {       // if properties are missing, this is an indication that our injected code is doing its duty
-
-				if (this._nodeInjectionAvailable) {
-					switch (mode) {
-						case 'range':
-						case 'all':
-							// try to use "vscode_size" from injected code
-							const handle = obj.handle;
-							if (typeof obj.vscode_size === 'number' && typeof handle === 'number' && handle !== 0) {
-								if (obj.vscode_size >= 0) {
-									this.log('va', `_createProperties: vscode_range ${start} ${end}`);
-									return this._node.command2('vscode_range', { handle: handle, from: start, to: end }).then(resp => {
-										const items = resp.body.result;
-										return Promise.all<Variable>(items.map((item, ix) => {
-											return this._createVariable(`[${start+ix}]`, item);
-										}));
-									});
-								}
+			if (this._nodeInjectionAvailable) {
+				switch (mode) {
+					case 'range':
+					case 'all':
+						// try to use "vscode_size" from injected code
+						const handle = obj.handle;
+						if (typeof obj.vscode_size === 'number' && typeof handle === 'number' && handle !== 0) {
+							if (obj.vscode_size >= 0) {
+								this.log('va', `_createProperties: vscode_range ${start} ${end}`);
+								return this._node.command2('vscode_range', { handle: handle, from: start, to: end }).then(resp => {
+									const items = resp.body.result;
+									return Promise.all<Variable>(items.map((item, ix) => {
+										return this._createVariable(`[${start+ix}]`, item);
+									}));
+								});
 							}
-							break;
+						}
+						break;
 
-						case 'named':
-							// can't add named properties because we don't have access to them yet.
-							break;
-					}
-				}
-
-				// if we end up here, somthing went wrong...
-				return Promise.resolve([]);
-			}
-
-			const selectedProperties = new Array<any>();
-
-			// first pass: determine properties
-			let found_proto = false;
-			for (let property of properties) {
-
-				if ('name' in property) {	// bug #19654: only extract properties with a name
-
-					const name = property.name;
-
-					if (name === NodeDebugSession.PROTO) {
-						found_proto = true;
-					}
-
-					switch (mode) {
-						case 'all':
-							selectedProperties.push(property);
-							break;
-						case 'named':
-							if (typeof name === 'string') {
-								selectedProperties.push(property);
-							}
-							break;
-						case 'range':
-							if (typeof name === 'number' && name >= start && name <= end) {
-								selectedProperties.push(property);
-							}
-							break;
-					}
+					case 'named':
+						// can't add named properties because we don't have access to them yet.
+						break;
 				}
 			}
 
-			// do we have to add the protoObject to the list of properties?
-			if (!found_proto && (mode === 'all' || mode === 'named')) {
-				const h = <number> obj.handle;
-				if (h > 0) {    // only add if not an internal debugger object
-					obj.protoObject.name = NodeDebugSession.PROTO;
-					selectedProperties.push(obj.protoObject);
-				}
-			}
-
-			return this._createVariables(selectedProperties);
+			// if we end up here, somthing went wrong...
+			return Promise.resolve([]);
 		}
+
+		const selectedProperties = new Array<any>();
+
+		// first pass: determine properties
+		let found_proto = false;
+		for (let property of obj.properties) {
+
+			if ('name' in property) {	// bug #19654: only extract properties with a name
+
+				const name = property.name;
+
+				if (name === NodeDebugSession.PROTO) {
+					found_proto = true;
+				}
+
+				switch (mode) {
+					case 'all':
+						selectedProperties.push(property);
+						break;
+					case 'named':
+						if (typeof name === 'string') {
+							selectedProperties.push(property);
+						}
+						break;
+					case 'range':
+						if (typeof name === 'number' && name >= start && name <= end) {
+							selectedProperties.push(property);
+						}
+						break;
+				}
+			}
+		}
+
+		// do we have to add the protoObject to the list of properties?
+		if (!found_proto && (mode === 'all' || mode === 'named')) {
+			const h = <number> obj.handle;
+			if (h > 0) {    // only add if not an internal debugger object
+				obj.protoObject.name = NodeDebugSession.PROTO;
+				selectedProperties.push(obj.protoObject);
+			}
+		}
+
+		return this._createVariables(selectedProperties);
 	}
 
 	//--- long array support
@@ -2028,6 +2022,7 @@ export class NodeDebugSession extends DebugSession {
 			case 'function':
 			case 'regexp':
 			case 'promise':
+			case 'generator':
 			case 'error':
 				// indirect value
 
@@ -2049,6 +2044,7 @@ export class NodeDebugSession extends DebugSession {
 					case 'RegExp':
 						return Promise.resolve(new Variable(name, text, this._variableHandles.create(new PropertyExpander(val))));
 
+					case 'Generator':
 					case 'Object':
 						return this._resolveValues( [ val.constructorFunction ] ).then(resolved => {
 							if (resolved[0]) {
@@ -2058,7 +2054,7 @@ export class NodeDebugSession extends DebugSession {
 								}
 							}
 
-							if (val.promiseValue && val.status) {
+							if (val.status) {
 								value += ` { ${val.status} }`;
 							}
 
