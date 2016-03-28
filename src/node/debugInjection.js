@@ -35,7 +35,6 @@
 			var a = mirror.indexedPropertiesFromRange(from_index, to_index);
 			for (var i = 0; i < a.length; i++) {
 				result[i] = a[i].value();
-
 			}
 		} else if (mirror.isObject()) {
 			result = new Array(to_index - from_index + 1);
@@ -84,7 +83,7 @@
 				handle: mirror.handle(),
 				type: "object",
 				className: className,
-				size: size,
+				vscode_size: size,
 				value: className
 			};
 		}

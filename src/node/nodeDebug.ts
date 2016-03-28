@@ -86,6 +86,7 @@ interface CommonArguments {
 	 * 'la': launch/attach
 	 * 'bp': breakpoints
 	 * 'sm': source maps
+	 * 'va': variable access
 	 * */
 	trace?: string;
 	/** Automatically stop target after launch. If not specified, target does not stop. */
@@ -150,43 +151,49 @@ export class NodeDebugSession extends DebugSession {
 	private static DUMMY_THREAD_NAME = 'Node';
 	private static FIRST_LINE_OFFSET = 62;
 	private static PROTO = '__proto__';
-	private static DEBUG_EXTENSION = 'debugExtension.js';
+	private static DEBUG_INJECTION = 'debugInjection.js';
 
 	private static NODE_SHEBANG_MATCHER = new RegExp('#! */usr/bin/env +node');
 	private static LONG_STRING_MATCHER = /\.\.\. \(length: [0-9]+\)$/;
 
-
+	// tracing
 	private _trace: string[];
 	private _traceAll = false;
 
 	// options
-	private _tryToExtendNode = true;
+	private _tryToInjectExtension = true;
 	private _largeArrays = false;
 
-
+	// session state
 	private _adapterID: string;
+	private _node: NodeV8Protocol;
+	private _nodeProcessId: number = -1; 		// pid of the node runtime
+	private _functionBreakpoints = new Array<number>();	// node function breakpoint ids
+
+	// session configurations
+	private _noDebug = false;
+	private _attachMode = false;
+	private _localRoot: string;
+	private _remoteRoot: string;
+	private _restartMode = false;
+	private _sourceMaps: ISourceMaps;
+	private _externalConsole: boolean;
+	private _stopOnEntry: boolean;
+
+	// state valid between stop events
 	private _variableHandles = new Handles<Expandable>();
 	private _frameHandles = new Handles<any>();
 	private _sourceHandles = new Handles<SourceSource>();
 	private _refCache = new Map<number, any>();
-	private _functionBreakpoints = new Array<number>();	// node function breakpoint ids
-	private _noDebug = false;
-	private _localRoot: string;
-	private _remoteRoot: string;
-	private _externalConsole: boolean;
+
+	// internal state
 	private _isTerminated: boolean;
 	private _inShutdown: boolean;
-	private _restartMode = false;
 	private _terminalProcess: CP.ChildProcess;		// the terminal process or undefined
 	private _pollForNodeProcess = false;
-	private _nodeProcessId: number = -1; 		// pid of the node runtime
-	private _node: NodeV8Protocol;
 	private _exception: any;
 	private _lastStoppedEvent: DebugProtocol.StoppedEvent;
-	private _nodeExtensionsAvailable = false;
-	private _attachMode: boolean = false;
-	private _sourceMaps: ISourceMaps;
-	private _stopOnEntry: boolean;
+	private _nodeInjectionAvailable = false;
 	private _needContinue: boolean;
 	private _needBreakpointEvent: boolean;
 	private _gotEntryEvent: boolean;
@@ -680,9 +687,9 @@ export class NodeDebugSession extends DebugSession {
 					this._pollForNodeTermination();
 				}
 
-				const v = this._node.embeddedHostVersion;
-				const runtimeSupportsExtension = v < 10000 || (v >= 40302 && v < 50000);
-				if (this._tryToExtendNode && runtimeSupportsExtension) {
+				const v = this._node.embeddedHostVersion;	// x.y.z version represented as (x*100+y)*100+z
+				const runtimeSupportsExtension = (v < 10000) || (v >= 40301 && v < 50000);
+				if (this._tryToInjectExtension && runtimeSupportsExtension) {
 					this._injectDebuggerExtensions((success: boolean) => {
 						this.sendResponse(response);
 						this._startInitialize(!resp.running);
@@ -729,19 +736,22 @@ export class NodeDebugSession extends DebugSession {
 	 */
 	private _injectDebuggerExtensions(done: (success: boolean) => void) : void {
 		try {
-			const contents = FS.readFileSync(Path.join(__dirname, NodeDebugSession.DEBUG_EXTENSION), 'utf8');
+			const contents = FS.readFileSync(Path.join(__dirname, NodeDebugSession.DEBUG_INJECTION), 'utf8');
+
+			const args = {
+				expression: contents,
+				disable_break: true
+			};
 
 			this._repeater(4, done, (callback: (again: boolean) => void) => {
 
-				this._node.command('evaluate', { expression: contents }, (resp: NodeV8Response) => {
-					if (resp.success) {
-						this.log('la', '_extendDebugger: node code inject: OK');
-						this._nodeExtensionsAvailable = true;
-						callback(false);
-					} else {
-						this.log('la', '_extendDebugger: node code inject: failed, try again...');
-						callback(true);
-					}
+				this._node.command2('evaluate', args).then(resp => {
+					this.log('la', '_extendDebugger: node code inject: OK');
+					this._nodeInjectionAvailable = true;
+					callback(false);
+				}).catch(resp => {
+					this.log('la', '_extendDebugger: node code inject: failed, try again...');
+					callback(true);
 				});
 
 			});
@@ -1613,30 +1623,36 @@ export class NodeDebugSession extends DebugSession {
 		if (type === 'object' || type === 'function' || type === 'error' || type === 'regexp' || type === 'promise' ||type === 'map' || type === 'set') {
 
 			const properties = obj.properties;
-			if (!properties) {       // if properties are missing, try to use size from vscode node extension
 
-				switch (mode) {
-					case 'range':
-					case 'all':
-						const size = obj.size;
-						if (size >= 0) {
+			if (!properties) {       // if properties are missing, this is an indication that our injected code is doing its duty
+
+				if (this._nodeInjectionAvailable) {
+					switch (mode) {
+						case 'range':
+						case 'all':
+							// try to use "vscode_size" from injected code
 							const handle = obj.handle;
-							if (typeof handle === 'number' && handle !== 0) {
-								return this._node.command2('vscode_range', { handle: handle, from: start, to: end }).then(resp => {
-									const items = resp.body.result;
-									return Promise.all<Variable>(items.map((item, ix) => {
-										return this._createVariable(`[${start+ix}]`, item);
-									}));
-								});
+							if (typeof obj.vscode_size === 'number' && typeof handle === 'number' && handle !== 0) {
+								if (obj.vscode_size >= 0) {
+									this.log('va', `_createProperties: vscode_range ${start} ${end}`);
+									return this._node.command2('vscode_range', { handle: handle, from: start, to: end }).then(resp => {
+										const items = resp.body.result;
+										return Promise.all<Variable>(items.map((item, ix) => {
+											return this._createVariable(`[${start+ix}]`, item);
+										}));
+									});
+								}
 							}
-						}
-						break;
+							break;
 
-					case 'named':
-						// can't add named properties because we don't have access to them yet.
-						break;
+						case 'named':
+							// can't add named properties because we don't have access to them yet.
+							break;
+					}
 				}
-				return Promise.resolve([]);	// no Variables
+
+				// if we end up here, somthing went wrong...
+				return Promise.resolve([]);
 			}
 
 			const selectedProperties = new Array<any>();
@@ -1697,6 +1713,7 @@ export class NodeDebugSession extends DebugSession {
 			]
 		}
 
+		this.log('va', `_createArrayVariable: array.length`);
 		return this._node.command2('evaluate', args).then((response: NodeV8Response) => {
 			this._cacheRefs(response);
 
@@ -1741,6 +1758,7 @@ export class NodeDebugSession extends DebugSession {
 			]
 		}
 
+		this.log('va', `_createLargeArrayElements: array.slice`);
 		return this._node.command2('evaluate', args).then(response => {
 
 			this._cacheRefs(response);
@@ -1772,6 +1790,7 @@ export class NodeDebugSession extends DebugSession {
 			]
 		}
 
+		this.log('va', `_createSetVariable: set.size`);
 		return this._node.command2('evaluate', args).then((response: NodeV8Response) => {
 			this._cacheRefs(response);
 
@@ -1806,6 +1825,7 @@ export class NodeDebugSession extends DebugSession {
 			]
 		}
 
+		this.log('va', `_createSetElements: set.slice`);
 		return this._node.command2('evaluate', args).then(response => {
 
 			this._cacheRefs(response);
@@ -1837,6 +1857,7 @@ export class NodeDebugSession extends DebugSession {
 			]
 		}
 
+		this.log('va', `_createSetElements: map.size`);
 		return this._node.command2('evaluate', args).then((response: NodeV8Response) => {
 			this._cacheRefs(response);
 
@@ -1871,6 +1892,7 @@ export class NodeDebugSession extends DebugSession {
 			]
 		}
 
+		this.log('va', `_createMapElements: map.slice`);
 		return this._node.command2('evaluate', args, NodeDebugSession.LARGE_DATASTRUCTURE_TIMEOUT).then(response => {
 
 			this._cacheRefs(response);
@@ -1923,6 +1945,7 @@ export class NodeDebugSession extends DebugSession {
 				]
 			}
 
+			this.log('va', `_createStringVariable: get full string`);
 			return this._node.command2('evaluate', args).then((response: NodeV8Response) => {
 				if (response.success) {
 					this._cacheRefs(response);
@@ -1979,6 +2002,7 @@ export class NodeDebugSession extends DebugSession {
 				maxStringLength: NodeDebugSession.MAX_STRING_LENGTH
 			}
 
+			this.log('va', `_createVariable2: trigger getter`);
 			return this._node.command2('evaluate', args).then(response => {
 				this._cacheRefs(response);
 
@@ -2149,7 +2173,7 @@ export class NodeDebugSession extends DebugSession {
 			(<any>evalArgs).global = true;
 		}
 
-		this._node.command(this._nodeExtensionsAvailable ? 'vscode_evaluate' : 'evaluate', evalArgs, (resp: NodeV8Response) => {
+		this._node.command(this._nodeInjectionAvailable ? 'vscode_evaluate' : 'evaluate', evalArgs, (resp: NodeV8Response) => {
 			if (resp.success) {
 				this._createVariable('evaluate', resp.body).then((v: Variable) => {
 					if (v) {
@@ -2391,7 +2415,9 @@ export class NodeDebugSession extends DebugSession {
 		}
 
 		if (lookup.length > 0) {
-			return this._node.command2(this._nodeExtensionsAvailable ? 'vscode_lookup' : 'lookup', { handles: lookup }).then(resp => {
+			const cmd = this._nodeInjectionAvailable ? 'vscode_lookup' : 'lookup';
+			this.log('va', `_resolveToCache: ${cmd} ${lookup.length} handles`);
+			return this._node.command2(cmd, { handles: lookup }).then(resp => {
 
 				this._cacheRefs(resp);
 
