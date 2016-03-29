@@ -1523,7 +1523,6 @@ export class NodeDebugSession extends DebugSession {
 			const scopes : any[] = response.body.scopes;
 
 			return Promise.all(scopes.map(scope => {
-
 				const type: number = scope.type;
 				const extra = type === 1 ? frameThis : null;
 				const expensive = type === 0;	// global scope is expensive
@@ -1619,7 +1618,7 @@ export class NodeDebugSession extends DebugSession {
 	 */
 	public _createProperties(obj: any, mode: string, start: number, end: number) : Promise<Variable[]> {
 
-		if (!obj.properties) {       // if properties are missing, this is an indication that our injected code is doing its duty
+		if (!obj.properties) {       // if properties are missing, this is an indication that we are running injected code which doesn't return properties eagerly
 
 			if (this._nodeInjectionAvailable) {
 				switch (mode) {
@@ -1646,13 +1645,12 @@ export class NodeDebugSession extends DebugSession {
 				}
 			}
 
-			// if we end up here, somthing went wrong...
+			// if we end up here, something went wrong...
 			return Promise.resolve([]);
 		}
 
 		const selectedProperties = new Array<any>();
 
-		// first pass: determine properties
 		let found_proto = false;
 		for (let property of obj.properties) {
 
@@ -1691,7 +1689,154 @@ export class NodeDebugSession extends DebugSession {
 			}
 		}
 
-		return this._createVariables(selectedProperties);
+		return this._createPropertyVariables(obj, selectedProperties);
+	}
+
+	/**
+	 * Resolves the given properties and returns them as an array of Variables.
+	 * If the properties are indexed (opposed to named), a value 'start' is added to the index number.
+	 * 'noBrackets' controls whether the index is enclosed in brackets.
+	 * If a value is undefined it probes for a getter.
+	 */
+	private _createPropertyVariables(obj: any, properties: any[], start?: number, noBrackets?: boolean) : Promise<Variable[]> {
+
+		if (typeof start !== 'number') {
+			start = 0;
+		}
+
+		return this._resolveValues(properties).then(() => {
+			return Promise.all<Variable>(properties.map(property => {
+				const val = this._getValueFromCache(property);
+
+				// create 'name'
+				let name = property.name;
+				if (typeof name === 'number') {
+					name = noBrackets ? `${start+name}` : `[${start+name}]`;
+				}
+
+				// if value 'undefined' trigger a getter
+				if (val.type == 'undefined' && !val.value && obj) {
+
+					const args = {
+						expression: `obj.${name}`,	// trigger call to getter
+						additional_context: [
+							{ name: 'obj', handle: obj.handle }
+						],
+						disable_break: true,
+						maxStringLength: NodeDebugSession.MAX_STRING_LENGTH
+					}
+
+					this.log('va', `_createVariable2: trigger getter`);
+					return this._node.command2('evaluate', args).then(response => {
+						this._cacheRefs(response);
+
+						return this._createVariable(name, response.body);
+					}).catch(err => {
+						return new Variable(name, 'undefined');
+					});
+
+				} else {
+					return this._createVariable(name, val);
+				}
+			}));
+		});
+	}
+
+	/**
+	 * Create a Variable with the given name and value.
+	 * For structured values the variable object will have a corresponding expander.
+	 */
+	public _createVariable(name: string, val: any) : Promise<Variable> {
+
+		if (!val) {
+			return Promise.resolve(null);
+		}
+
+		switch (val.type) {
+
+			case 'object':
+			case 'function':
+			case 'regexp':
+			case 'promise':
+			case 'generator':
+			case 'error':
+				// indirect value
+
+				let value = <string> val.className;
+				let text = <string> val.text;
+
+				switch (value) {
+
+					case 'Array':
+					case 'Buffer':
+						return this._createArrayVariable(name, val, false);
+
+					case 'Int8Array': case 'Uint8Array': case 'Uint8ClampedArray':
+					case 'Int16Array': case 'Uint16Array':
+					case 'Int32Array': case 'Uint32Array':
+					case 'Float32Array': case 'Float64Array':
+						return this._createArrayVariable(name, val, true);
+
+					case 'RegExp':
+						return Promise.resolve(new Variable(name, text, this._variableHandles.create(new PropertyExpander(val))));
+
+					case 'Generator':
+					case 'Object':
+						return this._resolveValues( [ val.constructorFunction ] ).then(resolved => {
+							if (resolved[0]) {
+								const constructor_name = <string>resolved[0].name;
+								if (constructor_name) {
+									value = constructor_name;
+								}
+							}
+
+							if (val.status) {	// promises and generators have a status attribute
+								value += ` { ${val.status} }`;
+							}
+
+							return new Variable(name, value, this._variableHandles.create(new PropertyExpander(val)));
+						});
+
+					case 'Function':
+					case 'Error':
+					default:
+						if (text) {
+							if (text.indexOf('\n') >= 0) {
+								// replace body of function with '...'
+								const pos = text.indexOf('{');
+								if (pos > 0) {
+									text = text.substring(0, pos) + '{ … }';
+								}
+							}
+							value = text;
+						}
+						break;
+				}
+				return Promise.resolve(new Variable(name, value, this._variableHandles.create(new PropertyExpander(val))));
+
+			case 'string':
+				return this._createStringVariable(name, val);
+
+			case 'boolean':
+				return Promise.resolve(new Variable(name, val.value.toString().toLowerCase()));	// node returns these boolean values capitalized
+
+			case 'set':
+				return this._createSetVariable(name, val);
+
+			case 'map':
+				return this._createMapVariable(name, val);
+
+			case 'undefined':
+			case 'null':
+				return Promise.resolve(new Variable(name, val.type));
+
+			case 'number':
+				return Promise.resolve(new Variable(name, '' + val.value));
+
+			case 'frame':
+			default:
+				return Promise.resolve(new Variable(name, val.value ? val.value.toString() : 'undefined'));
+		}
 	}
 
 	//--- long array support
@@ -1767,7 +1912,7 @@ export class NodeDebugSession extends DebugSession {
 				}
 			}
 
-			return this._createVariables(selectedProperties);
+			return this._createPropertyVariables(null, selectedProperties);
 		});
 	}
 
@@ -1834,7 +1979,7 @@ export class NodeDebugSession extends DebugSession {
 				}
 			}
 
-			return this._createVariables(selectedProperties, start, true);
+			return this._createPropertyVariables(null, selectedProperties, start, true);
 		});
 	}
 
@@ -1878,6 +2023,7 @@ export class NodeDebugSession extends DebugSession {
 
 	private _createMapElements(map: any, start: number, end: number) : Promise<Variable[]> {
 
+		// for each slot of the map we create three slots in a helper array: label, key, value
 		const args = {
 			expression: `var r=[],i=0; map.forEach((v,k) => { if (i>=${start} && i<=${end}) { r.push(k+' → '+v); r.push(k); r.push(v);} i++; }); r`,
 			disable_break: true,
@@ -1959,148 +2105,6 @@ export class NodeDebugSession extends DebugSession {
 			s = s.replace('\n', '\\n').replace('\r', '\\r');
 		}
 		return new Variable(name, `"${s}"`);
-	}
-
-	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-	private _createVariables(mirrors: any[], start?: number, noBrackets?: boolean) : Promise<Variable[]> {
-
-		if (typeof start !== 'number') {
-			start = 0;
-		}
-
-		return this._resolveValues(mirrors).then(() => {
-			return Promise.all<Variable>(mirrors.map(property => {
-				const val = this._getValueFromCache(property);
-				let name = property.name;
-				if (typeof name === 'number') {
-					name = noBrackets ? `${start+name}` : `[${start+name}]`;
-				}
-				return this._createVariable2(name, null, val);
-			}));
-		});
-	}
-
-	private _createVariable2(name: string, obj: any, val: any) : Promise<Variable> {
-
-		if (val.type == 'undefined' && !val.value && obj) {
-
-			// getter support
-
-			const args = {
-				expression: `obj.${name}`,
-				additional_context: [
-					{ name: 'obj', handle: obj.handle }
-				],
-				disable_break: true,
-				maxStringLength: NodeDebugSession.MAX_STRING_LENGTH
-			}
-
-			this.log('va', `_createVariable2: trigger getter`);
-			return this._node.command2('evaluate', args).then(response => {
-				this._cacheRefs(response);
-
-				return this._createVariable(name, response.body);
-			}).catch(err => {
-				return new Variable(name, 'undefined');
-			});
-
-		} else {
-			return this._createVariable(name, val);
-		}
-	}
-
-	public _createVariable(name: string, val: any) : Promise<Variable> {
-
-		if (!val) {
-			return Promise.resolve(null);
-		}
-
-		switch (val.type) {
-
-			case 'object':
-			case 'function':
-			case 'regexp':
-			case 'promise':
-			case 'generator':
-			case 'error':
-				// indirect value
-
-				let value = <string> val.className;
-				let text = <string> val.text;
-
-				switch (value) {
-
-					case 'Array':
-					case 'Buffer':
-						return this._createArrayVariable(name, val, false);
-
-					case 'Int8Array': case 'Uint8Array': case 'Uint8ClampedArray':
-					case 'Int16Array': case 'Uint16Array':
-					case 'Int32Array': case 'Uint32Array':
-					case 'Float32Array': case 'Float64Array':
-						return this._createArrayVariable(name, val, true);
-
-					case 'RegExp':
-						return Promise.resolve(new Variable(name, text, this._variableHandles.create(new PropertyExpander(val))));
-
-					case 'Generator':
-					case 'Object':
-						return this._resolveValues( [ val.constructorFunction ] ).then(resolved => {
-							if (resolved[0]) {
-								const constructor_name = <string>resolved[0].name;
-								if (constructor_name) {
-									value = constructor_name;
-								}
-							}
-
-							if (val.status) {
-								value += ` { ${val.status} }`;
-							}
-
-							return new Variable(name, value, this._variableHandles.create(new PropertyExpander(val)));
-						});
-
-					case 'Function':
-					case 'Error':
-					default:
-						if (text) {
-							if (text.indexOf('\n') >= 0) {
-								// replace body of function with '...'
-								const pos = text.indexOf('{');
-								if (pos > 0) {
-									text = text.substring(0, pos) + '{ … }';
-								}
-							}
-							value = text;
-						}
-						break;
-				}
-				return Promise.resolve(new Variable(name, value, this._variableHandles.create(new PropertyExpander(val))));
-
-			case 'string':
-				return this._createStringVariable(name, val);
-
-			case 'boolean':
-				return Promise.resolve(new Variable(name, val.value.toString().toLowerCase()));	// node returns these boolean values capitalized
-
-			case 'set':
-				return this._createSetVariable(name, val);
-
-			case 'map':
-				return this._createMapVariable(name, val);
-
-			case 'undefined':
-			case 'null':
-				return Promise.resolve(new Variable(name, val.type));
-
-			case 'number':
-				return Promise.resolve(new Variable(name, '' + val.value));
-
-			case 'frame':
-			default:
-				return Promise.resolve(new Variable(name, val.value ? val.value.toString() : 'undefined'));
-		}
 	}
 
 	//--- pause request -------------------------------------------------------------------------------------------------------
