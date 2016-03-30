@@ -1342,12 +1342,12 @@ export class NodeDebugSession extends DebugSession {
 			return;
 		}
 
-		this._node.command2('backtrace', { fromFrame: startFrame, toFrame: startFrame+maxLevels }, NodeDebugSession.STACKTRACE_TIMEOUT).then(backtraceResponse => {
+		this._node.command2('backtrace', { fromFrame: startFrame, toFrame: startFrame+maxLevels }, NodeDebugSession.STACKTRACE_TIMEOUT).then(response => {
 
-			this._cacheRefs(backtraceResponse);
+			this._cacheRefs(response);
 
-			const frames = backtraceResponse.body.frames;
-			totalFrames = backtraceResponse.body.totalFrames;
+			const frames = response.body.frames;
+			totalFrames = response.body.totalFrames;
 			return Promise.all<StackFrame>(frames.map(frame => this._createStackFrame(frame)));
 
 		}).then(stackframes => {
@@ -1367,6 +1367,9 @@ export class NodeDebugSession extends DebugSession {
 		});
 	}
 
+	/**
+	 * Create a single stack frame.
+	 */
 	private _createStackFrame(frame: any) : Promise<StackFrame> {
 
 		// resolve some refs
@@ -1409,14 +1412,14 @@ export class NodeDebugSession extends DebugSession {
 
 							return this._node.command2('scripts', { types: 1+2+4, includeSource: true, ids: [ script_id ] }).then(nodeResponse => {
 								const content = nodeResponse.body[0].source;
-								return this._sourceMapSource(frame, content, name, localPath, remotePath, origin, line, column);
+								return this._createStackFrameFromSourceMap(frame, content, name, localPath, remotePath, origin, line, column);
 							});
 						}
 
-						return this._sourceMapSource(frame, null, name, localPath, remotePath, origin, line, column);
+						return this._createStackFrameFromSourceMap(frame, null, name, localPath, remotePath, origin, line, column);
 					}
 
-					return this._createStackFrame3(frame, name, localPath, remotePath, origin, line, column);
+					return this._createStackFrameFromPath(frame, name, localPath, remotePath, origin, line, column);
 				}
 
 				// fall back: source not found locally -> prepare to stream source content from node backend.
@@ -1424,14 +1427,17 @@ export class NodeDebugSession extends DebugSession {
 				const sourceHandle = this._sourceHandles.create(new SourceSource(script_id));
 				origin = localize('core.module', "core module");
 				const src = new Source(name, null, sourceHandle, origin);
-				return this._createStackFrame2(frame, src, line, column);
+				return this._createStackFrameFromSource(frame, src, line, column);
 			}
 
-			return this._createStackFrame2(frame, null, line, column);
+			return this._createStackFrameFromSource(frame, null, line, column);
 		});
 	}
 
-	private _sourceMapSource(frame: any, content: string, name: string, localPath: string, remotePath: string, origin: string, line: number, column: number) : StackFrame {
+	/**
+	 * Creates a StackFrame when source maps are involved.
+	 */
+	private _createStackFrameFromSourceMap(frame: any, content: string, name: string, localPath: string, remotePath: string, origin: string, line: number, column: number) : StackFrame {
 
 		// try to map
 		let mapresult = this._sourceMaps.MapToSource(localPath, content, line, column, Bias.LEAST_UPPER_BOUND);
@@ -1449,7 +1455,7 @@ export class NodeDebugSession extends DebugSession {
 				line = mapresult.line;
 				column = mapresult.column;
 				const src = new Source(name, this.convertDebuggerPathToClient(localPath));
-				return this._createStackFrame2(frame, src, line, column);
+				return this._createStackFrameFromSource(frame, src, line, column);
 
 			} else {
 				// file doesn't exist at path
@@ -1463,35 +1469,42 @@ export class NodeDebugSession extends DebugSession {
 					column = mapresult.column;
 					origin = localize('content.from.source.map', "inlined content from source map");
 					const src = new Source(name, null, sourceHandle, origin, { inlinePath: mapresult.path });
-					return this._createStackFrame2(frame, src, line, column);
+					return this._createStackFrameFromSource(frame, src, line, column);
 
 				} else {
 					this.log('sm', `_createStackFrame: source doesn't exist and no inlined source -> use generated file`);
-					return this._createStackFrame3(frame, name, localPath, remotePath, origin, line, column);
+					return this._createStackFrameFromPath(frame, name, localPath, remotePath, origin, line, column);
 				}
 			}
 		} else {
 			this.log('sm', `_createStackFrame: gen: '${localPath}' ${line}:${column} -> couldn't be mapped to source -> use generated file`);
-			return this._createStackFrame3(frame, name, localPath, remotePath, origin, line, column);
+			return this._createStackFrameFromPath(frame, name, localPath, remotePath, origin, line, column);
 		}
 	}
 
-	private _createStackFrame3(frame: any, name: string, localPath: string, remotePath: string, origin: string, line: number, column: number) : StackFrame {
+	/**
+	 * Creates a StackFrame from the given local path.
+	 * The remote path is used if the local path doesn't exist.
+	 */
+	private _createStackFrameFromPath(frame: any, name: string, localPath: string, remotePath: string, origin: string, line: number, column: number) : StackFrame {
 		let src: Source;
 		if (FS.existsSync(localPath)) {
 			src = new Source(name, this.convertDebuggerPathToClient(localPath));
 		} else {
-			// source doesn't exist locally
-			// fall back: source not found locally -> prepare to stream source content from node backend.
+			// fall back: source not found locally -> prepare to stream source content from remote node.
 			const script_val = this._getValueFromCache(frame.script);
 			const script_id = script_val.id;
 			const sourceHandle = this._sourceHandles.create(new SourceSource(script_id));
 			src = new Source(name, null, sourceHandle, origin, { remotePath: remotePath	});	// assume it is a remote path
 		}
-		return this._createStackFrame2(frame, src, line, column);
+		return this._createStackFrameFromSource(frame, src, line, column);
 	}
 
-	private _createStackFrame2(frame: any, src: Source, line: number, column: number) : StackFrame {
+	/**
+	 * Creates a StackFrame with the given source location information.
+	 * The name of the frame is extracted from the frame.
+	 */
+	private _createStackFrameFromSource(frame: any, src: Source, line: number, column: number) : StackFrame {
 
 		let func_name: string;
 		const func_val = this._getValueFromCache(frame.func);
@@ -1731,7 +1744,7 @@ export class NodeDebugSession extends DebugSession {
 						maxStringLength: NodeDebugSession.MAX_STRING_LENGTH
 					}
 
-					this.log('va', `_createVariable2: trigger getter`);
+					this.log('va', `_createPropertyVariables: trigger getter`);
 					return this._node.command2('evaluate', args).then(response => {
 						this._cacheRefs(response);
 
