@@ -414,7 +414,7 @@ export class NodeDebugSession extends DebugSession {
 		} else {
 			// node cannot execute the program directly
 			if (!this._sourceMaps) {
-				this.sendErrorResponse(response, 2002, localize('VSND2002', "Cannot launch program '{0}'; enabling '{1}' might help.", '{path}', 'sourceMaps'), { path: programPath });
+				this.sendErrorResponse(response, 2002, localize('VSND2002', "Cannot launch program '{0}'; configuring source maps might help.", '{path}'), { path: programPath });
 				return;
 			}
 			const generatedPath = this._sourceMaps.MapPathFromSource(programPath);
