@@ -39,7 +39,7 @@
 			}
 		} else if (mirror.isObject()) {
 			result = new Array(length);
-			for (var i = 0, j = start; i <= length; i++, j++) {
+			for (var i = 0, j = start; i < length; i++, j++) {
 				var p = mirror.property(j.toString());
 				result[i] = p.value();
 			}

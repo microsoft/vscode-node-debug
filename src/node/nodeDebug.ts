@@ -51,7 +51,7 @@ export class PropertyExpander implements Expandable {
 	}
 
 	public Expand(session: NodeDebugSession) : Promise<Variable[]> {
-		return session._createProperties(this._object, 'all', 0, -1).then(variables => {
+		return session._createProperties(this._object, 'all').then(variables => {
 			if (this._this) {
 				return session._createVariable('this', this._this).then(variable => {
 					variables.push(variable);
@@ -138,7 +138,6 @@ interface AttachRequestArguments extends DebugProtocol.AttachRequestArguments, C
 
 export class NodeDebugSession extends DebugSession {
 
-	private static RANGESIZE = 1000;	// chunk size for large data structures
 	private static MAX_STRING_LENGTH = 10000;	// max string size to return in 'evaluate' request
 
 	private static NODE_TERMINATION_POLL_INTERVAL = 3000;
@@ -163,7 +162,8 @@ export class NodeDebugSession extends DebugSession {
 
 	// options
 	private _tryToInjectExtension = true;
-	private _largeArrays = false;
+	private _largeArrays = true;
+	private _chunkSize = 100;	// chunk size for large data structures
 
 	// session state
 	private _adapterID: string;
@@ -1641,10 +1641,10 @@ export class NodeDebugSession extends DebugSession {
 	 * Returns indexed or named properties for the given structured object as a variables array.
 	 * There are three modes:
 	 * 'all': add all properties (indexed and named)
-	 * 'range': add only the indexed properties between 'start' and 'end' (inclusive)
+	 * 'range': add 'count' indexed properties starting at 'start'
 	 * 'named': add only the named properties.
 	 */
-	public _createProperties(obj: any, mode: string, start: number, end: number) : Promise<Variable[]> {
+	public _createProperties(obj: any, mode: 'named' | 'range' | 'all', start = 0, count = 0) : Promise<Variable[]> {
 
 		if (!obj.properties) {
 
@@ -1658,9 +1658,8 @@ export class NodeDebugSession extends DebugSession {
 						const handle = obj.handle;
 						if (typeof obj.vscode_size === 'number' && typeof handle === 'number' && handle !== 0) {
 							if (obj.vscode_size >= 0) {
-								const length = end-start+1;
-								this.log('va', `_createProperties: vscode_slice ${start} ${length}`);
-								return this._node.command2('vscode_slice', { handle: handle, start: start, length: length }).then(resp => {
+								this.log('va', `_createProperties: vscode_slice ${start} ${count}`);
+								return this._node.command2('vscode_slice', { handle: handle, start: start, length: count }).then(resp => {
 									const items = resp.body.result;
 									return Promise.all<Variable>(items.map((item, ix) => {
 										return this._createVariable(`[${start+ix}]`, item);
@@ -1703,7 +1702,7 @@ export class NodeDebugSession extends DebugSession {
 						}
 						break;
 					case 'range':
-						if (typeof name === 'number' && name >= start && name <= end) {
+						if (typeof name === 'number' && name >= start && name < start+count) {
 							selectedProperties.push(property);
 						}
 						break;
@@ -1884,32 +1883,36 @@ export class NodeDebugSession extends DebugSession {
 		}
 
 		this.log('va', `_createArrayVariable: array.length`);
-		return this._node.command2('evaluate', args).then((response: NodeV8Response) => {
+		return this._node.command2('evaluate', args).then(response => {
+
 			this._cacheRefs(response);
 
 			const length = +response.body.value;
 
 			let expander: Expandable;
 
-			if (length > NodeDebugSession.RANGESIZE) {
+			if (length > this._chunkSize) {
+
 				expander = new Expander(() => {
 					// first add named properties then add ranges
-					return this._createProperties(array, 'named', 0, -1).then(variables => {
-						for (let start = 0; start < length; start += NodeDebugSession.RANGESIZE) {
-							let end = Math.min(start + NodeDebugSession.RANGESIZE, length)-1;
+					return this._createProperties(array, 'named').then(variables => {
+						for (let start = 0; start < length; start += this._chunkSize) {
+							const end = Math.min(start + this._chunkSize, length)-1;
+							const count = end-start+1;
 
-							let expander2: Expandable;
+							let expandFunc;
 							if (this._largeArrays) {
-								expander2 = new Expander(() => this._createLargeArrayElements(array, start, end, special));
+								expandFunc = () => this._createLargeArrayElements(array, start, count, special);
 							} else {
-								expander2 = new Expander(() => this._createProperties(array, 'range', start, end));
+								expandFunc = () => this._createProperties(array, 'range', start, count);
 							}
 
-							variables.push(new Variable(`[${start}..${end}]`, ' ', this._variableHandles.create(expander2)));
+							variables.push(new Variable(`[${start}..${end}]`, ' ', this._variableHandles.create(new Expander(expandFunc))));
 						}
 						return variables;
 					});
 				});
+
 			} else {
 				expander = new PropertyExpander(array);
 			}
@@ -1918,10 +1921,10 @@ export class NodeDebugSession extends DebugSession {
 		});
 	}
 
-	private _createLargeArrayElements(array: any, start: number, end: number, special: boolean) : Promise<Variable[]> {
+	private _createLargeArrayElements(array: any, start: number, count: number, special: boolean) : Promise<Variable[]> {
 
 		const args = {
-			expression: `array.slice(${start}, ${end+1})`,
+			expression: `array.slice(${start}, ${start+count})`,
 			disable_break: true,
 			additional_context: [
 				{ name: 'array', handle: array.handle }
@@ -1938,7 +1941,7 @@ export class NodeDebugSession extends DebugSession {
 
 			for (let property of properties) {
 				const name = property.name;
-				if (typeof name === 'number' && name >= 0 && name <= (end-start)) {
+				if (typeof name === 'number' && name >= 0 && name < count) {
 					selectedProperties.push(property);
 				}
 			}
@@ -1967,11 +1970,11 @@ export class NodeDebugSession extends DebugSession {
 			const size = +response.body.value;
 
 			let expandFunc;
-			if (size > NodeDebugSession.RANGESIZE) {
+			if (size > this._chunkSize) {
 				expandFunc = () => {
 					const variables = [];
-					for (let start = 0; start < size; start += NodeDebugSession.RANGESIZE) {
-						let end = Math.min(start + NodeDebugSession.RANGESIZE, size)-1;
+					for (let start = 0; start < size; start += this._chunkSize) {
+						let end = Math.min(start + this._chunkSize, size)-1;
 						let rangeExpander = new Expander(() => this._createSetElements(set, start, end));
 						variables.push(new Variable(`${start}..${end}`, ' ', this._variableHandles.create(rangeExpander)));
 					}
@@ -1995,7 +1998,8 @@ export class NodeDebugSession extends DebugSession {
 			]
 		}
 
-		this.log('va', `_createSetElements: set.slice`);
+		const length = end-start+1;
+		this.log('va', `_createSetElements: set.slice ${start} ${length}`);
 		return this._node.command2('evaluate', args).then(response => {
 
 			this._cacheRefs(response);
@@ -2005,7 +2009,7 @@ export class NodeDebugSession extends DebugSession {
 
 			for (let property of properties) {
 				const name = property.name;
-				if (typeof name === 'number' && name >= 0 && name <= end-start) {
+				if (typeof name === 'number' && name >= 0 && name < length) {
 					selectedProperties.push(property);
 				}
 			}
@@ -2027,18 +2031,18 @@ export class NodeDebugSession extends DebugSession {
 			]
 		}
 
-		this.log('va', `_createSetElements: map.size`);
+		this.log('va', `_createMapVariable: map.size`);
 		return this._node.command2('evaluate', args).then((response: NodeV8Response) => {
 			this._cacheRefs(response);
 
 			const size = +response.body.value;
 
 			let expandFunc;
-			if (size > NodeDebugSession.RANGESIZE) {
+			if (size > this._chunkSize) {
 				expandFunc = () => {
 					const variables = [];
-					for (let start = 0; start < size; start += NodeDebugSession.RANGESIZE) {
-						let end = Math.min(start + NodeDebugSession.RANGESIZE, size)-1;
+					for (let start = 0; start < size; start += this._chunkSize) {
+						let end = Math.min(start + this._chunkSize, size)-1;
 						let rangeExpander = new Expander(() => this._createMapElements(map, start, end));
 						variables.push(new Variable(`${start}..${end}`, ' ', this._variableHandles.create(rangeExpander)));
 					}
@@ -2063,7 +2067,8 @@ export class NodeDebugSession extends DebugSession {
 			]
 		}
 
-		this.log('va', `_createMapElements: map.slice`);
+		const count = end-start+1;
+		this.log('va', `_createMapElements: map.slice ${start} ${count}`);
 		return this._node.command2('evaluate', args, NodeDebugSession.LARGE_DATASTRUCTURE_TIMEOUT).then(response => {
 
 			this._cacheRefs(response);
@@ -2073,7 +2078,7 @@ export class NodeDebugSession extends DebugSession {
 
 			for (let property of properties) {
 				const name = property.name;
-				if (typeof name === 'number' && name >= 0 && name <= (end-start)*3+2) {
+				if (typeof name === 'number' && name >= 0 && name < count*3) {
 					selectedProperties.push(property);
 				}
 			}
