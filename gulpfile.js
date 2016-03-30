@@ -31,6 +31,7 @@ var watchedSources = [
 
 var scripts = [
 	'src/node/debugInjection.js',
+	'src/node/debugInjection2.js',
 	'src/node/terminateProcess.sh',
 	'src/node/TerminalHelper.scpt'
 ];

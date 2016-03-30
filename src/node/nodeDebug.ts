@@ -152,6 +152,7 @@ export class NodeDebugSession extends DebugSession {
 	private static FIRST_LINE_OFFSET = 62;
 	private static PROTO = '__proto__';
 	private static DEBUG_INJECTION = 'debugInjection.js';
+	private static DEBUG_INJECTION2 = 'debugInjection2.js';
 
 	private static NODE_SHEBANG_MATCHER = new RegExp('#! */usr/bin/env +node');
 	private static LONG_STRING_MATCHER = /\.\.\. \(length: [0-9]+\)$/;
@@ -194,6 +195,7 @@ export class NodeDebugSession extends DebugSession {
 	private _exception: any;
 	private _lastStoppedEvent: DebugProtocol.StoppedEvent;
 	private _nodeInjectionAvailable = false;
+	private _nodeInjection2Available = false;
 	private _needContinue: boolean;
 	private _needBreakpointEvent: boolean;
 	private _gotEntryEvent: boolean;
@@ -687,19 +689,11 @@ export class NodeDebugSession extends DebugSession {
 					this._pollForNodeTermination();
 				}
 
-				const v = this._node.embeddedHostVersion;	// x.y.z version represented as (x*100+y)*100+z
-				const runtimeSupportsExtension = (v < 10000) || (v >= 40301 && v < 50000);
-				if (this._tryToInjectExtension && runtimeSupportsExtension) {
-					this._injectDebuggerExtensions((success: boolean) => {
-						this.sendResponse(response);
-						this._startInitialize(!resp.running);
-						return;
-					});
-				} else {
+				this._injectDebuggerExtensions(_ => {
 					this.sendResponse(response);
 					this._startInitialize(!resp.running);
-					return;
-				}
+				});
+
 			} else {
 				this.log('la', '_initialize: retrieving process id from node failed');
 
@@ -732,33 +726,46 @@ export class NodeDebugSession extends DebugSession {
 	}
 
 	/*
-	 * Inject code into node.js to slowness issues when inspecting large data structures.
+	 * Inject code into node.js to address slowness issues when inspecting large data structures.
 	 */
-	private _injectDebuggerExtensions(done: (success: boolean) => void) : void {
-		try {
-			const contents = FS.readFileSync(Path.join(__dirname, NodeDebugSession.DEBUG_INJECTION), 'utf8');
+	private _injectDebuggerExtensions(done) : void {
 
-			const args = {
-				expression: contents,
-				disable_break: true
-			};
+		if (this._tryToInjectExtension) {
 
-			this._repeater(4, done, (callback: (again: boolean) => void) => {
+			const v = this._node.embeddedHostVersion;	// x.y.z version represented as (x*100+y)*100+z
 
-				this._node.command2('evaluate', args).then(resp => {
-					this.log('la', '_extendDebugger: node code inject: OK');
-					this._nodeInjectionAvailable = true;
-					callback(false);
-				}).catch(resp => {
-					this.log('la', '_extendDebugger: node code inject: failed, try again...');
-					callback(true);
-				});
+			if ((v >= 1200 && v < 10000) || (v >= 40301 && v < 50000) || (v >= 50600)) {
+				try {
+					const use_version_2 = v >= 50000;
+					const code = use_version_2 ? NodeDebugSession.DEBUG_INJECTION2 : NodeDebugSession.DEBUG_INJECTION;
+					const contents = FS.readFileSync(Path.join(__dirname, code), 'utf8');
 
-			});
+					const args = {
+						expression: contents,
+						disable_break: true
+					};
 
-		} catch(e) {
-			done(false);
+					this._repeater(4, done, (callback: (again: boolean) => void) => {
+
+						this._node.command2('evaluate', args).then(resp => {
+							this.log('la', '_injectDebuggerExtensions: code inject: OK');
+							this._nodeInjectionAvailable = true;
+							this._nodeInjection2Available = use_version_2;
+							callback(false);
+						}).catch(resp => {
+							this.log('la', '_injectDebuggerExtensions: code inject failed, trying again');
+							callback(true);
+						});
+					});
+
+					return;
+
+				} catch(e) {
+					// fall through
+				}
+			}
 		}
+		done();
 	}
 
 	/*
@@ -1342,7 +1349,9 @@ export class NodeDebugSession extends DebugSession {
 			return;
 		}
 
-		this._node.command2('backtrace', { fromFrame: startFrame, toFrame: startFrame+maxLevels }, NodeDebugSession.STACKTRACE_TIMEOUT).then(response => {
+		const cmd = this._nodeInjection2Available ? 'vscode_backtrace' : 'backtrace';
+		this.log('va', `stackTraceRequest: ${cmd} ${startFrame} ${maxLevels}`);
+		this._node.command2(cmd, { fromFrame: startFrame, toFrame: startFrame+maxLevels }, NodeDebugSession.STACKTRACE_TIMEOUT).then(response => {
 
 			this._cacheRefs(response);
 
@@ -1534,6 +1543,7 @@ export class NodeDebugSession extends DebugSession {
 		const frameIx = frame.index;
 		const frameThis = this._getValueFromCache(frame.receiver);
 
+		this.log('va', `scopesRequest: scope ${frameIx}`);
 		this._node.command2('scopes', { frame_index: frameIx, frameNumber: frameIx }).then(response => {
 
 			this._cacheRefs(response);
@@ -1636,7 +1646,9 @@ export class NodeDebugSession extends DebugSession {
 	 */
 	public _createProperties(obj: any, mode: string, start: number, end: number) : Promise<Variable[]> {
 
-		if (!obj.properties) {       // if properties are missing, this is an indication that we are running injected code which doesn't return properties eagerly
+		if (!obj.properties) {
+
+			// if properties are missing, this is an indication that we are running injected code which doesn't return properties eagerly
 
 			if (this._nodeInjectionAvailable) {
 				switch (mode) {
@@ -1646,8 +1658,9 @@ export class NodeDebugSession extends DebugSession {
 						const handle = obj.handle;
 						if (typeof obj.vscode_size === 'number' && typeof handle === 'number' && handle !== 0) {
 							if (obj.vscode_size >= 0) {
-								this.log('va', `_createProperties: vscode_range ${start} ${end}`);
-								return this._node.command2('vscode_range', { handle: handle, from: start, to: end }).then(resp => {
+								const length = end-start+1;
+								this.log('va', `_createProperties: vscode_slice ${start} ${length}`);
+								return this._node.command2('vscode_slice', { handle: handle, start: start, length: length }).then(resp => {
 									const items = resp.body.result;
 									return Promise.all<Variable>(items.map((item, ix) => {
 										return this._createVariable(`[${start+ix}]`, item);

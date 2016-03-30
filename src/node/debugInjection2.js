@@ -8,18 +8,19 @@
 	var LookupMirror = vm.runInDebugContext('LookupMirror');
 	var PropertyKind = vm.runInDebugContext('PropertyKind');
 	var DebugCommandProcessor = vm.runInDebugContext('DebugCommandProcessor');
-	var JSONProtocolSerializer = vm.runInDebugContext('JSONProtocolSerializer');
 
-	JSONProtocolSerializer.prototype.serializeReferencedObjects = function () {
-		var content = [];
-		for (var i = 0; i < this.mirrors_.length; i++) {
-			var m = this.mirrors_[i];
-			if (m.isArray()) continue;
-			if (m.isObject() && m.propertyNames(PropertyKind.Indexed | PropertyKind.Named, 100).length >= 100) continue;
-			content.push(this.serialize_(m, false, false));
+	DebugCommandProcessor.prototype.dispatch_['vscode_backtrace'] = function(request, response) {
+		var result = this.backtraceRequest_(request, response);
+		if (!result) {
+			var frames = response.body.frames;
+			for (var i = 0; i < frames.length; i++) {
+				const d = frames[i].details_.details_;
+				d[3]= 0;
+				d[4]= 0;
+			}
 		}
-		return content;
-	};
+		return result;
+	}
 
 	DebugCommandProcessor.prototype.dispatch_['vscode_slice'] = function(request, response) {
 		var handle = request.arguments.handle;
