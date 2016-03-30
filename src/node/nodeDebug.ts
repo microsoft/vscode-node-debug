@@ -1332,24 +1332,29 @@ export class NodeDebugSession extends DebugSession {
 	protected stackTraceRequest(response: DebugProtocol.StackTraceResponse, args: DebugProtocol.StackTraceArguments): void {
 
 		const threadReference = args.threadId;
-		let maxLevels = args.levels;
+		const startFrame = typeof args.startFrame === 'number' ? args.startFrame : 0;
+		const maxLevels = args.levels;
+
+		let totalFrames = 0;
 
 		if (threadReference !== NodeDebugSession.DUMMY_THREAD_ID) {
 			this.sendErrorResponse(response, 2014, 'Unexpected thread reference {_thread}.', { _thread: threadReference }, ErrorDestination.Telemetry);
 			return;
 		}
 
-		this._node.command2('backtrace', { fromFrame: 0, toFrame: maxLevels }, NodeDebugSession.STACKTRACE_TIMEOUT).then(backtraceResponse => {
+		this._node.command2('backtrace', { fromFrame: startFrame, toFrame: startFrame+maxLevels }, NodeDebugSession.STACKTRACE_TIMEOUT).then(backtraceResponse => {
 
 			this._cacheRefs(backtraceResponse);
 
 			const frames = backtraceResponse.body.frames;
+			totalFrames = backtraceResponse.body.totalFrames;
 			return Promise.all<StackFrame>(frames.map(frame => this._createStackFrame(frame)));
 
 		}).then(stackframes => {
 
 			response.body = {
-				stackFrames: stackframes
+				stackFrames: stackframes,
+				totalFrames: totalFrames
 			};
 			this.sendResponse(response);
 
