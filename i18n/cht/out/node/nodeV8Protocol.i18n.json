@@ -6,5 +6,5 @@
 {
 	"not.connected": "未連接至執行階段",
 	"runtime.timeout": "{0} 毫秒後逾時",
-	"runtime.unresponsive": "因節點未回應而取消"
+	"runtime.unresponsive": "已取消，因為 Node.js 沒有回應"
 }

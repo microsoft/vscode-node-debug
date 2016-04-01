@@ -6,5 +6,5 @@
 {
 	"not.connected": "non connecté au runtime",
 	"runtime.timeout": "dépassement du délai d'expiration après {0} ms",
-	"runtime.unresponsive": "annulé, car le nœud ne répond pas"
+	"runtime.unresponsive": "annulé, car Node.js a cessé de répondre"
 }

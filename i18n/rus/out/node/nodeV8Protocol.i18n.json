@@ -6,5 +6,5 @@
 {
 	"not.connected": "нет подключения к среде выполнения",
 	"runtime.timeout": "тайм-аут после {0} мс",
-	"runtime.unresponsive": "отменено, так как узел не отвечает"
+	"runtime.unresponsive": "отменено, так как Node.js не отвечает"
 }
