@@ -1,8 +1,10 @@
-.vscode/**/*
-.gitignore
-src/**/*
+i18n/**/*
 out/tests/**/*
+src/**/*
+testdata/**/*
+.gitignore
+.travis.yml
+.vscode/**/*
+appveyor.yml
 gulpfile.js
-tsd.json
-tslint.json
 README.md
