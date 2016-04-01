@@ -6,5 +6,5 @@
 {
 	"not.connected": "ランタイムに接続していません",
 	"runtime.timeout": "{0} ミリ秒後にタイムアウト",
-	"runtime.unresponsive": "ノードが応答しないので取り消されました"
+	"runtime.unresponsive": "Node.js が応答しないため、キャンセルされました"
 }

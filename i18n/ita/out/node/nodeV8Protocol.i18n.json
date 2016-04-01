@@ -6,5 +6,5 @@
 {
 	"not.connected": "non connesso al runtime",
 	"runtime.timeout": "timeout dopo {0} ms",
-	"runtime.unresponsive": "annullato perché il nodo non risponde"
+	"runtime.unresponsive": "annullato perché Node.js non risponde"
 }
