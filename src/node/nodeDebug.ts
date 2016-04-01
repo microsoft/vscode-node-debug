@@ -95,6 +95,8 @@ interface CommonArguments {
 	sourceMaps?: boolean;
 	/** Where to look for the generated code. Only used if sourceMaps is true. */
 	outDir?: string;
+	/** Try to automatically step over uninteresting source.  */
+	smartStep?: boolean;
 }
 
 /**
@@ -143,15 +145,14 @@ export class NodeDebugSession extends DebugSession {
 	private static NODE_TERMINATION_POLL_INTERVAL = 3000;
 	private static ATTACH_TIMEOUT = 10000;
 	private static STACKTRACE_TIMEOUT = 10000;
-	private static LARGE_DATASTRUCTURE_TIMEOUT = 60000;
 
 	private static NODE = 'node';
 	private static DUMMY_THREAD_ID = 1;
 	private static DUMMY_THREAD_NAME = 'Node';
 	private static FIRST_LINE_OFFSET = 62;
 	private static PROTO = '__proto__';
-	private static DEBUG_INJECTION = 'debugInjection.js';
-	private static DEBUG_INJECTION2 = 'debugInjection2.js';
+	private static DEBUG_INJECTION = 'debugInjection.js';		// for node version 0.12.x and >= 4.3.1
+	private static DEBUG_INJECTION2 = 'debugInjection2.js';		// for node version >= 5.6
 
 	private static NODE_SHEBANG_MATCHER = new RegExp('#! */usr/bin/env +node');
 	private static LONG_STRING_MATCHER = /\.\.\. \(length: [0-9]+\)$/;
@@ -162,8 +163,9 @@ export class NodeDebugSession extends DebugSession {
 
 	// options
 	private _tryToInjectExtension = true;
-	private _largeArrays = true;
-	private _chunkSize = 100;	// chunk size for large data structures
+	private _largeArrays = false;	// experimental
+	private _chunkSize = 100;		// chunk size for large data structures
+	private _smartStep = false;		// try to automatically step over uninteresting source
 
 	// session state
 	private _adapterID: string;
@@ -202,6 +204,7 @@ export class NodeDebugSession extends DebugSession {
 	private _entryPath: string;
 	private _entryLine: number;		// entry line in *.js file (not in the source file)
 	private _entryColumn: number;	// entry column in *.js file (not in the source file)
+	private _smartStepCount = 0;
 
 
 	public constructor() {
@@ -216,18 +219,12 @@ export class NodeDebugSession extends DebugSession {
 
 		this._node.on('break', (event: NodeV8Event) => {
 			this._stopped('break');
-			this._lastStoppedEvent = this._createStoppedEvent(event.body);
-			if (this._lastStoppedEvent.body.reason === localize({ key: 'reason.entry', comment: ['see https://github.com/Microsoft/vscode/issues/4568'] }, "entry")) {		// TODO@AW
-				this.log('la', 'NodeDebugSession: suppressed stop-on-entry event');
-			} else {
-				this.sendEvent(this._lastStoppedEvent);
-			}
+			this._handleNodeBreakEvent(event.body);
 		});
 
 		this._node.on('exception', (event: NodeV8Event) => {
 			this._stopped('exception');
-			this._lastStoppedEvent = this._createStoppedEvent(event.body);
-			this.sendEvent(this._lastStoppedEvent);
+			this._handleNodeBreakEvent(event.body);
 		});
 
 		this._node.on('close', (event: NodeV8Event) => {
@@ -243,10 +240,113 @@ export class NodeDebugSession extends DebugSession {
 		});
 	}
 
-	public log(traceCategory: string, message: string) {
-		if (this._trace && (this._traceAll || this._trace.indexOf(traceCategory) >= 0)) {
-			this.outLine(`${process.pid}: ${message}`);
+	/**
+	 * Analyse why node has stopped and sends StoppedEvent if necessary.
+	 */
+	private _handleNodeBreakEvent(eventBody: any) : void {
+
+		/*
+		// workaround: load sourcemap for this location to populate cache
+		if (this._sourceMaps) {
+			let path = body.script.name;
+			if (path && PathUtils.isAbsolutePath(path)) {
+				path = this._remoteToLocal(path);
+				this._sourceMaps.MapToSource(path, null, 0, 0);
+			}
 		}
+		*/
+
+		let isEntry = false;
+		let reason: string;
+		let exception_text: string;
+
+		// is exception?
+		if (eventBody.exception) {
+			this._exception = eventBody.exception;
+			exception_text = eventBody.exception.text;
+			reason = localize({ key: 'reason.exception', comment: ['https://github.com/Microsoft/vscode/issues/4568'] }, "exception");
+		}
+
+		// is breakpoint?
+		if (!reason) {
+			const breakpoints = eventBody.breakpoints;
+			if (isArray(breakpoints) && breakpoints.length > 0) {
+				const id = breakpoints[0];
+				if (!this._gotEntryEvent && id === 1) {	// 'stop on entry point' is implemented as a breakpoint with id 1
+					isEntry = true;
+					this.log('la', '_analyzeBreak: suppressed stop-on-entry event');
+					reason = localize({ key: 'reason.entry', comment: ['https://github.com/Microsoft/vscode/issues/4568'] }, "entry");
+					this._rememberEntryLocation(eventBody.script.name, eventBody.sourceLine, eventBody.sourceColumn);
+				} else {
+					reason = localize({ key: 'reason.breakpoint', comment: ['https://github.com/Microsoft/vscode/issues/4568'] }, "breakpoint");
+				}
+			}
+		}
+
+		// is debugger statement?
+		if (!reason) {
+			const sourceLine = eventBody.sourceLineText;
+			if (sourceLine && sourceLine.indexOf('debugger') >= 0) {
+				reason = localize({ key: 'reason.debugger_statement', comment: ['https://github.com/Microsoft/vscode/issues/4568'] }, "debugger statement");
+			}
+		}
+
+		// no reason yet: must be the result of a 'step'
+		if (!reason) {
+
+			// should we continue until we find a better place to stop?
+			if (this._smartStep && this._skipGenerated(eventBody)) {
+				this._node.command('continue', { stepaction: 'in' });
+				this._smartStepCount++;
+				return null;
+			}
+
+			reason = localize({ key: 'reason.step', comment: ['https://github.com/Microsoft/vscode/issues/4568'] }, "step");
+		}
+
+		this._lastStoppedEvent = new StoppedEvent(reason, NodeDebugSession.DUMMY_THREAD_ID, exception_text);
+
+		if (!isEntry) {
+			if (this._smartStepCount > 0) {
+				this.outLine(`smartSteps: ${this._smartStepCount}`);
+				this._smartStepCount = 0;
+			}
+			this.sendEvent(this._lastStoppedEvent)
+		}
+	}
+
+	/**
+	 * Returns true if a source location should be skipped.
+	 */
+	private _skipGenerated(event: any) : boolean {
+
+		if (!this._sourceMaps) {
+			// proceed as normal
+			return false;
+		}
+
+		let line = event.sourceLine;
+		let column = this._adjustColumn(line, event.sourceColumn);
+
+		let remotePath = event.script.name;
+
+		if (remotePath && PathUtils.isAbsolutePath(remotePath)) {
+
+			// if launch.json defines localRoot and remoteRoot try to convert remote path back to a local path
+			let localPath = this._remoteToLocal(remotePath);
+
+			// try to map
+			let mapresult = this._sourceMaps.MapToSource(localPath, null, line, column, Bias.LEAST_UPPER_BOUND);
+			if (!mapresult) {	// try using the other bias option
+				mapresult = this._sourceMaps.MapToSource(localPath, null, line, column, Bias.GREATEST_LOWER_BOUND);
+			}
+			if (mapresult) {
+				return false;
+			}
+		}
+
+		// skip everything
+		return true;
 	}
 
 	/**
@@ -551,6 +651,8 @@ export class NodeDebugSession extends DebugSession {
 			this._trace = args.trace.split(',');
 			this._traceAll = this._trace.indexOf('all') >= 0;
 		}
+
+		this._smartStep = (typeof args.smartStep === 'boolean') && args.smartStep;
 
 		this._stopOnEntry = (typeof args.stopOnEntry === 'boolean') && args.stopOnEntry;
 
@@ -2069,7 +2171,7 @@ export class NodeDebugSession extends DebugSession {
 
 		const count = end-start+1;
 		this.log('va', `_createMapElements: map.slice ${start} ${count}`);
-		return this._node.command2('evaluate', args, NodeDebugSession.LARGE_DATASTRUCTURE_TIMEOUT).then(response => {
+		return this._node.command2('evaluate', args).then(response => {
 
 			this._cacheRefs(response);
 
@@ -2273,6 +2375,12 @@ export class NodeDebugSession extends DebugSession {
 	}
 
 	//---- private helpers ----------------------------------------------------------------------------------------------------
+
+	public log(traceCategory: string, message: string) {
+		if (this._trace && (this._traceAll || this._trace.indexOf(traceCategory) >= 0)) {
+			this.outLine(`${process.pid}: ${message}`);
+		}
+	}
 
 	/**
 	 * 'Attribute missing' error
@@ -2488,57 +2596,6 @@ export class NodeDebugSession extends DebugSession {
 		} else {
 			return Promise.resolve(handles.map(handle => this._refCache.get(handle)));
 		}
-	}
-
-	private _createStoppedEvent(body: any): DebugProtocol.StoppedEvent {
-
-		// workaround: load sourcemap for this location to populate cache
-		if (this._sourceMaps) {
-			let path = body.script.name;
-			if (path && PathUtils.isAbsolutePath(path)) {
-				path = this._remoteToLocal(path);
-				this._sourceMaps.MapToSource(path, null, 0, 0);
-			}
-		}
-
-		let reason: string;
-		let exception_text: string;
-
-		// is exception?
-		if (body.exception) {
-			this._exception = body.exception;
-			exception_text = body.exception.text;
-			reason = localize({ key: 'reason.exception', comment: ['https://github.com/Microsoft/vscode/issues/4568'] }, "exception");
-		}
-
-		// is breakpoint?
-		if (!reason) {
-			const breakpoints = body.breakpoints;
-			if (isArray(breakpoints) && breakpoints.length > 0) {
-				const id = breakpoints[0];
-				if (!this._gotEntryEvent && id === 1) {	// 'stop on entry point' is implemented as a breakpoint with id 1
-					reason = localize({ key: 'reason.entry', comment: ['https://github.com/Microsoft/vscode/issues/4568'] }, "entry");
-					this._rememberEntryLocation(body.script.name, body.sourceLine, body.sourceColumn);
-				} else {
-					reason = localize({ key: 'reason.breakpoint', comment: ['https://github.com/Microsoft/vscode/issues/4568'] }, "breakpoint");
-				}
-			}
-		}
-
-		// is debugger statement?
-		if (!reason) {
-			const sourceLine = body.sourceLineText;
-			if (sourceLine && sourceLine.indexOf('debugger') >= 0) {
-				reason = localize({ key: 'reason.debugger_statement', comment: ['https://github.com/Microsoft/vscode/issues/4568'] }, "debugger statement");
-			}
-		}
-
-		// must be 'step'!
-		if (!reason) {
-			reason = localize({ key: 'reason.step', comment: ['https://github.com/Microsoft/vscode/issues/4568'] }, "step");
-		}
-
-		return new StoppedEvent(reason, NodeDebugSession.DUMMY_THREAD_ID, exception_text);
 	}
 
 	private _rememberEntryLocation(path: string, line: number, column: number): void {
