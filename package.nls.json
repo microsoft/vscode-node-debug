@@ -6,6 +6,9 @@
 	"node.sourceMaps.description": "Use JavaScript source maps (if they exist).",
 	"node.outDir.description": "If source maps are enabled, the generated code is expected in this directory. If not specified, the generated code is expected in the same directory as its source.",
 	"node.stopOnEntry.description": "Automatically stop program after launch.",
+	"node.port.description": "Debug port to attach to. Default is 5858.",
+	"node.address.description": "TCP/IP address of debug port (for Node.js >= 5.0 only). Default is 'localhost'.",
+	"node.timeout.description": "Retry for this number of milliseconds to connect to Node.js. Default is 10000 ms.",
 
 	"node.launch.program.description": "Absolute path to the program.",
 	"node.launch.externalConsole.description": "Launch debug target in external console.",
@@ -17,9 +20,6 @@
 
 	"node.launch.config.name": "Launch",
 
-	"node.attach.port.description": "Debug port to attach to. Default is 5858.",
-	"node.attach.address.description": "TCP/IP address of debug port (for Node.js >= 5.0 only). Default is 'localhost'.",
-	"node.attach.timeout.description": "Retry for this number of milliseconds to connect to Node.js. Default is 10000 ms.",
 	"node.attach.restart.description": "Restart session after Node.js has terminated.",
 	"node.attach.localRoot.description": "The local source root that corresponds to the 'remoteRoot'.",
 	"node.attach.remoteRoot.description": "The source root of the remote host.",

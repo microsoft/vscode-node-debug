@@ -89,6 +89,12 @@ interface CommonArguments {
 	 * 'va': variable access
 	 * */
 	trace?: string;
+	/** The debug port to attach to. */
+	port: number;
+	/** The TCP/IP address of the port (remote addresses only supported for node >= 5.0). */
+	address?: string;
+	/** Retry for this number of milliseconds to connect to the node runtime. */
+	timeout?: number;
 	/** Automatically stop target after launch. If not specified, target does not stop. */
 	stopOnEntry?: boolean;
 	/** Configure source maps. By default source maps are disabled. */
@@ -123,12 +129,6 @@ interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArguments, C
  * This interface should always match the schema found in the node-debug extension manifest.
  */
 interface AttachRequestArguments extends DebugProtocol.AttachRequestArguments, CommonArguments {
-	/** The debug port to attach to. */
-	port: number;
-	/** The TCP/IP address of the port (remote addresses only supported for node >= 5.0). */
-	address?: string;
-	/** Retry for this number of milliseconds to connect to the node runtime. */
-	timeout?: number;
 	/** Request frontend to restart session on termination. */
 	restart?: boolean;
 	/** Node's root directory. */
@@ -433,7 +433,9 @@ export class NodeDebugSession extends DebugSession {
 
 		this._externalConsole = (typeof args.externalConsole === 'boolean') && args.externalConsole;
 
-		const port = random(3000, 50000);
+		const port = args.port || random(3000, 50000);
+		const address = args.address;
+		const timeout = args.timeout;
 
 		let runtimeExecutable = args.runtimeExecutable;
 		if (runtimeExecutable) {
@@ -575,7 +577,7 @@ export class NodeDebugSession extends DebugSession {
 				if (this._noDebug) {
 					this.sendResponse(response);
 				} else {
-					this._attach(response, port);
+					this._attach(response, port, address, timeout);
 				}
 
 			}).catch((error: TerminalError) => {
@@ -614,7 +616,7 @@ export class NodeDebugSession extends DebugSession {
 			if (this._noDebug) {
 				this.sendResponse(response);
 			} else {
-				this._attach(response, port);
+				this._attach(response, port, address, timeout);
 			}
 		}
 	}
@@ -715,7 +717,7 @@ export class NodeDebugSession extends DebugSession {
 	/*
 	 * shared code used in launchRequest and attachRequest
 	 */
-	private _attach(response: DebugProtocol.Response, port?: number, address?: string, timeout?: number): void {
+	private _attach(response: DebugProtocol.Response, port: number, address: string, timeout: number): void {
 
 		if (!port) {
 			port = 5858;

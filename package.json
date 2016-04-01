@@ -152,24 +152,39 @@
 								"type": ["string", "null"],
 								"description": "%node.outDir.description%",
 								"default": null
-							}
+							},
+							"port": {
+								"type": "number",
+								"description": "%node.port.description%",
+								"default": 5858
+							},
+							"address": {
+								"type": "string",
+								"description": "%node.address.description%",
+								"default": "localhost"
+							},
+							"timeout": {
+								"type": "number",
+								"description": "%node.timeout.description%",
+								"default": 10000
+							},
 						}
 					},
 					"attach": {
 						"properties": {
 							"port": {
 								"type": "number",
-								"description": "%node.attach.port.description%",
+								"description": "%node.port.description%",
 								"default": 5858
 							},
 							"address": {
 								"type": "string",
-								"description": "%node.attach.address.description%",
+								"description": "%node.address.description%",
 								"default": "localhost"
 							},
 							"timeout": {
 								"type": "number",
-								"description": "%node.attach.timeout.description%",
+								"description": "%node.timeout.description%",
 								"default": 10000
 							},
 							"restart": {
