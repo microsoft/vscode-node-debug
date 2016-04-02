@@ -57,6 +57,14 @@
 		"nodemon": "^1.9.1"
 	},
 	"contributes": {
+		"languages": [
+			{
+				"id": "javascript",
+				"extensions": [
+					".js!transpiled"
+				]
+			}
+		],
 		"debuggers": [
 			{
 				"type": "node",
