@@ -175,7 +175,7 @@
 								"type": "number",
 								"description": "%node.timeout.description%",
 								"default": 10000
-							},
+							}
 						}
 					},
 					"attach": {
