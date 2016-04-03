@@ -159,7 +159,7 @@ export class NodeV8Protocol extends EE.EventEmitter {
 					clb(new NodeV8Response(request, localize('runtime.timeout', "timeout after {0} ms", timeout)));
 
 					this._unresponsiveMode = true;
-					this.emitEvent(new NodeV8Event('diagnostic', { reason: 'unresponsive ' + command }));
+					this.emitEvent(new NodeV8Event('diagnostic', { reason: `request '${command}' timed out'`}));
 				}
 			}, timeout);
 		}
