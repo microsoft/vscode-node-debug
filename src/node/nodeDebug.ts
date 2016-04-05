@@ -86,7 +86,7 @@ interface CommonArguments {
 	 * 'la': launch/attach
 	 * 'bp': breakpoints
 	 * 'sm': source maps
-	 * 'va': variable access
+	 * 'va': data structure access
 	 * */
 	trace?: string;
 	/** The debug port to attach to. */
@@ -1521,10 +1521,8 @@ export class NodeDebugSession extends DebugSession {
 
 						if (!FS.existsSync(localPath)) {
 							const script_val = this._getValueFromCache(frame.script);
-							const script_id = script_val.id;
 
-							return this._node.command2('scripts', { types: 1+2+4, includeSource: true, ids: [ script_id ] }).then(nodeResponse => {
-								const content = nodeResponse.body[0].source;
+							return this._loadScript(script_val.id).then(content => {
 								return this._createStackFrameFromSourceMap(frame, content, name, localPath, remotePath, origin, line, column);
 							});
 						}
@@ -2374,6 +2372,12 @@ export class NodeDebugSession extends DebugSession {
 		} else {
 			this.sendErrorResponse(response, 9999, 'sourceRequest error', null, ErrorDestination.Telemetry);
 		}
+	}
+
+	private _loadScript(scriptId: number) : Promise<string>  {
+		return this._node.command2('scripts', { types: 1+2+4, includeSource: true, ids: [ scriptId ] }).then(nodeResponse => {
+			return nodeResponse.body[0].source;
+		});
 	}
 
 	//---- private helpers ----------------------------------------------------------------------------------------------------
