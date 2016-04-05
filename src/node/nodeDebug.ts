@@ -5,7 +5,7 @@
 
 import {
 	DebugSession, Thread, Source, StackFrame, Scope, Variable, Breakpoint,
-	TerminatedEvent, InitializedEvent, StoppedEvent, OutputEvent,
+	TerminatedEvent, InitializedEvent, StoppedEvent, OutputEvent, BreakpointEvent,
 	Handles, ErrorDestination
 } from 'vscode-debugadapter';
 import {DebugProtocol} from 'vscode-debugprotocol';
@@ -227,6 +227,16 @@ export class NodeDebugSession extends DebugSession {
 			this._handleNodeBreakEvent(event.body);
 		});
 
+		/*
+		this._node.on('beforeCompile', (event: NodeV8Event) => {
+			this.outLine(`beforeCompile ${event.body.name}`);
+		});
+		*/
+
+		this._node.on('afterCompile', (event: NodeV8Event) => {
+			this._handleNodeAfterCompileEvent(event.body);
+		});
+
 		this._node.on('close', (event: NodeV8Event) => {
 			this._terminated('node v8protocol close');
 		});
@@ -235,9 +245,49 @@ export class NodeDebugSession extends DebugSession {
 			this._terminated('node v8protocol error');
 		});
 
+		/*
 		this._node.on('diagnostic', (event: NodeV8Event) => {
-			// console.error('diagnostic event: ' + event.body.reason);
+			this.outLine(`diagnostic event ${event.body.reason}`);
 		});
+		*/
+	}
+
+	/**
+	 * Experimental support for SystemJS module loader (https://github.com/systemjs/systemjs)
+	 *
+	 * Tries to figure out whether JavaScript code has been dynamically generated
+	 * and whether it contains a source map reference.
+	 * If this is the case try to reload breakpoints.
+	 */
+	private _handleNodeAfterCompileEvent(eventBody: any) {
+
+		if (this._sourceMaps) {		// this only applies if source maps are enabled
+
+			let path = eventBody.script.name;
+			if (path && Path.extname(path) === '.js!transpiled' && path.indexOf('file://') === 0) {
+
+				path = path.substring('file://'.length);
+
+				if (!FS.existsSync(path)) {	// path does not exist locally.
+
+					const script_id = eventBody.script.id;
+
+					this._loadScript(script_id).then(content => {
+
+						const sources = this._sourceMaps.MapPathToSource(path, content);
+						if (sources && sources.length >= 0) {
+							this.outLine(`afterCompile: ${path} maps to ${sources[0]}`);
+
+							// trigger resending breakpoints
+							this.sendEvent(new InitializedEvent());
+						}
+
+					}).catch(err => {
+						// ignore
+					});
+				}
+			}
+		}
 	}
 
 	/**
@@ -1220,7 +1270,7 @@ export class NodeDebugSession extends DebugSession {
 				// this source uses a sourcemap so we have to map js locations back to source locations
 				const mapresult = this._sourceMaps.MapToSource(path, null, actualLine, actualColumn);
 				if (mapresult) {
-					this.log('sm', `_setBreakpoints: bp verification gen: '${path}' ${actualLine}:${actualColumn} -> src: '${mapresult.path}' ${mapresult.line}:${mapresult.column}`);
+					this.log('sm', `_setBreakpoint: bp verification gen: '${path}' ${actualLine}:${actualColumn} -> src: '${mapresult.path}' ${mapresult.line}:${mapresult.column}`);
 					actualLine = mapresult.line;
 					actualColumn = mapresult.column;
 				}
@@ -1236,13 +1286,13 @@ export class NodeDebugSession extends DebugSession {
 					// we do not have to 'continue' but we have to generate a stopped event instead
 					this._needContinue = false;
 					this._needBreakpointEvent = true;
-					this.log('la', '_setBreakpoints: remember to fire a breakpoint event later');
+					this.log('la', '_setBreakpoint: remember to fire a breakpoint event later');
 				}
 			}
 
 			return new Breakpoint(true, this.convertDebuggerLineToClient(actualLine), this.convertDebuggerColumnToClient(actualColumn));
 
-		}).catch((error) => {
+		}).catch(error => {
 			return new Breakpoint(false);
 		});
 	}

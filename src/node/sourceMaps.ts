@@ -32,6 +32,12 @@ export interface ISourceMaps {
 	MapPathFromSource(path: string): string;
 
 	/*
+	 * Map generated path to source path.
+	 * Returns null if not found.
+	 */
+	MapPathToSource(path: string, content: string): string[];
+
+	/*
 	 * Map location in source language to location in generated code.
 	 * line and column are 0 based.
 	 */
@@ -65,6 +71,14 @@ export class SourceMaps implements ISourceMaps {
 		const map = this._findSourceToGeneratedMapping(pathToSource);
 		if (map) {
 			return map.generatedPath();
+		}
+		return null;
+	}
+
+	public MapPathToSource(pathToGenerated: string, content: string) : string[] {
+		const map = this._findGeneratedToSourceMapping(pathToGenerated, content);
+		if (map) {
+			return map.sources();
 		}
 		return null;
 	}
@@ -419,6 +433,10 @@ class SourceMap {
 	 */
 	public generatedPath(): string {
 		return this._generatedFile;
+	}
+
+	public sources() : string[] {
+		return this._sources;
 	}
 
 	/*
