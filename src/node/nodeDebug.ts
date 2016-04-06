@@ -87,6 +87,7 @@ interface CommonArguments {
 	 * 'bp': breakpoints
 	 * 'sm': source maps
 	 * 'va': data structure access
+	 * 'ss': smart steps
 	 * */
 	trace?: string;
 	/** The debug port to attach to. */
@@ -358,7 +359,7 @@ export class NodeDebugSession extends DebugSession {
 
 		if (!isEntry) {
 			if (this._smartStepCount > 0) {
-				this.outLine(`smartSteps: ${this._smartStepCount}`);
+				this.log('ss', `_handleNodeBreakEvent: ${this._smartStepCount} steps skipped`);
 				this._smartStepCount = 0;
 			}
 			this.sendEvent(this._lastStoppedEvent)
