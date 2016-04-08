@@ -175,6 +175,11 @@
 								"type": "number",
 								"description": "%node.timeout.description%",
 								"default": 10000
+							},
+							"smartStep": {
+								"type": "boolean",
+								"description": "%node.smartStep.description%",
+								"default": true
 							}
 						}
 					},
@@ -224,6 +229,11 @@
 								"type": ["string", "null"],
 								"description": "%node.attach.remoteRoot.description%",
 								"default": null
+							},
+							"smartStep": {
+								"type": "boolean",
+								"description": "%node.smartStep.description%",
+								"default": true
 							}
 						}
 					}
@@ -275,6 +285,11 @@
 								"type": ["string", "null"],
 								"description": "%extensionHost.launch.outDir.description%",
 								"default": "out"
+							},
+							"smartStep": {
+								"type": "boolean",
+								"description": "%extensionHost.smartStep.description%",
+								"default": true
 							}
 						}
 					}
