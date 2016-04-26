@@ -234,7 +234,7 @@ export class NodeV8Protocol extends EE.EventEmitter {
 								if (match && match.length === 4) {
 									this.embeddedHostVersion = (parseInt(match[1])*100 + parseInt(match[2]))*100 + parseInt(match[3]);
 								} else if (pair[1] === 'Electron') {
-									this.embeddedHostVersion = 4;
+									this.embeddedHostVersion = 51000; // TODO this needs to be detected in a smarter way by looking at the V8 version in Electron
 								}
 								break;
 							case 'Content-Length':

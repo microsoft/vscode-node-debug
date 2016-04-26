@@ -6,7 +6,13 @@
 !function() {
 	var vm = require('vm');
 	var LookupMirror = vm.runInDebugContext('LookupMirror');
-	var PropertyKind = vm.runInDebugContext('PropertyKind');
+	var PropertyKindIndexed;
+	try {
+		var PropertyKind = vm.runInDebugContext('PropertyKind'); // https://github.com/electron/electron/issues/5295
+		PropertyKindIndexed = PropertyKind.Indexed;
+	} catch (error) {
+		PropertyKindIndexed = 1;
+	}
 	var DebugCommandProcessor = vm.runInDebugContext('DebugCommandProcessor');
 
 	DebugCommandProcessor.prototype.dispatch_['vscode_backtrace'] = function(request, response) {
@@ -61,7 +67,7 @@
 			switch (mirror.toText()) {
 			case "#<Buffer>":
 				className = "Buffer";
-				size = mirror.propertyNames(PropertyKind.Indexed).length;
+				size = mirror.propertyNames(PropertyKindIndexed).length;
 				break;
 			case "#<Int8Array>":
 			case "#<Uint8Array>":
@@ -73,7 +79,7 @@
 			case "#<Float32Array>":
 			case "#<Float64Array>":
 				className = mirror.className();
-				size = mirror.propertyNames(PropertyKind.Indexed).length;
+				size = mirror.propertyNames(PropertyKindIndexed).length;
 				break;
 			default:
 				break;
