@@ -1,7 +1,7 @@
 {
 	"name": "node-debug",
 	"displayName": "Node Debug",
-	"version": "0.10.12",
+	"version": "0.11.0",
 	"publisher": "ms-vscode",
 	"description": "%extension.description%",
 	"categories": [
@@ -19,12 +19,12 @@
 		"nodemon": "./node_modules/.bin/nodemon --debug --nolazy ./out/node/nodeDebug.js --server=4711"
 	},
 	"engines": {
-		"node": ">= 0.12.0",
-		"vscode": "^0.10.1"
+		"vscode": "^1.0.0",
+		"node": "^4.1.1"
 	},
 	"dependencies": {
-		"vscode-debugprotocol": "1.8.0-pre.3",
-		"vscode-debugadapter": "1.8.0-pre.2",
+		"vscode-debugprotocol": "^1.8.0",
+		"vscode-debugadapter": "^1.8.0",
 		"source-map": "^0.5.3",
 		"vscode-nls": "^1.0.4"
 	},
@@ -52,7 +52,7 @@
 		"tslint": "^3.5.0",
 		"typescript": "^1.8.5",
 		"vscode-nls-dev": "^1.0.3",
-		"vscode-debugadapter-testsupport": "1.8.0-pre.3",
+		"vscode-debugadapter-testsupport": "^1.8.0",
 		"event-stream": "^3.3.2",
 		"nodemon": "^1.9.1"
 	},

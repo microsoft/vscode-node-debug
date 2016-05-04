@@ -5,7 +5,7 @@
 
 import {
 	DebugSession, Thread, Source, StackFrame, Scope, Variable, Breakpoint,
-	TerminatedEvent, InitializedEvent, StoppedEvent, OutputEvent, BreakpointEvent,
+	TerminatedEvent, InitializedEvent, StoppedEvent, OutputEvent,
 	Handles, ErrorDestination
 } from 'vscode-debugadapter';
 import {DebugProtocol} from 'vscode-debugprotocol';
@@ -362,7 +362,7 @@ export class NodeDebugSession extends DebugSession {
 				this.log('ss', `_handleNodeBreakEvent: ${this._smartStepCount} steps skipped`);
 				this._smartStepCount = 0;
 			}
-			this.sendEvent(this._lastStoppedEvent)
+			this.sendEvent(this._lastStoppedEvent);
 		}
 	}
 
@@ -1898,7 +1898,7 @@ export class NodeDebugSession extends DebugSession {
 				}
 
 				// if value 'undefined' trigger a getter
-				if (val.type == 'undefined' && !val.value && obj) {
+				if (val.type === 'undefined' && !val.value && obj) {
 
 					const args = {
 						expression: `obj.${name}`,	// trigger call to getter
@@ -1907,7 +1907,7 @@ export class NodeDebugSession extends DebugSession {
 						],
 						disable_break: true,
 						maxStringLength: NodeDebugSession.MAX_STRING_LENGTH
-					}
+					};
 
 					this.log('va', `_createPropertyVariables: trigger getter`);
 					return this._node.command2('evaluate', args).then(response => {
@@ -2033,7 +2033,7 @@ export class NodeDebugSession extends DebugSession {
 			additional_context: [
 				{ name: 'array', handle: array.handle }
 			]
-		}
+		};
 
 		this.log('va', `_createArrayVariable: array.length`);
 		return this._node.command2('evaluate', args).then(response => {
@@ -2082,7 +2082,7 @@ export class NodeDebugSession extends DebugSession {
 			additional_context: [
 				{ name: 'array', handle: array.handle }
 			]
-		}
+		};
 
 		this.log('va', `_createLargeArrayElements: array.slice`);
 		return this._node.command2('evaluate', args).then(response => {
@@ -2114,7 +2114,7 @@ export class NodeDebugSession extends DebugSession {
 			additional_context: [
 				{ name: 'set', handle: set.handle }
 			]
-		}
+		};
 
 		this.log('va', `_createSetVariable: set.size`);
 		return this._node.command2('evaluate', args).then((response: NodeV8Response) => {
@@ -2149,7 +2149,7 @@ export class NodeDebugSession extends DebugSession {
 			additional_context: [
 				{ name: 'set', handle: set.handle }
 			]
-		}
+		};
 
 		const length = end-start+1;
 		this.log('va', `_createSetElements: set.slice ${start} ${length}`);
@@ -2182,7 +2182,7 @@ export class NodeDebugSession extends DebugSession {
 			additional_context: [
 				{ name: 'map', handle: map.handle }
 			]
-		}
+		};
 
 		this.log('va', `_createMapVariable: map.size`);
 		return this._node.command2('evaluate', args).then((response: NodeV8Response) => {
@@ -2218,7 +2218,7 @@ export class NodeDebugSession extends DebugSession {
 			additional_context: [
 				{ name: 'map', handle: map.handle }
 			]
-		}
+		};
 
 		const count = end-start+1;
 		this.log('va', `_createMapElements: map.slice ${start} ${count}`);
@@ -2272,7 +2272,7 @@ export class NodeDebugSession extends DebugSession {
 				additional_context: [
 					{ name: 'str', handle: val.handle }
 				]
-			}
+			};
 
 			this.log('va', `_createStringVariable: get full string`);
 			return this._node.command2('evaluate', args).then((response: NodeV8Response) => {
