@@ -228,7 +228,7 @@ class MacTerminalService extends DefaultTerminalService {
 			// and then launches the program inside that window.
 
 			const osaArgs = [
-				Path.join(__dirname, './terminalHelper.scpt'),
+				Path.join(__dirname, './TerminalHelper.scpt'),
 				'-t', MacTerminalService.TERMINAL_TITLE,
 				'-w', dir,
 			];
