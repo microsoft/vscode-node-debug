@@ -17,7 +17,7 @@
 
 	DebugCommandProcessor.prototype.dispatch_['vscode_backtrace'] = function(request, response) {
 		var result = this.backtraceRequest_(request, response);
-		if (!result) {
+		if (!result && response.body.frames) {
 			var frames = response.body.frames;
 			for (var i = 0; i < frames.length; i++) {
 				const d = frames[i].details_.details_;
