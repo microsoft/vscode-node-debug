@@ -1530,28 +1530,15 @@ export class NodeDebugSession extends DebugSession {
 
 		}).catch(error => {
 
-			let msg: string = null;
-
 			if (error.message === 'no stack') {
-
 				if (this._stoppedReason === 'pause') {
-					msg = localize('paused.outside.js', "No call stack because program paused outside of JavaScript.");
-					//this.sendErrorResponse(response, 2021, localize('VSND2021', "No call stack because program paused outside of JavaScript."));
+					this.sendErrorResponse(response, 2021, localize('VSND2021', "No call stack because program paused outside of JavaScript."));
 				} else {
-					msg = localize('no.call.stack.available', "No call stack available.");
-					//this.sendErrorResponse(response, 2022, localize('VSND2022', "No call stack available."));
+					this.sendErrorResponse(response, 2022, localize('VSND2022', "No call stack available."));
 				}
-
 			} else {
-				msg = localize('VSND2018', "No call stack available ({0}).", error.message);
-				//this.sendErrorResponse(response, 2018, localize('VSND2018', "No call stack available ({_error})."), { _error: error.message } );
+				this.sendErrorResponse(response, 2018, localize('VSND2018', "No call stack available ({_error})."), { _error: error.message } );
 			}
-
-			response.body = {
-				stackFrames: [ new StackFrame(0, msg, null, 0, 0) ],
-				totalFrames: 1
-			};
-			this.sendResponse(response);
 
 		});
 	}
