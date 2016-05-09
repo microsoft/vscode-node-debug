@@ -197,6 +197,7 @@ export class NodeDebugSession extends DebugSession {
 	private _pollForNodeProcess = false;
 	private _exception: any;
 	private _lastStoppedEvent: DebugProtocol.StoppedEvent;
+	private _stoppedReason: string;
 	private _nodeInjectionAvailable = false;
 	private _nodeInjection2Available = false;
 	private _needContinue: boolean;
@@ -404,6 +405,7 @@ export class NodeDebugSession extends DebugSession {
 	 * clear everything that is no longer valid after a new stopped event.
 	 */
 	private _stopped(reason: string): void {
+		this._stoppedReason = reason;
 		this.log('la', `_stopped: got ${reason} event from node`);
 		this._exception = undefined;
 		this._variableHandles.reset();
@@ -908,7 +910,7 @@ export class NodeDebugSession extends DebugSession {
 							this._nodeInjection2Available = use_version_2;
 							callback(false);
 						}).catch(resp => {
-							this.log('la', '_injectDebuggerExtensions: code inject failed, trying again');
+							this.log('la', `_injectDebuggerExtensions: code injection failed with error '${resp.message}'`);
 							callback(true);
 						});
 					});
@@ -1510,9 +1512,13 @@ export class NodeDebugSession extends DebugSession {
 
 			this._cacheRefs(response);
 
-			const frames = response.body.frames;
-			totalFrames = response.body.totalFrames;
-			return Promise.all<StackFrame>(frames.map(frame => this._createStackFrame(frame)));
+			if (response.body.totalFrames > 0 || response.body.frames) {
+				const frames = response.body.frames;
+				totalFrames = response.body.totalFrames;
+				return Promise.all<StackFrame>(frames.map(frame => this._createStackFrame(frame)));
+			} else {
+				throw new Error('no stack');
+			}
 
 		}).then(stackframes => {
 
@@ -1524,10 +1530,29 @@ export class NodeDebugSession extends DebugSession {
 
 		}).catch(error => {
 
+			let msg: string = null;
+
+			if (error.message === 'no stack') {
+
+				if (this._stoppedReason === 'pause') {
+					msg = localize('paused.outside.js', "No call stack because program paused outside of JavaScript.");
+					//this.sendErrorResponse(response, 2021, localize('VSND2021', "No call stack because program paused outside of JavaScript."));
+				} else {
+					msg = localize('no.call.stack.available', "No call stack available.");
+					//this.sendErrorResponse(response, 2022, localize('VSND2022', "No call stack available."));
+				}
+
+			} else {
+				msg = localize('VSND2018', "No call stack available ({0}).", error.message);
+				//this.sendErrorResponse(response, 2018, localize('VSND2018', "No call stack available ({_error})."), { _error: error.message } );
+			}
+
 			response.body = {
-				stackFrames: []
+				stackFrames: [ new StackFrame(0, msg, null, 0, 0) ],
+				totalFrames: 1
 			};
 			this.sendResponse(response);
+
 		});
 	}
 
