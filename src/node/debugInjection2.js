@@ -4,11 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 !function() {
-	var vm = require('vm');
+	var vm = process.mainModule.require('vm');
 	var LookupMirror = vm.runInDebugContext('LookupMirror');
 	var PropertyKindIndexed;
 	try {
-		var PropertyKind = vm.runInDebugContext('PropertyKind'); // https://github.com/electron/electron/issues/5295
+		var PropertyKind = vm.runInDebugContext('PropertyKind');
 		PropertyKindIndexed = PropertyKind.Indexed;
 	} catch (error) {
 		PropertyKindIndexed = 1;

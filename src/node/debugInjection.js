@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 !function() {
-	var vm = require('vm');
+	var vm = process.mainModule.require('vm');
 	var LookupMirror = vm.runInDebugContext('LookupMirror');
 	var PropertyKind = vm.runInDebugContext('PropertyKind');
 	var DebugCommandProcessor = vm.runInDebugContext('DebugCommandProcessor');

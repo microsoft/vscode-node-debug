@@ -846,7 +846,7 @@ export class NodeDebugSession extends DebugSession {
 					this._pollForNodeTermination();
 				}
 
-				this._injectDebuggerExtensions(_ => {
+				this._injectDebuggerExtensions().then(_ => {
 					this.sendResponse(response);
 					this._startInitialize(!resp.running);
 				});
@@ -885,7 +885,7 @@ export class NodeDebugSession extends DebugSession {
 	/*
 	 * Inject code into node.js to address slowness issues when inspecting large data structures.
 	 */
-	private _injectDebuggerExtensions(done) : void {
+	private _injectDebuggerExtensions() : Promise<boolean> {
 
 		if (this._tryToInjectExtension) {
 
@@ -899,30 +899,26 @@ export class NodeDebugSession extends DebugSession {
 
 					const args = {
 						expression: contents,
+						global: true,
 						disable_break: true
 					};
 
-					this._repeater(4, done, (callback: (again: boolean) => void) => {
-
-						this._node.command2('evaluate', args).then(resp => {
-							this.log('la', '_injectDebuggerExtensions: code inject: OK');
-							this._nodeInjectionAvailable = true;
-							this._nodeInjection2Available = use_version_2;
-							callback(false);
-						}).catch(resp => {
-							this.log('la', `_injectDebuggerExtensions: code injection failed with error '${resp.message}'`);
-							callback(true);
-						});
+					return this._node.command2('evaluate', args).then(resp => {
+						this.log('la', '_injectDebuggerExtensions: code inject: OK');
+						this._nodeInjectionAvailable = true;
+						this._nodeInjection2Available = use_version_2;
+						return true;
+					}).catch(resp => {
+						this.log('la', `_injectDebuggerExtensions: code injection failed with error '${resp.message}'`);
+						return true;
 					});
-
-					return;
 
 				} catch(e) {
 					// fall through
 				}
 			}
 		}
-		done();
+		return Promise.resolve(true);
 	}
 
 	/*
@@ -2552,23 +2548,6 @@ export class NodeDebugSession extends DebugSession {
 			} else {
 				this.sendErrorResponse(response, 2013, 'Node.js request \'{_request}\' failed (reason: {_error}).', { _request: nodeResponse.command, _error: errmsg }, ErrorDestination.Telemetry);
 			}
-		}
-	}
-
-	private _repeater(n: number, done: (success: boolean) => void, asyncwork: (done2: (again: boolean) => void) => void): void {
-		if (n > 0) {
-			asyncwork( (again: boolean) => {
-				if (again) {
-					setTimeout(() => {
-						// recurse
-						this._repeater(n-1, done, asyncwork);
-					}, 100);		// retry after 100 ms
-				} else {
-					done(true);
-				}
-			});
-		} else {
-			done(false);
 		}
 	}
 
