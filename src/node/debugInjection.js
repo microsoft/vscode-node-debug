@@ -4,6 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 !function() {
+	var CHUNK_SIZE = 100;
+
 	var vm = process.mainModule.require('vm');
 	var LookupMirror = vm.runInDebugContext('LookupMirror');
 	var PropertyKind = vm.runInDebugContext('PropertyKind');
@@ -14,8 +16,17 @@
 		var content = [];
 		for (var i = 0; i < this.mirrors_.length; i++) {
 			var m = this.mirrors_[i];
+
 			if (m.isArray()) continue;
-			if (m.isObject() && m.propertyNames(PropertyKind.Indexed | PropertyKind.Named, 100).length >= 100) continue;
+
+			if (m.isObject()) {
+				if (m.handle() < 0) {
+					// we cannot drop transient objects from 'refs' because they cannot be looked up later
+				} else {
+					if (m.propertyNames(PropertyKind.Indexed | PropertyKind.Named, CHUNK_SIZE).length >= CHUNK_SIZE) continue;
+				}
+			}
+
 			content.push(this.serialize_(m, false, false));
 		}
 		return content;
@@ -78,7 +89,7 @@
 				break;
 			}
 		}
-		if (size > 1000) {
+		if (size > CHUNK_SIZE) {
 			return {
 				handle: mirror.handle(),
 				type: "object",
