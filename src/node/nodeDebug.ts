@@ -152,8 +152,7 @@ export class NodeDebugSession extends DebugSession {
 	private static DUMMY_THREAD_NAME = 'Node';
 	private static FIRST_LINE_OFFSET = 62;
 	private static PROTO = '__proto__';
-	private static DEBUG_INJECTION = 'debugInjection2.js';		// for node version 0.12.x and >= 4.3.1
-	private static DEBUG_INJECTION2 = 'debugInjection2.js';		// for node version >= 5.6
+	private static DEBUG_INJECTION = 'debugInjection.js';
 
 	private static NODE_SHEBANG_MATCHER = new RegExp('#! */usr/bin/env +node');
 	private static LONG_STRING_MATCHER = /\.\.\. \(length: [0-9]+\)$/;
@@ -199,7 +198,6 @@ export class NodeDebugSession extends DebugSession {
 	private _lastStoppedEvent: DebugProtocol.StoppedEvent;
 	private _stoppedReason: string;
 	private _nodeInjectionAvailable = false;
-	private _nodeInjection2Available = false;
 	private _needContinue: boolean;
 	private _needBreakpointEvent: boolean;
 	private _gotEntryEvent: boolean;
@@ -846,10 +844,12 @@ export class NodeDebugSession extends DebugSession {
 					this._pollForNodeTermination();
 				}
 
-				this._injectDebuggerExtensions().then(_ => {
-					this.sendResponse(response);
-					this._startInitialize(!resp.running);
-				});
+				setTimeout(() => {
+					this._injectDebuggerExtensions().then(_ => {
+						this.sendResponse(response);
+						this._startInitialize(!resp.running);
+					});
+				}, 10);
 
 			} else {
 				this.log('la', '_initialize: retrieving process id from node failed');
@@ -893,24 +893,33 @@ export class NodeDebugSession extends DebugSession {
 
 			if ((v >= 1200 && v < 10000) || (v >= 40301 && v < 50000) || (v >= 50600)) {
 				try {
-					const use_version_2 = v >= 50000;
-					const code = use_version_2 ? NodeDebugSession.DEBUG_INJECTION2 : NodeDebugSession.DEBUG_INJECTION;
-					const contents = FS.readFileSync(Path.join(__dirname, code), 'utf8');
+					const contents = FS.readFileSync(Path.join(__dirname, NodeDebugSession.DEBUG_INJECTION), 'utf8');
 
 					const args = {
 						expression: contents,
-						global: true,
+						global: false,
 						disable_break: true
 					};
 
 					return this._node.command2('evaluate', args).then(resp => {
 						this.log('la', `_injectDebuggerExtensions: code inject: ${resp.body.text}`);
 						this._nodeInjectionAvailable = true;
-						this._nodeInjection2Available = use_version_2;
 						return true;
 					}).catch(resp => {
-						this.log('la', `_injectDebuggerExtensions: code injection failed with error '${resp.message}'`);
-						return true;
+
+						this.log('la', `_injectDebuggerExtensions: frame code injection failed with error '${resp.message}'`);
+
+						args.global = true;
+
+						return this._node.command2('evaluate', args).then(resp => {
+							this.log('la', `_injectDebuggerExtensions: code inject: ${resp.body.text}`);
+							this._nodeInjectionAvailable = true;
+							return true;
+						}).catch(resp => {
+							this.log('la', `_injectDebuggerExtensions: global code injection failed with error '${resp.message}'`);
+							return true;
+						});
+
 					});
 
 				} catch(e) {
@@ -1502,7 +1511,7 @@ export class NodeDebugSession extends DebugSession {
 			return;
 		}
 
-		const cmd = this._nodeInjection2Available ? 'vscode_backtrace' : 'backtrace';
+		const cmd = this._nodeInjectionAvailable ? 'vscode_backtrace' : 'backtrace';
 		this.log('va', `stackTraceRequest: ${cmd} ${startFrame} ${maxLevels}`);
 		this._node.command2(cmd, { fromFrame: startFrame, toFrame: startFrame+maxLevels }, NodeDebugSession.STACKTRACE_TIMEOUT).then(response => {
 
