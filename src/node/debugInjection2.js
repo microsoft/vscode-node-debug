@@ -3,17 +3,79 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-!function() {
+'status: '+function() {
+
+	var status = '';
+
+	var CHUNK_SIZE = 100;
+	var ARGUMENT_COUNT_INDEX = 3;	// index of Argument count field in FrameDetails
+	var LOCAL_COUNT_INDEX = 4;		// index of Local count field in FrameDetails
+
 	var vm = process.mainModule.require('vm');
 	var LookupMirror = vm.runInDebugContext('LookupMirror');
-	var PropertyKindIndexed;
+	var DebugCommandProcessor = vm.runInDebugContext('DebugCommandProcessor');
+
+	var indexedPropertyCount;
+	var namedProperties;
 	try {
 		var PropertyKind = vm.runInDebugContext('PropertyKind');
-		PropertyKindIndexed = PropertyKind.Indexed;
+		indexedPropertyCount = function(mirror) {
+			return mirror.propertyNames(PropertyKind.Indexed).length;
+		};
+		namedProperties = function(mirror) {
+			return mirror.propertyNames(PropertyKind.Named);
+		};
+		status += 'PropertyKind available, ';
 	} catch (error) {
-		PropertyKindIndexed = 1;
+		indexedPropertyCount = function(mirror) {
+			var n = 0;
+			const names = mirror.propertyNames();
+			for (var name of names) {
+				if (name[0] >= '0' && name[0] <= '9') {
+					n++;
+				}
+			}
+			return n;
+		};
+		namedProperties = function(mirror) {
+			var named = [];
+			const names = mirror.propertyNames();
+			for (var name of names) {
+				if (name[0] < '0' || name[0] > '9') {
+					named.push(name);
+				}
+			}
+			return named;
+		};
+		status += 'PropertyKind not available, ';
 	}
-	var DebugCommandProcessor = vm.runInDebugContext('DebugCommandProcessor');
+
+	try {
+		var JSONProtocolSerializer = vm.runInDebugContext('JSONProtocolSerializer');
+
+		JSONProtocolSerializer.prototype.serializeReferencedObjects = function () {
+			var content = [];
+			for (var i = 0; i < this.mirrors_.length; i++) {
+				var m = this.mirrors_[i];
+
+				if (m.isArray()) continue;
+
+				if (m.isObject()) {
+					if (m.handle() < 0) {
+						// we cannot drop transient objects from 'refs' because they cannot be looked up later
+					} else {
+						if (m.propertyNames(PropertyKind.Indexed | PropertyKind.Named, CHUNK_SIZE).length >= CHUNK_SIZE) continue;
+					}
+				}
+
+				content.push(this.serialize_(m, false, false));
+			}
+			return content;
+		};
+		status += 'JSONProtocolSerializer available\n';
+	} catch (error) {
+		status += 'JSONProtocolSerializer not available\n';
+	}
 
 	DebugCommandProcessor.prototype.dispatch_['vscode_backtrace'] = function(request, response) {
 		var result = this.backtraceRequest_(request, response);
@@ -21,8 +83,8 @@
 			var frames = response.body.frames;
 			for (var i = 0; i < frames.length; i++) {
 				const d = frames[i].details_.details_;
-				d[3]= 0;
-				d[4]= 0;
+				d[ARGUMENT_COUNT_INDEX]= 0;		// don't include any Arguments in stack frame
+				d[LOCAL_COUNT_INDEX]= 0;		// don't include any Locals in stack frame
 			}
 		}
 		return result;
@@ -36,21 +98,27 @@
 		if (!mirror) {
 			return response.failed('Object #' + handle + '# not found');
 		}
-		var result;
-		if (mirror.isArray()) {
-			result = new Array(length);
-			var a = mirror.indexedPropertiesFromRange(start, start+length-1);
-			for (var i = 0; i < length; i++) {
-				result[i] = a[i].value();
-			}
-		} else if (mirror.isObject()) {
-			result = new Array(length);
-			for (var i = 0, j = start; i < length; i++, j++) {
-				var p = mirror.property(j.toString());
-				result[i] = p.value();
+		var result = new Array();
+		if (typeof start === 'number') {
+			if (mirror.isArray()) {
+				var a = mirror.indexedPropertiesFromRange(start, start+length-1);
+				for (var i = 0; i < a.length; i++) {
+					result.push({ name: (start+i).toString(), value: a[i].value() });
+				}
+			} else if (mirror.isObject()) {
+				for (var i = 0, j = start; i < length; i++, j++) {
+					var p = mirror.property(j.toString());
+					result.push({ name: j.toString(), value: p.value() });
+				}
 			}
 		} else {
-			result = new Array(length);
+			if (mirror.isArray() || mirror.isObject()) {
+				var names = namedProperties(mirror);
+				for (var name of names) {
+					var p = mirror.property(name);
+					result.push({ name: name, value: p.value() });
+				}
+			}
 		}
 		response.body = {
 			result: result
@@ -58,40 +126,36 @@
 	};
 
 	DebugCommandProcessor.prototype.vscode_dehydrate = function(mirror) {
-		var className = null;
 		var size = -1;
+
 		if (mirror.isArray()) {
-			className = "Array";
 			size = mirror.length();
 		} else if (mirror.isObject()) {
-			switch (mirror.toText()) {
-			case "#<Buffer>":
-				className = "Buffer";
-				size = mirror.propertyNames(PropertyKindIndexed).length;
-				break;
-			case "#<Int8Array>":
-			case "#<Uint8Array>":
-			case "#<Uint8ClampedArray>":
-			case "#<Int16Array>":
-			case "#<Uint16Array>":
-			case "#<Int32Array>":
-			case "#<Uint32Array>":
-			case "#<Float32Array>":
-			case "#<Float64Array>":
-				className = mirror.className();
-				size = mirror.propertyNames(PropertyKindIndexed).length;
+			switch (mirror.className()) {
+			case 'ArrayBuffer':
+			case 'Int8Array':
+			case 'Uint8Array':
+			case 'Uint8ClampedArray':
+			case 'Int16Array':
+			case 'Uint16Array':
+			case 'Int32Array':
+			case 'Uint32Array':
+			case 'Float32Array':
+			case 'Float64Array':
+				size = indexedPropertyCount(mirror);
 				break;
 			default:
 				break;
 			}
 		}
-		if (size > 1000) {
+
+		if (size > CHUNK_SIZE) {
 			return {
 				handle: mirror.handle(),
-				type: "object",
-				className: className,
-				vscode_size: size,
-				value: className
+				type: 'object',
+				className: mirror.className(),
+				vscode_size: size
+				//value: mirror.className()
 			};
 		}
 		return mirror;
@@ -116,4 +180,6 @@
 		}
 		return result;
 	};
+
+	return status + 'OK';
 }()

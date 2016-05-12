@@ -152,7 +152,7 @@ export class NodeDebugSession extends DebugSession {
 	private static DUMMY_THREAD_NAME = 'Node';
 	private static FIRST_LINE_OFFSET = 62;
 	private static PROTO = '__proto__';
-	private static DEBUG_INJECTION = 'debugInjection.js';		// for node version 0.12.x and >= 4.3.1
+	private static DEBUG_INJECTION = 'debugInjection2.js';		// for node version 0.12.x and >= 4.3.1
 	private static DEBUG_INJECTION2 = 'debugInjection2.js';		// for node version >= 5.6
 
 	private static NODE_SHEBANG_MATCHER = new RegExp('#! */usr/bin/env +node');
@@ -904,7 +904,7 @@ export class NodeDebugSession extends DebugSession {
 					};
 
 					return this._node.command2('evaluate', args).then(resp => {
-						this.log('la', '_injectDebuggerExtensions: code inject: OK');
+						this.log('la', `_injectDebuggerExtensions: code inject: ${resp.body.text}`);
 						this._nodeInjectionAvailable = true;
 						this._nodeInjection2Available = use_version_2;
 						return true;
@@ -1807,23 +1807,23 @@ export class NodeDebugSession extends DebugSession {
 	 */
 	public _createProperties(obj: any, mode: 'named' | 'range' | 'all', start = 0, count = 0) : Promise<Variable[]> {
 
-		if (!obj.properties) {
+		if (obj && !obj.properties) {
 
-			// if properties are missing, this is an indication that we are running injected code which doesn't return properties eagerly
+			// if properties are missing, this is an indication that we are running injected code which doesn't return the properties for large objects
 
 			if (this._nodeInjectionAvailable) {
+				const handle = obj.handle;
 				switch (mode) {
 					case 'range':
 					case 'all':
 						// try to use "vscode_size" from injected code
-						const handle = obj.handle;
 						if (typeof obj.vscode_size === 'number' && typeof handle === 'number' && handle !== 0) {
 							if (obj.vscode_size >= 0) {
 								this.log('va', `_createProperties: vscode_slice ${start} ${count}`);
 								return this._node.command2('vscode_slice', { handle: handle, start: start, length: count }).then(resp => {
 									const items = resp.body.result;
-									return Promise.all<Variable>(items.map((item, ix) => {
-										return this._createVariable(`[${start+ix}]`, item);
+									return Promise.all<Variable>(items.map(item => {
+										return this._createVariable(`[${item.name}]`, item.value);
 									}));
 								});
 							}
@@ -1831,7 +1831,15 @@ export class NodeDebugSession extends DebugSession {
 						break;
 
 					case 'named':
-						// can't add named properties because we don't have access to them yet.
+						if (typeof obj.vscode_size === 'number' && typeof handle === 'number' && handle !== 0) {
+							this.log('va', `_createProperties: vscode_slice`);
+							return this._node.command2('vscode_slice', { handle: handle, length: count }).then(resp => {
+								const items = resp.body.result;
+								return Promise.all<Variable>(items.map(item => {
+									return this._createVariable(item.name, item.value);
+								}));
+							});
+						}
 						break;
 				}
 			}
@@ -1959,14 +1967,12 @@ export class NodeDebugSession extends DebugSession {
 				switch (value) {
 
 					case 'Array':
-					case 'Buffer':
-						return this._createArrayVariable(name, val, false);
-
+					case 'ArrayBuffer':
 					case 'Int8Array': case 'Uint8Array': case 'Uint8ClampedArray':
 					case 'Int16Array': case 'Uint16Array':
 					case 'Int32Array': case 'Uint32Array':
 					case 'Float32Array': case 'Float64Array':
-						return this._createArrayVariable(name, val, true);
+						return this._createArrayVariable(name, val);
 
 					case 'RegExp':
 						return Promise.resolve(new Variable(name, text, this._variableHandles.create(new PropertyExpander(val))));
@@ -2032,23 +2038,9 @@ export class NodeDebugSession extends DebugSession {
 
 	//--- long array support
 
-	private _createArrayVariable(name: string, array: any, special: boolean) : Promise<Variable> {
+	private _createArrayVariable(name: string, array: any) : Promise<Variable> {
 
-		const args = {
-			// initially we need only the length of the array
-			expression: `array.length`,
-			disable_break: true,
-			additional_context: [
-				{ name: 'array', handle: array.handle }
-			]
-		};
-
-		this.log('va', `_createArrayVariable: array.length`);
-		return this._node.command2('evaluate', args).then(response => {
-
-			this._cacheRefs(response);
-
-			const length = +response.body.value;
+		return this._getArraySize(array).then(length => {
 
 			let expander: Expandable;
 
@@ -2063,7 +2055,7 @@ export class NodeDebugSession extends DebugSession {
 
 							let expandFunc;
 							if (this._largeArrays) {
-								expandFunc = () => this._createLargeArrayElements(array, start, count, special);
+								expandFunc = () => this._createLargeArrayElements(array, start, count);
 							} else {
 								expandFunc = () => this._createProperties(array, 'range', start, count);
 							}
@@ -2082,7 +2074,28 @@ export class NodeDebugSession extends DebugSession {
 		});
 	}
 
-	private _createLargeArrayElements(array: any, start: number, count: number, special: boolean) : Promise<Variable[]> {
+	private _getArraySize(array: any) : Promise<number> {
+
+		if (typeof array.vscode_size === 'number') {
+			return Promise.resolve(array.vscode_size);
+		}
+
+		const args = {
+			expression: `array.length`,
+			disable_break: true,
+			additional_context: [
+				{ name: 'array', handle: array.handle }
+			]
+		};
+
+		this.log('va', `_getArraySize: array.length`);
+		return this._node.command2('evaluate', args).then(response => {
+			this._cacheRefs(response);
+			return +response.body.value;
+		});
+	}
+
+	private _createLargeArrayElements(array: any, start: number, count: number) : Promise<Variable[]> {
 
 		const args = {
 			expression: `array.slice(${start}, ${start+count})`,
