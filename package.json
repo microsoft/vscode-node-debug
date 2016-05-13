@@ -43,6 +43,7 @@
 		"gulp-filter": "^3.0.1",
 		"gulp-azure-storage": "*",
 		"gulp-tslint": "^4.3.0",
+		"gulp-uglify": "^1.5.3",
 		"tslint-microsoft-contrib": "^2.0.0",
 		"git-rev-sync": "*",
 		"del": "*",

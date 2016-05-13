@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-'status: '+function() {
+''+function() {
 
 	var status = '';
 
@@ -37,7 +37,8 @@
 		indexedPropertyCount = function(mirror) {
 			var n = 0;
 			const names = mirror.propertyNames();
-			for (var name of names) {
+			for (var i = 0; i < names.length; i++) {
+				var name = names[i];
 				if (name[0] >= '0' && name[0] <= '9') {
 					n++;
 				}
@@ -47,7 +48,8 @@
 		namedProperties = function(mirror) {
 			var named = [];
 			const names = mirror.propertyNames();
-			for (var name of names) {
+			for (var i = 0; i < names.length; i++) {
+				var name = names[i];
 				if (name[0] < '0' || name[0] > '9') {
 					named.push(name);
 				}
@@ -121,7 +123,8 @@
 		} else {
 			if (mirror.isArray() || mirror.isObject()) {
 				var names = namedProperties(mirror);
-				for (var name of names) {
+				for (var i = 0; i < names.length; i++) {
+					var name = names[i];
 					var p = mirror.property(name);
 					result.push({ name: name, value: p.value() });
 				}

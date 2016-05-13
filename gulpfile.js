@@ -11,6 +11,7 @@ var log = require('gulp-util').log;
 var tslint = require("gulp-tslint");
 var filter = require('gulp-filter');
 var azure = require('gulp-azure-storage');
+var uglify = require('gulp-uglify');
 var git = require('git-rev-sync');
 var del = require('del');
 var runSequence = require('run-sequence');
@@ -30,10 +31,14 @@ var watchedSources = [
 ];
 
 var scripts = [
-	'src/node/debugInjection.js',
 	'src/node/terminateProcess.sh',
 	'src/node/TerminalHelper.scpt'
 ];
+
+var scripts2 = [
+	'src/node/debugInjection.js'
+];
+
 
 var outDest = 'out';
 
@@ -84,15 +89,21 @@ gulp.task('ts-watch', ['internal-build'], function(cb) {
 
 // compile and copy everything to outDest
 gulp.task('internal-build', function(callback) {
-	runSequence('internal-compile', 'internal-copy-scripts', callback);
+	runSequence('internal-compile', 'internal-copy-scripts', 'internal-minify-scripts', callback);
 });
 
 gulp.task('internal-nls-build', function(callback) {
-	runSequence('internal-nls-compile', 'internal-copy-scripts', callback);
+	runSequence('internal-nls-compile', 'internal-copy-scripts', 'internal-minify-scripts', callback);
 });
 
 gulp.task('internal-copy-scripts', function() {
 	return gulp.src(scripts)
+		.pipe(gulp.dest(outDest + '/node'));
+});
+
+gulp.task('internal-minify-scripts', function() {
+	return gulp.src(scripts2)
+		.pipe(uglify())
 		.pipe(gulp.dest(outDest + '/node'));
 });
 
