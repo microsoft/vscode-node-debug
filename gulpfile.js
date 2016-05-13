@@ -39,7 +39,6 @@ var scripts2 = [
 	'src/node/debugInjection.js'
 ];
 
-
 var outDest = 'out';
 
 var BOM = [
@@ -82,7 +81,7 @@ gulp.task('clean', function() {
 
 gulp.task('ts-watch', ['internal-build'], function(cb) {
 	log('Watching build sources...');
-	gulp.watch(watchedSources, ['internal-compile']);
+	gulp.watch(watchedSources, ['internal-build']);
 });
 
 //---- internal
