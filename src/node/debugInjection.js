@@ -7,10 +7,11 @@
 
 	var status = '';
 
-	var CHUNK_SIZE = 100;
+	var CHUNK_SIZE = 100;			// break large objects into chunks of this size
 	var ARGUMENT_COUNT_INDEX = 3;	// index of Argument count field in FrameDetails
 	var LOCAL_COUNT_INDEX = 4;		// index of Local count field in FrameDetails
 
+	// try to load 'vm' even if 'require' isn't available in the current context
 	var vm;
 	if (process.mainModule) {
 		vm = process.mainModule.require('vm');
@@ -19,9 +20,15 @@
 		vm = require('vm');
 		status += 'require as argument, ';
 	}
+
+	// the following objects should be available in all versions of node.js
 	var LookupMirror = vm.runInDebugContext('LookupMirror');
 	var DebugCommandProcessor = vm.runInDebugContext('DebugCommandProcessor');
 
+	/*
+	 * Retrieving index and named properties of an object requires some work in recent versions of node
+	 * because 'propertyNames' no longer takes a filter argument.
+	 */
 	var indexedPropertyCount;
 	var namedProperties;
 	try {
@@ -59,6 +66,10 @@
 		status += 'PropertyKind not available, ';
 	}
 
+	/**
+	 * In old versions of node it was possible to monkey patch the JSON response serializer.
+	 * This made it possible to drop large objects from the 'refs' cache that is part of every protocol response.
+	 */
 	try {
 		var JSONProtocolSerializer = vm.runInDebugContext('JSONProtocolSerializer');
 
@@ -86,6 +97,13 @@
 		status += 'JSONProtocolSerializer not available\n';
 	}
 
+	/**
+	 * The original backtrace request returns unsolicited arguments and local variables for all stack frames.
+	 * If these arguments or local variables are large, they blow up the backtrace response which slows down
+	 * stepping speed.
+	 * This override clears the argument and local variable count in the FrameDetails structure
+	 * which prevents arguments and local variables from being included in the backtrace response.
+	 */
 	DebugCommandProcessor.prototype.dispatch_['vscode_backtrace'] = function(request, response) {
 		var result = this.backtraceRequest_(request, response);
 		if (!result && response.body.frames) {
@@ -99,10 +117,16 @@
 		return result;
 	}
 
+	/**
+	 * This new protocol request makes it possible to retrieve a range of values from a
+	 * large object.
+	 * If 'start' is specified, 'count' indexed properties are returned.
+	 * If 'start' is omitted, the first 'count' named properties are returned.
+ 	 */
 	DebugCommandProcessor.prototype.dispatch_['vscode_slice'] = function(request, response) {
 		var handle = request.arguments.handle;
 		var start = request.arguments.start;
-		var length = request.arguments.length;
+		var count = request.arguments.count;
 		var mirror = LookupMirror(handle);
 		if (!mirror) {
 			return response.failed('Object #' + handle + '# not found');
@@ -110,12 +134,12 @@
 		var result = new Array();
 		if (typeof start === 'number') {
 			if (mirror.isArray()) {
-				var a = mirror.indexedPropertiesFromRange(start, start+length-1);
+				var a = mirror.indexedPropertiesFromRange(start, start+count-1);
 				for (var i = 0; i < a.length; i++) {
 					result.push({ name: (start+i).toString(), value: a[i].value() });
 				}
 			} else if (mirror.isObject()) {
-				for (var i = 0, j = start; i < length; i++, j++) {
+				for (var i = 0, j = start; i < count; i++, j++) {
 					var p = mirror.property(j.toString());
 					result.push({ name: j.toString(), value: p.value() });
 				}
@@ -135,7 +159,11 @@
 		};
 	};
 
-	DebugCommandProcessor.prototype.vscode_dehydrate = function(mirror) {
+	/**
+	 * If the passed mirror object is a large array or object this function
+	 * returns the mirror without its properties but with a size attribute ('vscode_size') instead.
+ 	 */
+	var dehydrate = function(mirror) {
 		var size = -1;
 
 		if (mirror.isArray()) {
@@ -171,22 +199,30 @@
 		return mirror;
 	};
 
+	/**
+	 * This override removes the properties of large data structures from the lookup response
+	 * and returns the size of the data structure instead.
+ 	 */
 	DebugCommandProcessor.prototype.dispatch_['vscode_lookup'] = function(request, response) {
 		var result = this.lookupRequest_(request, response);
 		if (!result) {
 			var handles = request.arguments.handles;
 			for (var i = 0; i < handles.length; i++) {
 				var handle = handles[i];
-				response.body[handle] = this.vscode_dehydrate(response.body[handle]);
+				response.body[handle] = dehydrate(response.body[handle]);
 			}
 		}
 		return result;
 	};
 
+	/**
+	 * This override removes the properties of large data structures from the lookup response
+	 * and returns the size of the data structure instead.
+ 	 */
 	DebugCommandProcessor.prototype.dispatch_['vscode_evaluate'] = function(request, response) {
 		var result = this.evaluateRequest_(request, response);
 		if (!result) {
-			response.body = this.vscode_dehydrate(response.body);
+			response.body = dehydrate(response.body);
 		}
 		return result;
 	};

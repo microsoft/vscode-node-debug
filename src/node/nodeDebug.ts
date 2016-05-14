@@ -901,6 +901,7 @@ export class NodeDebugSession extends DebugSession {
 						disable_break: true
 					};
 
+					// first try evaluate against the current stack frame
 					return this._node.command2('evaluate', args).then(resp => {
 						this.log('la', `_injectDebuggerExtensions: code inject: ${resp.body.text}`);
 						this._nodeInjectionAvailable = true;
@@ -911,6 +912,7 @@ export class NodeDebugSession extends DebugSession {
 
 						args.global = true;
 
+						// evaluate globally
 						return this._node.command2('evaluate', args).then(resp => {
 							this.log('la', `_injectDebuggerExtensions: code inject: ${resp.body.text}`);
 							this._nodeInjectionAvailable = true;
@@ -1829,7 +1831,7 @@ export class NodeDebugSession extends DebugSession {
 						if (typeof obj.vscode_size === 'number' && typeof handle === 'number' && handle !== 0) {
 							if (obj.vscode_size >= 0) {
 								this.log('va', `_createProperties: vscode_slice ${start} ${count}`);
-								return this._node.command2('vscode_slice', { handle: handle, start: start, length: count }).then(resp => {
+								return this._node.command2('vscode_slice', { handle: handle, start: start, count: count }).then(resp => {
 									const items = resp.body.result;
 									return Promise.all<Variable>(items.map(item => {
 										return this._createVariable(`[${item.name}]`, item.value);
@@ -1842,7 +1844,7 @@ export class NodeDebugSession extends DebugSession {
 					case 'named':
 						if (typeof obj.vscode_size === 'number' && typeof handle === 'number' && handle !== 0) {
 							this.log('va', `_createProperties: vscode_slice`);
-							return this._node.command2('vscode_slice', { handle: handle, length: count }).then(resp => {
+							return this._node.command2('vscode_slice', { handle: handle, count: count }).then(resp => {
 								const items = resp.body.result;
 								return Promise.all<Variable>(items.map(item => {
 									return this._createVariable(item.name, item.value);
