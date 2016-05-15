@@ -2126,7 +2126,7 @@ export class NodeDebugSession extends DebugSession {
 
 			for (let property of properties) {
 				const name = property.name;
-				if (typeof name === 'number' && name >= 0 && name < count) {
+				if (typeof name === 'number' || (typeof name === 'string' && name[0] >= '0' && name[0] <= '9')) {
 					selectedProperties.push(property);
 				}
 			}
@@ -2194,7 +2194,7 @@ export class NodeDebugSession extends DebugSession {
 
 			for (let property of properties) {
 				const name = property.name;
-				if (typeof name === 'number' && name >= 0 && name < length) {
+				if (typeof name === 'number' || (typeof name === 'string' && name[0] >= '0' && name[0] <= '9')) {
 					selectedProperties.push(property);
 				}
 			}
@@ -2263,7 +2263,7 @@ export class NodeDebugSession extends DebugSession {
 
 			for (let property of properties) {
 				const name = property.name;
-				if (typeof name === 'number' && name >= 0 && name < count*3) {
+				if (typeof name === 'number' || (typeof name === 'string' && name[0] >= '0' && name[0] <= '9')) {
 					selectedProperties.push(property);
 				}
 			}
