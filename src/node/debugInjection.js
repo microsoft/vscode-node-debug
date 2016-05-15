@@ -3,23 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-''+function() {
-
-	var status = '';
+!function() {
 
 	var CHUNK_SIZE = 100;			// break large objects into chunks of this size
 	var ARGUMENT_COUNT_INDEX = 3;	// index of Argument count field in FrameDetails
 	var LOCAL_COUNT_INDEX = 4;		// index of Local count field in FrameDetails
 
 	// try to load 'vm' even if 'require' isn't available in the current context
-	var vm;
-	if (process.mainModule) {
-		vm = process.mainModule.require('vm');
-		status += 'require from mainModule, ';
-	} else {
-		vm = require('vm');
-		status += 'require as argument, ';
-	}
+	var vm = process.mainModule ? process.mainModule.require('vm') : require('vm');
 
 	// the following objects should be available in all versions of node.js
 	var LookupMirror = vm.runInDebugContext('LookupMirror');
@@ -39,7 +30,6 @@
 		namedProperties = function(mirror) {
 			return mirror.propertyNames(PropertyKind.Named);
 		};
-		status += 'PropertyKind available, ';
 	} catch (error) {
 		indexedPropertyCount = function(mirror) {
 			var n = 0;
@@ -63,12 +53,11 @@
 			}
 			return named;
 		};
-		status += 'PropertyKind not available, ';
 	}
 
 	/**
 	 * In old versions of node it was possible to monkey patch the JSON response serializer.
-	 * This made it possible to drop large objects from the 'refs' cache that is part of every protocol response.
+	 * This made it possible to drop large objects from the 'refs' array (that is part of every protocol response).
 	 */
 	try {
 		var JSONProtocolSerializer = vm.runInDebugContext('JSONProtocolSerializer');
@@ -92,9 +81,7 @@
 			}
 			return content;
 		};
-		status += 'JSONProtocolSerializer available\n';
 	} catch (error) {
-		status += 'JSONProtocolSerializer not available\n';
 	}
 
 	/**
@@ -131,7 +118,7 @@
 		if (!mirror) {
 			return response.failed('Object #' + handle + '# not found');
 		}
-		var result = new Array();
+		var result = [];
 		if (typeof start === 'number') {
 			if (mirror.isArray()) {
 				var a = mirror.indexedPropertiesFromRange(start, start+count-1);
@@ -226,6 +213,4 @@
 		}
 		return result;
 	};
-
-	return status + 'OK';
 }()

@@ -903,18 +903,18 @@ export class NodeDebugSession extends DebugSession {
 
 					// first try evaluate against the current stack frame
 					return this._node.command2('evaluate', args).then(resp => {
-						this.log('la', `_injectDebuggerExtensions: code inject: ${resp.body.text}`);
+						this.log('la', `_injectDebuggerExtensions: frame based code injection successful`);
 						this._nodeInjectionAvailable = true;
 						return true;
 					}).catch(resp => {
 
-						this.log('la', `_injectDebuggerExtensions: frame code injection failed with error '${resp.message}'`);
+						this.log('la', `_injectDebuggerExtensions: frame based code injection failed with error '${resp.message}'`);
 
 						args.global = true;
 
 						// evaluate globally
 						return this._node.command2('evaluate', args).then(resp => {
-							this.log('la', `_injectDebuggerExtensions: code inject: ${resp.body.text}`);
+							this.log('la', `_injectDebuggerExtensions: global code injection successful`);
 							this._nodeInjectionAvailable = true;
 							return true;
 						}).catch(resp => {
