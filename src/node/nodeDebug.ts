@@ -1709,6 +1709,16 @@ export class NodeDebugSession extends DebugSession {
 
 	//--- scopes request ------------------------------------------------------------------------------------------------------
 
+	private static SCOPE_NAMES = [
+		localize({ key: 'scope.global', comment: ['https://github.com/Microsoft/vscode/issues/4569'] }, "Global"),
+		localize({ key: 'scope.local', comment: ['https://github.com/Microsoft/vscode/issues/4569'] }, "Local"),
+		localize({ key: 'scope.with', comment: ['https://github.com/Microsoft/vscode/issues/4569'] }, "With"),
+		localize({ key: 'scope.closure', comment: ['https://github.com/Microsoft/vscode/issues/4569'] }, "Closure"),
+		localize({ key: 'scope.catch', comment: ['https://github.com/Microsoft/vscode/issues/4569'] }, "Catch"),
+		localize({ key: 'scope.block', comment: ['https://github.com/Microsoft/vscode/issues/4569'] }, "Block"),
+		localize({ key: 'scope.script', comment: ['https://github.com/Microsoft/vscode/issues/4569'] }, "Script")
+	];
+
 	protected scopesRequest(response: DebugProtocol.ScopesResponse, args: DebugProtocol.ScopesArguments): void {
 
 		const frame = this._frameHandles.get(args.frameId);
@@ -1719,44 +1729,40 @@ export class NodeDebugSession extends DebugSession {
 		const frameIx = frame.index;
 		const frameThis = this._getValueFromCache(frame.receiver);
 
+		const scopesArgs: any = {
+			frame_index: frameIx,
+			frameNumber: frameIx
+		}
+		let cmd = 'scopes';
+
+		if (this._nodeInjectionAvailable) {
+			cmd = 'vscode_scopes';
+			scopesArgs.maxLocals = this._chunkSize;
+		}
+
 		this.log('va', `scopesRequest: scope ${frameIx}`);
-		this._node.command2('scopes', { frame_index: frameIx, frameNumber: frameIx }).then(response => {
+		this._node.command2(cmd, scopesArgs).then(scopesResponse => {
 
-			this._cacheRefs(response);
+			this._cacheRefs(scopesResponse);
 
-			const scopes : any[] = response.body.scopes;
+			const scopes : any[] = scopesResponse.body.scopes;
 
 			return Promise.all(scopes.map(scope => {
 				const type: number = scope.type;
 				const extra = type === 1 ? frameThis : null;
-				const expensive = type === 0;	// global scope is expensive
+				let expensive = type === 0;	// global scope is expensive
 
 				let scopeName: string;
-				switch (type) {
-					case 0:
-						scopeName = localize({ key: 'scope.global', comment: ['https://github.com/Microsoft/vscode/issues/4569'] }, "Global");
-						break;
-					case 1:
-						scopeName = localize({ key: 'scope.local', comment: ['https://github.com/Microsoft/vscode/issues/4569'] }, "Local");
-						break;
-					case 2:
-						scopeName = localize({ key: 'scope.with', comment: ['https://github.com/Microsoft/vscode/issues/4569'] }, "With");
-						break;
-					case 3:
-						scopeName = localize({ key: 'scope.closure', comment: ['https://github.com/Microsoft/vscode/issues/4569'] }, "Closure");
-						break;
-					case 4:
-						scopeName = localize({ key: 'scope.catch', comment: ['https://github.com/Microsoft/vscode/issues/4569'] }, "Catch");
-						break;
-					case 5:
-						scopeName = localize({ key: 'scope.block', comment: ['https://github.com/Microsoft/vscode/issues/4569'] }, "Block");
-						break;
-					case 6:
-						scopeName = localize({ key: 'scope.script', comment: ['https://github.com/Microsoft/vscode/issues/4569'] }, "Script");
-						break;
-					default:
-						scopeName = localize('scope.unknown', "Unknown Scope Type: {0}", type);
-						break;
+				if (type >= 0 && type < NodeDebugSession.SCOPE_NAMES.length) {
+					if (type === 1 && typeof scopesResponse.body.vscode_locals === 'number') {
+						expensive = true;
+						scopeName = localize({ key: 'scope.local.with.count', comment: ['https://github.com/Microsoft/vscode/issues/4569'] },
+							"Local ({0} of {1})", scopesArgs.maxLocals, scopesResponse.body.vscode_locals);
+					} else {
+						scopeName = NodeDebugSession.SCOPE_NAMES[type];
+					}
+				} else {
+					scopeName = localize('scope.unknown', "Unknown Scope Type: {0}", type);
 				}
 
 				return this._resolveValues( [ scope.object ] ).then(resolved => {

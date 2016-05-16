@@ -82,6 +82,7 @@
 			return content;
 		};
 	} catch (error) {
+		// since overriding 'serializeReferencedObjects' is optional, we can silently ignore the error.
 	}
 
 	/**
@@ -210,6 +211,34 @@
 		var result = this.evaluateRequest_(request, response);
 		if (!result) {
 			response.body = dehydrate(response.body);
+		}
+		return result;
+	};
+
+	/**
+	 * This override trims the maximum number of local variables to 'maxLocals'.
+	 */
+	DebugCommandProcessor.prototype.dispatch_['vscode_scopes'] = function(request, response) {
+		var result = this.scopesRequest_(request, response);
+		if (!result) {
+			var maxLocals = request.arguments.maxLocals;
+			var scopes = response.body.scopes;
+			for (var i = 0; i < scopes.length-1; i++) {
+				const details = scopes[i].details_.details_;
+				if (details[0] === 1) {	// locals
+					const locals = details[1];
+					const names = Object.keys(locals);
+					if (names.length > maxLocals) {
+						var locals2 = {};
+						for (var j = 0; j < maxLocals; j++) {
+							var name = names[j];
+							locals2[name] = locals[name];
+						}
+						details[1] = locals2;
+					}
+					response.body.vscode_locals = names.length;	// remember original number of locals
+				}
+			}
 		}
 		return result;
 	};
