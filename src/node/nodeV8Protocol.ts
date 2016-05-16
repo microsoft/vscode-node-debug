@@ -55,7 +55,7 @@ export class NodeV8Event extends NodeV8Message {
 
 export class NodeV8Protocol extends EE.EventEmitter {
 
-	private static TIMEOUT = 3000;
+	private static TIMEOUT = 10000;
 	private static TWO_CRLF = '\r\n\r\n';
 
 	private _rawData: Buffer;

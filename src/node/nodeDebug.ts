@@ -145,7 +145,6 @@ export class NodeDebugSession extends DebugSession {
 
 	private static NODE_TERMINATION_POLL_INTERVAL = 3000;
 	private static ATTACH_TIMEOUT = 10000;
-	private static STACKTRACE_TIMEOUT = 10000;
 
 	private static NODE = 'node';
 	private static DUMMY_THREAD_ID = 1;
@@ -1513,9 +1512,14 @@ export class NodeDebugSession extends DebugSession {
 			return;
 		}
 
+		const backtraceArgs : any = {
+			fromFrame: startFrame,
+			toFrame: startFrame+maxLevels
+		}
 		const cmd = this._nodeInjectionAvailable ? 'vscode_backtrace' : 'backtrace';
+
 		this.log('va', `stackTraceRequest: ${cmd} ${startFrame} ${maxLevels}`);
-		this._node.command2(cmd, { fromFrame: startFrame, toFrame: startFrame+maxLevels }, NodeDebugSession.STACKTRACE_TIMEOUT).then(response => {
+		this._node.command2(cmd, backtraceArgs).then(response => {
 
 			this._cacheRefs(response);
 
