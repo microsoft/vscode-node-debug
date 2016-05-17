@@ -11,6 +11,7 @@ import {NodeDebugSession} from './nodeDebug';
 
 const util = require('../../node_modules/source-map/lib/util.js');
 
+const pathNormalize = (process.platform === 'win32' || process.platform === 'darwin') ? path => path.toLowerCase() : path => path;
 
 export interface MappingResult {
 	path: string;		// absolute path
@@ -131,17 +132,18 @@ export class SourceMaps implements ISourceMaps {
 		if (!pathToSource) {
 			return null;
 		}
+		const pathToSourceKey = pathNormalize(pathToSource);
 
 		// try to find in existing
-		if (pathToSource in this._sourceToGeneratedMaps) {
-			return this._sourceToGeneratedMaps[pathToSource];
+		if (pathToSourceKey in this._sourceToGeneratedMaps) {
+			return this._sourceToGeneratedMaps[pathToSourceKey];
 		}
 
 		// a reverse lookup: in all source maps try to find pathToSource in the sources array
 		for (let key in this._generatedToSourceMaps) {
 			const m = this._generatedToSourceMaps[key];
 			if (m.doesOriginateFrom(pathToSource)) {
-				this._sourceToGeneratedMaps[pathToSource] = m;
+				this._sourceToGeneratedMaps[pathToSourceKey] = m;
 				return m;
 			}
 		}
@@ -155,7 +157,7 @@ export class SourceMaps implements ISourceMaps {
 					const m = this._loadSourceMap(map_path);
 					if (m && m.doesOriginateFrom(pathToSource)) {
 						this._log(`_findSourceToGeneratedMapping: found source map for source ${pathToSource} in outDir`);
-						this._sourceToGeneratedMaps[pathToSource] = m;
+						this._sourceToGeneratedMaps[pathToSourceKey] = m;
 						return m;
 					}
 				}
@@ -205,12 +207,12 @@ export class SourceMaps implements ISourceMaps {
 		}
 
 		// if not found look in the same directory as the source
-		if (map === null && pathToGenerated !== pathToSource) {
+		if (map === null && pathNormalize(pathToGenerated) !== pathToSourceKey) {
 			map = this._findGeneratedToSourceMapping(pathToGenerated);
 		}
 
 		if (map) {
-			this._sourceToGeneratedMaps[pathToSource] = map;
+			this._sourceToGeneratedMaps[pathToSourceKey] = map;
 			return map;
 		}
 
@@ -228,9 +230,10 @@ export class SourceMaps implements ISourceMaps {
 		if (!pathToGenerated) {
 			return null;
 		}
+		const pathToGeneratedKey = pathNormalize(pathToGenerated);
 
-		if (pathToGenerated in this._generatedToSourceMaps) {
-			return this._generatedToSourceMaps[pathToGenerated];
+		if (pathToGeneratedKey in this._generatedToSourceMaps) {
+			return this._generatedToSourceMaps[pathToGeneratedKey];
 		}
 
 		// try to find a source map URL in the generated file
@@ -308,8 +311,10 @@ export class SourceMaps implements ISourceMaps {
 	 */
 	private _loadSourceMap(map_path: string, generatedPath?: string): SourceMap {
 
-		if (map_path in this._allSourceMaps) {
-			return this._allSourceMaps[map_path];
+		const mapPathKey = pathNormalize(map_path);
+
+		if (mapPathKey in this._allSourceMaps) {
+			return this._allSourceMaps[mapPathKey];
 		}
 
 		try {
@@ -317,7 +322,7 @@ export class SourceMaps implements ISourceMaps {
 			const contents = FS.readFileSync(mp).toString();
 
 			const map = new SourceMap(mp, generatedPath, contents);
-			this._allSourceMaps[map_path] = map;
+			this._allSourceMaps[mapPathKey] = map;
 
 			this._registerSourceMap(map);
 
@@ -334,7 +339,7 @@ export class SourceMaps implements ISourceMaps {
 	private _registerSourceMap(map: SourceMap): SourceMap {
 		const gp = map.generatedPath();
 		if (gp) {
-			this._generatedToSourceMaps[gp] = map;
+			this._generatedToSourceMaps[pathNormalize(gp)] = map;
 		}
 		return map;
 	}
@@ -455,11 +460,13 @@ class SourceMap {
 		if (process.platform === 'win32') {
 			absPath = absPath.replace(/\\/g, '/');
 		}
+		absPath = pathNormalize(absPath);
 		for (let name of this._sources) {
 			if (!util.isAbsolute(name)) {
 				name = util.join(this._sourceRoot, name);
 			}
 			let path = this.absolutePath(name);
+			path = pathNormalize(path);
 			if (absPath === path) {
 				return name;
 			}
