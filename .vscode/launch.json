@@ -23,6 +23,7 @@
 			"runtimeArgs": [ "--nolazy" ],
 			"args": [ "--server=4711" ],
 			"externalConsole": false,
+			"internalConsoleOptions": "openOnSessionStart",
 			"sourceMaps": true,
 			"outDir": "${workspaceRoot}/out"
 		},
@@ -40,7 +41,8 @@
 				"./out/tests"
 			],
 			"sourceMaps": true,
-			"outDir": "${workspaceRoot}/out"
+			"outDir": "${workspaceRoot}/out",
+			"internalConsoleOptions": "openOnSessionStart"
 		},
 		{
 			"name": "Nodemon Attach",
