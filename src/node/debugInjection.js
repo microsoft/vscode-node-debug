@@ -235,8 +235,8 @@
 							locals2[name] = locals[name];
 						}
 						details[1] = locals2;
+						response.body.vscode_locals = names.length;	// remember original number of locals
 					}
-					response.body.vscode_locals = names.length;	// remember original number of locals
 				}
 			}
 		}
