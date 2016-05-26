@@ -12,13 +12,12 @@
 	"extensionHost.launch.runtimeExecutable.description": "Ruta de acceso absoluta a VS Code.",
 	"extensionHost.launch.sourceMaps.description": "Se usan los mapas de origen de JavaScript.",
 	"extensionHost.launch.stopOnEntry.description": "El host de extensiones se detiene automáticamente tras el inicio.",
-	"node.attach.address.description": "Dirección TCP/IP del puerto de depuración (para Node.js >= 5.0 solo). El valor predeterminado es 'localhost'.",
+	"extensionHost.smartStep.description": "Explore automáticamente el código generado que no se puede volver a asignar al código fuente original.",
+	"node.address.description": "Dirección TCP/IP del puerto de depuración (solo para Node.js 5.0 o una versión posterior). El valor predeterminado es 'localhost'.",
 	"node.attach.config.name": "Asociar",
 	"node.attach.localRoot.description": "Raíz de origen local que corresponde a \"remoteRoot\".",
-	"node.attach.port.description": "Puerto de depuración al que se va a conectar. El valor predeterminado es 5858.",
 	"node.attach.remoteRoot.description": "Raíz de origen del host remoto.",
 	"node.attach.restart.description": "Reinicie la sesión cuando Node.js haya terminado.",
-	"node.attach.timeout.description": "Pruebe de nuevo con este número de milisegundos para conectarse a Node.js. El valor predeterminado es 10000 ms.",
 	"node.launch.args.description": "Argumentos de la línea de comandos pasados al programa.",
 	"node.launch.config.name": "Iniciar",
 	"node.launch.cwd.description": "Ruta de acceso absoluta al directorio de trabajo del programa que se está depurando.",
@@ -28,6 +27,9 @@
 	"node.launch.runtimeArgs.description": "Argumentos opcionales pasados al ejecutable del runtime.",
 	"node.launch.runtimeExecutable.description": "Ruta de acceso absoluta al ejecutable del runtime que se va a usar. El valor predeterminado es el ejecutable del runtime que hay en PATH.",
 	"node.outDir.description": "Si los mapas de origen están habilitados, el código generado se espera en este directorio. Si no se especifica, el código generado se espera en el mismo directorio que su origen.",
+	"node.port.description": "Puerto de depuración al que se va a conectar. El valor predeterminado es 5858.",
+	"node.smartStep.description": "Explore automáticamente el código generado que no se puede volver a asignar al código fuente original.",
 	"node.sourceMaps.description": "Se usan los mapas de origen de JavaScript (si existen).",
-	"node.stopOnEntry.description": "El programa se detiene automáticamente tras el inicio."
+	"node.stopOnEntry.description": "El programa se detiene automáticamente tras el inicio.",
+	"node.timeout.description": "Vuelva a probar con este número de milisegundos para conectarse a Node.js. El valor predeterminado es 10 000 ms."
 }

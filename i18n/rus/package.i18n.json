@@ -12,13 +12,12 @@
 	"extensionHost.launch.runtimeExecutable.description": "Абсолютный путь к VS Code.",
 	"extensionHost.launch.sourceMaps.description": "Использовать карты исходного кода JavaScript.",
 	"extensionHost.launch.stopOnEntry.description": "Автоматически остановить узел расширения после запуска.",
-	"node.attach.address.description": "TCP/IP-адрес порта отладки (только для Node.js >= 5.0). Значение по умолчанию — \"localhost\".",
+	"extensionHost.smartStep.description": "Автоматическая пошаговая отработка сформированного кода, который невозможно снова добавить в исходный источник.",
+	"node.address.description": "TCP/IP-адрес порта отладки (только для Node.js >= 5.0). Значение по умолчанию — \"localhost\".",
 	"node.attach.config.name": "Подключить",
 	"node.attach.localRoot.description": "Корневой элемент локального источника, соответствующий remoteRoot.",
-	"node.attach.port.description": "Порт отладки для присоединения. Значение по умолчанию — 5858.",
 	"node.attach.remoteRoot.description": "Исходный корневой элемент удаленного узла.",
 	"node.attach.restart.description": "Перезапуск сеанса после завершения Node.js.",
-	"node.attach.timeout.description": "Повторять в течение этого количества миллисекунд для подключения к Node.js. Значение по умолчанию — 10 000 мс.",
 	"node.launch.args.description": "Аргументы командной строки, передаваемые программе.",
 	"node.launch.config.name": "Запустить",
 	"node.launch.cwd.description": "Абсолютный путь к рабочему каталогу отлаживаемой программы.",
@@ -28,6 +27,9 @@
 	"node.launch.runtimeArgs.description": "Необязательные аргументы, переданные исполняемому файлу среды выполнения.",
 	"node.launch.runtimeExecutable.description": "Абсолютный путь к исполняемому файлу среды выполнения. По умолчанию это исполняемый файл среды выполнения, заданный переменной PATH.",
 	"node.outDir.description": "Если карты исходного кода включены, созданный код должен быть в этом каталоге. Если параметр не задан, созданный код будет в том же каталоге, что и источник.",
+	"node.port.description": "Порт отладки для присоединения. Значение по умолчанию — 5858.",
+	"node.smartStep.description": "Автоматическая пошаговая отработка сформированного кода, который невозможно снова добавить в исходный источник.",
 	"node.sourceMaps.description": "Использовать карты исходного кода JavaScript (если они существуют).",
-	"node.stopOnEntry.description": "Автоматически остановить программу после запуска."
+	"node.stopOnEntry.description": "Автоматически остановить программу после запуска.",
+	"node.timeout.description": "Повторять в течение этого количества миллисекунд для подключения к Node.js. Значение по умолчанию — 10 000 мс."
 }

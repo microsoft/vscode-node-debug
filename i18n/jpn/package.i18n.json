@@ -12,13 +12,12 @@
 	"extensionHost.launch.runtimeExecutable.description": "VS Code への絶対パス。",
 	"extensionHost.launch.sourceMaps.description": "JavaScript ソース マップを使用します。",
 	"extensionHost.launch.stopOnEntry.description": "起動後に拡張機能ホストを自動的に停止します。",
-	"node.attach.address.description": "デバッグ ポートの TCP/IP アドレス (Node.js 5.0 以上の場合のみ)。既定値は 'localhost' です。",
+	"extensionHost.smartStep.description": "元のソースにマップし直すことができない、生成されたコードを自動的にステップ スルーします。",
+	"node.address.description": "デバッグ ポートの TCP/IP アドレス (Node.js 5.0 以上の場合のみ)。既定値は 'localhost' です。",
 	"node.attach.config.name": "アタッチ",
 	"node.attach.localRoot.description": "'remoteRoot' に対応するローカル ソース ルート。",
-	"node.attach.port.description": "アタッチ先のデバッグ ポート。既定は 5858 です。",
 	"node.attach.remoteRoot.description": "リモート ホストのソース ルート。",
 	"node.attach.restart.description": "Node.js が終了した後、セッションを再開します。",
-	"node.attach.timeout.description": "このミリ秒の間、Node.js への接続を再試行します。既定値は 10000 ミリ秒です。",
 	"node.launch.args.description": "プログラムに渡されるコマンド ライン引数。",
 	"node.launch.config.name": "起動",
 	"node.launch.cwd.description": "デバッグされるプログラムの作業ディレクトリへの絶対パス。",
@@ -28,6 +27,9 @@
 	"node.launch.runtimeArgs.description": "ランタイム実行可能ファイルに渡される省略可能な引数。",
 	"node.launch.runtimeExecutable.description": "使用されるランタイム実行可能ファイルへの絶対パス。既定は PATH 上のランタイム実行可能ファイルです。",
 	"node.outDir.description": "ソース マップを有効にすると、生成されるコードはこのディレクトリ内にあると想定されます。指定しないと、生成されるコードはそのソースと同じディレクトリ内にあると想定されます。",
+	"node.port.description": "添付先のデバッグ ポート。既定は 5858 です。",
+	"node.smartStep.description": "元のソースにマップし直すことができない、生成されたコードを自動的にステップ スルーします。",
 	"node.sourceMaps.description": "JavaScript ソース マップを使用します (存在する場合)。",
-	"node.stopOnEntry.description": "起動後、プログラムを自動的に停止します。"
+	"node.stopOnEntry.description": "起動後、プログラムを自動的に停止します。",
+	"node.timeout.description": "このミリ秒の間、Node.js への接続を再試行します。既定値は 10000 ミリ秒です。"
 }
