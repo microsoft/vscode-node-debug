@@ -21,11 +21,14 @@
 
 	"node.launch.config.name": "Launch",
 
+	"node.attach.processId.description": "Id of process to attach to.",
 	"node.attach.restart.description": "Restart session after Node.js has terminated.",
 	"node.attach.localRoot.description": "The local source root that corresponds to the 'remoteRoot'.",
 	"node.attach.remoteRoot.description": "The source root of the remote host.",
 
 	"node.attach.config.name": "Attach",
+
+	"node.processattach.config.name": "Attach to Process",
 
 	"extensionHost.label": "VSCode Extension Development",
 

@@ -16,7 +16,8 @@
 		"prepublish": "node ./node_modules/gulp/bin/gulp.js build",
 		"build": "node ./node_modules/gulp/bin/gulp.js build",
 		"test": "node ./node_modules/mocha/bin/mocha --timeout 10000 -u tdd ./out/tests/",
-		"nodemon": "./node_modules/.bin/nodemon --debug --nolazy ./out/node/nodeDebug.js --server=4711"
+		"nodemon": "./node_modules/.bin/nodemon --debug --nolazy ./out/node/nodeDebug.js --server=4711",
+		"postinstall": "node ./node_modules/vscode/bin/install"
 	},
 	"engines": {
 		"vscode": "^1.0.0",
@@ -52,11 +53,16 @@
 		"mocha": "^2.4.5",
 		"tslint": "^3.5.0",
 		"typescript": "^1.8.5",
+		"vscode": "^0.11.13",
 		"vscode-nls-dev": "^1.0.3",
 		"vscode-debugadapter-testsupport": "1.9.0",
 		"event-stream": "^3.3.2",
 		"nodemon": "^1.9.1"
 	},
+    "main": "./out/node/extension",
+    "activationEvents": [
+        "onCommand:extension.pickNodeProcess"
+    ],
 	"contributes": {
 		"languages": [
 			{
@@ -73,6 +79,9 @@
 				"enableBreakpointsFor": { "languageIds": ["javascript", "javascriptreact"] },
 				"program": "./out/node/nodeDebug.js",
 				"runtime": "node",
+				"variables": {
+					"PickProcess": "extension.pickNodeProcess"
+				},
 				"aiKey": "AIF-d9b70cd4-b9f9-4d70-929b-a071c400b217",
 				"initialConfigurations": [
 					{
@@ -104,6 +113,15 @@
 						"outDir": null,
 						"localRoot": "${workspaceRoot}",
 						"remoteRoot": null
+					},
+					{
+						"name": "%node.processattach.config.name%",
+						"type": "node",
+						"request": "attach",
+						"processId": "${action.pickProcess}",
+						"port": 5858,
+						"sourceMaps": false,
+						"outDir": null
 					}
 				],
 				"configurationAttributes": {
@@ -186,6 +204,11 @@
 					},
 					"attach": {
 						"properties": {
+							"processId": {
+								"type": "string",
+								"description": "%node.attach.processId.description%",
+								"default": "${action.pickProcess}"
+							},
 							"port": {
 								"type": "number",
 								"description": "%node.port.description%",

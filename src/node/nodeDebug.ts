@@ -136,6 +136,8 @@ interface AttachRequestArguments extends DebugProtocol.AttachRequestArguments, C
 	remoteRoot?: string;
 	/** VS Code's root directory. */
 	localRoot?: string;
+	/** Send a USR1 signal to this process. */
+	processId?: string;
 }
 
 
@@ -760,6 +762,12 @@ export class NodeDebugSession extends DebugSession {
 			this._localRoot = localRoot;
 		}
 		this._remoteRoot = args.remoteRoot;
+
+		// if a processId is specified, send a 'SIGUSR1' to the given process to force it into debug mode.
+		if (typeof args.processId === "string") {
+			const pid = parseInt(args.processId);
+			process.kill(pid, 'SIGUSR1');
+		}
 
 		this._attach(response, args.port, args.address, args.timeout);
 	}
