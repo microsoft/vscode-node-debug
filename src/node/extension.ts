@@ -85,9 +85,7 @@ function listProcesses() : Promise<ProcessItem[]> {
 			const PID_CMD = new RegExp('^\\s*([0-9]+)\\s+(.+)$');
 			const MAC_APPS = new RegExp('^.*/(.*).(?:app|bundle)/Contents/.*$');
 
-			const args = '-ax -o pid=,args=';
-
-			exec('ps ' + args, (err, stdout, stderr) => {
+			exec('ps -ax -o pid=,command=', (err, stdout, stderr) => {
 
 				if (err || stderr) {
 					reject(err || stderr.toString());
@@ -102,20 +100,25 @@ function listProcesses() : Promise<ProcessItem[]> {
 
 							const pid = matches[1];
 							const cmd = matches[2];
+							const parts = cmd.split(' '); // this will break paths with spaces
+							const executable_path = parts[0];
+							const executable_name = basename(executable_path);
 
-							let executable = cmd;
-							const matches2 = MAC_APPS.exec(cmd);
-							if (matches2 && matches2.length === 2) {
-								executable = matches2[1];
-							} else {
-								const parts = cmd.split(' ');
-								if (parts.length >= 1) {
-									executable = basename(parts[0]);
-								}
+							if (executable_name !== 'node') {
+								continue;
 							}
 
-							items.push({
-								label: executable,
+							let application = cmd;
+							// try to show the correct name for OS X applications and bundles
+							const matches2 = MAC_APPS.exec(cmd);
+							if (matches2 && matches2.length === 2) {
+								application = matches2[1];
+							} else {
+								application = executable_name;
+							}
+
+							items.unshift({		// build up list reverted
+								label: application,
 								description: pid,
 								detail: cmd,
 								pid: pid
