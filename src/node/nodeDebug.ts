@@ -765,8 +765,24 @@ export class NodeDebugSession extends DebugSession {
 
 		// if a processId is specified, send a 'SIGUSR1' to the given process to force it into debug mode.
 		if (typeof args.processId === "string") {
-			const pid = parseInt(args.processId);
-			process.kill(pid, 'SIGUSR1');
+			if (process.platform === 'win32') {
+				this.sendErrorResponse(response, 2004, localize('VSND2004', "Attach to process is not supported on Windows."));
+				return;
+			} else {
+				const pid_string = args.processId.trim();
+				if (/^([0-9]+)$/.test(pid_string)) {
+					const pid = Number(pid_string);
+					try {
+						process.kill(pid, 'SIGUSR1');
+					} catch (e) {
+						this.sendErrorResponse(response, 2021, localize('VSND2021', "Attach to process: cannot enable debug mode for process '{0}' (reason: {1}).", pid, e));
+						return;
+					}
+				} else {
+					this.sendErrorResponse(response, 2006, localize('VSND2006', "Attach to process: '{0}' doesn't look like a process id.", pid_string));
+					return;
+				}
+			}
 		}
 
 		this._attach(response, args.port, args.address, args.timeout);
