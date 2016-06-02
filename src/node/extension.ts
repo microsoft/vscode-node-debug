@@ -16,6 +16,8 @@ function listProcesses() : Promise<ProcessItem[]> {
 
 	return new Promise((resolve, reject) => {
 
+		const NODE = new RegExp('^(?:node|iojs)$', 'i');
+
 		if (process.platform === 'win32') {
 
 			const CMD_PID = new RegExp('^(.+) ([0-9]+)$');
@@ -45,26 +47,37 @@ function listProcesses() : Promise<ProcessItem[]> {
 						const matches = CMD_PID.exec(line.trim());
 						if (matches && matches.length === 3) {
 
-							const cmd = matches[1].trim();
+							let cmd = matches[1].trim();
 							const pid = matches[2];
 
-							let executable;
-							let args;
+							// remove leading device specifier
+							if (cmd.indexOf('\\??\\') === 0) {
+								cmd = cmd.replace('\\??\\', '');
+							}
+
+							let executable_path : string;
+							let args : string;
 							const matches2 = EXECUTABLE_ARGS.exec(cmd);
 							if (matches2 && matches2.length >= 2) {
 								if (matches2.length >= 3) {
-									executable = matches2[1] || matches2[2];
+									executable_path = matches2[1] || matches2[2];
 								} else {
-									executable = matches2[1];
+									executable_path = matches2[1];
 								}
 								if (matches2.length === 4) {
 									args = matches2[3];
 								}
 							}
 
-							if (executable) {
+							if (executable_path) {
+
+								const executable_name = basename(executable_path);
+								if (!NODE.test(executable_name)) {
+									continue;
+								}
+
 								items.push({
-									label: basename(executable),
+									label: executable_name,
 									description: pid,
 									detail: cmd,
 									pid: pid
@@ -104,7 +117,7 @@ function listProcesses() : Promise<ProcessItem[]> {
 							const executable_path = parts[0];
 							const executable_name = basename(executable_path);
 
-							if (executable_name !== 'node') {
+							if (!NODE.test(executable_name)) {
 								continue;
 							}
 
