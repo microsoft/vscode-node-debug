@@ -1506,7 +1506,7 @@ export class NodeDebugSession extends DebugSession {
 					for (let thread of ths) {
 						const id = thread.id;
 						if (id >= 0) {
-							threads.push(new Thread(id, NodeDebugSession.DUMMY_THREAD_NAME));
+							threads.push(new Thread(id, `Thread (id: ${id})`));
 						}
 					}
 				}
