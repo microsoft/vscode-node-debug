@@ -1649,9 +1649,9 @@ export class NodeDebugSession extends DebugSession {
 	private _createStackFrameFromSourceMap(frame: any, content: string, name: string, localPath: string, remotePath: string, origin: string, line: number, column: number) : StackFrame {
 
 		// try to map
-		let mapresult = this._sourceMaps.MapToSource(localPath, content, line, column, Bias.LEAST_UPPER_BOUND);
+		let mapresult = this._sourceMaps.MapToSource(localPath, content, line, column, Bias.GREATEST_LOWER_BOUND);
 		if (!mapresult) {	// try using the other bias option
-			mapresult = this._sourceMaps.MapToSource(localPath, content, line, column, Bias.GREATEST_LOWER_BOUND);
+			mapresult = this._sourceMaps.MapToSource(localPath, content, line, column, Bias.LEAST_UPPER_BOUND);
 		}
 		if (mapresult) {
 			this.log('sm', `_createStackFrame: gen: '${localPath}' ${line}:${column} -> src: '${mapresult.path}' ${mapresult.line}:${mapresult.column}`);
