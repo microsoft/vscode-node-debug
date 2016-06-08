@@ -763,25 +763,25 @@ export class NodeDebugSession extends DebugSession {
 		}
 		this._remoteRoot = args.remoteRoot;
 
-		// if a processId is specified, send a 'SIGUSR1' to the given process to force it into debug mode.
+		// if a processId is specified, try to bring the process into debug mode.
 		if (typeof args.processId === "string") {
-			if (process.platform === 'win32') {
-				this.sendErrorResponse(response, 2004, localize('VSND2004', "Attach to process is not supported on Windows."));
-				return;
-			} else {
-				const pid_string = args.processId.trim();
-				if (/^([0-9]+)$/.test(pid_string)) {
-					const pid = Number(pid_string);
-					try {
+			const pid_string = args.processId.trim();
+			if (/^([0-9]+)$/.test(pid_string)) {
+				const pid = Number(pid_string);
+				try {
+					if (process.platform === 'win32') {
+						// undocumented API function
+						(<any>process)._debugProcess(pid);
+					} else {
 						process.kill(pid, 'SIGUSR1');
-					} catch (e) {
-						this.sendErrorResponse(response, 2021, localize('VSND2021', "Attach to process: cannot enable debug mode for process '{0}' (reason: {1}).", pid, e));
-						return;
 					}
-				} else {
-					this.sendErrorResponse(response, 2006, localize('VSND2006', "Attach to process: '{0}' doesn't look like a process id.", pid_string));
+				} catch (e) {
+					this.sendErrorResponse(response, 2021, localize('VSND2021', "Attach to process: cannot enable debug mode for process '{0}' (reason: {1}).", pid, e));
 					return;
 				}
+			} else {
+				this.sendErrorResponse(response, 2006, localize('VSND2006', "Attach to process: '{0}' doesn't look like a process id.", pid_string));
+				return;
 			}
 		}
 
