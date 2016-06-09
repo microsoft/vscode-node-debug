@@ -66,6 +66,7 @@ export class NodeV8Protocol extends EE.EventEmitter {
 	private _unresponsiveMode: boolean;
 
 	public embeddedHostVersion: number = -1;
+	public v8Version: string;
 
 
 	public startDispatch(inStream: NodeJS.ReadableStream, outStream: NodeJS.WritableStream) : void {
@@ -229,6 +230,12 @@ export class NodeV8Protocol extends EE.EventEmitter {
 					for (let i = 0; i < lines.length; i++) {
 						const pair = lines[i].split(/: +/);
 						switch (pair[0]) {
+							case 'V8-Version':
+								const match0 = pair[1].match(/(\d+(?:\.\d+)+)/);
+								if (match0 && match0.length === 2) {
+									this.v8Version = match0[1];
+								}
+								break;
 							case 'Embedding-Host':
 								const match = pair[1].match(/node\sv(\d+)\.(\d+)\.(\d+)/);
 								if (match && match.length === 4) {

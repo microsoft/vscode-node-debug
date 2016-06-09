@@ -914,7 +914,7 @@ export class NodeDebugSession extends DebugSession {
 
 			const v = this._node.embeddedHostVersion;	// x.y.z version represented as (x*100+y)*100+z
 
-			if ((v >= 1200 && v < 10000) || (v >= 40301 && v < 50000) || (v >= 50600)) {
+			if (this._node.v8Version && (v >= 1200 && v < 10000) || (v >= 40301 && v < 50000) || (v >= 50600)) {
 				try {
 					const contents = FS.readFileSync(Path.join(__dirname, NodeDebugSession.DEBUG_INJECTION), 'utf8');
 
