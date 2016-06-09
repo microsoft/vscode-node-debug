@@ -1589,52 +1589,62 @@ export class NodeDebugSession extends DebugSession {
 			let line = frame.line;
 			let column = this._adjustColumn(line, frame.column);
 
-			let origin = localize('content.streamed.from.node', "content streamed from Node.js");
+			let origin = localize('origin.from.node', "read-only content from Node.js");
 
 			const script_val = this._getValueFromCache(frame.script);
 			if (script_val) {
 				let name = script_val.name;
+				const script_id: number = script_val.id;
 
-				// system.js generates script names that are file urls
-				if (name.indexOf('file://') === 0) {
-					name = name.replace('file://', '');
-				}
+				if (name) {
 
-				if (name && PathUtils.isAbsolutePath(name)) {
-
-					let remotePath = name;		// with remote debugging path might come from a different OS
-
-					// if launch.json defines localRoot and remoteRoot try to convert remote path back to a local path
-					let localPath = this._remoteToLocal(remotePath);
-
-					if (localPath !== remotePath && this._attachMode) {
-						// assume attached to remote node process
-						origin = localize('content.streamed.from.remote.node', "content streamed from remote Node.js");
+					// system.js generates script names that are file urls
+					if (name.indexOf('file://') === 0) {
+						name = name.replace('file://', '');
 					}
 
-					name = Path.basename(localPath);
+					if (PathUtils.isAbsolutePath(name)) {
 
-					// source mapping
-					if (this._sourceMaps) {
+						let remotePath = name;		// with remote debugging path might come from a different OS
 
-						if (!FS.existsSync(localPath)) {
-							const script_val = this._getValueFromCache(frame.script);
+						// if launch.json defines localRoot and remoteRoot try to convert remote path back to a local path
+						let localPath = this._remoteToLocal(remotePath);
 
-							return this._loadScript(script_val.id).then(content => {
-								return this._createStackFrameFromSourceMap(frame, content, name, localPath, remotePath, origin, line, column);
-							});
+						if (localPath !== remotePath && this._attachMode) {
+							// assume attached to remote node process
+							origin = localize('origin.from.remote.node', "read-only content from remote Node.js");
 						}
 
-						return this._createStackFrameFromSourceMap(frame, null, name, localPath, remotePath, origin, line, column);
+						name = Path.basename(localPath);
+
+						// source mapping
+						if (this._sourceMaps) {
+
+							if (!FS.existsSync(localPath)) {
+								const script_val = this._getValueFromCache(frame.script);
+
+								return this._loadScript(script_val.id).then(content => {
+									return this._createStackFrameFromSourceMap(frame, content, name, localPath, remotePath, origin, line, column);
+								});
+							}
+
+							return this._createStackFrameFromSourceMap(frame, null, name, localPath, remotePath, origin, line, column);
+						}
+
+						return this._createStackFrameFromPath(frame, name, localPath, remotePath, origin, line, column);
 					}
 
-					return this._createStackFrameFromPath(frame, name, localPath, remotePath, origin, line, column);
+					// if we end up here, 'name' is an internal module
+ 					origin = localize('origin.core.module', "read-only core module");
+
+				} else {
+					// if a function is dynamically created from a string, its script has no name.
+					// create a name by using the script id and append ".js" so that JavaScript contents is detected.
+					name = `VM${script_id}.js`;
 				}
 
-				// fall back: source not found locally -> prepare to stream source content from node backend.
-				const script_id:number = script_val.id;
+				// source not found locally -> prepare to stream source content from node backend.
 				const sourceHandle = this._sourceHandles.create(new SourceSource(script_id));
-				origin = localize('core.module', "core module");
 				const src = new Source(name, null, sourceHandle, origin);
 				return this._createStackFrameFromSource(frame, src, line, column);
 			}
@@ -1676,7 +1686,7 @@ export class NodeDebugSession extends DebugSession {
 					const sourceHandle = this._sourceHandles.create(new SourceSource(0, content));
 					line = mapresult.line;
 					column = mapresult.column;
-					origin = localize('content.from.source.map', "inlined content from source map");
+					origin = localize('origin.inlined.source.map', "read-only inlined content from source map");
 					const src = new Source(name, null, sourceHandle, origin, { inlinePath: mapresult.path });
 					return this._createStackFrameFromSource(frame, src, line, column);
 
