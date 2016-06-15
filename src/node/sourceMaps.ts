@@ -49,6 +49,11 @@ export interface ISourceMaps {
 	 * line and column are 0 based.
 	 */
 	MapToSource(path: string, content: string, line: number, column: number, bias?: Bias): MappingResult;
+
+	/*
+	 * Returns true if content contains a reference to a source map (or a data url with an inlined source map).
+	 */
+	HasSourceMap(content: string) : boolean;
 }
 
 
@@ -115,6 +120,10 @@ export class SourceMaps implements ISourceMaps {
 			}
 		}
 		return null;
+	}
+
+	public HasSourceMap(content: string) : boolean {
+		return this._findSourceMapUrlInFile(null, content) !== null;
 	}
 
 	//---- private -----------------------------------------------------------------------
@@ -283,8 +292,8 @@ export class SourceMaps implements ISourceMaps {
 	}
 
 	/**
-	 * try to find the 'sourceMappingURL' in the file with the given path.
-	 * Returns null in case of errors.
+	 * Try to find the 'sourceMappingURL' in the file with the given path.
+	 * Returns null if no source map url is found or if an error occured.
 	 */
 	private _findSourceMapUrlInFile(pathToGenerated: string, content: string): string {
 
@@ -295,7 +304,11 @@ export class SourceMaps implements ISourceMaps {
 				const matches = SourceMaps.SOURCE_MAPPING_MATCHER.exec(line);
 				if (matches && matches.length === 2) {
 					const uri = matches[1].trim();
-					this._log(`_findSourceMapUrlInFile: source map url at end of generated file '${pathToGenerated}''`);
+					if (pathToGenerated) {
+						this._log(`_findSourceMapUrlInFile: source map url found at end of generated file '${pathToGenerated}'`);
+					} else {
+						this._log(`_findSourceMapUrlInFile: source map url found at end of generated content`);
+					}
 					return uri;
 				}
 			}
