@@ -1257,7 +1257,7 @@ export class NodeDebugSession extends DebugSession {
 	private _clearBreakpoints(ids: Array<number>) : Promise<void> {
 		return Promise.all(ids.map(id => this._node.command2('clearbreakpoint', { breakpoint: id }))).then(() => {
 			return;
-		}).catch((e) => {
+		}).catch(err => {
 			return;	// ignore errors
 		});
 	}
