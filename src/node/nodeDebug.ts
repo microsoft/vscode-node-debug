@@ -10,7 +10,13 @@ import {
 } from 'vscode-debugadapter';
 import {DebugProtocol} from 'vscode-debugprotocol';
 
-import {NodeV8Protocol, NodeV8Event, NodeV8Response} from './nodeV8Protocol';
+import {
+	NodeV8Protocol, NodeV8Event, NodeV8Response,
+	V8EvaluateArgs, V8ScriptsArgs, V8SetVariableValueArgs, V8SetBreakpointArgs, V8SetExceptionBreakArgs,
+	V8BacktraceResponse, V8ScopeResponse, V8EvaluateResponse, V8ScriptsResponse, V8SetVariableValueResponse, V8FrameResponse,
+	V8EventBody,
+	V8Ref, V8Handle, V8Property, V8Object, V8Simple, V8Function, V8Frame, V8Scope, V8Script
+} from './nodeV8Protocol';
 import {ISourceMaps, SourceMaps, Bias} from './sourceMaps';
 import {Terminal, TerminalError} from './terminal';
 import * as PathUtils from './pathUtilities';
@@ -22,12 +28,12 @@ import * as nls from 'vscode-nls';
 
 const localize = nls.config(process.env.VSCODE_NLS_CONFIG)();
 
-
-export interface Expandable {
+export interface VariableContainer {
 	Expand(session: NodeDebugSession): Promise<Variable[]>;
+	SetValue(session: NodeDebugSession, name: string, value: string): Promise<string>;
 }
 
-export class Expander implements Expandable {
+export class Expander implements VariableContainer {
 
 	private _expanderFunction : () => Promise<Variable[]>;
 
@@ -38,14 +44,41 @@ export class Expander implements Expandable {
 	public Expand(session: NodeDebugSession) : Promise<Variable[]> {
 		return this._expanderFunction();
 	}
+
+	public SetValue(session: NodeDebugSession, name: string, value: string) : Promise<string> {
+		return Promise.reject(new Error("setting value not supported."));
+	}
 }
 
-export class PropertyExpander implements Expandable {
+export class RangeContainer implements VariableContainer {
 
-	private _object: any;
-	private _this: any;
+	private _array: V8Object;
+	private _start: number;
+	private _count: number;
 
-	public constructor(obj: any, ths?: any) {
+	public constructor(array, start: number, count: number) {
+		this._array = array;
+		this._start = start;
+		this._count = count;
+	}
+
+	public Expand(session: NodeDebugSession) : Promise<Variable[]> {
+		// experimental support for long arrays not relying on code injection
+		//return session._createLargeArrayElements(this._array, this._start, this._count);
+		return session._createProperties(this._array, 'range', this._start, this._count);
+	}
+
+	public SetValue(session: NodeDebugSession, name: string, value: string) : Promise<string> {
+		return session._setPropertyValue(this._array.handle, name, value);
+	}
+}
+
+export class PropertyContainer implements VariableContainer {
+
+	private _object: V8Object;
+	private _this: V8Object;
+
+	public constructor(obj: V8Object, ths?: V8Object) {
 		this._object = obj;
 		this._this = ths;
 	}
@@ -61,6 +94,42 @@ export class PropertyExpander implements Expandable {
 				return variables;
 			}
 		});
+	}
+
+	public SetValue(session: NodeDebugSession, name: string, value: string) : Promise<string> {
+		return session._setPropertyValue(this._object.handle, name, value);
+	}
+}
+
+export class ScopeContainer implements VariableContainer {
+
+	private _frame: number;
+	private _scope: number;
+	private _object: V8Object;
+	private _this: V8Object;
+
+	public constructor(scope: V8Scope, obj: V8Object, ths?: V8Object) {
+		this._frame = scope.frameIndex;
+		this._scope = scope.index;
+		this._object = obj;
+		this._this = ths;
+	}
+
+	public Expand(session: NodeDebugSession) : Promise<Variable[]> {
+		return session._createProperties(this._object, 'all').then(variables => {
+			if (this._this) {
+				return session._createVariable('this', this._this).then(variable => {
+					variables.push(variable);
+					return variables;
+				});
+			} else {
+				return variables;
+			}
+		});
+	}
+
+	public SetValue(session: NodeDebugSession, name: string, value: string) : Promise<string> {
+		return session._setVariableValue(this._frame, this._scope, name, value);
 	}
 }
 
@@ -88,6 +157,7 @@ interface CommonArguments {
 	 * 'sm': source maps
 	 * 'va': data structure access
 	 * 'ss': smart steps
+	 * 'rc': ref caching
 	 * */
 	trace?: string;
 	/** The debug port to attach to. */
@@ -164,7 +234,6 @@ export class NodeDebugSession extends DebugSession {
 
 	// options
 	private _tryToInjectExtension = true;
-	private _largeArrays = false;	// experimental
 	private _chunkSize = 100;		// chunk size for large data structures
 	private _smartStep = false;		// try to automatically step over uninteresting source
 
@@ -185,17 +254,17 @@ export class NodeDebugSession extends DebugSession {
 	private _stopOnEntry: boolean;
 
 	// state valid between stop events
-	private _variableHandles = new Handles<Expandable>();
-	private _frameHandles = new Handles<any>();
+	private _variableHandles = new Handles<VariableContainer>();
+	private _frameHandles = new Handles<V8Frame>();
 	private _sourceHandles = new Handles<SourceSource>();
-	private _refCache = new Map<number, any>();
+	private _refCache = new Map<number, V8Handle>();
 
 	// internal state
 	private _isTerminated: boolean;
 	private _inShutdown: boolean;
 	private _terminalProcess: CP.ChildProcess;		// the terminal process or undefined
 	private _pollForNodeProcess = false;
-	private _exception: any;
+	private _exception: V8Object;
 	private _lastStoppedEvent: DebugProtocol.StoppedEvent;
 	private _stoppedReason: string;
 	private _nodeInjectionAvailable = false;
@@ -216,7 +285,18 @@ export class NodeDebugSession extends DebugSession {
 		this.setDebuggerLinesStartAt1(false);
 		this.setDebuggerColumnsStartAt1(false);
 
-		this._node = new NodeV8Protocol();
+		this._node = new NodeV8Protocol(response => {
+			// if request successful, cache alls refs
+			if (response.success && response.refs) {
+				const oldSize = this._refCache.size;
+				for (let r of response.refs) {
+					this._cache(r.handle, r);
+				}
+				if (this._refCache.size !== oldSize) {
+					this.log('rc', `NodeV8Protocol hook: ref cache size: ${this._refCache.size}`);
+				}
+			}
+		});
 
 		this._node.on('break', (event: NodeV8Event) => {
 			this._stopped('break');
@@ -260,7 +340,7 @@ export class NodeDebugSession extends DebugSession {
 	 * and whether it contains a source map reference.
 	 * If this is the case try to reload breakpoints.
 	 */
-	private _handleNodeAfterCompileEvent(eventBody: any) {
+	private _handleNodeAfterCompileEvent(eventBody: V8EventBody) {
 
 		if (this._sourceMaps) {		// this only applies if source maps are enabled
 
@@ -294,7 +374,7 @@ export class NodeDebugSession extends DebugSession {
 	/**
 	 * Analyse why node has stopped and sends StoppedEvent if necessary.
 	 */
-	private _handleNodeBreakEvent(eventBody: any) : void {
+	private _handleNodeBreakEvent(eventBody: V8EventBody) : void {
 
 		/*
 		// workaround: load sourcemap for this location to populate cache
@@ -369,7 +449,7 @@ export class NodeDebugSession extends DebugSession {
 	/**
 	 * Returns true if a source location should be skipped.
 	 */
-	private _skipGenerated(event: any) : boolean {
+	private _skipGenerated(event: V8EventBody) : boolean {
 
 		if (!this._sourceMaps) {
 			// proceed as normal
@@ -409,7 +489,8 @@ export class NodeDebugSession extends DebugSession {
 		this._exception = undefined;
 		this._variableHandles.reset();
 		this._frameHandles.reset();
-		this._refCache = new Map<number, any>();
+		this._refCache = new Map<number, V8Object>();
+		this.log('rc', `_stopped: new ref cache`);
 	}
 
 	/**
@@ -469,6 +550,8 @@ export class NodeDebugSession extends DebugSession {
 				default: true
 			}
 		];
+
+		response.body.supportsSetVariable = true;
 
 		this.sendResponse(response);
 	}
@@ -811,7 +894,7 @@ export class NodeDebugSession extends DebugSession {
 		const socket = new Net.Socket();
 		socket.connect(port, address);
 
-		socket.on('connect', (err: any) => {
+		socket.on('connect', err => {
 			this.log('la', '_attach: connected');
 			connected = true;
 			this._node.startDispatch(socket, socket);
@@ -819,7 +902,7 @@ export class NodeDebugSession extends DebugSession {
 		});
 
 		const endTime = new Date().getTime() + timeout;
-		socket.on('error', (err: any) => {
+		socket.on('error', err => {
 			if (connected) {
 				// since we are connected this error is fatal
 				this._terminated('socket error');
@@ -841,18 +924,18 @@ export class NodeDebugSession extends DebugSession {
 			}
 		});
 
-		socket.on('end', (err: any) => {
+		socket.on('end', err => {
 			this._terminated('socket end');
 		});
 	}
 
 	private _initialize(response: DebugProtocol.Response, retryCount: number = 0) : void {
 
-		this._node.command('evaluate', { expression: 'process.pid', global: true }, (resp: NodeV8Response) => {
+		this._node.command('evaluate', { expression: 'process.pid', global: true }, (resp: V8EvaluateResponse) => {
 
 			let ok = resp.success;
 			if (resp.success) {
-				this._nodeProcessId = parseInt(resp.body.value);
+				this._nodeProcessId = +resp.body.value;
 				this.log('la', `_initialize: got process id ${this._nodeProcessId} from node`);
 			} else {
 				if (resp.message.indexOf('process is not defined') >= 0) {
@@ -925,7 +1008,7 @@ export class NodeDebugSession extends DebugSession {
 					};
 
 					// first try evaluate against the current stack frame
-					return this._node.command2('evaluate', args).then(resp => {
+					return this._node.evaluate(args).then(resp => {
 						this.log('la', `_injectDebuggerExtensions: frame based code injection successful`);
 						this._nodeInjectionAvailable = true;
 						return true;
@@ -936,7 +1019,7 @@ export class NodeDebugSession extends DebugSession {
 						args.global = true;
 
 						// evaluate globally
-						return this._node.command2('evaluate', args).then(resp => {
+						return this._node.evaluate(args).then(resp => {
 							this.log('la', `_injectDebuggerExtensions: global code injection successful`);
 							this._nodeInjectionAvailable = true;
 							return true;
@@ -982,9 +1065,9 @@ export class NodeDebugSession extends DebugSession {
 			this.log('la', `_startInitialize: got break on entry event after ${n} retries`);
 			if (this._nodeProcessId <= 0) {
 				// if we haven't gotten a process pid so far, we try it again
-				this._node.command('evaluate', { expression: 'process.pid', global: true }, (resp: NodeV8Response) => {
+				this._node.command('evaluate', { expression: 'process.pid', global: true }, (resp: V8EvaluateResponse) => {
 					if (resp.success) {
-						this._nodeProcessId = parseInt(resp.body.value);
+						this._nodeProcessId = +resp.body.value;
 						this.log('la', `_initialize: got process id ${this._nodeProcessId} from node (2nd try)`);
 					}
 					this._startInitialize2(stopped);
@@ -997,10 +1080,9 @@ export class NodeDebugSession extends DebugSession {
 
 			this._gotEntryEvent = true;	// we pretend to got one so that no 'entry' event will show up later...
 
-			this._node.command('frame', null, (resp: NodeV8Response) => {
+			this._node.command('frame', null, (resp: V8FrameResponse) => {
 				if (resp.success) {
-					this._cacheRefs(resp);
-					let s = this._getValueFromCache(resp.body.script);
+					const s = <V8Script> this._getValueFromCache(resp.body.script);
 					this._rememberEntryLocation(s.name, resp.body.line, resp.body.column);
 				}
 
@@ -1210,7 +1292,7 @@ export class NodeDebugSession extends DebugSession {
 	private _updateBreakpoints(response: DebugProtocol.SetBreakpointsResponse, path: string, scriptId: number, lbs: DebugProtocol.SourceBreakpoint[], sourcemap: boolean = false): void {
 
 		// clear all existing breakpoints for the given path or script ID
-		this._node.command2('listbreakpoints').then(nodeResponse => {
+		this._node.listBreakpoints().then(nodeResponse => {
 
 			const toClear = new Array<number>();
 
@@ -1255,7 +1337,7 @@ export class NodeDebugSession extends DebugSession {
 	 * Clear breakpoints by their ids.
 	 */
 	private _clearBreakpoints(ids: Array<number>) : Promise<void> {
-		return Promise.all(ids.map(id => this._node.command2('clearbreakpoint', { breakpoint: id }))).then(() => {
+		return Promise.all(ids.map(id => this._node.clearBreakpoint({ breakpoint: id }))).then(response => {
 			return;
 		}).catch(err => {
 			return;	// ignore errors
@@ -1278,20 +1360,32 @@ export class NodeDebugSession extends DebugSession {
 			lb.column += NodeDebugSession.FIRST_LINE_OFFSET;
 		}
 
+		let args: V8SetBreakpointArgs;
+
 		if (scriptId > 0) {
-			(<any>lb).type = 'scriptId';
-			(<any>lb).target = scriptId;
+			args = {
+				type: 'scriptId',
+				target: scriptId,
+				line: lb.line,
+				column: lb.column,
+				condition: lb.condition
+			}
 		} else {
-			(<any>lb).type = 'scriptRegExp';
-			(<any>lb).target = this._pathToRegexp(path);
+			args = {
+				type: 'scriptRegExp',
+				target: this._pathToRegexp(path),
+				line: lb.line,
+				column: lb.column,
+				condition: lb.condition
+			}
 		}
 
-		return this._node.command2('setbreakpoint', lb).then(resp => {
+		return this._node.setBreakpoint(args).then(resp => {
 
-			this.log('bp', `_setBreakpoint: ${JSON.stringify(lb)}`);
+			this.log('bp', `_setBreakpoint: ${JSON.stringify(args)}`);
 
-			let actualLine = lb.line;
-			let actualColumn = lb.column;
+			let actualLine = args.line;
+			let actualColumn = args.column;
 
 			const al = resp.body.actual_locations;
 			if (al.length > 0) {
@@ -1402,7 +1496,7 @@ export class NodeDebugSession extends DebugSession {
 	 */
 	private _setFunctionBreakpoint(functionBreakpoint: DebugProtocol.FunctionBreakpoint): Promise<Breakpoint> {
 
-		let args: any = {
+		let args: V8SetBreakpointArgs = {
 			type: 'function',
 			target: functionBreakpoint.name
 		};
@@ -1410,7 +1504,7 @@ export class NodeDebugSession extends DebugSession {
 			args.condition = functionBreakpoint.condition;
 		}
 
-		return this._node.command2('setbreakpoint', args).then(resp => {
+		return this._node.setBreakpoint(args).then(resp => {
 			this._functionBreakpoints.push(resp.body.breakpoint);	// remember function breakpoint ids
 			const locations = resp.body.actual_locations;
 			if (locations && locations.length > 0) {
@@ -1434,39 +1528,24 @@ export class NodeDebugSession extends DebugSession {
 
 		this.log('bp', `setExceptionBreakPointsRequest: ${JSON.stringify(args.filters)}`);
 
-		let f: string;
+		let nodeArgs: V8SetExceptionBreakArgs = {
+			type: 'all',
+			enabled: false
+		};
 		const filters = args.filters;
 		if (filters) {
 			if (filters.indexOf('all') >= 0) {
-				f = 'all';
+				nodeArgs.enabled = true;
 			} else if (filters.indexOf('uncaught') >= 0) {
-				f = 'uncaught';
+				nodeArgs.type = 'uncaught';
+				nodeArgs.enabled = true
 			}
 		}
 
-		// we need to simplify this...
-		this._node.command('setexceptionbreak', { type: 'all', enabled: false }, (nodeResponse1: NodeV8Response) => {
-			if (nodeResponse1.success) {
-				this._node.command('setexceptionbreak', { type: 'uncaught', enabled: false }, (nodeResponse2: NodeV8Response) => {
-					if (nodeResponse2.success) {
-						if (f) {
-							this._node.command('setexceptionbreak', { type: f, enabled: true }, (nodeResponse3: NodeV8Response) => {
-								if (nodeResponse3.success) {
-									this.sendResponse(response);	// send response for setexceptionbreak
-								} else {
-									this._sendNodeResponse(response, nodeResponse3);
-								}
-							});
-						} else {
-							this.sendResponse(response);	// send response for setexceptionbreak
-						}
-					} else {
-						this._sendNodeResponse(response, nodeResponse2);
-					}
-				});
-			} else {
-				this._sendNodeResponse(response, nodeResponse1);
-			}
+		this._node.setExceptionBreak(nodeArgs).then(nodeResponse => {
+			this.sendResponse(response);
+		}).catch(err => {
+			this.sendErrorResponse(response, 2024, 'Configuring exception break options failed ({_nodeError}).', { _nodeError: err.message }, ErrorDestination.Telemetry);
 		});
 	}
 
@@ -1543,9 +1622,7 @@ export class NodeDebugSession extends DebugSession {
 		const cmd = this._nodeInjectionAvailable ? 'vscode_backtrace' : 'backtrace';
 
 		this.log('va', `stackTraceRequest: ${cmd} ${startFrame} ${maxLevels}`);
-		this._node.command2(cmd, backtraceArgs).then(response => {
-
-			this._cacheRefs(response);
+		this._node.command2(cmd, backtraceArgs).then((response: V8BacktraceResponse) => {
 
 			if (response.body.totalFrames > 0 || response.body.frames) {
 				const frames = response.body.frames;
@@ -1567,9 +1644,9 @@ export class NodeDebugSession extends DebugSession {
 
 			if (error.message === 'no stack') {
 				if (this._stoppedReason === 'pause') {
-					this.sendErrorResponse(response, 2021, localize('VSND2021', "No call stack because program paused outside of JavaScript."));
+					this.sendErrorResponse(response, 2022, localize('VSND2022', "No call stack because program paused outside of JavaScript."));
 				} else {
-					this.sendErrorResponse(response, 2022, localize('VSND2022', "No call stack available."));
+					this.sendErrorResponse(response, 2023, localize('VSND2023', "No call stack available."));
 				}
 			} else {
 				this.sendErrorResponse(response, 2018, localize('VSND2018', "No call stack available ({_error})."), { _error: error.message } );
@@ -1581,7 +1658,7 @@ export class NodeDebugSession extends DebugSession {
 	/**
 	 * Create a single stack frame.
 	 */
-	private _createStackFrame(frame: any) : Promise<StackFrame> {
+	private _createStackFrame(frame: V8Frame) : Promise<StackFrame> {
 
 		// resolve some refs
 		return this._resolveValues([ frame.script, frame.func, frame.receiver ]).then(() => {
@@ -1591,7 +1668,7 @@ export class NodeDebugSession extends DebugSession {
 
 			let origin = localize('origin.from.node', "read-only content from Node.js");
 
-			const script_val = this._getValueFromCache(frame.script);
+			const script_val = <V8Script> this._getValueFromCache(frame.script);
 			if (script_val) {
 				let name = script_val.name;
 				const script_id: number = script_val.id;
@@ -1621,7 +1698,7 @@ export class NodeDebugSession extends DebugSession {
 						if (this._sourceMaps) {
 
 							if (!FS.existsSync(localPath)) {
-								const script_val = this._getValueFromCache(frame.script);
+								const script_val = <V8Script> this._getValueFromCache(frame.script);
 
 								return this._loadScript(script_val.id).then(content => {
 									return this._createStackFrameFromSourceMap(frame, content, name, localPath, remotePath, origin, line, column);
@@ -1656,7 +1733,7 @@ export class NodeDebugSession extends DebugSession {
 	/**
 	 * Creates a StackFrame when source maps are involved.
 	 */
-	private _createStackFrameFromSourceMap(frame: any, content: string, name: string, localPath: string, remotePath: string, origin: string, line: number, column: number) : StackFrame {
+	private _createStackFrameFromSourceMap(frame: V8Frame, content: string, name: string, localPath: string, remotePath: string, origin: string, line: number, column: number) : StackFrame {
 
 		// try to map
 		let mapresult = this._sourceMaps.MapToSource(localPath, content, line, column, Bias.GREATEST_LOWER_BOUND);
@@ -1705,13 +1782,13 @@ export class NodeDebugSession extends DebugSession {
 	 * Creates a StackFrame from the given local path.
 	 * The remote path is used if the local path doesn't exist.
 	 */
-	private _createStackFrameFromPath(frame: any, name: string, localPath: string, remotePath: string, origin: string, line: number, column: number) : StackFrame {
+	private _createStackFrameFromPath(frame: V8Frame, name: string, localPath: string, remotePath: string, origin: string, line: number, column: number) : StackFrame {
 		let src: Source;
 		if (FS.existsSync(localPath)) {
 			src = new Source(name, this.convertDebuggerPathToClient(localPath));
 		} else {
 			// fall back: source not found locally -> prepare to stream source content from remote node.
-			const script_val = this._getValueFromCache(frame.script);
+			const script_val = <V8Script> this._getValueFromCache(frame.script);
 			const script_id = script_val.id;
 			const sourceHandle = this._sourceHandles.create(new SourceSource(script_id));
 			src = new Source(name, null, sourceHandle, origin, { remotePath: remotePath	});	// assume it is a remote path
@@ -1723,10 +1800,10 @@ export class NodeDebugSession extends DebugSession {
 	 * Creates a StackFrame with the given source location information.
 	 * The name of the frame is extracted from the frame.
 	 */
-	private _createStackFrameFromSource(frame: any, src: Source, line: number, column: number) : StackFrame {
+	private _createStackFrameFromSource(frame: V8Frame, src: Source, line: number, column: number) : StackFrame {
 
 		let func_name: string;
-		const func_val = this._getValueFromCache(frame.func);
+		const func_val = <V8Function> this._getValueFromCache(frame.func);
 		if (func_val) {
 			func_name = func_val.inferredName;
 			if (!func_name || func_name.length === 0) {
@@ -1761,7 +1838,7 @@ export class NodeDebugSession extends DebugSession {
 			return;
 		}
 		const frameIx = frame.index;
-		const frameThis = this._getValueFromCache(frame.receiver);
+		const frameThis = <V8Object> this._getValueFromCache(frame.receiver);
 
 		const scopesArgs: any = {
 			frame_index: frameIx,
@@ -1775,14 +1852,12 @@ export class NodeDebugSession extends DebugSession {
 		}
 
 		this.log('va', `scopesRequest: scope ${frameIx}`);
-		this._node.command2(cmd, scopesArgs).then(scopesResponse => {
+		this._node.command2(cmd, scopesArgs).then((scopesResponse: V8ScopeResponse) => {
 
-			this._cacheRefs(scopesResponse);
-
-			const scopes : any[] = scopesResponse.body.scopes;
+			const scopes : V8Scope[] = scopesResponse.body.scopes;
 
 			return Promise.all(scopes.map(scope => {
-				const type: number = scope.type;
+				const type = scope.type;
 				const extra = type === 1 ? frameThis : null;
 				let expensive = type === 0;	// global scope is expensive
 
@@ -1800,7 +1875,7 @@ export class NodeDebugSession extends DebugSession {
 				}
 
 				return this._resolveValues( [ scope.object ] ).then(resolved => {
-					return new Scope(scopeName, this._variableHandles.create(new PropertyExpander(resolved[0], extra)), expensive);
+					return new Scope(scopeName, this._variableHandles.create(new ScopeContainer(scope, resolved[0], extra)), expensive);
 				}).catch(error => {
 					return new Scope(scopeName, 0);
 				});
@@ -1810,7 +1885,7 @@ export class NodeDebugSession extends DebugSession {
 
 			// exception scope
 			if (frameIx === 0 && this._exception) {
-				scopes.unshift(new Scope(localize({ key: 'scope.exception', comment: ['https://github.com/Microsoft/vscode/issues/4569'] }, "Exception"), this._variableHandles.create(new PropertyExpander(this._exception))));
+				scopes.unshift(new Scope(localize({ key: 'scope.exception', comment: ['https://github.com/Microsoft/vscode/issues/4569'] }, "Exception"), this._variableHandles.create(new PropertyContainer(this._exception))));
 			}
 
 			response.body = {
@@ -1829,9 +1904,9 @@ export class NodeDebugSession extends DebugSession {
 
 	protected variablesRequest(response: DebugProtocol.VariablesResponse, args: DebugProtocol.VariablesArguments): void {
 		const reference = args.variablesReference;
-		const expander = this._variableHandles.get(reference);
-		if (expander) {
-			expander.Expand(this).then(variables => {
+		const variablesContainer = this._variableHandles.get(reference);
+		if (variablesContainer) {
+			variablesContainer.Expand(this).then(variables => {
 				variables.sort(NodeDebugSession.compareVariableNames);
 				response.body = {
 					variables: variables
@@ -1860,7 +1935,7 @@ export class NodeDebugSession extends DebugSession {
 	 * 'range': add 'count' indexed properties starting at 'start'
 	 * 'named': add only the named properties.
 	 */
-	public _createProperties(obj: any, mode: 'named' | 'range' | 'all', start = 0, count = 0) : Promise<Variable[]> {
+	public _createProperties(obj: V8Object, mode: 'named' | 'range' | 'all', start = 0, count = 0) : Promise<Variable[]> {
 
 		if (obj && !obj.properties) {
 
@@ -1903,7 +1978,7 @@ export class NodeDebugSession extends DebugSession {
 			return Promise.resolve([]);
 		}
 
-		const selectedProperties = new Array<any>();
+		const selectedProperties = new Array<V8Property>();
 
 		let found_proto = false;
 		for (let property of obj.properties) {
@@ -1936,10 +2011,10 @@ export class NodeDebugSession extends DebugSession {
 
 		// do we have to add the protoObject to the list of properties?
 		if (!found_proto && (mode === 'all' || mode === 'named')) {
-			const h = <number> obj.handle;
+			const h = obj.handle;
 			if (h > 0) {    // only add if not an internal debugger object
-				obj.protoObject.name = NodeDebugSession.PROTO;
-				selectedProperties.push(obj.protoObject);
+				(<any>obj.protoObject).name = NodeDebugSession.PROTO;
+				selectedProperties.push(<V8Property>obj.protoObject);
 			}
 		}
 
@@ -1952,7 +2027,7 @@ export class NodeDebugSession extends DebugSession {
 	 * 'noBrackets' controls whether the index is enclosed in brackets.
 	 * If a value is undefined it probes for a getter.
 	 */
-	private _createPropertyVariables(obj: any, properties: any[], start?: number, noBrackets?: boolean) : Promise<Variable[]> {
+	private _createPropertyVariables(obj: V8Object, properties: V8Property[], start?: number, noBrackets?: boolean) : Promise<Variable[]> {
 
 		if (typeof start !== 'number') {
 			start = 0;
@@ -1960,12 +2035,15 @@ export class NodeDebugSession extends DebugSession {
 
 		return this._resolveValues(properties).then(() => {
 			return Promise.all<Variable>(properties.map(property => {
-				const val = this._getValueFromCache(property);
+				const val = <V8Object> this._getValueFromCache(property);
 
 				// create 'name'
-				let name = property.name;
-				if (typeof name === 'number') {
-					name = noBrackets ? `${start+name}` : `[${start+name}]`;
+				let name: string;
+				if (typeof property.name === 'number') {
+					const ix = +property.name;
+					name = noBrackets ? `${start+ix}` : `[${start+ix}]`;
+				} else {
+					name = <string> property.name;
 				}
 
 				// if value 'undefined' trigger a getter
@@ -1981,9 +2059,7 @@ export class NodeDebugSession extends DebugSession {
 					};
 
 					this.log('va', `_createPropertyVariables: trigger getter`);
-					return this._node.command2('evaluate', args).then(response => {
-						this._cacheRefs(response);
-
+					return this._node.evaluate(args).then(response => {
 						return this._createVariable(name, response.body);
 					}).catch(err => {
 						return new Variable(name, 'undefined');
@@ -2000,7 +2076,7 @@ export class NodeDebugSession extends DebugSession {
 	 * Create a Variable with the given name and value.
 	 * For structured values the variable object will have a corresponding expander.
 	 */
-	public _createVariable(name: string, val: any) : Promise<Variable> {
+	public _createVariable(name: string, val: V8Handle) : Promise<Variable> {
 
 		if (!val) {
 			return Promise.resolve(null);
@@ -2008,16 +2084,27 @@ export class NodeDebugSession extends DebugSession {
 
 		switch (val.type) {
 
+			case 'undefined':
+			case 'null':
+				return Promise.resolve(new Variable(name, val.type));
+
+			case 'string':
+				return this._createStringVariable(name, val);
+			case 'number':
+				return Promise.resolve(new Variable(name, (<V8Simple> val).value.toString()));
+			case 'boolean':
+				return Promise.resolve(new Variable(name, (<V8Simple> val).value.toString().toLowerCase()));	// node returns these boolean values capitalized
+
 			case 'object':
 			case 'function':
 			case 'regexp':
 			case 'promise':
 			case 'generator':
 			case 'error':
-				// indirect value
 
-				let value = <string> val.className;
-				let text = <string> val.text;
+				const object = <V8Object> val;
+				let value = object.className;
+				let text = object.text;
 
 				switch (value) {
 
@@ -2030,11 +2117,11 @@ export class NodeDebugSession extends DebugSession {
 						return this._createArrayVariable(name, val);
 
 					case 'RegExp':
-						return Promise.resolve(new Variable(name, text, this._variableHandles.create(new PropertyExpander(val))));
+						return Promise.resolve(new Variable(name, text, this._variableHandles.create(new PropertyContainer(val))));
 
 					case 'Generator':
 					case 'Object':
-						return this._resolveValues( [ val.constructorFunction ] ).then(resolved => {
+						return this._resolveValues( [ object.constructorFunction ] ).then((resolved: V8Function[]) => {
 							if (resolved[0]) {
 								const constructor_name = <string>resolved[0].name;
 								if (constructor_name) {
@@ -2042,11 +2129,11 @@ export class NodeDebugSession extends DebugSession {
 								}
 							}
 
-							if (val.status) {	// promises and generators have a status attribute
-								value += ` { ${val.status} }`;
+							if (object.status) {	// promises and generators have a status attribute
+								value += ` { ${object.status} }`;
 							}
 
-							return new Variable(name, value, this._variableHandles.create(new PropertyExpander(val)));
+							return new Variable(name, value, this._variableHandles.create(new PropertyContainer(val)));
 						});
 
 					case 'Function':
@@ -2064,13 +2151,7 @@ export class NodeDebugSession extends DebugSession {
 						}
 						break;
 				}
-				return Promise.resolve(new Variable(name, value, this._variableHandles.create(new PropertyExpander(val))));
-
-			case 'string':
-				return this._createStringVariable(name, val);
-
-			case 'boolean':
-				return Promise.resolve(new Variable(name, val.value.toString().toLowerCase()));	// node returns these boolean values capitalized
+				return Promise.resolve(new Variable(name, value, this._variableHandles.create(new PropertyContainer(val))));
 
 			case 'set':
 				return this._createSetVariable(name, val);
@@ -2078,26 +2159,19 @@ export class NodeDebugSession extends DebugSession {
 			case 'map':
 				return this._createMapVariable(name, val);
 
-			case 'undefined':
-			case 'null':
-				return Promise.resolve(new Variable(name, val.type));
-
-			case 'number':
-				return Promise.resolve(new Variable(name, '' + val.value));
-
 			case 'frame':
 			default:
-				return Promise.resolve(new Variable(name, val.value ? val.value.toString() : 'undefined'));
+				return Promise.resolve(new Variable(name, (<V8Simple> val).value ? (<V8Simple> val).value.toString() : 'undefined'));
 		}
 	}
 
 	//--- long array support
 
-	private _createArrayVariable(name: string, array: any) : Promise<Variable> {
+	private _createArrayVariable(name: string, array: V8Object) : Promise<Variable> {
 
 		return this._getArraySize(array).then(length => {
 
-			let expander: Expandable;
+			let expander: VariableContainer;
 
 			if (length > this._chunkSize) {
 
@@ -2107,29 +2181,21 @@ export class NodeDebugSession extends DebugSession {
 						for (let start = 0; start < length; start += this._chunkSize) {
 							const end = Math.min(start + this._chunkSize, length)-1;
 							const count = end-start+1;
-
-							let expandFunc;
-							if (this._largeArrays) {
-								expandFunc = () => this._createLargeArrayElements(array, start, count);
-							} else {
-								expandFunc = () => this._createProperties(array, 'range', start, count);
-							}
-
-							variables.push(new Variable(`[${start}..${end}]`, ' ', this._variableHandles.create(new Expander(expandFunc))));
+							variables.push(new Variable(`[${start}..${end}]`, ' ', this._variableHandles.create(new RangeContainer(array, start, count))));
 						}
 						return variables;
 					});
 				});
 
 			} else {
-				expander = new PropertyExpander(array);
+				expander = new PropertyContainer(array);
 			}
 
 			return new Variable(name, `${array.className}[${(length >= 0) ? length.toString() : ''}]`, this._variableHandles.create(expander));
 		});
 	}
 
-	private _getArraySize(array: any) : Promise<number> {
+	private _getArraySize(array: V8Object) : Promise<number> {
 
 		if (typeof array.vscode_size === 'number') {
 			return Promise.resolve(array.vscode_size);
@@ -2144,8 +2210,7 @@ export class NodeDebugSession extends DebugSession {
 		};
 
 		this.log('va', `_getArraySize: array.length`);
-		return this._node.command2('evaluate', args).then(response => {
-			this._cacheRefs(response);
+		return this._node.evaluate(args).then(response => {
 			return +response.body.value;
 		});
 	}
@@ -2161,9 +2226,7 @@ export class NodeDebugSession extends DebugSession {
 		};
 
 		this.log('va', `_createLargeArrayElements: array.slice`);
-		return this._node.command2('evaluate', args).then(response => {
-
-			this._cacheRefs(response);
+		return this._node.evaluate(args).then(response => {
 
 			const properties = response.body.properties;
 			const selectedProperties = new Array<any>();
@@ -2181,7 +2244,7 @@ export class NodeDebugSession extends DebugSession {
 
 	//--- ES6 Set support
 
-	private _createSetVariable(name: string, set: any) : Promise<Variable> {
+	private _createSetVariable(name: string, set: V8Handle) : Promise<Variable> {
 
 		const args = {
 			// initially we need only the size of the set
@@ -2193,8 +2256,7 @@ export class NodeDebugSession extends DebugSession {
 		};
 
 		this.log('va', `_createSetVariable: set.size`);
-		return this._node.command2('evaluate', args).then((response: NodeV8Response) => {
-			this._cacheRefs(response);
+		return this._node.evaluate(args).then(response => {
 
 			const size = +response.body.value;
 
@@ -2217,7 +2279,7 @@ export class NodeDebugSession extends DebugSession {
 		});
 	}
 
-	private _createSetElements(set: any, start: number, end: number) : Promise<Variable[]> {
+	private _createSetElements(set: V8Handle, start: number, end: number) : Promise<Variable[]> {
 
 		const args = {
 			expression: `var r = [], i = 0; set.forEach(v => { if (i >= ${start} && i <= ${end}) r.push(v); i++; }); r`,
@@ -2229,9 +2291,7 @@ export class NodeDebugSession extends DebugSession {
 
 		const length = end-start+1;
 		this.log('va', `_createSetElements: set.slice ${start} ${length}`);
-		return this._node.command2('evaluate', args).then(response => {
-
-			this._cacheRefs(response);
+		return this._node.evaluate(args).then(response => {
 
 			const properties = response.body.properties;
 			const selectedProperties = new Array<any>();
@@ -2249,7 +2309,7 @@ export class NodeDebugSession extends DebugSession {
 
 	//--- ES6 map support
 
-	private _createMapVariable(name: string, map: any) : Promise<Variable> {
+	private _createMapVariable(name: string, map: V8Handle) : Promise<Variable> {
 
 		const args = {
 			// initially we need only the size of the map
@@ -2261,8 +2321,7 @@ export class NodeDebugSession extends DebugSession {
 		};
 
 		this.log('va', `_createMapVariable: map.size`);
-		return this._node.command2('evaluate', args).then((response: NodeV8Response) => {
-			this._cacheRefs(response);
+		return this._node.evaluate(args).then(response => {
 
 			const size = +response.body.value;
 
@@ -2285,7 +2344,7 @@ export class NodeDebugSession extends DebugSession {
 		});
 	}
 
-	private _createMapElements(map: any, start: number, end: number) : Promise<Variable[]> {
+	private _createMapElements(map: V8Handle, start: number, end: number) : Promise<Variable[]> {
 
 		// for each slot of the map we create three slots in a helper array: label, key, value
 		const args = {
@@ -2298,9 +2357,7 @@ export class NodeDebugSession extends DebugSession {
 
 		const count = end-start+1;
 		this.log('va', `_createMapElements: map.slice ${start} ${count}`);
-		return this._node.command2('evaluate', args).then(response => {
-
-			this._cacheRefs(response);
+		return this._node.evaluate(args).then(response => {
 
 			const properties = response.body.properties;
 			const selectedProperties = new Array<any>();
@@ -2316,8 +2373,8 @@ export class NodeDebugSession extends DebugSession {
 				const variables = [];
 				for (let i = 0; i < selectedProperties.length; i += 3) {
 
-					const key = this._getValueFromCache(selectedProperties[i+1]);
-					const val = this._getValueFromCache(selectedProperties[i+2]);
+					const key = <V8Object> this._getValueFromCache(selectedProperties[i+1]);
+					const val = <V8Object> this._getValueFromCache(selectedProperties[i+2]);
 
 					const expander = new Expander(() => {
 						return Promise.all([
@@ -2326,7 +2383,8 @@ export class NodeDebugSession extends DebugSession {
 						]);
 					});
 
-					variables.push(new Variable((start + (i/3)).toString(), this._getValueFromCache(selectedProperties[i]).value, this._variableHandles.create(expander)));
+					const x = <V8Object> this._getValueFromCache(selectedProperties[i]);
+					variables.push(new Variable((start + (i/3)).toString(), <string> x.value, this._variableHandles.create(expander)));
 				}
 				return variables;
 			});
@@ -2335,9 +2393,9 @@ export class NodeDebugSession extends DebugSession {
 
 	//--- long string support
 
-	private _createStringVariable(name: string, val: any) : Promise<Variable> {
+	private _createStringVariable(name: string, val: V8Simple) : Promise<Variable> {
 
-		let str_val = val.value;
+		let str_val = <string>val.value;
 
 		if (NodeDebugSession.LONG_STRING_MATCHER.exec(str_val)) {
 
@@ -2351,12 +2409,8 @@ export class NodeDebugSession extends DebugSession {
 			};
 
 			this.log('va', `_createStringVariable: get full string`);
-			return this._node.command2('evaluate', args).then((response: NodeV8Response) => {
-				if (response.success) {
-					this._cacheRefs(response);
-
-					str_val = response.body.value;
-				}
+			return this._node.evaluate(args).then(response => {
+				str_val = <string> response.body.value;
 				return this._createStringVariable2(name, str_val);
 			});
 
@@ -2370,6 +2424,82 @@ export class NodeDebugSession extends DebugSession {
 			s = s.replace('\n', '\\n').replace('\r', '\\r');
 		}
 		return new Variable(name, `"${s}"`);
+	}
+
+	//--- setVariable request -------------------------------------------------------------------------------------------------
+
+	protected setVariableRequest(response: DebugProtocol.SetVariableResponse, args: DebugProtocol.SetVariableArguments): void {
+		const reference = args.variablesReference;
+		const name = args.name;
+		const value = args.value;
+		const variablesContainer = this._variableHandles.get(reference);
+		if (variablesContainer) {
+			variablesContainer.SetValue(this, name, value).then(newValue => {
+				response.body = {
+					value: newValue
+				};
+				this.sendResponse(response);
+			}).catch(err => {
+				// in case of error return empty variables array
+				this.sendErrorResponse(response, 2004, localize('setVariable.error', "Can't set variable ({0}).", err.message));
+			});
+		} else {
+			this.sendErrorResponse(response, 2004, localize('setVariable.error', "Can't set variable."));
+		}
+	}
+
+	public _setVariableValue(frame: number, scope: number, name: string, value: string) : Promise<string> {
+
+		const evalArgs = {
+			expression: value,
+			disable_break: true,
+			maxStringLength: NodeDebugSession.MAX_STRING_LENGTH,
+			frame: frame
+		};
+
+		return this._node.evaluate(evalArgs).then(evalResponse => {
+
+			const args = {
+				scope: {
+					frameNumber: frame,
+					number: scope
+				},
+				name: name,
+				newValue: {
+					value: evalResponse.body.value,
+					type: evalResponse.body.type
+				}
+			};
+
+			return this._node.setVariableValue(args).then(response => {
+				return this._createVariable('_setVariableValue', response.body.newValue).then(variable => {
+					return variable.value;
+				});
+			});
+		});
+	}
+
+	public _setPropertyValue(objHandle: number, propName: string, value: string) : Promise<string> {
+
+		if (propName[0] !== '[') {
+			propName = '.' + propName;
+		}
+
+		const args = {
+			global: true,
+			expression: `obj${propName} = ${value}`,
+			disable_break: true,
+			maxStringLength: NodeDebugSession.MAX_STRING_LENGTH,
+			additional_context: [
+				{ name: 'obj', handle: objHandle }
+			]
+		};
+
+		return this._node.evaluate(args).then(response => {
+			return this._createVariable('_setpropertyvalue', response.body).then(variable => {
+				return variable.value;
+			});
+		});
 	}
 
 	//--- pause request -------------------------------------------------------------------------------------------------------
@@ -2390,7 +2520,7 @@ export class NodeDebugSession extends DebugSession {
 	//--- continue request ----------------------------------------------------------------------------------------------------
 
 	protected continueRequest(response: DebugProtocol.ContinueResponse, args: DebugProtocol.ContinueArguments): void {
-		this._node.command('continue', null, (nodeResponse) => {
+		this._node.command('continue', null, nodeResponse => {
 			this._sendNodeResponse(response, nodeResponse);
 		});
 	}
@@ -2398,19 +2528,19 @@ export class NodeDebugSession extends DebugSession {
 	//--- step request --------------------------------------------------------------------------------------------------------
 
 	protected stepInRequest(response: DebugProtocol.StepInResponse, args: DebugProtocol.StepInArguments) : void {
-		this._node.command('continue', { stepaction: 'in' }, (nodeResponse) => {
+		this._node.command('continue', { stepaction: 'in' }, nodeResponse => {
 			this._sendNodeResponse(response, nodeResponse);
 		});
 	}
 
 	protected stepOutRequest(response: DebugProtocol.StepOutResponse, args: DebugProtocol.StepOutArguments) : void {
-		this._node.command('continue', { stepaction: 'out' }, (nodeResponse) => {
+		this._node.command('continue', { stepaction: 'out' }, nodeResponse => {
 			this._sendNodeResponse(response, nodeResponse);
 		});
 	}
 
 	protected nextRequest(response: DebugProtocol.NextResponse, args: DebugProtocol.NextArguments): void {
-		this._node.command('continue', { stepaction: 'next' }, (nodeResponse) => {
+		this._node.command('continue', { stepaction: 'next' }, nodeResponse => {
 			this._sendNodeResponse(response, nodeResponse);
 		});
 	}
@@ -2438,7 +2568,7 @@ export class NodeDebugSession extends DebugSession {
 			(<any>evalArgs).global = true;
 		}
 
-		this._node.command(this._nodeInjectionAvailable ? 'vscode_evaluate' : 'evaluate', evalArgs, (resp: NodeV8Response) => {
+		this._node.command(this._nodeInjectionAvailable ? 'vscode_evaluate' : 'evaluate', evalArgs, (resp: V8EvaluateResponse) => {
 			if (resp.success) {
 				this._createVariable('evaluate', resp.body).then((v: Variable) => {
 					if (v) {
@@ -2484,12 +2614,20 @@ export class NodeDebugSession extends DebugSession {
 
 		if (srcSource.scriptId) {
 
-			this._node.command('scripts', { types: 1+2+4, includeSource: true, ids: [ srcSource.scriptId ] }, (nodeResponse: NodeV8Response) => {
-				if (nodeResponse.success) {
-					srcSource.source = nodeResponse.body[0].source;
-				} else {
-					srcSource.source = localize('source.not.found', "<source not found>");
-				}
+			const args = {
+				types: 1+2+4,
+				includeSource: true,
+				ids: [ srcSource.scriptId ]
+			};
+
+			this._node.scripts(args).then(nodeResponse => {
+				srcSource.source = nodeResponse.body[0].source;
+				response.body = {
+					content: srcSource.source
+				};
+				this.sendResponse(response);
+			}).catch(err => {
+				srcSource.source = localize('source.not.found', "<source not found>");
 				response.body = {
 					content: srcSource.source
 				};
@@ -2502,7 +2640,14 @@ export class NodeDebugSession extends DebugSession {
 	}
 
 	private _loadScript(scriptId: number) : Promise<string>  {
-		return this._node.command2('scripts', { types: 1+2+4, includeSource: true, ids: [ scriptId ] }).then(nodeResponse => {
+
+		const args = {
+			types: 1+2+4,
+			includeSource: true,
+			ids: [ scriptId ]
+		};
+
+		return this._node.scripts(args).then(nodeResponse => {
 			return nodeResponse.body[0].source;
 		});
 	}
@@ -2619,18 +2764,11 @@ export class NodeDebugSession extends DebugSession {
 		}
 	}
 
-	private _cacheRefs(response: NodeV8Response): void {
-		const refs = response.refs;
-		for (let r of refs) {
-			this._cache(r.handle, r);
-		}
+	private _cache(handle: number, obj: V8Object): void {
+		this._refCache.set(handle, obj);
 	}
 
-	private _cache(handle: number, o: any): void {
-		this._refCache.set(handle, o);
-	}
-
-	private _getValueFromCache(container: any): any {
+	private _getValueFromCache(container: V8Ref): V8Handle {
 		const value = this._refCache.get(container.ref);
 		if (value) {
 			return value;
@@ -2639,7 +2777,7 @@ export class NodeDebugSession extends DebugSession {
 		return null;
 	}
 
-	private _resolveValues(mirrors: any[]) : Promise<any[]> {
+	private _resolveValues(mirrors: V8Ref[]) : Promise<V8Object[]> {
 
 		const needLookup = new Array<number>();
 		for (let mirror of mirrors) {
@@ -2655,11 +2793,12 @@ export class NodeDebugSession extends DebugSession {
 				return mirrors.map(m => this._refCache.get(m.ref || m.handle));
 			});
 		} else {
-			return Promise.resolve(mirrors);
+			//return Promise.resolve(<V8Object[]>mirrors);
+			return Promise.resolve(mirrors.map(m => this._refCache.get(m.ref || m.handle)));
 		}
 	}
 
-	private _resolveToCache(handles: number[]) : Promise<any[]> {
+	private _resolveToCache(handles: number[]) : Promise<V8Object[]> {
 
 		const lookup = new Array<number>();
 
@@ -2678,8 +2817,6 @@ export class NodeDebugSession extends DebugSession {
 			const cmd = this._nodeInjectionAvailable ? 'vscode_lookup' : 'lookup';
 			this.log('va', `_resolveToCache: ${cmd} ${lookup.length} handles`);
 			return this._node.command2(cmd, { handles: lookup }).then(resp => {
-
-				this._cacheRefs(resp);
 
 				for (let key in resp.body) {
 					const obj = resp.body[key];
@@ -2737,7 +2874,11 @@ export class NodeDebugSession extends DebugSession {
 	}
 
 	private _findModule(name: string) : Promise<number> {
-		return this._node.command2('scripts', { types: 1 + 2 + 4, filter: name }).then(resp => {
+		const args = {
+			types: 1 + 2 + 4,
+			filter: name
+		};
+		return this._node.scripts(args).then(resp => {
 			for (let result of resp.body) {
 				if (result.name === name) {	// return the first exact match
 					return result.id;

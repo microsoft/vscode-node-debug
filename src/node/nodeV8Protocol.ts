@@ -25,7 +25,7 @@ export class NodeV8Response extends NodeV8Message {
 	command: string;
 	message: string;
 	body: any;
-	refs: any;
+	refs: V8Object[];
 
 	public constructor(request: NodeV8Response, message?: string) {
 		super('response');
@@ -42,7 +42,7 @@ export class NodeV8Response extends NodeV8Message {
 
 export class NodeV8Event extends NodeV8Message {
 	event: string;
-	body: any;
+	body: V8EventBody;
 
 	public constructor(event: string, body?: any) {
 		super('event');
@@ -52,6 +52,209 @@ export class NodeV8Event extends NodeV8Message {
 		}
 	}
 }
+
+// response types
+
+export interface V8Handle {
+	handle: number;
+	type: 'undefined' | 'null' | 'boolean' | 'number' | 'string' | 'object' | 'function' | 'frame';
+}
+
+export interface V8Simple extends V8Handle {
+	value?: boolean | number | string;
+}
+
+export interface V8Object extends V8Simple {
+
+	vscode_size?: number;
+
+	className?: string;
+	constructorFunction?: V8Ref;
+	protoObject?: V8Ref;
+	prototypeObject?: V8Ref;
+	properties?: V8Property[];
+
+
+	text?: string;
+
+	status?: string;
+}
+
+export interface V8Function extends V8Object {
+
+	name?: string;
+	inferredName?: string;
+}
+
+export interface V8Script extends V8Handle {
+	name: string;
+	id: number;
+	source?: string;
+}
+
+export interface V8Ref {
+	ref: number;
+
+	// if resolved, then a value exists
+	value?: boolean | number | string;
+	handle?: number;
+}
+
+export interface V8Property extends V8Ref {
+	name: number | string;
+}
+
+export interface V8Frame {
+	index: number;
+
+	line: number;
+	column: number;
+
+	script: V8Ref;
+	func: V8Ref;
+	receiver: V8Ref;
+}
+
+export interface V8Scope {
+	type: number;
+	frameIndex : number;
+	index: number;
+	object: V8Ref;
+}
+
+export interface V8Breakpoint {
+	type: 'scriptId' | 'scriptRegExp';
+	script_id: number;
+	number: number;
+	script_regexp: string;
+}
+
+// responses
+
+export interface V8ScopeResponse extends NodeV8Response {
+	body: {
+		vscode_locals?: number;
+		scopes: V8Scope[];
+	}
+}
+
+export interface V8EvaluateResponse extends NodeV8Response {
+	body: V8Object;
+}
+
+export interface V8BacktraceResponse extends NodeV8Response {
+	body: {
+		fromFrame: number;
+		toFrame: number;
+		totalFrames: number;
+		frames: V8Frame[];
+	}
+}
+
+export interface V8ScriptsResponse extends NodeV8Response {
+	body: V8Script[];
+}
+
+export interface V8SetVariableValueResponse extends NodeV8Response {
+	body: {
+		newValue: V8Handle;
+	}
+}
+
+export interface V8FrameResponse extends NodeV8Response {
+	body: V8Frame;
+}
+
+export interface V8ListBreakpointsResponse extends NodeV8Response {
+	body: {
+		breakpoints: V8Breakpoint[];
+	}
+}
+
+export interface V8SetBreakpointResponse extends NodeV8Response {
+	body: {
+		type: string;
+		breakpoint: number;
+		script_id: number;
+		actual_locations: {
+			line: number;
+			column: number;
+		}[];
+	}
+}
+
+export interface V8SetExceptionBreakResponse extends NodeV8Response {
+	body: {
+		type: 'all' | 'uncaught';
+		enabled: boolean;
+	}
+}
+
+// events
+
+export interface V8EventBody {
+	script: V8Script;
+	exception: V8Object;
+	breakpoints: any[];
+	sourceLine: number;
+	sourceColumn: number;
+	sourceLineText: string;
+}
+
+// arguments
+
+export interface V8EvaluateArgs {
+	expression: string;
+	disable_break?: boolean;
+	maxStringLength?: number;
+	global?: boolean;
+	frame?: number;
+	additional_context?: {
+		name: string;
+		handle: number;
+	}[];
+}
+
+export interface V8ScriptsArgs {
+	types: number;
+	includeSource?: boolean;
+	ids?: number[];
+	filter?: string;
+}
+
+export interface V8SetVariableValueArgs {
+	scope: {
+		frameNumber: number;
+		number: number;
+	};
+	name: string;
+	newValue: {
+		value: boolean | number | string;
+		type: string;
+	}
+}
+
+export interface V8FrameArgs {
+}
+
+export interface V8ClearBreakpointArgs {
+	breakpoint: number
+}
+
+export interface V8SetBreakpointArgs {
+	type : 'function' | 'script' | 'scriptId' | 'scriptRegExp';
+	target: number | string;
+	line?: number;
+	column?: number;
+	condition?: string;
+}
+
+export interface V8SetExceptionBreakArgs {
+	type : 'all' | 'uncaught';
+	enabled?: boolean;
+}
+
+//---- the protocol implementation
 
 export class NodeV8Protocol extends EE.EventEmitter {
 
@@ -64,10 +267,15 @@ export class NodeV8Protocol extends EE.EventEmitter {
 	private _writableStream: NodeJS.WritableStream;
 	private _pendingRequests = new Map<number, NodeV8Response>();
 	private _unresponsiveMode: boolean;
+	private _responseHook: (response: NodeV8Response) => void;
 
 	public embeddedHostVersion: number = -1;
 	public v8Version: string;
 
+	public constructor(responseHook?: (response: NodeV8Response) => void) {
+		super();
+		this._responseHook = responseHook;
+	}
 
 	public startDispatch(inStream: NodeJS.ReadableStream, outStream: NodeJS.WritableStream) : void {
 		this._sequence = 1;
@@ -99,15 +307,47 @@ export class NodeV8Protocol extends EE.EventEmitter {
 	}
 
 	public command2(command: string, args?: any, timeout: number = NodeV8Protocol.TIMEOUT) : Promise<NodeV8Response> {
-		return new Promise((completeDispatch, errorDispatch) => {
-			this._command(command, args, timeout, (result: NodeV8Response) => {
-				if (result.success) {
-					completeDispatch(result);
+		return new Promise((resolve, reject) => {
+			this.command(command, args, response => {
+				if (response.success) {
+					resolve(response);
 				} else {
-					errorDispatch(result);
+					reject(response);
 				}
 			});
 		});
+	}
+
+	public evaluate(args: V8EvaluateArgs, timeout: number = NodeV8Protocol.TIMEOUT) : Promise<V8EvaluateResponse> {
+		return this.command2('evaluate', args);
+	}
+
+	public scripts(args: V8ScriptsArgs, timeout: number = NodeV8Protocol.TIMEOUT) : Promise<V8ScriptsResponse> {
+		return this.command2('scripts', args);
+	}
+
+	public setVariableValue(args: V8SetVariableValueArgs, timeout: number = NodeV8Protocol.TIMEOUT) : Promise<V8SetVariableValueResponse> {
+		return this.command2('setvariablevalue', args);
+	}
+
+	public frame(args: V8FrameArgs, timeout: number = NodeV8Protocol.TIMEOUT) : Promise<V8FrameResponse> {
+		return this.command2('frame', args);
+	}
+
+	public setBreakpoint(args: V8SetBreakpointArgs, timeout: number = NodeV8Protocol.TIMEOUT) : Promise<V8SetBreakpointResponse> {
+		return this.command2('setbreakpoint', args);
+	}
+
+	public setExceptionBreak(args: V8SetExceptionBreakArgs, timeout: number = NodeV8Protocol.TIMEOUT) : Promise<V8SetExceptionBreakResponse> {
+		return this.command2('setexceptionbreak', args);
+	}
+
+	public clearBreakpoint(args: V8ClearBreakpointArgs, timeout: number = NodeV8Protocol.TIMEOUT) : Promise<NodeV8Response> {
+		return this.command2('clearbreakpoint', args);
+	}
+
+	public listBreakpoints(timeout: number = NodeV8Protocol.TIMEOUT) : Promise<V8ListBreakpointsResponse> {
+		return this.command2('listbreakpoints');
 	}
 
 	public sendEvent(event: NodeV8Event) : void {
@@ -123,6 +363,7 @@ export class NodeV8Protocol extends EE.EventEmitter {
 	}
 
 	// ---- private ------------------------------------------------------------
+
 
 	private _command(command: string, args: any, timeout: number, cb: (response: NodeV8Response) => void) : void {
 
@@ -195,6 +436,9 @@ export class NodeV8Protocol extends EE.EventEmitter {
 			const clb = this._pendingRequests[response.request_seq];
 			if (clb) {
 				delete this._pendingRequests[response.request_seq];
+				if (this._responseHook) {
+					this._responseHook(response);
+				}
 				clb(response);
 			}
 			break;
