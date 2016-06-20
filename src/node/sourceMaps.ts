@@ -209,9 +209,8 @@ export class SourceMaps implements ISourceMaps {
 		if (map === null) {
 			let srcSegment = Path.sep + 'src' + Path.sep;
 			if (pathToGenerated.indexOf(srcSegment) >= 0) {
-				let outSegment = Path.sep + 'out' + Path.sep;
-				pathToGenerated = pathToGenerated.replace(srcSegment, outSegment);
-				map = this._findGeneratedToSourceMapping(pathToGenerated);
+				const outSegment = Path.sep + 'out' + Path.sep;
+				map = this._findGeneratedToSourceMapping(pathToGenerated.replace(srcSegment, outSegment));
 			}
 		}
 
