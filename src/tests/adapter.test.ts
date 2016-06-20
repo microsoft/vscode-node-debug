@@ -309,6 +309,24 @@ suite('Node Debug Adapter', () => {
 
 		const PROGRAM = Path.join(DATA_ROOT, 'programWithException.js');
 
+		test('should not stop on an exception', () => {
+
+			return Promise.all<DebugProtocol.ProtocolMessage>([
+
+				dc.waitForEvent('initialized').then(event => {
+					return dc.setExceptionBreakpointsRequest({
+						filters: [ ]
+					});
+				}).then(response => {
+					return dc.configurationDoneRequest();
+				}),
+
+				dc.launch({ program: PROGRAM }),
+
+				dc.waitForEvent('terminated')
+			]);
+		});
+
 		test('should stop on a caught exception', () => {
 
 			const EXCEPTION_LINE = 6;
