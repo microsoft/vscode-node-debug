@@ -2527,6 +2527,12 @@ export class NodeDebugSession extends DebugSession {
 
 	//--- step request --------------------------------------------------------------------------------------------------------
 
+	protected nextRequest(response: DebugProtocol.NextResponse, args: DebugProtocol.NextArguments): void {
+		this._node.command('continue', { stepaction: 'next' }, nodeResponse => {
+			this._sendNodeResponse(response, nodeResponse);
+		});
+	}
+
 	protected stepInRequest(response: DebugProtocol.StepInResponse, args: DebugProtocol.StepInArguments) : void {
 		this._node.command('continue', { stepaction: 'in' }, nodeResponse => {
 			this._sendNodeResponse(response, nodeResponse);
@@ -2539,8 +2545,8 @@ export class NodeDebugSession extends DebugSession {
 		});
 	}
 
-	protected nextRequest(response: DebugProtocol.NextResponse, args: DebugProtocol.NextArguments): void {
-		this._node.command('continue', { stepaction: 'next' }, nodeResponse => {
+	protected stepBackRequest(response: DebugProtocol.StepBackResponse, args: DebugProtocol.StepBackArguments) : void {
+ 		this._node.command('continue', { stepaction: 'back' }, (nodeResponse) => {
 			this._sendNodeResponse(response, nodeResponse);
 		});
 	}
