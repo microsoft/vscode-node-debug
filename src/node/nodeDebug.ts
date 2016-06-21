@@ -35,6 +35,8 @@ export interface VariableContainer {
 
 export class Expander implements VariableContainer {
 
+	public static SET_VALUE_ERROR = localize('setVariable.error', "Setting value not supported");
+
 	private _expanderFunction : () => Promise<Variable[]>;
 
 	public constructor(func: () => Promise<Variable[]>) {
@@ -46,7 +48,7 @@ export class Expander implements VariableContainer {
 	}
 
 	public SetValue(session: NodeDebugSession, name: string, value: string) : Promise<string> {
-		return Promise.reject(new Error("setting value not supported."));
+		return Promise.reject(new Error(Expander.SET_VALUE_ERROR));
 	}
 }
 
@@ -2477,11 +2479,10 @@ export class NodeDebugSession extends DebugSession {
 				};
 				this.sendResponse(response);
 			}).catch(err => {
-				// in case of error return empty variables array
-				this.sendErrorResponse(response, 2004, localize('setVariable.error', "Can't set variable ({0}).", err.message));
+				this.sendErrorResponse(response, 2004, err.message);
 			});
 		} else {
-			this.sendErrorResponse(response, 2004, localize('setVariable.error', "Can't set variable."));
+			this.sendErrorResponse(response, 2025, Expander.SET_VALUE_ERROR);
 		}
 	}
 
