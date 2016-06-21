@@ -201,8 +201,10 @@ interface CommonArguments {
 	sourceMaps?: boolean;
 	/** Where to look for the generated code. Only used if sourceMaps is true. */
 	outDir?: string;
-	/** Try to automatically step over uninteresting source.  */
+	/** Try to automatically step over uninteresting source. */
 	smartStep?: boolean;
+	/** Step back supported. */
+	stepBack?: boolean;
 }
 
 /**
@@ -281,6 +283,7 @@ export class NodeDebugSession extends DebugSession {
 	private _sourceMaps: ISourceMaps;
 	private _externalConsole: boolean;
 	private _stopOnEntry: boolean;
+	private _stepBack = false;
 
 	// state valid between stop events
 	public _variableHandles = new Handles<VariableContainer>();
@@ -818,6 +821,8 @@ export class NodeDebugSession extends DebugSession {
 			this._traceAll = this._trace.indexOf('all') >= 0;
 		}
 
+		this._stepBack = (typeof args.stepBack === 'boolean') && args.stepBack;
+
 		this._smartStep = (typeof args.smartStep === 'boolean') && args.smartStep;
 
 		this._stopOnEntry = (typeof args.stopOnEntry === 'boolean') && args.stopOnEntry;
@@ -981,6 +986,21 @@ export class NodeDebugSession extends DebugSession {
 
 				setTimeout(() => {
 					this._injectDebuggerExtensions().then(_ => {
+
+						if (!this._stepBack) {
+							// does runtime support 'step back'?
+							const v = this._node.embeddedHostVersion;	// x.y.z version represented as (x*100+y)*100+z
+							if (!this._node.v8Version && v >= 70000) {
+								this._stepBack = true;
+							}
+						}
+
+						if (this._stepBack) {
+							response.body = {
+								supportsStepBack: true
+							};
+						}
+
 						this.sendResponse(response);
 						this._startInitialize(!resp.running);
 					});
