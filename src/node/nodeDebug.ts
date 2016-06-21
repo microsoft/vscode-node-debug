@@ -50,6 +50,35 @@ export class Expander implements VariableContainer {
 	}
 }
 
+export class ArrayContainer implements VariableContainer {
+
+	private _array: V8Object;
+	private _length: number;
+	private _chunkSize: number;
+
+	public constructor(array: V8Object, length: number, chunkSize: number) {
+		this._array = array;
+		this._length = length;
+		this._chunkSize = chunkSize;
+	}
+
+	public Expand(session: NodeDebugSession) : Promise<Variable[]> {
+		// first add named properties then add ranges
+		return session._createProperties(this._array, 'named').then(variables => {
+			for (let start = 0; start < this._length; start += this._chunkSize) {
+				const end = Math.min(start + this._chunkSize, this._length)-1;
+				const count = end-start+1;
+				variables.push(new Variable(`[${start}..${end}]`, ' ', session._variableHandles.create(new RangeContainer(this._array, start, count))));
+			}
+			return variables;
+		});
+	}
+
+	public SetValue(session: NodeDebugSession, name: string, value: string) : Promise<string> {
+		return session._setPropertyValue(this._array.handle, name, value);
+	}
+}
+
 export class RangeContainer implements VariableContainer {
 
 	private _array: V8Object;
@@ -254,7 +283,7 @@ export class NodeDebugSession extends DebugSession {
 	private _stopOnEntry: boolean;
 
 	// state valid between stop events
-	private _variableHandles = new Handles<VariableContainer>();
+	public _variableHandles = new Handles<VariableContainer>();
 	private _frameHandles = new Handles<V8Frame>();
 	private _sourceHandles = new Handles<SourceSource>();
 	private _refCache = new Map<number, V8Handle>();
@@ -2174,19 +2203,7 @@ export class NodeDebugSession extends DebugSession {
 			let expander: VariableContainer;
 
 			if (length > this._chunkSize) {
-
-				expander = new Expander(() => {
-					// first add named properties then add ranges
-					return this._createProperties(array, 'named').then(variables => {
-						for (let start = 0; start < length; start += this._chunkSize) {
-							const end = Math.min(start + this._chunkSize, length)-1;
-							const count = end-start+1;
-							variables.push(new Variable(`[${start}..${end}]`, ' ', this._variableHandles.create(new RangeContainer(array, start, count))));
-						}
-						return variables;
-					});
-				});
-
+				expander = new ArrayContainer(array, length, this._chunkSize);
 			} else {
 				expander = new PropertyContainer(array);
 			}
@@ -2547,9 +2564,9 @@ export class NodeDebugSession extends DebugSession {
 
 	protected stepBackRequest(response: DebugProtocol.StepBackResponse, args: DebugProtocol.StepBackArguments) : void {
  		this._node.command('continue', { stepaction: 'back' }, (nodeResponse) => {
-			this._sendNodeResponse(response, nodeResponse);
-		});
-	}
+ 			this._sendNodeResponse(response, nodeResponse);
+ 		});
+ 	}
 
 	//--- evaluate request ----------------------------------------------------------------------------------------------------
 
