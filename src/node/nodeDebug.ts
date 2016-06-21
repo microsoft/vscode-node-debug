@@ -1949,7 +1949,7 @@ export class NodeDebugSession extends DebugSession {
 				this.sendResponse(response);
 			});
 		} else {
-			// in case of error return empty variables array
+			// no container found: return empty variables array
 			response.body = {
 				variables: []
 			};
