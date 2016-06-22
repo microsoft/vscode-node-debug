@@ -36,7 +36,7 @@
 			const names = mirror.propertyNames();
 			for (var i = 0; i < names.length; i++) {
 				var name = names[i];
-				if (name[0] >= '0' && name[0] <= '9') {
+				if (name.length > 0 && name[0] >= '0' && name[0] <= '9') {
 					n++;
 				}
 			}
@@ -47,7 +47,7 @@
 			const names = mirror.propertyNames();
 			for (var i = 0; i < names.length; i++) {
 				var name = names[i];
-				if (name[0] < '0' || name[0] > '9') {
+				if (name.length === 0 || name[0] < '0' || name[0] > '9') {
 					named.push(name);
 				}
 			}
