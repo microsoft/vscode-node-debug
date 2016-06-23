@@ -164,6 +164,21 @@ export class ScopeContainer implements VariableContainer {
 	}
 }
 
+class InternalSourceBreakpoint {
+
+	line: number;
+	orgLine: number;
+	column: number;
+	orgColumn: number;
+	condition: string;
+
+	constructor(line: number, column: number = 0, condition?: string) {
+		this.line = this.orgLine = line;
+		this.column = this.orgColumn = column;
+		this.condition = condition;
+	}
+}
+
 /**
  * A SourceSource represents the source contents of an internal module or of a source map with inlined contents.
  */
@@ -1226,21 +1241,20 @@ export class NodeDebugSession extends DebugSession {
 
 		this.log('bp', `setBreakPointsRequest: ${JSON.stringify(args.source)} ${JSON.stringify(args.breakpoints)}`);
 
+		const sbs = new Array<InternalSourceBreakpoint>();
 		// prefer the new API: array of breakpoints
-		let lbs = args.breakpoints;
-		if (lbs) {
-			for (let b of lbs) {
-				b.line = this.convertClientLineToDebugger(b.line);
-				b.column = typeof b.column === 'number' ? this.convertClientColumnToDebugger(b.column) : 0;
+		if (args.breakpoints) {
+			for (let b of args.breakpoints) {
+				sbs.push(new InternalSourceBreakpoint(
+					this.convertClientLineToDebugger(b.line),
+					typeof b.column === 'number' ? this.convertClientColumnToDebugger(b.column) : 0,
+					b.condition)
+				);
 			}
 		} else {
-			lbs = new Array<DebugProtocol.SourceBreakpoint>();
 			// deprecated API: convert line number array
 			for (let l of args.lines) {
-				lbs.push({
-					line: this.convertClientLineToDebugger(l),
-					column: 0
-				});
+				sbs.push(new InternalSourceBreakpoint(this.convertClientLineToDebugger(l)));
 			}
 		}
 
@@ -1250,13 +1264,13 @@ export class NodeDebugSession extends DebugSession {
 
 			if (source.adapterData.inlinePath) {
 				// a breakpoint in inlined source: we need to source map
-				this._mapSourceAndUpdateBreakpoints(response, source.adapterData.inlinePath, lbs);
+				this._mapSourceAndUpdateBreakpoints(response, source.adapterData.inlinePath, sbs);
 				return;
 			}
 
 			if (source.adapterData.remotePath) {
 				// a breakpoint in a remote file: don't try to source map
-				this._updateBreakpoints(response, source.adapterData.remotePath, -1, lbs);
+				this._updateBreakpoints(response, source.adapterData.remotePath, -1, sbs);
 				return;
 			}
 		}
@@ -1264,14 +1278,14 @@ export class NodeDebugSession extends DebugSession {
 		if (source.sourceReference > 0) {
 			const srcSource = this._sourceHandles.get(source.sourceReference);
 			if (srcSource && srcSource.scriptId) {
-				this._updateBreakpoints(response, null, srcSource.scriptId, lbs);
+				this._updateBreakpoints(response, null, srcSource.scriptId, sbs);
 				return;
 			}
 		}
 
 		if (source.path) {
 			let path = this.convertClientPathToDebugger(source.path);
-			this._mapSourceAndUpdateBreakpoints(response, path, lbs);
+			this._mapSourceAndUpdateBreakpoints(response, path, sbs);
 			return;
 		}
 
@@ -1279,7 +1293,7 @@ export class NodeDebugSession extends DebugSession {
 			// a core module
 			this._findModule(source.name).then(scriptId => {
 				if (scriptId >= 0) {
-					this._updateBreakpoints(response, null, scriptId, lbs);
+					this._updateBreakpoints(response, null, scriptId, sbs);
 				} else {
 					this.sendErrorResponse(response, 2019, localize('VSND2019', "Internal module {0} not found.", '{_module}'), { _module: source.name });
 				}
@@ -1291,7 +1305,7 @@ export class NodeDebugSession extends DebugSession {
 		this.sendErrorResponse(response, 2012, 'No valid source specified.', null, ErrorDestination.Telemetry);
 	}
 
-	private _mapSourceAndUpdateBreakpoints(response: DebugProtocol.SetBreakpointsResponse, path: string, lbs: DebugProtocol.SourceBreakpoint[]) {
+	private _mapSourceAndUpdateBreakpoints(response: DebugProtocol.SetBreakpointsResponse, path: string, lbs: InternalSourceBreakpoint[]) {
 
 		let sourcemap = false;
 
@@ -1340,7 +1354,7 @@ export class NodeDebugSession extends DebugSession {
 	/*
 	 * clear and set all breakpoints of a given source.
 	 */
-	private _updateBreakpoints(response: DebugProtocol.SetBreakpointsResponse, path: string, scriptId: number, lbs: DebugProtocol.SourceBreakpoint[], sourcemap: boolean = false): void {
+	private _updateBreakpoints(response: DebugProtocol.SetBreakpointsResponse, path: string, scriptId: number, lbs: InternalSourceBreakpoint[], sourcemap: boolean = false): void {
 
 		// clear all existing breakpoints for the given path or script ID
 		this._node.listBreakpoints().then(nodeResponse => {
@@ -1398,7 +1412,7 @@ export class NodeDebugSession extends DebugSession {
 	/*
 	 * register a single breakpoint with node.
 	 */
-	private _setBreakpoint(scriptId: number, path: string, lb: DebugProtocol.SourceBreakpoint, sourcemap: boolean) : Promise<Breakpoint> {
+	private _setBreakpoint(scriptId: number, path: string, lb: InternalSourceBreakpoint, sourcemap: boolean) : Promise<Breakpoint> {
 
 		if (lb.line < 0) {
 			// ignore this breakpoint because it couldn't be source mapped successfully
@@ -1445,12 +1459,27 @@ export class NodeDebugSession extends DebugSession {
 			}
 
 			if (sourcemap) {
-				// this source uses a sourcemap so we have to map js locations back to source locations
-				const mapresult = this._sourceMaps.MapToSource(path, null, actualLine, actualColumn);
-				if (mapresult) {
-					this.log('sm', `_setBreakpoint: bp verification gen: '${path}' ${actualLine}:${actualColumn} -> src: '${mapresult.path}' ${mapresult.line}:${mapresult.column}`);
-					actualLine = mapresult.line;
-					actualColumn = mapresult.column;
+
+				if (actualLine != args.line || actualColumn != args.column) {
+					// breakpoint location was adjusted by node.js so we have to map the new location back to source
+
+					// first try to map the remote path back to local
+					const localpath = this._remoteToLocal(path);
+
+					// then try to map js locations back to source locations
+					const mapresult = this._sourceMaps.MapToSource(localpath, null, actualLine, actualColumn);
+					if (mapresult) {
+						this.log('sm', `_setBreakpoint: bp verification gen: '${localpath}' ${actualLine}:${actualColumn} -> src: '${mapresult.path}' ${mapresult.line}:${mapresult.column}`);
+						actualLine = mapresult.line;
+						actualColumn = mapresult.column;
+					} else {
+						actualLine = lb.orgLine;
+						actualColumn = lb.orgColumn;
+					}
+
+				} else {
+					actualLine = lb.orgLine;
+					actualColumn = lb.orgColumn;
 				}
 			}
 
