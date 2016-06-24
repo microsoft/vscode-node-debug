@@ -1852,8 +1852,10 @@ export class NodeDebugSession extends DebugSession {
 					return this._createStackFrameFromPath(frame, name, localPath, remotePath, origin, line, column);
 				}
 			}
+
 		} else {
-			this.log('sm', `_createStackFrame: gen: '${localPath}' ${line}:${column} -> couldn't be mapped to source -> use generated file`);
+
+			this.log('sm', `_createStackFrameFromSourceMap: gen: '${localPath}' ${line}:${column} -> couldn't be mapped to source -> use generated file`);
 			return this._createStackFrameFromPath(frame, name, localPath, remotePath, origin, line, column);
 		}
 	}
@@ -1896,6 +1898,37 @@ export class NodeDebugSession extends DebugSession {
 
 		const frameReference = this._frameHandles.create(frame);
 		return new StackFrame(frameReference, func_name, src, this.convertDebuggerLineToClient(line), this.convertDebuggerColumnToClient(column));
+	}
+
+	// verify that the file on disk is really the same as the executed content
+	private _sameFile(path: string, contents: string) : Promise<boolean> {
+
+		return new Promise((completeDispatch, errorDispatch) => {
+			let fileContents = FS.readFile(path, 'utf8', (err, fileContents) => {
+				if (err) {
+					errorDispatch(err);
+				} else {
+					// remove an optional shebang
+					fileContents = fileContents.replace(/^#!.*\n/, '');
+
+					// try to locate the file contents in the executed contents
+					const pos = contents.indexOf(fileContents);
+					completeDispatch(pos >= 0);
+				}
+			});
+		});
+	}
+
+	// verify that the file on disk is really the same as the executed content
+	private _sameFile2(path: string, contents: string) : boolean {
+
+		let fileContents = FS.readFileSync(path, 'utf8');
+		// remove an optional shebang
+		fileContents = fileContents.replace(/^#!.*\n/, '');
+
+		// try to locate the file contents in the executed contents
+		const pos = contents.indexOf(fileContents);
+		return pos >= 0;
 	}
 
 	//--- scopes request ------------------------------------------------------------------------------------------------------
