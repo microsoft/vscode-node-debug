@@ -164,6 +164,14 @@ export class ScopeContainer implements VariableContainer {
 	}
 }
 
+class Script {
+	contents: string;
+
+	constructor(script: V8Script) {
+		this.contents = script.source;
+	}
+}
+
 class InternalSourceBreakpoint {
 
 	line: number;
@@ -199,6 +207,7 @@ interface CommonArguments {
 	/** comma separated list of trace selectors. Supported:
 	 * 'all': all
 	 * 'la': launch/attach
+	 * 'ls': load scripts
 	 * 'bp': breakpoints
 	 * 'sm': source maps
 	 * 'va': data structure access
@@ -290,6 +299,7 @@ export class NodeDebugSession extends DebugSession {
 	private _node: NodeV8Protocol;
 	private _nodeProcessId: number = -1; 		// pid of the node runtime
 	private _functionBreakpoints = new Array<number>();	// node function breakpoint ids
+	private _scripts = new Map<number, Script>();
 
 	// session configurations
 	private _noDebug = false;
@@ -402,9 +412,9 @@ export class NodeDebugSession extends DebugSession {
 
 					const script_id = eventBody.script.id;
 
-					this._loadScript(script_id).then(content => {
+					this._loadScript(script_id).then(script => {
 
-						const sources = this._sourceMaps.MapPathToSource(path, content);
+						const sources = this._sourceMaps.MapPathToSource(path, script.contents);
 						if (sources && sources.length >= 0) {
 							this.outLine(`afterCompile: ${path} maps to ${sources[0]}`);
 
@@ -1751,7 +1761,6 @@ export class NodeDebugSession extends DebugSession {
 			const script_val = <V8Script> this._getValueFromCache(frame.script);
 			if (script_val) {
 				let name = script_val.name;
-				const script_id: number = script_val.id;
 
 				if (name) {
 
@@ -1778,10 +1787,8 @@ export class NodeDebugSession extends DebugSession {
 						if (this._sourceMaps) {
 
 							if (!FS.existsSync(localPath)) {
-								const script_val = <V8Script> this._getValueFromCache(frame.script);
-
-								return this._loadScript(script_val.id).then(content => {
-									return this._createStackFrameFromSourceMap(frame, content, name, localPath, remotePath, origin, line, column);
+								return this._loadScript(script_val.id).then(script => {
+									return this._createStackFrameFromSourceMap(frame, script.contents, name, localPath, remotePath, origin, line, column);
 								});
 							}
 
@@ -1797,11 +1804,11 @@ export class NodeDebugSession extends DebugSession {
 				} else {
 					// if a function is dynamically created from a string, its script has no name.
 					// create a name by using the script id and append ".js" so that JavaScript contents is detected.
-					name = `VM${script_id}.js`;
+					name = `VM${script_val.id}.js`;
 				}
 
 				// source not found locally -> prepare to stream source content from node backend.
-				const sourceHandle = this._sourceHandles.create(new SourceSource(script_id));
+				const sourceHandle = this._sourceHandles.create(new SourceSource(script_val.id));
 				const src = new Source(name, null, sourceHandle, origin);
 				return this._createStackFrameFromSource(frame, src, line, column);
 			}
@@ -1825,27 +1832,21 @@ export class NodeDebugSession extends DebugSession {
 
 			// verify that a file exists at path
 			if (FS.existsSync(mapresult.path)) {
+
 				// use this mapping
-				localPath = mapresult.path;
-				name = Path.basename(localPath);
-				line = mapresult.line;
-				column = mapresult.column;
-				const src = new Source(name, this.convertDebuggerPathToClient(localPath));
-				return this._createStackFrameFromSource(frame, src, line, column);
+				const src = new Source(Path.basename(mapresult.path), this.convertDebuggerPathToClient(mapresult.path));
+				return this._createStackFrameFromSource(frame, src, mapresult.line, mapresult.column);
 
 			} else {
 				// file doesn't exist at path
 				// if source map has inlined source use it
-				const content = (<any>mapresult).content;
-				if (content) {
+				if (mapresult.content) {
+					
 					this.log('sm', `_createStackFrame: source '${mapresult.path}' doesn't exist -> use inlined source`);
-					name = Path.basename(mapresult.path);
-					const sourceHandle = this._sourceHandles.create(new SourceSource(0, content));
-					line = mapresult.line;
-					column = mapresult.column;
+					const sourceHandle = this._sourceHandles.create(new SourceSource(0, mapresult.content));
 					origin = localize('origin.inlined.source.map', "read-only inlined content from source map");
-					const src = new Source(name, null, sourceHandle, origin, { inlinePath: mapresult.path });
-					return this._createStackFrameFromSource(frame, src, line, column);
+					const src = new Source(Path.basename(mapresult.path), null, sourceHandle, origin, { inlinePath: mapresult.path });
+					return this._createStackFrameFromSource(frame, src, mapresult.line, mapresult.column);
 
 				} else {
 					this.log('sm', `_createStackFrame: source doesn't exist and no inlined source -> use generated file`);
@@ -2710,42 +2711,45 @@ export class NodeDebugSession extends DebugSession {
 		const sourceHandle = args.sourceReference;
 		const srcSource = this._sourceHandles.get(sourceHandle);
 
-		if (srcSource.source) {
-			response.body = {
-				content: srcSource.source
-			};
-			this.sendResponse(response);
-			return;
-		}
+		if (srcSource) {
 
-		if (srcSource.scriptId) {
-
-			const args = {
-				types: 1+2+4,
-				includeSource: true,
-				ids: [ srcSource.scriptId ]
-			};
-
-			this._node.scripts(args).then(nodeResponse => {
-				srcSource.source = nodeResponse.body[0].source;
+			if (srcSource.source) {
 				response.body = {
 					content: srcSource.source
 				};
 				this.sendResponse(response);
-			}).catch(err => {
-				srcSource.source = localize('source.not.found', "<source not found>");
-				response.body = {
-					content: srcSource.source
-				};
-				this.sendResponse(response);
-			});
+				return;
+			}
 
-		} else {
-			this.sendErrorResponse(response, 9999, 'sourceRequest error', null, ErrorDestination.Telemetry);
+			if (srcSource.scriptId) {
+
+				this._loadScript(srcSource.scriptId).then(script => {
+					srcSource.source = script.contents;
+					response.body = {
+						content: srcSource.source
+					};
+					this.sendResponse(response);
+				}).catch(err => {
+					srcSource.source = localize('source.not.found', "<source not found>");
+					response.body = {
+						content: srcSource.source
+					};
+					this.sendResponse(response);
+				});
+				return;
+			}
 		}
+
+		this.sendErrorResponse(response, 9999, 'sourceRequest error', null, ErrorDestination.Telemetry);
 	}
 
-	private _loadScript(scriptId: number) : Promise<string>  {
+	private _loadScript(scriptId: number) : Promise<Script>  {
+
+		const script = this._scripts.get(scriptId);
+
+		if (script) {
+			return Promise.resolve(script);
+		}
 
 		const args = {
 			types: 1+2+4,
@@ -2753,8 +2757,12 @@ export class NodeDebugSession extends DebugSession {
 			ids: [ scriptId ]
 		};
 
+		this.log('ls', `_loadScript: ${scriptId}`);
+
 		return this._node.scripts(args).then(nodeResponse => {
-			return nodeResponse.body[0].source;
+			const s = new Script(nodeResponse.body[0]);
+			this._scripts.set(scriptId, s);
+			return s;
 		});
 	}
 
@@ -2979,11 +2987,16 @@ export class NodeDebugSession extends DebugSession {
 		return column;
 	}
 
+	/**
+	 * Returns script id for the given script name or -1 if not found.
+	 */
 	private _findModule(name: string) : Promise<number> {
+
 		const args = {
 			types: 1 + 2 + 4,
 			filter: name
 		};
+
 		return this._node.scripts(args).then(resp => {
 			for (let result of resp.body) {
 				if (result.name === name) {	// return the first exact match
