@@ -3,7 +3,7 @@
 [![build status](https://travis-ci.org/Microsoft/vscode-node-debug.svg?branch=master)](https://travis-ci.org/Microsoft/vscode-node-debug)
 [![build status](https://ci.appveyor.com/api/projects/status/t74psolxi3k7bcjp/branch/master?svg=true)](https://ci.appveyor.com/project/weinand/vscode-node-debug)
 
-The debug extension for node.js that ships with [VS Code](https://code.visualstudio.com).
+This repository contains the debug extension for [node.js](https://nodejs.org) that ships with [VS Code](https://code.visualstudio.com).
 
 The [`vscode-node-debug`](https://github.com/microsoft/vscode-node-debug) repository is where we do development and there are many ways you can participate in the project, for example:
 
