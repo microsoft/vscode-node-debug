@@ -17,7 +17,7 @@ import {
 	V8EventBody,
 	V8Ref, V8Handle, V8Property, V8Object, V8Simple, V8Function, V8Frame, V8Scope, V8Script
 } from './nodeV8Protocol';
-import {ISourceMaps, SourceMaps, Bias} from './sourceMaps';
+import {ISourceMaps, SourceMaps, SourceMap, Bias} from './sourceMaps';
 import {Terminal, TerminalError} from './terminal';
 import * as PathUtils from './pathUtilities';
 import * as CP from 'child_process';
@@ -166,6 +166,7 @@ export class ScopeContainer implements VariableContainer {
 
 class Script {
 	contents: string;
+	sourceMap: SourceMap;
 
 	constructor(script: V8Script) {
 		this.contents = script.source;
@@ -371,11 +372,11 @@ export class NodeDebugSession extends DebugSession {
 		this._node.on('beforeCompile', (event: NodeV8Event) => {
 			this.outLine(`beforeCompile ${event.body.name}`);
 		});
-		*/
 
 		this._node.on('afterCompile', (event: NodeV8Event) => {
-			this._handleNodeAfterCompileEvent(event.body);
+			this.outLine(`afterCompile ${event.body.name}`);
 		});
+		*/
 
 		this._node.on('close', (event: NodeV8Event) => {
 			this._terminated('node v8protocol close');
@@ -390,44 +391,6 @@ export class NodeDebugSession extends DebugSession {
 			this.outLine(`diagnostic event ${event.body.reason}`);
 		});
 		*/
-	}
-
-	/**
-	 * Experimental support for SystemJS module loader (https://github.com/systemjs/systemjs)
-	 *
-	 * Tries to figure out whether JavaScript code has been dynamically generated
-	 * and whether it contains a source map reference.
-	 * If this is the case try to reload breakpoints.
-	 */
-	private _handleNodeAfterCompileEvent(eventBody: V8EventBody) {
-
-		if (this._sourceMaps) {		// this only applies if source maps are enabled
-
-			let path = eventBody.script.name;
-			if (path && Path.extname(path) === '.js!transpiled' && path.indexOf('file://') === 0) {
-
-				path = path.substring('file://'.length);
-
-				if (!FS.existsSync(path)) {	// path does not exist locally.
-
-					const script_id = eventBody.script.id;
-
-					this._loadScript(script_id).then(script => {
-
-						const sources = this._sourceMaps.MapPathToSource(path, script.contents);
-						if (sources && sources.length >= 0) {
-							this.outLine(`afterCompile: ${path} maps to ${sources[0]}`);
-
-							// trigger resending breakpoints
-							this.sendEvent(new InitializedEvent());
-						}
-
-					}).catch(err => {
-						// ignore
-					});
-				}
-			}
-		}
 	}
 
 	/**
@@ -484,16 +447,26 @@ export class NodeDebugSession extends DebugSession {
 		// no reason yet: must be the result of a 'step'
 		if (!reason) {
 
-			// should we continue until we find a better place to stop?
-			if (this._smartStep && this._skipGenerated(eventBody)) {
-				this._node.command('continue', { stepaction: 'in' });
-				this._smartStepCount++;
-				return null;
-			}
-
 			reason = localize({ key: 'reason.step', comment: ['https://github.com/Microsoft/vscode/issues/4568'] }, "step");
+
+			// should we continue until we find a better place to stop?
+			if (this._smartStep) {
+				this._skipGenerated(eventBody).then(r => {
+					if (r) {
+						this._node.command('continue', { stepaction: 'in' });
+						this._smartStepCount++;
+					} else {
+						this._handleNodeBreakEvent2(reason, exception_text, isEntry);
+					}
+				});
+				return;
+			}
 		}
 
+		this._handleNodeBreakEvent2(reason, exception_text, isEntry);
+	}
+
+	private _handleNodeBreakEvent2(reason: string, exception_text: string, isEntry: boolean) {
 		this._lastStoppedEvent = new StoppedEvent(reason, NodeDebugSession.DUMMY_THREAD_ID, exception_text);
 
 		if (!isEntry) {
@@ -506,13 +479,13 @@ export class NodeDebugSession extends DebugSession {
 	}
 
 	/**
-	 * Returns true if a source location should be skipped.
+	 * Returns true if a source location of the gievn event should be skipped.
 	 */
-	private _skipGenerated(event: V8EventBody) : boolean {
+	private _skipGenerated(event: V8EventBody) : Promise<boolean> {
 
 		if (!this._sourceMaps) {
 			// proceed as normal
-			return false;
+			return Promise.resolve(false);
 		}
 
 		let line = event.sourceLine;
@@ -526,17 +499,13 @@ export class NodeDebugSession extends DebugSession {
 			let localPath = this._remoteToLocal(remotePath);
 
 			// try to map
-			let mapresult = this._sourceMaps.MapToSource(localPath, null, line, column, Bias.LEAST_UPPER_BOUND);
-			if (!mapresult) {	// try using the other bias option
-				mapresult = this._sourceMaps.MapToSource(localPath, null, line, column, Bias.GREATEST_LOWER_BOUND);
-			}
-			if (mapresult) {
-				return false;
-			}
+			return this._sourceMaps.MapToSource(localPath, null, line, column).then(mapresult => {
+				return ! mapresult;
+			});
 		}
 
 		// skip everything
-		return true;
+		return Promise.resolve(true);
 	}
 
 	/**
@@ -628,8 +597,6 @@ export class NodeDebugSession extends DebugSession {
 		this._externalConsole = (typeof args.externalConsole === 'boolean') && args.externalConsole;
 
 		const port = args.port || random(3000, 50000);
-		const address = args.address;
-		const timeout = args.timeout;
 
 		let runtimeExecutable = args.runtimeExecutable;
 		if (runtimeExecutable) {
@@ -700,14 +667,17 @@ export class NodeDebugSession extends DebugSession {
 				// programPath is the generated file or whether it is the source (and we need source mapping).
 				// Typically this happens if a tool like 'babel' or 'uglify' is used (because they both transpile js to js).
 				// We use the source maps to find a 'source' file for the given js file.
-				const generatedPath = this._sourceMaps.MapPathFromSource(programPath);
-				if (generatedPath && generatedPath !== programPath) {
-					// programPath must be source because there seems to be a generated file for it
-					this.log('sm', `launchRequest: program '${programPath}' seems to be the source; launch the generated file '${generatedPath}' instead`);
-					programPath = generatedPath;
-				} else {
-					this.log('sm', `launchRequest: program '${programPath}' seems to be the generated file`);
-				}
+				this._sourceMaps.MapPathFromSource(programPath).then(generatedPath => {
+					if (generatedPath && generatedPath !== programPath) {
+						// programPath must be source because there seems to be a generated file for it
+						this.log('sm', `launchRequest: program '${programPath}' seems to be the source; launch the generated file '${generatedPath}' instead`);
+						programPath = generatedPath;
+					} else {
+						this.log('sm', `launchRequest: program '${programPath}' seems to be the generated file`);
+					}
+					this.launchRequest2(response, args, programPath, programArgs, runtimeExecutable, runtimeArgs, port);
+				});
+				return;
 			}
 		} else {
 			// node cannot execute the program directly
@@ -715,17 +685,25 @@ export class NodeDebugSession extends DebugSession {
 				this.sendErrorResponse(response, 2002, localize('VSND2002', "Cannot launch program '{0}'; configuring source maps might help.", '{path}'), { path: programPath });
 				return;
 			}
-			const generatedPath = this._sourceMaps.MapPathFromSource(programPath);
-			if (!generatedPath) {	// cannot find generated file
-				this.sendErrorResponse(response, 2003, localize('VSND2003', "Cannot launch program '{0}'; setting the '{1}' attribute might help.", '{path}', 'outDir'), { path: programPath });
-				return;
-			}
-			this.log('sm', `launchRequest: program '${programPath}' seems to be the source; launch the generated file '${generatedPath}' instead`);
-			programPath = generatedPath;
+			this._sourceMaps.MapPathFromSource(programPath).then(generatedPath => {
+				if (!generatedPath) {	// cannot find generated file
+					this.sendErrorResponse(response, 2003, localize('VSND2003', "Cannot launch program '{0}'; setting the '{1}' attribute might help.", '{path}', 'outDir'), { path: programPath });
+					return;
+				}
+				this.log('sm', `launchRequest: program '${programPath}' seems to be the source; launch the generated file '${generatedPath}' instead`);
+				programPath = generatedPath;
+				this.launchRequest2(response, args, programPath, programArgs, runtimeExecutable, runtimeArgs, port);
+			});
+			return;
 		}
+		this.launchRequest2(response, args, programPath, programArgs, runtimeExecutable, runtimeArgs, port);
+	}
+
+	private launchRequest2(response: DebugProtocol.LaunchResponse, args: LaunchRequestArguments, programPath: string, programArgs: string[], runtimeExecutable: string, runtimeArgs: string[], port: number): void {
 
 		let program: string;
 		let workingDirectory = args.cwd;
+
 		if (workingDirectory) {
 			if (!Path.isAbsolute(workingDirectory)) {
 				this.sendRelativePathErrorResponse(response, 'cwd', workingDirectory);
@@ -750,6 +728,9 @@ export class NodeDebugSession extends DebugSession {
 			launchArgs.push(`--debug-brk=${port}`);
 		}
 		launchArgs = launchArgs.concat(runtimeArgs, [ program ], programArgs);
+
+		const address = args.address;
+		const timeout = args.timeout;
 
 		if (this._externalConsole) {
 
@@ -1315,50 +1296,68 @@ export class NodeDebugSession extends DebugSession {
 		this.sendErrorResponse(response, 2012, 'No valid source specified.', null, ErrorDestination.Telemetry);
 	}
 
-	private _mapSourceAndUpdateBreakpoints(response: DebugProtocol.SetBreakpointsResponse, path: string, lbs: InternalSourceBreakpoint[]) {
+	private _mapSourceAndUpdateBreakpoints(response: DebugProtocol.SetBreakpointsResponse, path: string, lbs: InternalSourceBreakpoint[]) : void {
 
-		let sourcemap = false;
+		const generated: string = null;
 
-		let generated: string = null;
-		if (this._sourceMaps) {
-			generated = this._sourceMaps.MapPathFromSource(path);
+		Promise.resolve(generated).then(generated => {
+
+			if (this._sourceMaps) {
+				return this._sourceMaps.MapPathFromSource(path);
+			}
+			return generated;
+
+		}).then(generated => {
+
 			if (generated === path) {   // if generated and source are the same we don't need a sourcemap
 				this.log('bp', `_mapSourceAndUpdateBreakpoints: source and generated are same -> ignore sourcemap`);
 				generated = null;
 			}
-		}
-		if (generated) {
-			sourcemap = true;
-			// source map line numbers
-			for (let lb of lbs) {
-				const mapresult = this._sourceMaps.MapFromSource(path, lb.line, lb.column);
-				if (mapresult) {
-					this.log('sm', `_mapSourceAndUpdateBreakpoints: src: '${path}' ${lb.line}:${lb.column} -> gen: '${mapresult.path}' ${mapresult.line}:${mapresult.column}`);
-					if (mapresult.path !== generated) {
-						// this source line maps to a different destination file -> this is not supported, ignore breakpoint by setting line to -1
-						lb.line = -1;
-					} else {
-						lb.line = mapresult.line;
-						lb.column = mapresult.column;
+
+			if (generated) {
+
+				// source map line numbers
+				Promise.all(lbs.map(lbrkpt => this._sourceMaps.MapFromSource(path, lbrkpt.line, lbrkpt.column))).then(mapResults => {
+
+					for (let i = 0; i < lbs.length; i++) {
+						const lb = lbs[i];
+						const mapresult = mapResults[i];
+						if (mapresult) {
+							this.log('sm', `_mapSourceAndUpdateBreakpoints: src: '${path}' ${lb.line}:${lb.column} -> gen: '${mapresult.path}' ${mapresult.line}:${mapresult.column}`);
+							if (mapresult.path !== generated) {
+								// this source line maps to a different destination file -> this is not supported, ignore breakpoint by setting line to -1
+								lb.line = -1;
+							} else {
+								lb.line = mapresult.line;
+								lb.column = mapresult.column;
+							}
+						} else {
+							this.log('sm', `_mapSourceAndUpdateBreakpoints: src: '${path}' ${lb.line}:${lb.column} -> gen: couldn't be mapped; breakpoint ignored`);
+							lb.line = -1;
+						}
 					}
-				} else {
-					this.log('sm', `_mapSourceAndUpdateBreakpoints: src: '${path}' ${lb.line}:${lb.column} -> gen: couldn't be mapped; breakpoint ignored`);
+
+					path = generated;
+					path = this._localToRemote(path);
+
+					this._updateBreakpoints(response, path, -1, lbs, true);
+				});
+
+				return;
+			}
+
+			if (!NodeDebugSession.isJavaScript(path)) {
+				// ignore all breakpoints for this source
+				for (let lb of lbs) {
 					lb.line = -1;
 				}
 			}
-			path = generated;
-		}
-		else if (!NodeDebugSession.isJavaScript(path)) {
-			// ignore all breakpoints for this source
-			for (let lb of lbs) {
-				lb.line = -1;
-			}
-		}
 
-		// try to convert local path to remote path
-		path = this._localToRemote(path);
+			// try to convert local path to remote path
+			path = this._localToRemote(path);
 
-		this._updateBreakpoints(response, path, -1, lbs, sourcemap);
+			this._updateBreakpoints(response, path, -1, lbs, false);
+		});
 	}
 
 	/*
@@ -1477,15 +1476,19 @@ export class NodeDebugSession extends DebugSession {
 					const localpath = this._remoteToLocal(path);
 
 					// then try to map js locations back to source locations
-					const mapresult = this._sourceMaps.MapToSource(localpath, null, actualLine, actualColumn);
-					if (mapresult) {
-						this.log('sm', `_setBreakpoint: bp verification gen: '${localpath}' ${actualLine}:${actualColumn} -> src: '${mapresult.path}' ${mapresult.line}:${mapresult.column}`);
-						actualLine = mapresult.line;
-						actualColumn = mapresult.column;
-					} else {
-						actualLine = lb.orgLine;
-						actualColumn = lb.orgColumn;
-					}
+					return this._sourceMaps.MapToSource(localpath, null, actualLine, actualColumn).then(mapresult => {
+
+						if (mapresult) {
+							this.log('sm', `_setBreakpoint: bp verification gen: '${localpath}' ${actualLine}:${actualColumn} -> src: '${mapresult.path}' ${mapresult.line}:${mapresult.column}`);
+							actualLine = mapresult.line;
+							actualColumn = mapresult.column;
+						} else {
+							actualLine = lb.orgLine;
+							actualColumn = lb.orgColumn;
+						}
+
+						return this._setBreakpoint2(path, actualLine, actualColumn);
+					});
 
 				} else {
 					actualLine = lb.orgLine;
@@ -1493,25 +1496,30 @@ export class NodeDebugSession extends DebugSession {
 				}
 			}
 
-			// nasty corner case: since we ignore the break-on-entry event we have to make sure that we
-			// stop in the entry point line if the user has an explicit breakpoint there.
-			// For this we check here whether a breakpoint is at the same location as the 'break-on-entry' location.
-			// If yes, then we plan for hitting the breakpoint instead of 'continue' over it!
-
-			if (!this._stopOnEntry && this._entryPath === path) {	// only relevant if we do not stop on entry and have a matching file
-				if (this._entryLine === actualLine && this._entryColumn === actualColumn) {
-					// we do not have to 'continue' but we have to generate a stopped event instead
-					this._needContinue = false;
-					this._needBreakpointEvent = true;
-					this.log('la', '_setBreakpoint: remember to fire a breakpoint event later');
-				}
-			}
-
-			return new Breakpoint(true, this.convertDebuggerLineToClient(actualLine), this.convertDebuggerColumnToClient(actualColumn));
+			return this._setBreakpoint2(path, actualLine, actualColumn);
 
 		}).catch(error => {
 			return new Breakpoint(false);
 		});
+	}
+
+	private _setBreakpoint2(path: string, actualLine: number, actualColumn: number) : Breakpoint {
+
+		// nasty corner case: since we ignore the break-on-entry event we have to make sure that we
+		// stop in the entry point line if the user has an explicit breakpoint there.
+		// For this we check here whether a breakpoint is at the same location as the 'break-on-entry' location.
+		// If yes, then we plan for hitting the breakpoint instead of 'continue' over it!
+
+		if (!this._stopOnEntry && this._entryPath === path) {	// only relevant if we do not stop on entry and have a matching file
+			if (this._entryLine === actualLine && this._entryColumn === actualColumn) {
+				// we do not have to 'continue' but we have to generate a stopped event instead
+				this._needContinue = false;
+				this._needBreakpointEvent = true;
+				this.log('la', '_setBreakpoint2: remember to fire a breakpoint event later');
+			}
+		}
+
+		return new Breakpoint(true, this.convertDebuggerLineToClient(actualLine), this.convertDebuggerColumnToClient(actualColumn));
 	}
 
 	/**
@@ -1820,45 +1828,41 @@ export class NodeDebugSession extends DebugSession {
 	/**
 	 * Creates a StackFrame when source maps are involved.
 	 */
-	private _createStackFrameFromSourceMap(frame: V8Frame, content: string, name: string, localPath: string, remotePath: string, origin: string, line: number, column: number) : StackFrame {
+	private _createStackFrameFromSourceMap(frame: V8Frame, content: string, name: string, localPath: string, remotePath: string, origin: string, line: number, column: number) : Promise<StackFrame> {
 
-		// try to map
-		let mapresult = this._sourceMaps.MapToSource(localPath, content, line, column, Bias.GREATEST_LOWER_BOUND);
-		if (!mapresult) {	// try using the other bias option
-			mapresult = this._sourceMaps.MapToSource(localPath, content, line, column, Bias.LEAST_UPPER_BOUND);
-		}
-		if (mapresult) {
-			this.log('sm', `_createStackFrame: gen: '${localPath}' ${line}:${column} -> src: '${mapresult.path}' ${mapresult.line}:${mapresult.column}`);
+		return this._sourceMaps.MapToSource(localPath, content, line, column).then(mapresult => {
+			if (mapresult) {
+				this.log('sm', `_createStackFrame: gen: '${localPath}' ${line}:${column} -> src: '${mapresult.path}' ${mapresult.line}:${mapresult.column}`);
 
-			// verify that a file exists at path
-			if (FS.existsSync(mapresult.path)) {
+				// verify that a file exists at path
+				if (FS.existsSync(mapresult.path)) {
 
-				// use this mapping
-				const src = new Source(Path.basename(mapresult.path), this.convertDebuggerPathToClient(mapresult.path));
-				return this._createStackFrameFromSource(frame, src, mapresult.line, mapresult.column);
-
-			} else {
-				// file doesn't exist at path
-				// if source map has inlined source use it
-				if (mapresult.content) {
-					
-					this.log('sm', `_createStackFrame: source '${mapresult.path}' doesn't exist -> use inlined source`);
-					const sourceHandle = this._sourceHandles.create(new SourceSource(0, mapresult.content));
-					origin = localize('origin.inlined.source.map', "read-only inlined content from source map");
-					const src = new Source(Path.basename(mapresult.path), null, sourceHandle, origin, { inlinePath: mapresult.path });
+					// use this mapping
+					const src = new Source(Path.basename(mapresult.path), this.convertDebuggerPathToClient(mapresult.path));
 					return this._createStackFrameFromSource(frame, src, mapresult.line, mapresult.column);
 
 				} else {
-					this.log('sm', `_createStackFrame: source doesn't exist and no inlined source -> use generated file`);
-					return this._createStackFrameFromPath(frame, name, localPath, remotePath, origin, line, column);
+					// file doesn't exist at path
+					// if source map has inlined source use it
+					if (mapresult.content) {
+
+						this.log('sm', `_createStackFrame: source '${mapresult.path}' doesn't exist -> use inlined source`);
+						const sourceHandle = this._sourceHandles.create(new SourceSource(0, mapresult.content));
+						origin = localize('origin.inlined.source.map', "read-only inlined content from source map");
+						const src = new Source(Path.basename(mapresult.path), null, sourceHandle, origin, { inlinePath: mapresult.path });
+						return this._createStackFrameFromSource(frame, src, mapresult.line, mapresult.column);
+
+					} else {
+						this.log('sm', `_createStackFrame: source doesn't exist and no inlined source -> use generated file`);
+						return this._createStackFrameFromPath(frame, name, localPath, remotePath, origin, line, column);
+					}
 				}
+
+			} else {
+				this.log('sm', `_createStackFrameFromSourceMap: gen: '${localPath}' ${line}:${column} -> couldn't be mapped to source -> use generated file`);
+				return this._createStackFrameFromPath(frame, name, localPath, remotePath, origin, line, column);
 			}
-
-		} else {
-
-			this.log('sm', `_createStackFrameFromSourceMap: gen: '${localPath}' ${line}:${column} -> couldn't be mapped to source -> use generated file`);
-			return this._createStackFrameFromPath(frame, name, localPath, remotePath, origin, line, column);
-		}
+		});
 	}
 
 	/**
@@ -2762,6 +2766,21 @@ export class NodeDebugSession extends DebugSession {
 		return this._node.scripts(args).then(nodeResponse => {
 			const s = new Script(nodeResponse.body[0]);
 			this._scripts.set(scriptId, s);
+
+			/*
+			if (this._sourceMaps) {
+				return this._sourceMaps.LoadSourceMap(s.contents).then(sourceMap => {
+					if (sourceMap) {
+						s.sourceMap = sourceMap;
+					}
+					return s;
+				}).catch(err => {
+					// s.error =
+					return s;
+				});
+			}
+			*/
+
 			return s;
 		});
 	}

@@ -5,6 +5,8 @@
 
 import * as Path from 'path';
 import * as FS from 'fs';
+import * as URL from 'url';
+import * as HTTP from 'http';
 import {SourceMapConsumer} from 'source-map';
 import * as PathUtils from './pathUtilities';
 import {NodeDebugSession} from './nodeDebug';
@@ -30,30 +32,26 @@ export interface ISourceMaps {
 	 * Map source language path to generated path.
 	 * Returns null if not found.
 	 */
-	MapPathFromSource(path: string): string;
-
-	/*
-	 * Map generated path to source path.
-	 * Returns null if not found.
-	 */
-	MapPathToSource(path: string, content: string): string[];
+	MapPathFromSource(path: string): Promise<string>;
 
 	/*
 	 * Map location in source language to location in generated code.
 	 * line and column are 0 based.
 	 */
-	MapFromSource(path: string, line: number, column: number, bias?: Bias): MappingResult;
+	MapFromSource(path: string, line: number, column: number, bias?: Bias): Promise<MappingResult>;
 
 	/*
 	 * Map location in generated code to location in source language.
 	 * line and column are 0 based.
 	 */
-	MapToSource(path: string, content: string, line: number, column: number, bias?: Bias): MappingResult;
+	MapToSource(pathToGenerated: string, content: string, line: number, column: number): Promise<MappingResult>;
 
 	/*
 	 * Returns true if content contains a reference to a source map (or a data url with an inlined source map).
 	 */
 	HasSourceMap(content: string) : boolean;
+
+	LoadSourceMap(content: string) : Promise<SourceMap>;
 }
 
 
@@ -73,57 +71,70 @@ export class SourceMaps implements ISourceMaps {
 		this._generatedCodeDirectory = generatedCodeDirectory;
 	}
 
-	public MapPathFromSource(pathToSource: string): string {
-		const map = this._findSourceToGeneratedMapping(pathToSource);
-		if (map) {
-			return map.generatedPath();
-		}
-		return null;
+	public MapPathFromSource(pathToSource: string): Promise<string> {
+		return this._findSourceToGeneratedMapping(pathToSource).then(map => {
+			return map ? map.generatedPath() : null;
+		});
 	}
 
-	public MapPathToSource(pathToGenerated: string, content: string) : string[] {
-		const map = this._findGeneratedToSourceMapping(pathToGenerated, content);
-		if (map) {
-			return map.sources();
-		}
-		return null;
-	}
-
-	public MapFromSource(pathToSource: string, line: number, column: number, bias?: Bias): MappingResult {
-		const map = this._findSourceToGeneratedMapping(pathToSource);
-		if (map) {
-			line += 1;	// source map impl is 1 based
-			const mr = map.generatedPositionFor(pathToSource, line, column, bias);
-			if (mr && typeof mr.line === 'number') {
-				return {
-					path: map.generatedPath(),
-					line: mr.line-1,
-					column: mr.column
-				};
+	public MapFromSource(pathToSource: string, line: number, column: number, bias?: Bias): Promise<MappingResult> {
+		return this._findSourceToGeneratedMapping(pathToSource).then(map => {
+			if (map) {
+				line += 1;	// source map impl is 1 based
+				const mr = map.generatedPositionFor(pathToSource, line, column, bias);
+				if (mr && typeof mr.line === 'number') {
+					return {
+						path: map.generatedPath(),
+						line: mr.line-1,
+						column: mr.column
+					};
+				}
 			}
-		}
-		return null;
+			return null;
+		});
 	}
 
-	public MapToSource(pathToGenerated: string, content: string, line: number, column: number, bias?: Bias): MappingResult {
-		const map = this._findGeneratedToSourceMapping(pathToGenerated, content);
-		if (map) {
-			line += 1;	// source map impl is 1 based
-			const mr = map.originalPositionFor(line, column, bias);
-			if (mr && mr.source) {
-				return {
-					path: mr.source,
-					content: (<any>mr).content,
-					line: mr.line-1,
-					column: mr.column
-				};
+	public MapToSource(pathToGenerated: string, content: string, line: number, column: number): Promise<MappingResult> {
+		return this._findGeneratedToSourceMapping2(pathToGenerated, content).then(map => {
+			if (map) {
+				line += 1;	// source map impl is 1 based
+				let mr = map.originalPositionFor(line, column,  Bias.GREATEST_LOWER_BOUND);
+				if (!mr) {
+					mr = map.originalPositionFor(line, column, Bias.LEAST_UPPER_BOUND);
+				}
+				if (mr && mr.source) {
+					return {
+						path: mr.source,
+						content: (<any>mr).content,
+						line: mr.line-1,
+						column: mr.column
+					};
+				}
 			}
-		}
-		return null;
+			return null;
+		});
 	}
 
 	public HasSourceMap(content: string) : boolean {
 		return this._findSourceMapUrlInFile(null, content) !== null;
+	}
+
+	public LoadSourceMap(content: string) : Promise<SourceMap> {
+
+		const uri = this._findSourceMapUrlInFile(null, content);
+		if (uri) {
+			return this._rawSourceMap(uri).then(sm => {
+				if (sm) {
+					return new SourceMap('mapPath', 'getPath', sm);
+				} else {
+					return null;
+				}
+			}).catch(err => {
+				return null;
+			});
+		} else {
+			return Promise.resolve(null);
+		}
 	}
 
 	//---- private -----------------------------------------------------------------------
@@ -136,7 +147,7 @@ export class SourceMaps implements ISourceMaps {
 	 * - search in all known source maps whether if refers to this source in the sources array.
 	 * - ...
 	 */
-	private _findSourceToGeneratedMapping(pathToSource: string): SourceMap {
+	private _findSourceToGeneratedMapping(pathToSource: string): Promise<SourceMap> {
 
 		if (!pathToSource) {
 			return null;
@@ -145,7 +156,7 @@ export class SourceMaps implements ISourceMaps {
 
 		// try to find in existing
 		if (pathToSourceKey in this._sourceToGeneratedMaps) {
-			return this._sourceToGeneratedMaps[pathToSourceKey];
+			return Promise.resolve(this._sourceToGeneratedMaps[pathToSourceKey]);
 		}
 
 		// a reverse lookup: in all source maps try to find pathToSource in the sources array
@@ -153,7 +164,7 @@ export class SourceMaps implements ISourceMaps {
 			const m = this._generatedToSourceMaps[key];
 			if (m.doesOriginateFrom(pathToSource)) {
 				this._sourceToGeneratedMaps[pathToSourceKey] = m;
-				return m;
+				return Promise.resolve(m);
 			}
 		}
 
@@ -167,7 +178,7 @@ export class SourceMaps implements ISourceMaps {
 					if (m && m.doesOriginateFrom(pathToSource)) {
 						this._log(`_findSourceToGeneratedMapping: found source map for source ${pathToSource} in outDir`);
 						this._sourceToGeneratedMaps[pathToSourceKey] = m;
-						return m;
+						return Promise.resolve(m);
 					}
 				}
 			}
@@ -221,11 +232,11 @@ export class SourceMaps implements ISourceMaps {
 
 		if (map) {
 			this._sourceToGeneratedMaps[pathToSourceKey] = map;
-			return map;
+			return Promise.resolve(map);
 		}
 
 		// nothing found
-		return null;
+		return Promise.resolve(null);
 	}
 
 	/**
@@ -289,6 +300,131 @@ export class SourceMaps implements ISourceMaps {
 
 		return null;
 	}
+
+	/**
+	 * Tries to find a SourceMap for the given path to a generated file.
+	 * This is simple if the generated file has the 'sourceMappingURL' at the end.
+	 * If not, we are using some heuristics...
+	 */
+	private _findGeneratedToSourceMapping2(pathToGenerated: string, content?: string): Promise<SourceMap> {
+
+		if (!pathToGenerated) {
+			return null;
+		}
+		const pathToGeneratedKey = pathNormalize(pathToGenerated);
+
+		if (pathToGeneratedKey in this._generatedToSourceMaps) {
+			return Promise.resolve(this._generatedToSourceMaps[pathToGeneratedKey]);
+		}
+
+		// try to find a source map URL in the generated file
+		const uri = this._findSourceMapUrlInFile(pathToGenerated, content);
+		if (uri) {
+			return this._rawSourceMap(uri, pathToGenerated).then(rsm => {
+				return this._registerSourceMap(new SourceMap(pathToGenerated, pathToGenerated, rsm));
+			}).catch(err => {
+				return Promise.resolve(null);
+			});
+		} else {
+			// try to find map file next to the generated source
+			const map_path = pathToGenerated + '.map';
+			if (FS.existsSync(map_path)) {
+				const map = this._loadSourceMap(map_path, pathToGenerated);
+				if (map) {
+					return Promise.resolve(map);
+				}
+			}
+			return Promise.resolve(null);
+		}
+	}
+
+	/**
+	 * Returns the string contents of a sourcemap
+	 */
+	private _rawSourceMap(uri: string, pathToGenerated?: string) : Promise<string> {
+
+		const u = URL.parse(uri);
+
+		if (u.protocol === 'file:' || u.protocol == null) {
+			// a local file path
+			let map_path = u.path;
+
+			if (!map_path) {
+				throw new Error(`no path`);
+			}
+
+			// if path is relative make it absolute
+			if (!Path.isAbsolute(map_path)) {
+				if (pathToGenerated) {
+					map_path = PathUtils.makePathAbsolute(pathToGenerated, map_path);
+				} else {
+					return Promise.resolve(null);
+					//throw new Error(`relative path but no base given`);
+				}
+			}
+
+			if (FS.existsSync(map_path)) {
+				return new Promise((resolve, reject) => {
+					FS.readFile(map_path, 'utf8', (err, fileContents) => {
+						if (err) {
+							reject(err);
+						} else {
+							resolve(fileContents);
+						}
+					});
+				});
+			}
+			throw new Error(`can't locate source map`);
+		}
+
+		if (u.protocol === 'data:' && uri.indexOf('data:application/json') >= 0) {
+
+			// if uri is data url source map is inlined in generated file
+			const pos = uri.lastIndexOf(',');
+			if (pos > 0) {
+				const data = uri.substr(pos+1);
+				try {
+					const buffer = new Buffer(data, 'base64');
+					const json = buffer.toString();
+					if (json) {
+						return Promise.resolve(json);
+					}
+				}
+				catch (e) {
+					//this._log(`_findGeneratedToSourceMapping: exception while processing data url '${e}'`);
+					throw new Error(`exception while processing data url`);
+				}
+			}
+			throw new Error(`exception while processing data url`);
+		}
+
+		if (u.protocol === 'http:' || u.protocol === 'https:') {
+
+			return new Promise((resolve, reject) => {
+
+				var options = {
+					host: u.host,
+					path: u.path
+				}
+				var request = HTTP.request(options, function (res) {
+					var data = '';
+					res.on('data', chunk =>  {
+						data += chunk;
+					});
+					res.on('end', () => {
+						resolve(data);
+					});
+				});
+				request.on('error', err => {
+					reject(err);
+				});
+				request.end();
+			});
+		}
+
+		return Promise.resolve(null);
+	}
+
 
 	/**
 	 * Try to find the 'sourceMappingURL' in the file with the given path.
@@ -361,7 +497,7 @@ export class SourceMaps implements ISourceMaps {
 	}
 }
 
-class SourceMap {
+export class SourceMap {
 
 	private _sourcemapLocation: string;	// the directory where this sourcemap lives
 	private _generatedFile: string;		// the generated file to which this source map belongs to
