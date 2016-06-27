@@ -64,14 +64,6 @@
         "onCommand:extension.pickNodeProcess"
     ],
 	"contributes": {
-		"languages": [
-			{
-				"id": "javascript",
-				"extensions": [
-					".js!transpiled"
-				]
-			}
-		],
 		"debuggers": [
 			{
 				"type": "node",
