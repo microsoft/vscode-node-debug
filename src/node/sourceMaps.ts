@@ -65,6 +65,8 @@ export class SourceMaps implements ISourceMaps {
 	private _sourceToGeneratedMaps:  { [id: string] : SourceMap; } = {};	// source file -> SourceMap
 	private _generatedCodeDirectory: string;
 
+	private _httpCache = new Map<string, Promise<string>>();
+
 
 	public constructor(session: NodeDebugSession, generatedCodeDirectory: string) {
 		this._session = session;
@@ -95,7 +97,7 @@ export class SourceMaps implements ISourceMaps {
 	}
 
 	public MapToSource(pathToGenerated: string, content: string, line: number, column: number): Promise<MappingResult> {
-		return this._findGeneratedToSourceMapping2(pathToGenerated, content).then(map => {
+		return this._findGeneratedToSourceMapping(pathToGenerated, content).then(map => {
 			if (map) {
 				line += 1;	// source map impl is 1 based
 				let mr = map.originalPositionFor(line, column,  Bias.GREATEST_LOWER_BOUND);
@@ -150,7 +152,7 @@ export class SourceMaps implements ISourceMaps {
 	private _findSourceToGeneratedMapping(pathToSource: string): Promise<SourceMap> {
 
 		if (!pathToSource) {
-			return null;
+			return Promise.resolve(null);
 		}
 		const pathToSourceKey = pathNormalize(pathToSource);
 
@@ -190,7 +192,6 @@ export class SourceMaps implements ISourceMaps {
 		// no map found
 
 		let pathToGenerated = pathToSource;
-
 		const ext = Path.extname(pathToSource);
 		if (ext !== '.js') {
 			// use heuristic: change extension to ".js" and find a map for it
@@ -200,105 +201,58 @@ export class SourceMaps implements ISourceMaps {
 			}
 		}
 
-		let map = null;
+		let map: SourceMap = null;
 
-		// first look into the generated code directory
-		if (this._generatedCodeDirectory) {
-			let rest = PathUtils.makeRelative(this._generatedCodeDirectory, pathToGenerated);
-			while (rest) {
-				const path = Path.join(this._generatedCodeDirectory, rest);
-				map = this._findGeneratedToSourceMapping(path);
-				if (map) {
-					break;
+		return Promise.resolve(map).then(map => {
+
+			// first look into the generated code directory
+			if (this._generatedCodeDirectory) {
+				const promises = new Array<Promise<SourceMap>>();
+				let rest = PathUtils.makeRelative(this._generatedCodeDirectory, pathToGenerated);
+				while (rest) {
+					const path = Path.join(this._generatedCodeDirectory, rest);
+					promises.push(this._findGeneratedToSourceMapping(path));
+					rest = PathUtils.removeFirstSegment(rest);
 				}
-				rest = PathUtils.removeFirstSegment(rest);
-			}
-		}
-
-		// VSCode extension host support:
-		// we know that the plugin has an "out" directory next to the "src" directory
-		if (map === null) {
-			let srcSegment = Path.sep + 'src' + Path.sep;
-			if (pathToGenerated.indexOf(srcSegment) >= 0) {
-				const outSegment = Path.sep + 'out' + Path.sep;
-				map = this._findGeneratedToSourceMapping(pathToGenerated.replace(srcSegment, outSegment));
-			}
-		}
-
-		// if not found look in the same directory as the source
-		if (map === null && pathNormalize(pathToGenerated) !== pathToSourceKey) {
-			map = this._findGeneratedToSourceMapping(pathToGenerated);
-		}
-
-		if (map) {
-			this._sourceToGeneratedMaps[pathToSourceKey] = map;
-			return Promise.resolve(map);
-		}
-
-		// nothing found
-		return Promise.resolve(null);
-	}
-
-	/**
-	 * Tries to find a SourceMap for the given path to a generated file.
-	 * This is simple if the generated file has the 'sourceMappingURL' at the end.
-	 * If not, we are using some heuristics...
-	 */
-	private _findGeneratedToSourceMapping(pathToGenerated: string, content?: string): SourceMap {
-
-		if (!pathToGenerated) {
-			return null;
-		}
-		const pathToGeneratedKey = pathNormalize(pathToGenerated);
-
-		if (pathToGeneratedKey in this._generatedToSourceMaps) {
-			return this._generatedToSourceMaps[pathToGeneratedKey];
-		}
-
-		// try to find a source map URL in the generated file
-		let map_path: string = null;
-		const uri = this._findSourceMapUrlInFile(pathToGenerated, content);
-		if (uri) {
-			// if uri is data url source map is inlined in generated file
-			if (uri.indexOf('data:application/json') >= 0) {
-				const pos = uri.lastIndexOf(',');
-				if (pos > 0) {
-					const data = uri.substr(pos+1);
-					try {
-						const buffer = new Buffer(data, 'base64');
-						const json = buffer.toString();
-						if (json) {
-							this._log(`_findGeneratedToSourceMapping: successfully read inlined source map in '${pathToGenerated}'`);
-							return this._registerSourceMap(new SourceMap(pathToGenerated, pathToGenerated, json));
+				return Promise.all(promises).then(results => {
+					for (let r of results) {
+						if (r) {
+							return r;
 						}
 					}
-					catch (e) {
-						this._log(`_findGeneratedToSourceMapping: exception while processing data url '${e}'`);
-					}
+					return null;
+				});
+			}
+			return map;
+
+		}).then(map => {
+
+			// VSCode extension host support:
+			// we know that the plugin has an "out" directory next to the "src" directory
+			if (map === null) {
+				let srcSegment = Path.sep + 'src' + Path.sep;
+				if (pathToGenerated.indexOf(srcSegment) >= 0) {
+					const outSegment = Path.sep + 'out' + Path.sep;
+					return this._findGeneratedToSourceMapping(pathToGenerated.replace(srcSegment, outSegment));
 				}
-			} else {
-				map_path = uri;
 			}
-		}
+			return map;
 
-		// if path is relative make it absolute
-		if (map_path && !Path.isAbsolute(map_path)) {
-			map_path = PathUtils.makePathAbsolute(pathToGenerated, map_path);
-		}
+		}).then(map => {
 
-		if (!map_path || !FS.existsSync(map_path)) {
-			// try to find map file next to the generated source
-			map_path = pathToGenerated + '.map';
-		}
+			if (map === null && pathNormalize(pathToGenerated) !== pathToSourceKey) {
+				return this._findGeneratedToSourceMapping(pathToGenerated);
+			}
+			return map;
 
-		if (map_path && FS.existsSync(map_path)) {
-			const map = this._loadSourceMap(map_path, pathToGenerated);
+		}).then(map => {
+
 			if (map) {
-				return map;
+				this._sourceToGeneratedMaps[pathToSourceKey] = map;
 			}
-		}
+			return map;
 
-		return null;
+		});
 	}
 
 	/**
@@ -306,7 +260,7 @@ export class SourceMaps implements ISourceMaps {
 	 * This is simple if the generated file has the 'sourceMappingURL' at the end.
 	 * If not, we are using some heuristics...
 	 */
-	private _findGeneratedToSourceMapping2(pathToGenerated: string, content?: string): Promise<SourceMap> {
+	private _findGeneratedToSourceMapping(pathToGenerated: string, content?: string): Promise<SourceMap> {
 
 		if (!pathToGenerated) {
 			return null;
@@ -323,34 +277,36 @@ export class SourceMaps implements ISourceMaps {
 			return this._rawSourceMap(uri, pathToGenerated).then(rsm => {
 				return this._registerSourceMap(new SourceMap(pathToGenerated, pathToGenerated, rsm));
 			}).catch(err => {
-				return Promise.resolve(null);
+				return null;
 			});
-		} else {
-			// try to find map file next to the generated source
-			const map_path = pathToGenerated + '.map';
-			if (FS.existsSync(map_path)) {
-				const map = this._loadSourceMap(map_path, pathToGenerated);
-				if (map) {
-					return Promise.resolve(map);
-				}
-			}
-			return Promise.resolve(null);
 		}
+
+		// try to find map file next to the generated source
+		const map_path = pathToGenerated + '.map';
+		if (FS.existsSync(map_path)) {
+			const map = this._loadSourceMap(map_path, pathToGenerated);
+			if (map) {
+				return Promise.resolve(map);
+			}
+		}
+
+		return Promise.resolve(null);
 	}
 
 	/**
-	 * Returns the string contents of a sourcemap
+	 * Returns the string contents of a sourcemap specified via the given uri.
 	 */
 	private _rawSourceMap(uri: string, pathToGenerated?: string) : Promise<string> {
 
 		const u = URL.parse(uri);
 
 		if (u.protocol === 'file:' || u.protocol == null) {
+
 			// a local file path
-			let map_path = u.path;
+			let map_path = decodeURI(u.path);
 
 			if (!map_path) {
-				throw new Error(`no path`);
+				throw new Error(`no path or empty path`);
 			}
 
 			// if path is relative make it absolute
@@ -358,23 +314,11 @@ export class SourceMaps implements ISourceMaps {
 				if (pathToGenerated) {
 					map_path = PathUtils.makePathAbsolute(pathToGenerated, map_path);
 				} else {
-					return Promise.resolve(null);
-					//throw new Error(`relative path but no base given`);
+					throw new Error(`relative path but no base given`);
 				}
 			}
 
-			if (FS.existsSync(map_path)) {
-				return new Promise((resolve, reject) => {
-					FS.readFile(map_path, 'utf8', (err, fileContents) => {
-						if (err) {
-							reject(err);
-						} else {
-							resolve(fileContents);
-						}
-					});
-				});
-			}
-			throw new Error(`can't locate source map`);
+			return this._readFile(map_path);
 		}
 
 		if (u.protocol === 'data:' && uri.indexOf('data:application/json') >= 0) {
@@ -400,29 +344,34 @@ export class SourceMaps implements ISourceMaps {
 
 		if (u.protocol === 'http:' || u.protocol === 'https:') {
 
-			return new Promise((resolve, reject) => {
+			let p = this._httpCache.get(uri);
+			if (!p) {
+				p = new Promise((resolve, reject) => {
 
-				var options = {
-					host: u.host,
-					path: u.path
-				}
-				var request = HTTP.request(options, function (res) {
-					var data = '';
-					res.on('data', chunk =>  {
-						data += chunk;
+					var options = {
+						host: u.host,
+						path: u.path
+					}
+					var request = HTTP.request(options, res => {
+						var data = '';
+						res.on('data', chunk =>  {
+							data += chunk;
+						});
+						res.on('end', () => {
+							resolve(data);
+						});
 					});
-					res.on('end', () => {
-						resolve(data);
+					request.on('error', err => {
+						reject(err);
 					});
+					request.end();
 				});
-				request.on('error', err => {
-					reject(err);
-				});
-				request.end();
-			});
+				this._httpCache.set(uri, p);
+			}
+			return p;
 		}
 
-		return Promise.resolve(null);
+		throw new Error(`url is not a valid source map`);
 	}
 
 
@@ -490,6 +439,18 @@ export class SourceMaps implements ISourceMaps {
 			this._generatedToSourceMaps[pathNormalize(gp)] = map;
 		}
 		return map;
+	}
+
+	private _readFile(path: string, encoding: string = 'utf8'): Promise<string> {
+		return new Promise((resolve, reject) => {
+			FS.readFile(path, encoding, (err, fileContents) => {
+				if (err) {
+					reject(err);
+				} else {
+					resolve(fileContents);
+				}
+			});
+		});
 	}
 
 	private _log(message: string): void {
