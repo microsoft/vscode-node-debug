@@ -110,7 +110,7 @@
 						"name": "%node.processattach.config.name%",
 						"type": "node",
 						"request": "attach",
-						"processId": "${action.PickProcess}",
+						"processId": "${command.PickProcess}",
 						"port": 5858,
 						"sourceMaps": false,
 						"outDir": null
@@ -199,7 +199,7 @@
 							"processId": {
 								"type": "string",
 								"description": "%node.attach.processId.description%",
-								"default": "${action.PickProcess}"
+								"default": "${command.PickProcess}"
 							},
 							"port": {
 								"type": "number",
