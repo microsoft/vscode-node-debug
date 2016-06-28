@@ -135,7 +135,7 @@ export interface V8ScopeResponse extends NodeV8Response {
 	body: {
 		vscode_locals?: number;
 		scopes: V8Scope[];
-	}
+	};
 }
 
 export interface V8EvaluateResponse extends NodeV8Response {
@@ -148,7 +148,7 @@ export interface V8BacktraceResponse extends NodeV8Response {
 		toFrame: number;
 		totalFrames: number;
 		frames: V8Frame[];
-	}
+	};
 }
 
 export interface V8ScriptsResponse extends NodeV8Response {
@@ -158,7 +158,7 @@ export interface V8ScriptsResponse extends NodeV8Response {
 export interface V8SetVariableValueResponse extends NodeV8Response {
 	body: {
 		newValue: V8Handle;
-	}
+	};
 }
 
 export interface V8FrameResponse extends NodeV8Response {
@@ -168,7 +168,7 @@ export interface V8FrameResponse extends NodeV8Response {
 export interface V8ListBreakpointsResponse extends NodeV8Response {
 	body: {
 		breakpoints: V8Breakpoint[];
-	}
+	};
 }
 
 export interface V8SetBreakpointResponse extends NodeV8Response {
@@ -180,14 +180,14 @@ export interface V8SetBreakpointResponse extends NodeV8Response {
 			line: number;
 			column: number;
 		}[];
-	}
+	};
 }
 
 export interface V8SetExceptionBreakResponse extends NodeV8Response {
 	body: {
 		type: 'all' | 'uncaught';
 		enabled: boolean;
-	}
+	};
 }
 
 // events
@@ -231,14 +231,14 @@ export interface V8SetVariableValueArgs {
 	newValue: {
 		value: boolean | number | string;
 		type: string;
-	}
+	};
 }
 
 export interface V8FrameArgs {
 }
 
 export interface V8ClearBreakpointArgs {
-	breakpoint: number
+	breakpoint: number;
 }
 
 export interface V8SetBreakpointArgs {

@@ -12,8 +12,8 @@ import {DebugProtocol} from 'vscode-debugprotocol';
 
 import {
 	NodeV8Protocol, NodeV8Event, NodeV8Response,
-	V8EvaluateArgs, V8ScriptsArgs, V8SetVariableValueArgs, V8SetBreakpointArgs, V8SetExceptionBreakArgs,
-	V8BacktraceResponse, V8ScopeResponse, V8EvaluateResponse, V8ScriptsResponse, V8SetVariableValueResponse, V8FrameResponse,
+	V8SetBreakpointArgs, V8SetExceptionBreakArgs,
+	V8BacktraceResponse, V8ScopeResponse, V8EvaluateResponse, V8FrameResponse,
 	V8EventBody,
 	V8Ref, V8Handle, V8Property, V8Object, V8Simple, V8Function, V8Frame, V8Scope, V8Script
 } from './nodeV8Protocol';
@@ -908,7 +908,7 @@ export class NodeDebugSession extends DebugSession {
 		this._remoteRoot = args.remoteRoot;
 
 		// if a processId is specified, try to bring the process into debug mode.
-		if (typeof args.processId === "string") {
+		if (typeof args.processId === 'string') {
 			const pid_string = args.processId.trim();
 			if (/^([0-9]+)$/.test(pid_string)) {
 				const pid = Number(pid_string);
@@ -1444,7 +1444,7 @@ export class NodeDebugSession extends DebugSession {
 				line: lb.line,
 				column: lb.column,
 				condition: lb.condition
-			}
+			};
 		} else {
 			args = {
 				type: 'scriptRegExp',
@@ -1452,7 +1452,7 @@ export class NodeDebugSession extends DebugSession {
 				line: lb.line,
 				column: lb.column,
 				condition: lb.condition
-			}
+			};
 		}
 
 		return this._node.setBreakpoint(args).then(resp => {
@@ -1470,7 +1470,7 @@ export class NodeDebugSession extends DebugSession {
 
 			if (sourcemap) {
 
-				if (actualLine != args.line || actualColumn != args.column) {
+				if (actualLine !== args.line || actualColumn !== args.column) {
 					// breakpoint location was adjusted by node.js so we have to map the new location back to source
 
 					// first try to map the remote path back to local
@@ -1628,7 +1628,7 @@ export class NodeDebugSession extends DebugSession {
 				nodeArgs.enabled = true;
 			} else if (filters.indexOf('uncaught') >= 0) {
 				nodeArgs.type = 'uncaught';
-				nodeArgs.enabled = true
+				nodeArgs.enabled = true;
 			}
 		}
 
@@ -1708,7 +1708,7 @@ export class NodeDebugSession extends DebugSession {
 		const backtraceArgs : any = {
 			fromFrame: startFrame,
 			toFrame: startFrame+maxLevels
-		}
+		};
 		const cmd = this._nodeInjectionAvailable ? 'vscode_backtrace' : 'backtrace';
 
 		this.log('va', `stackTraceRequest: ${cmd} ${startFrame} ${maxLevels}`);
@@ -1841,7 +1841,7 @@ export class NodeDebugSession extends DebugSession {
 				// file doesn't exist at path
 				// if source map has inlined source use it
 				if (mapresult.content) {
-					
+
 					this.log('sm', `_createStackFrame: source '${mapresult.path}' doesn't exist -> use inlined source`);
 					const sourceHandle = this._sourceHandles.create(new SourceSource(0, mapresult.content));
 					origin = localize('origin.inlined.source.map', "read-only inlined content from source map");
@@ -1901,11 +1901,12 @@ export class NodeDebugSession extends DebugSession {
 		return new StackFrame(frameReference, func_name, src, this.convertDebuggerLineToClient(line), this.convertDebuggerColumnToClient(column));
 	}
 
+/*
 	// verify that the file on disk is really the same as the executed content
 	private _sameFile(path: string, contents: string) : Promise<boolean> {
 
 		return new Promise((completeDispatch, errorDispatch) => {
-			let fileContents = FS.readFile(path, 'utf8', (err, fileContents) => {
+			FS.readFile(path, 'utf8', (err, fileContents) => {
 				if (err) {
 					errorDispatch(err);
 				} else {
@@ -1931,6 +1932,7 @@ export class NodeDebugSession extends DebugSession {
 		const pos = contents.indexOf(fileContents);
 		return pos >= 0;
 	}
+*/
 
 	//--- scopes request ------------------------------------------------------------------------------------------------------
 
@@ -1957,7 +1959,7 @@ export class NodeDebugSession extends DebugSession {
 		const scopesArgs: any = {
 			frame_index: frameIx,
 			frameNumber: frameIx
-		}
+		};
 		let cmd = 'scopes';
 
 		if (this._nodeInjectionAvailable) {
@@ -2317,6 +2319,7 @@ export class NodeDebugSession extends DebugSession {
 		});
 	}
 
+/*
 	private _createLargeArrayElements(array: any, start: number, count: number) : Promise<Variable[]> {
 
 		const args = {
@@ -2343,7 +2346,7 @@ export class NodeDebugSession extends DebugSession {
 			return this._createPropertyVariables(null, selectedProperties);
 		});
 	}
-
+*/
 	//--- ES6 Set support
 
 	private _createSetVariable(name: string, set: V8Handle) : Promise<Variable> {
