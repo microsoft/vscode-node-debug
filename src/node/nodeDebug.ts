@@ -914,13 +914,18 @@ export class NodeDebugSession extends DebugSession {
 				const pid = Number(pid_string);
 				try {
 					if (process.platform === 'win32') {
-						// undocumented API function
-						(<any>process)._debugProcess(pid);
+						// regular node has an undocumented API function for forcing another node process into debug mode.
+						// 		(<any>process)._debugProcess(pid);
+						// But since we are running on Electron's node, process._debugProcess doesn't work (for unknown reasons).
+						// So we use a regular node instead:
+						const command = `node -e process._debugProcess(${pid})`;
+						CP.execSync(command);
+
 					} else {
 						process.kill(pid, 'SIGUSR1');
 					}
 				} catch (e) {
-					this.sendErrorResponse(response, 2021, localize('VSND2021', "Attach to process: cannot enable debug mode for process '{0}' (reason: {1}).", pid, e));
+					this.sendErrorResponse(response, 2021, localize('VSND2021', "Attach to process: cannot enable debug mode for process '{0}' ({1}).", pid, e));
 					return;
 				}
 			} else {
