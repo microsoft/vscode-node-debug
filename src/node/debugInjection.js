@@ -98,8 +98,10 @@
 			var frames = response.body.frames;
 			for (var i = 0; i < frames.length; i++) {
 				const d = frames[i].details_.details_;
-				d[ARGUMENT_COUNT_INDEX]= 0;		// don't include any Arguments in stack frame
-				d[LOCAL_COUNT_INDEX]= 0;		// don't include any Locals in stack frame
+				if (d) {
+					d[ARGUMENT_COUNT_INDEX]= 0;		// don't include any Arguments in stack frame
+					d[LOCAL_COUNT_INDEX]= 0;		// don't include any Locals in stack frame
+				}
 			}
 		}
 		return result;
@@ -193,7 +195,7 @@
  	 */
 	DebugCommandProcessor.prototype.dispatch_['vscode_lookup'] = function(request, response) {
 		var result = this.lookupRequest_(request, response);
-		if (!result) {
+		if (!result && response.body) {
 			var handles = request.arguments.handles;
 			for (var i = 0; i < handles.length; i++) {
 				var handle = handles[i];
@@ -225,7 +227,7 @@
 			var scopes = response.body.scopes;
 			for (var i = 0; i < scopes.length-1; i++) {
 				const details = scopes[i].details_.details_;
-				if (details[0] === 1) {	// locals
+				if (details && details[0] === 1) {	// locals
 					const locals = details[1];
 					const names = Object.keys(locals);
 					if (names.length > maxLocals) {

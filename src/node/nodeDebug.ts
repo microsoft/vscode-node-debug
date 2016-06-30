@@ -1744,7 +1744,7 @@ export class NodeDebugSession extends DebugSession {
 					this.sendErrorResponse(response, 2023, localize('VSND2023', "No call stack available."));
 				}
 			} else {
-				this.sendErrorResponse(response, 2018, localize('VSND2018', "No call stack available ({_error})."), { _error: error.message } );
+				this.sendErrorResponse(response, 2018, localize('VSND2018', "No call stack available ({_command}: {_error})."), { _command: error.command, _error: error.message } );
 			}
 
 		});
