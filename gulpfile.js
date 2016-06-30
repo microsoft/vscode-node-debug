@@ -22,7 +22,7 @@ var tsProject = ts.createProject('./src/tsconfig.json');
 var nls = require('vscode-nls-dev');
 
 var inlineMap = true;
-var inlineSource = false;
+var inlineSource = true;
 
 var watchedSources = [
 	'src/**/*',
