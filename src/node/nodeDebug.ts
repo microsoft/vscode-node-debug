@@ -1839,49 +1839,32 @@ export class NodeDebugSession extends DebugSession {
 	private _createStackFrameFromSourceMap(frame: V8Frame, content: string, name: string, localPath: string, remotePath: string, origin: string, line: number, column: number) : Promise<StackFrame> {
 
 		return this._sourceMaps.MapToSource(localPath, content, line, column).then(mapresult => {
+
 			if (mapresult) {
-				this.log('sm', `_createStackFrame: gen: '${localPath}' ${line}:${column} -> src: '${mapresult.path}' ${mapresult.line}:${mapresult.column}`);
+				this.log('sm', `_createStackFrameFromSourceMap: gen: '${localPath}' ${line}:${column} -> src: '${mapresult.path}' ${mapresult.line}:${mapresult.column}`);
 
 				// verify that a file exists at path
 				if (FS.existsSync(mapresult.path)) {
 
-//<<<<<<< HEAD
-//			} else {
-//				// file doesn't exist at path
-//				// if source map has inlined source use it
-//				if (mapresult.content) {
-//
-//					this.log('sm', `_createStackFrame: source '${mapresult.path}' doesn't exist -> use inlined source`);
-//					const sourceHandle = this._sourceHandles.create(new SourceSource(0, mapresult.content));
-//					origin = localize('origin.inlined.source.map', "read-only inlined content from source map");
-//					const src = new Source(Path.basename(mapresult.path), null, sourceHandle, origin, { inlinePath: mapresult.path });
-//=======
 					// use this mapping
 					const src = new Source(Path.basename(mapresult.path), this.convertDebuggerPathToClient(mapresult.path));
-//>>>>>>> aweinand/asyncsourcemaps
 					return this._createStackFrameFromSource(frame, src, mapresult.line, mapresult.column);
-
-				} else {
-					// file doesn't exist at path
-					// if source map has inlined source use it
-					if (mapresult.content) {
-
-						this.log('sm', `_createStackFrame: source '${mapresult.path}' doesn't exist -> use inlined source`);
-						const sourceHandle = this._sourceHandles.create(new SourceSource(0, mapresult.content));
-						origin = localize('origin.inlined.source.map', "read-only inlined content from source map");
-						const src = new Source(Path.basename(mapresult.path), null, sourceHandle, origin, { inlinePath: mapresult.path });
-						return this._createStackFrameFromSource(frame, src, mapresult.line, mapresult.column);
-
-					} else {
-						this.log('sm', `_createStackFrame: source doesn't exist and no inlined source -> use generated file`);
-						return this._createStackFrameFromPath(frame, name, localPath, remotePath, origin, line, column);
-					}
 				}
 
-			} else {
-				this.log('sm', `_createStackFrameFromSourceMap: gen: '${localPath}' ${line}:${column} -> couldn't be mapped to source -> use generated file`);
-				return this._createStackFrameFromPath(frame, name, localPath, remotePath, origin, line, column);
+				// file doesn't exist at path
+				// if source map has inlined source use it
+				if (mapresult.content) {
+
+					this.log('sm', `_createStackFrameFromSourceMap: source '${mapresult.path}' doesn't exist -> use inlined source`);
+					const sourceHandle = this._sourceHandles.create(new SourceSource(0, mapresult.content));
+					origin = localize('origin.inlined.source.map', "read-only inlined content from source map");
+					const src = new Source(Path.basename(mapresult.path), null, sourceHandle, origin, { inlinePath: mapresult.path });
+					return this._createStackFrameFromSource(frame, src, mapresult.line, mapresult.column);
+				}
 			}
+			
+			this.log('sm', `_createStackFrameFromSourceMap: gen: '${localPath}' ${line}:${column} -> couldn't be mapped to source -> use generated file`);
+			return this._createStackFrameFromPath(frame, name, localPath, remotePath, origin, line, column);
 		});
 	}
 
