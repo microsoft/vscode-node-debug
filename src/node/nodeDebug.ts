@@ -1209,12 +1209,16 @@ export class NodeDebugSession extends DebugSession {
 			}
 		}
 
-		super.disconnectRequest(response, args);
+		this.shutdown();
+
+		this.log('la', 'disconnectRequest: send response');
+		this.sendResponse(response);
 	}
 
 	/**
-	 * we rely on the generic implementation from DebugSession but we override 'Protocol.shutdown'
-	 * to disconnect from node and kill node & subprocesses
+	 * Overridden from DebugSession:
+	 * attach: disconnect from node
+	 * launch: kill node & subprocesses
 	 */
 	public shutdown(): void {
 
@@ -1222,30 +1226,29 @@ export class NodeDebugSession extends DebugSession {
 			this._inShutdown = true;
 
 			if (this._attachMode) {
+
 				// disconnect only in attach mode since otherwise node continues to run until it is killed
 				this._node.command('disconnect'); // we don't wait for reponse
-			}
 
-			this._node.stop();	// stop socket connection (otherwise node.js dies with ECONNRESET on Windows)
+				// stop socket connection (otherwise node.js dies with ECONNRESET on Windows)
+				this._node.stop();
 
-			if (!this._attachMode) {
-				// kill the whole process tree either starting with the terminal or with the node process
+			} else {
+
+				// stop socket connection (otherwise node.js dies with ECONNRESET on Windows)
+				this._node.stop();
+
+				// kill the whole process tree by either starting with the terminal or with the node process
 				let pid = this._terminalProcess ? this._terminalProcess.pid : this._nodeProcessId;
 				if (pid > 0) {
+					this._terminalProcess = null;
+					this._nodeProcessId = -1;
 					this.log('la', 'shutdown: kill debugee and sub-processes');
-					Terminal.killTree(pid).then(() => {
-						this._terminalProcess = null;
-						this._nodeProcessId = -1;
-						super.shutdown();
-					}).catch(error => {
-						this._terminalProcess = null;
-						this._nodeProcessId = -1;
-						super.shutdown();
-					});
-					return;
+					Terminal.killTree(pid);
 				}
 			}
 
+			// plan for shutting down this process after a delay of 100ms
 			super.shutdown();
 		}
 	}

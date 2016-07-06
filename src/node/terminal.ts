@@ -18,8 +18,8 @@ export class Terminal
 		return this.terminalService().launchInTerminal(dir, args, envVars);
 	}
 
-	public static killTree(processId: number): Promise<any> {
-		return this.terminalService().killTree(processId);
+	public static killTree(processId: number): void {
+		this.terminalService().killTree(processId);
 	}
 
 	/*
@@ -59,7 +59,7 @@ export class TerminalError {
 
 interface ITerminalService {
 	launchInTerminal(dir: string, args: string[], envVars: { [key: string]: string; }): Promise<CP.ChildProcess>;
-	killTree(pid: number) : Promise<any>;
+	killTree(pid: number): void;
 	isOnPath(program: string): boolean;
 }
 
@@ -74,23 +74,14 @@ class DefaultTerminalService implements ITerminalService {
 		});
 	}
 
-	public killTree(pid: number): Promise<any> {
+	public killTree(pid: number): void {
 
 		// on linux and OS X we kill all direct and indirect child processes as well
-
-		return new Promise<any>( (resolve, reject) => {
-			try {
-				const cmd = Path.join(__dirname, './terminateProcess.sh');
-				const result = (<any>CP).spawnSync(cmd, [ pid.toString() ]);
-				if (result.error) {
-					reject(result.error);
-				} else {
-					resolve();
-				}
-			} catch (err) {
-				reject(err);
-			}
-		});
+		try {
+			const cmd = Path.join(__dirname, './terminateProcess.sh');
+			CP.spawnSync(cmd, [ pid.toString() ]);
+		} catch (err) {
+		}
 	}
 
 	public isOnPath(program: string): boolean {
@@ -140,21 +131,16 @@ class WindowsTerminalService extends DefaultTerminalService {
 		});
 	}
 
-	public killTree(pid: number): Promise<any> {
+	public killTree(pid: number): void {
 
 		// when killing a process in Windows its child processes are *not* killed but become root processes.
 		// Therefore we use TASKKILL.EXE
 
-		return new Promise<any>( (resolve, reject) => {
-			const cmd = `taskkill /F /T /PID ${pid}`;
-			try {
-				CP.execSync(cmd);
-				resolve();
-			}
-			catch (err) {
-				reject(err);
-			}
-		});
+		try {
+			CP.execSync(`taskkill /F /T /PID ${pid}`);
+		}
+		catch (err) {
+		}
 	}
 
 	public isOnPath(program: string): boolean {
