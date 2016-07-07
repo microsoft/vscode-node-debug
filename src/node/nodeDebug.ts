@@ -2732,7 +2732,7 @@ export class NodeDebugSession extends DebugSession {
 
 			if (srcSource.scriptId) {
 
-				this._loadScript(srcSource.scriptId+12131).then(script => {
+				this._loadScript(srcSource.scriptId).then(script => {
 					srcSource.source = script.contents;
 					response.body = {
 						content: srcSource.source,
