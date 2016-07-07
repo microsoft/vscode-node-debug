@@ -1819,8 +1819,7 @@ export class NodeDebugSession extends DebugSession {
 
 				} else {
 					// if a function is dynamically created from a string, its script has no name.
-					// create a name by using the script id and append ".js" so that JavaScript contents is detected.
-					name = `VM${script_val.id}.js`;
+					name = `VM${script_val.id}`;
 				}
 
 				// source not found locally -> prepare to stream source content from node backend.
@@ -1862,7 +1861,7 @@ export class NodeDebugSession extends DebugSession {
 					return this._createStackFrameFromSource(frame, src, mapresult.line, mapresult.column);
 				}
 			}
-			
+
 			this.log('sm', `_createStackFrameFromSourceMap: gen: '${localPath}' ${line}:${column} -> couldn't be mapped to source -> use generated file`);
 			return this._createStackFrameFromPath(frame, name, localPath, remotePath, origin, line, column);
 		});
@@ -2736,7 +2735,8 @@ export class NodeDebugSession extends DebugSession {
 				this._loadScript(srcSource.scriptId).then(script => {
 					srcSource.source = script.contents;
 					response.body = {
-						content: srcSource.source
+						content: srcSource.source,
+						mimeType: 'text/javascript'
 					};
 					this.sendResponse(response);
 				}).catch(err => {
