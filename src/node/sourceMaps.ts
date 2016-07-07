@@ -321,7 +321,7 @@ export class SourceMaps implements ISourceMaps {
 			return this._readFile(map_path);
 		}
 
-		if (u.protocol === 'data:' && uri.indexOf('data:application/json') >= 0) {
+		if (u.protocol === 'data:' && u.host === 'application' && u.path.indexOf('/json;base64,') === 0) {
 
 			// if uri is data url source map is inlined in generated file
 			const pos = uri.lastIndexOf(',');
@@ -335,7 +335,6 @@ export class SourceMaps implements ISourceMaps {
 					}
 				}
 				catch (e) {
-					//this._log(`_findGeneratedToSourceMapping: exception while processing data url '${e}'`);
 					throw new Error(`exception while processing data url`);
 				}
 			}
