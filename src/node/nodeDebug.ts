@@ -2732,7 +2732,7 @@ export class NodeDebugSession extends DebugSession {
 
 			if (srcSource.scriptId) {
 
-				this._loadScript(srcSource.scriptId).then(script => {
+				this._loadScript(srcSource.scriptId+12131).then(script => {
 					srcSource.source = script.contents;
 					response.body = {
 						content: srcSource.source,
@@ -2740,17 +2740,13 @@ export class NodeDebugSession extends DebugSession {
 					};
 					this.sendResponse(response);
 				}).catch(err => {
-					srcSource.source = localize('source.not.found', "<source not found>");
-					response.body = {
-						content: srcSource.source
-					};
-					this.sendResponse(response);
+					this.sendErrorResponse(response, 2026, localize('source.not.found', "Could not retrieve content."));
 				});
 				return;
 			}
 		}
 
-		this.sendErrorResponse(response, 9999, 'sourceRequest error', null, ErrorDestination.Telemetry);
+		this.sendErrorResponse(response, 2027, 'sourceRequest error: illegal handle', null, ErrorDestination.Telemetry);
 	}
 
 	private _loadScript(scriptId: number) : Promise<Script>  {
