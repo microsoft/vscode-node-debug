@@ -232,6 +232,8 @@ interface CommonArguments {
 	smartStep?: boolean;
 	/** Step back supported. */
 	stepBack?: boolean;
+	/** Control mapping of node.js scripts to files on disk. */
+	mapToFilesOnDisk?: boolean;
 }
 
 /**
@@ -294,6 +296,7 @@ export class NodeDebugSession extends DebugSession {
 	private _tryToInjectExtension = true;
 	private _chunkSize = 100;		// chunk size for large data structures
 	private _smartStep = false;		// try to automatically step over uninteresting source
+	private _mapToFilesOnDisk = true; // by default try to map node.js scripts to files on disk
 
 	// session state
 	private _adapterID: string;
@@ -832,6 +835,8 @@ export class NodeDebugSession extends DebugSession {
 		this._stepBack = (typeof args.stepBack === 'boolean') && args.stepBack;
 
 		this._smartStep = (typeof args.smartStep === 'boolean') && args.smartStep;
+
+		this._mapToFilesOnDisk = (typeof args.mapToFilesOnDisk === 'boolean') && args.mapToFilesOnDisk;
 
 		this._stopOnEntry = (typeof args.stopOnEntry === 'boolean') && args.stopOnEntry;
 
@@ -1780,44 +1785,54 @@ export class NodeDebugSession extends DebugSession {
 
 				if (name) {
 
-					// system.js generates script names that are file urls
-					if (name.indexOf('file://') === 0) {
-						name = name.replace('file://', '');
-					}
+					if (this._mapToFilesOnDisk) {
 
-					if (PathUtils.isAbsolutePath(name)) {
+						// try to map the script to a file in the workspace
 
-						let remotePath = name;		// with remote debugging path might come from a different OS
-
-						// if launch.json defines localRoot and remoteRoot try to convert remote path back to a local path
-						let localPath = this._remoteToLocal(remotePath);
-
-						if (localPath !== remotePath && this._attachMode) {
-							// assume attached to remote node process
-							origin = localize('origin.from.remote.node', "read-only content from remote Node.js");
+						// system.js generates script names that are file urls
+						if (name.indexOf('file://') === 0) {
+							name = name.replace('file://', '');
 						}
 
-						name = Path.basename(localPath);
+						if (PathUtils.isAbsolutePath(name)) {
 
-						// source mapping
-						if (this._sourceMaps) {
+							let remotePath = name;		// with remote debugging path might come from a different OS
 
-							if (!FS.existsSync(localPath)) {
-								return this._loadScript(script_val.id).then(script => {
-									return this._createStackFrameFromSourceMap(frame, script.contents, name, localPath, remotePath, origin, line, column);
-								});
+							// if launch.json defines localRoot and remoteRoot try to convert remote path back to a local path
+							let localPath = this._remoteToLocal(remotePath);
+
+							if (localPath !== remotePath && this._attachMode) {
+								// assume attached to remote node process
+								origin = localize('origin.from.remote.node', "read-only content from remote Node.js");
 							}
 
-							return this._createStackFrameFromSourceMap(frame, null, name, localPath, remotePath, origin, line, column);
+							name = Path.basename(localPath);
+
+							// source mapping
+							if (this._sourceMaps) {
+
+								if (!FS.existsSync(localPath)) {
+									return this._loadScript(script_val.id).then(script => {
+										return this._createStackFrameFromSourceMap(frame, script.contents, name, localPath, remotePath, origin, line, column);
+									});
+								}
+
+								return this._createStackFrameFromSourceMap(frame, null, name, localPath, remotePath, origin, line, column);
+							}
+
+							return this._createStackFrameFromPath(frame, name, localPath, remotePath, origin, line, column);
 						}
 
-						return this._createStackFrameFromPath(frame, name, localPath, remotePath, origin, line, column);
+						// if we end up here, 'name' is an internal module
+						origin = localize('origin.core.module', "read-only core module");
+
+					} else {
+						// do not map the script to a file in the workspace
+
 					}
+				}
 
-					// if we end up here, 'name' is an internal module
- 					origin = localize('origin.core.module', "read-only core module");
-
-				} else {
+				if (!name) {
 					// if a function is dynamically created from a string, its script has no name.
 					name = `VM${script_val.id}`;
 				}
