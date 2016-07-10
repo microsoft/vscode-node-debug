@@ -832,13 +832,21 @@ export class NodeDebugSession extends DebugSession {
 			this._traceAll = this._trace.indexOf('all') >= 0;
 		}
 
-		this._stepBack = (typeof args.stepBack === 'boolean') && args.stepBack;
+		if (typeof args.stepBack === 'boolean') {
+			this._stepBack = args.stepBack;
+		}
 
-		this._smartStep = (typeof args.smartStep === 'boolean') && args.smartStep;
+		if (typeof args.smartStep === 'boolean') {
+			this._smartStep = args.smartStep;
+		}
 
-		this._mapToFilesOnDisk = (typeof args.mapToFilesOnDisk === 'boolean') && args.mapToFilesOnDisk;
+		if (typeof args.mapToFilesOnDisk === 'boolean') {
+			this._mapToFilesOnDisk = args.mapToFilesOnDisk;
+		}
 
-		this._stopOnEntry = (typeof args.stopOnEntry === 'boolean') && args.stopOnEntry;
+		if (typeof args.stopOnEntry === 'boolean') {
+			this._stopOnEntry = args.stopOnEntry;
+		}
 
 		if (!this._sourceMaps) {
 			if (typeof args.sourceMaps === 'boolean' && args.sourceMaps) {
