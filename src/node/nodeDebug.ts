@@ -22,6 +22,7 @@ import {Terminal, TerminalError} from './terminal';
 import * as PathUtils from './pathUtilities';
 import * as CP from 'child_process';
 import * as Net from 'net';
+import * as URL from 'url';
 import * as Path from 'path';
 import * as FS from 'fs';
 import * as nls from 'vscode-nls';
@@ -297,13 +298,15 @@ export class NodeDebugSession extends DebugSession {
 	private _chunkSize = 100;		// chunk size for large data structures
 	private _smartStep = false;		// try to automatically step over uninteresting source
 	private _mapToFilesOnDisk = true; // by default try to map node.js scripts to files on disk
+	private _compareContents = true;	// by default verify that script contents is same as file contents
 
 	// session state
 	private _adapterID: string;
 	private _node: NodeV8Protocol;
 	private _nodeProcessId: number = -1; 		// pid of the node runtime
 	private _functionBreakpoints = new Array<number>();	// node function breakpoint ids
-	private _scripts = new Map<number, Script>();
+	private _scripts = new Map<number, Promise<Script>>();		// script cache
+	private _files = new Map<string, Promise<string>>();		// file cache
 
 	// session configurations
 	private _noDebug = false;
@@ -1785,6 +1788,8 @@ export class NodeDebugSession extends DebugSession {
 			let line = frame.line;
 			let column = this._adjustColumn(line, frame.column);
 
+			let src: Source = null;
+
 			let origin = localize('origin.from.node', "read-only content from Node.js");
 
 			const script_val = <V8Script> this._getValueFromCache(frame.script);
@@ -1797,46 +1802,53 @@ export class NodeDebugSession extends DebugSession {
 
 						// try to map the script to a file in the workspace
 
-						// system.js generates script names that are file urls
-						if (name.indexOf('file://') === 0) {
-							name = name.replace('file://', '');
+						// first convert urls to paths
+						const u = URL.parse(name);
+						if (u.protocol === 'file:') {
+							// a local file path
+							name = decodeURI(u.path);
 						}
 
+						// we can only map absolute paths
 						if (PathUtils.isAbsolutePath(name)) {
 
-							let remotePath = name;		// with remote debugging path might come from a different OS
+							// with remote debugging path might come from a different OS
+							let remotePath = name;
 
 							// if launch.json defines localRoot and remoteRoot try to convert remote path back to a local path
 							let localPath = this._remoteToLocal(remotePath);
-
 							if (localPath !== remotePath && this._attachMode) {
 								// assume attached to remote node process
 								origin = localize('origin.from.remote.node', "read-only content from remote Node.js");
 							}
 
-							name = Path.basename(localPath);
+							//name = Path.basename(localPath);	// do we really need this?
 
-							// source mapping
+							// source mapping is enabled
 							if (this._sourceMaps) {
 
-								if (!FS.existsSync(localPath)) {
-									return this._loadScript(script_val.id).then(script => {
-										return this._createStackFrameFromSourceMap(frame, script.contents, name, localPath, remotePath, origin, line, column);
-									});
-								}
+                            	// load script to find source reference
+								return this._loadScript(script_val.id).then(script => {
 
-								return this._createStackFrameFromSourceMap(frame, null, name, localPath, remotePath, origin, line, column);
+									if (this._sourceMaps.HasSourceMap(script.contents)) {
+										return this._createStackFrameFromSourceMap(frame, script.contents, name, localPath, remotePath, origin, line, column);
+									}
+
+									// content contains no source mapping (babel/register does this; see https://github.com/Microsoft/vscode-node-debug/issues/62)
+									// try to find the corresponding file
+									return this._createStackFrameFromPath(frame, name, localPath, remotePath, origin, line, column);
+								});
 							}
 
 							return this._createStackFrameFromPath(frame, name, localPath, remotePath, origin, line, column);
 						}
 
-						// if we end up here, 'name' is an internal module
+						// if we end up here, 'name' is not a path and is an internal module
 						origin = localize('origin.core.module', "read-only core module");
 
 					} else {
 						// do not map the script to a file in the workspace
-
+						// fall through
 					}
 				}
 
@@ -1847,11 +1859,10 @@ export class NodeDebugSession extends DebugSession {
 
 				// source not found locally -> prepare to stream source content from node backend.
 				const sourceHandle = this._sourceHandles.create(new SourceSource(script_val.id));
-				const src = new Source(name, null, sourceHandle, origin);
-				return this._createStackFrameFromSource(frame, src, line, column);
+				src = new Source(name, null, sourceHandle, origin);
 			}
 
-			return this._createStackFrameFromSource(frame, null, line, column);
+			return this._createStackFrameFromSource(frame, src, line, column);
 		});
 	}
 
@@ -1865,6 +1876,28 @@ export class NodeDebugSession extends DebugSession {
 			if (mapresult) {
 				this.log('sm', `_createStackFrameFromSourceMap: gen: '${localPath}' ${line}:${column} -> src: '${mapresult.path}' ${mapresult.line}:${mapresult.column}`);
 
+				return this._sameFile(mapresult.path, this._compareContents, 0, mapresult.content).then(same => {
+
+					if (same) {
+						// use this mapping
+						const src = new Source(Path.basename(mapresult.path), this.convertDebuggerPathToClient(mapresult.path));
+						return this._createStackFrameFromSource(frame, src, mapresult.line, mapresult.column);
+					}
+
+					// file doesn't exist at path: if source map has inlined source use it
+					if (mapresult.content) {
+						this.log('sm', `_createStackFrameFromSourceMap: source '${mapresult.path}' doesn't exist -> use inlined source`);
+						const sourceHandle = this._sourceHandles.create(new SourceSource(0, mapresult.content));
+						origin = localize('origin.inlined.source.map', "read-only inlined content from source map");
+						const src = new Source(Path.basename(mapresult.path), null, sourceHandle, origin, { inlinePath: mapresult.path });
+						return this._createStackFrameFromSource(frame, src, mapresult.line, mapresult.column);
+					}
+
+					this.log('sm', `_createStackFrameFromSourceMap: gen: '${localPath}' ${line}:${column} -> can't find source -> use generated file`);
+					return this._createStackFrameFromPath(frame, name, localPath, remotePath, origin, line, column);
+				});
+
+				/*
 				// verify that a file exists at path
 				if (FS.existsSync(mapresult.path)) {
 
@@ -1883,6 +1916,7 @@ export class NodeDebugSession extends DebugSession {
 					const src = new Source(Path.basename(mapresult.path), null, sourceHandle, origin, { inlinePath: mapresult.path });
 					return this._createStackFrameFromSource(frame, src, mapresult.line, mapresult.column);
 				}
+				*/
 			}
 
 			this.log('sm', `_createStackFrameFromSourceMap: gen: '${localPath}' ${line}:${column} -> couldn't be mapped to source -> use generated file`);
@@ -1894,18 +1928,23 @@ export class NodeDebugSession extends DebugSession {
 	 * Creates a StackFrame from the given local path.
 	 * The remote path is used if the local path doesn't exist.
 	 */
-	private _createStackFrameFromPath(frame: V8Frame, name: string, localPath: string, remotePath: string, origin: string, line: number, column: number) : StackFrame {
-		let src: Source;
-		if (FS.existsSync(localPath)) {
-			src = new Source(name, this.convertDebuggerPathToClient(localPath));
-		} else {
-			// fall back: source not found locally -> prepare to stream source content from remote node.
-			const script_val = <V8Script> this._getValueFromCache(frame.script);
-			const script_id = script_val.id;
-			const sourceHandle = this._sourceHandles.create(new SourceSource(script_id));
-			src = new Source(name, null, sourceHandle, origin, { remotePath: remotePath	});	// assume it is a remote path
-		}
-		return this._createStackFrameFromSource(frame, src, line, column);
+	private _createStackFrameFromPath(frame: V8Frame, name: string, localPath: string, remotePath: string, origin: string, line: number, column: number) : Promise<StackFrame> {
+
+		const script_val = <V8Script> this._getValueFromCache(frame.script);
+		const script_id = script_val.id;
+
+		return this._sameFile(localPath, this._compareContents, script_id, null).then(same => {
+			let src: Source;
+			if (same) {
+				// we use the file on disk
+				src = new Source(name, this.convertDebuggerPathToClient(localPath));
+			} else {
+				// we use the script's content streamed from node
+				const sourceHandle = this._sourceHandles.create(new SourceSource(script_id));
+				src = new Source(name, null, sourceHandle, origin, { remotePath: remotePath	});	// assume it is a remote path
+			}
+			return this._createStackFrameFromSource(frame, src, line, column);
+		});
 	}
 
 	/**
@@ -1930,38 +1969,76 @@ export class NodeDebugSession extends DebugSession {
 		return new StackFrame(frameReference, func_name, src, this.convertDebuggerLineToClient(line), this.convertDebuggerColumnToClient(column));
 	}
 
-/*
-	// verify that the file on disk is really the same as the executed content
-	private _sameFile(path: string, contents: string) : Promise<boolean> {
+	/**
+	 * Returns true if a file exists at path.
+	 * If compareContents is true and a script_id is given, _sameFile verifies that the
+	 * file's content matches the script's content.
+	 */
+	private _sameFile(path: string, compareContents: boolean, script_id: number, content: string) : Promise<boolean> {
 
-		return new Promise((completeDispatch, errorDispatch) => {
-			FS.readFile(path, 'utf8', (err, fileContents) => {
-				if (err) {
-					errorDispatch(err);
-				} else {
-					// remove an optional shebang
-					fileContents = fileContents.replace(/^#!.*\n/, '');
+		return this._existsFile(path).then(exists => {
 
-					// try to locate the file contents in the executed contents
-					const pos = contents.indexOf(fileContents);
-					completeDispatch(pos >= 0);
+			if (exists) {
+
+				if (compareContents && (script_id || content)) {
+
+					return Promise.all<any>([
+						this._readFile(path),
+						content ? Promise.resolve(content) : this._loadScript(script_id).then(script => { return script.contents } )
+					]).then(results => {
+						let fileContents = results[0];
+						const contents = results[1];
+
+						// remove an optional shebang
+						fileContents = fileContents.replace(/^#!.*\n/, '');
+
+						// try to locate the file contents in the executed contents
+						const pos = contents.indexOf(fileContents);
+						return pos >= 0;
+
+					}).catch(err => {
+						return false;
+					});
 				}
-			});
+				return true;
+
+			}
+			return false;
 		});
 	}
 
-	// verify that the file on disk is really the same as the executed content
-	private _sameFile2(path: string, contents: string) : boolean {
+	/**
+	 * Reads and caches files.
+	 */
+	private _readFile(path: string) : Promise<string>  {
 
-		let fileContents = FS.readFileSync(path, 'utf8');
-		// remove an optional shebang
-		fileContents = fileContents.replace(/^#!.*\n/, '');
+		let file = this._files.get(path);
 
-		// try to locate the file contents in the executed contents
-		const pos = contents.indexOf(fileContents);
-		return pos >= 0;
+		if (!file) {
+
+			this.log('ls', `__readFile: ${path}`);
+
+			file = new Promise((completeDispatch, errorDispatch) => {
+				FS.readFile(path, 'utf8', (err, fileContents) => {
+					if (err) {
+						errorDispatch(err);
+					} else {
+						completeDispatch(fileContents);
+					}
+				});
+			});
+
+			this._files.set(path, file);
+		}
+
+		return file;
 	}
-*/
+
+	private _existsFile(path: string) : Promise<boolean> {
+		return new Promise((completeDispatch, errorDispatch) => {
+			FS.exists(path, completeDispatch);
+		});
+	}
 
 	//--- scopes request ------------------------------------------------------------------------------------------------------
 
@@ -2774,40 +2851,27 @@ export class NodeDebugSession extends DebugSession {
 
 	private _loadScript(scriptId: number) : Promise<Script>  {
 
-		const script = this._scripts.get(scriptId);
+		let script = this._scripts.get(scriptId);
 
-		if (script) {
-			return Promise.resolve(script);
+		if (!script) {
+
+			this.log('ls', `_loadScript: ${scriptId}`);
+
+			// not found
+			const args = {
+				types: 1+2+4,
+				includeSource: true,
+				ids: [ scriptId ]
+			};
+
+			script = this._node.scripts(args).then(nodeResponse => {
+				return new Script(nodeResponse.body[0]);
+			});
+
+			this._scripts.set(scriptId, script);
 		}
 
-		const args = {
-			types: 1+2+4,
-			includeSource: true,
-			ids: [ scriptId ]
-		};
-
-		this.log('ls', `_loadScript: ${scriptId}`);
-
-		return this._node.scripts(args).then(nodeResponse => {
-			const s = new Script(nodeResponse.body[0]);
-			this._scripts.set(scriptId, s);
-
-			/*
-			if (this._sourceMaps) {
-				return this._sourceMaps.LoadSourceMap(s.contents).then(sourceMap => {
-					if (sourceMap) {
-						s.sourceMap = sourceMap;
-					}
-					return s;
-				}).catch(err => {
-					// s.error =
-					return s;
-				});
-			}
-			*/
-
-			return s;
-		});
+		return script;
 	}
 
 	//---- private helpers ----------------------------------------------------------------------------------------------------
