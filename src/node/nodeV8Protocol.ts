@@ -8,11 +8,13 @@ import * as nls from 'vscode-nls';
 
 const localize = nls.loadMessageBundle();
 
+type NodeV8MessageType = 'request' | 'response' | 'event';
+
 export class NodeV8Message {
 	seq: number;
-	type: 'request' | 'response' | 'event';
+	type: NodeV8MessageType;
 
-	public constructor(type: 'request' | 'response' | 'event') {
+	public constructor(type: NodeV8MessageType) {
 		this.seq = 0;
 		this.type = type;
 	}
@@ -122,8 +124,10 @@ export interface V8Scope {
 	object: V8Ref;
 }
 
+type BreakpointType = 'function' | 'script' | 'scriptId' | 'scriptRegExp';
+
 export interface V8Breakpoint {
-	type: 'scriptId' | 'scriptRegExp';
+	type: BreakpointType;
 	script_id: number;
 	number: number;
 	script_regexp: string;
@@ -183,9 +187,11 @@ export interface V8SetBreakpointResponse extends NodeV8Response {
 	};
 }
 
+type ExceptionType = 'all' | 'uncaught';
+
 export interface V8SetExceptionBreakResponse extends NodeV8Response {
 	body: {
-		type: 'all' | 'uncaught';
+		type: ExceptionType;
 		enabled: boolean;
 	};
 }
@@ -242,7 +248,7 @@ export interface V8ClearBreakpointArgs {
 }
 
 export interface V8SetBreakpointArgs {
-	type : 'function' | 'script' | 'scriptId' | 'scriptRegExp';
+	type: BreakpointType;
 	target: number | string;
 	line?: number;
 	column?: number;
@@ -250,7 +256,7 @@ export interface V8SetBreakpointArgs {
 }
 
 export interface V8SetExceptionBreakArgs {
-	type : 'all' | 'uncaught';
+	type: ExceptionType;
 	enabled?: boolean;
 }
 
@@ -411,7 +417,7 @@ export class NodeV8Protocol extends EE.EventEmitter {
 		this.emit(event.event, event);
 	}
 
-	private send(typ: 'request' | 'response' | 'event', message: NodeV8Message) : void {
+	private send(typ: NodeV8MessageType, message: NodeV8Message) : void {
 		message.type = typ;
 		message.seq = this._sequence++;
 		const json = JSON.stringify(message);
