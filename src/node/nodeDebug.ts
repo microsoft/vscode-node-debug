@@ -332,6 +332,7 @@ export class NodeDebugSession extends DebugSession {
 	private _pollForNodeProcess = false;
 	private _exception: V8Object;
 	private _lastStoppedEvent: DebugProtocol.StoppedEvent;
+	private _restartFramePending: boolean;
 	private _stoppedReason: string;
 	private _nodeInjectionAvailable = false;
 	private _needContinue: boolean;
@@ -453,7 +454,12 @@ export class NodeDebugSession extends DebugSession {
 		// no reason yet: must be the result of a 'step'
 		if (!reason) {
 
-			reason = localize({ key: 'reason.step', comment: ['https://github.com/Microsoft/vscode/issues/4568'] }, "step");
+			if (this._restartFramePending) {
+				this._restartFramePending = false;
+				reason = localize({ key: 'reason.restart', comment: ['https://github.com/Microsoft/vscode/issues/4568'] }, "frame entry");
+			} else {
+				reason = localize({ key: 'reason.step', comment: ['https://github.com/Microsoft/vscode/issues/4568'] }, "step");
+			}
 
 			// should we continue until we find a better place to stop?
 			if (this._smartStep) {
@@ -585,7 +591,11 @@ export class NodeDebugSession extends DebugSession {
 			}
 		];
 
+		// This debug adapter supports setting variables
 		response.body.supportsSetVariable = true;
+
+		// This debug adapter supports the restartFrame request
+		response.body.supportsRestartFrame = true;
 
 		this.sendResponse(response);
 	}
@@ -2739,6 +2749,29 @@ export class NodeDebugSession extends DebugSession {
  		this._node.command('continue', { stepaction: 'back' }, (nodeResponse) => {
  			this._sendNodeResponse(response, nodeResponse);
  		});
+ 	}
+
+	protected restartFrameRequest(response: DebugProtocol.RestartFrameResponse, args: DebugProtocol.RestartFrameArguments) : void {
+
+		const restartFrameArgs = {
+			frame: undefined
+		};
+
+		if (args.frameId > 0) {
+			const frame = this._frameHandles.get(args.frameId);
+			if (!frame) {
+				this.sendErrorResponse(response, 2020, 'stack frame not valid', null, ErrorDestination.Telemetry);
+				return;
+			}
+			restartFrameArgs.frame = frame.index;
+		}
+
+		this._node.command('restartFrame', restartFrameArgs, restartNodeResponse => {
+			this._restartFramePending= true;
+			this._node.command('continue', { stepaction: 'in' }, stepInNodeResponse => {
+				this._sendNodeResponse(response, stepInNodeResponse);
+			});
+		});
  	}
 
 	//--- evaluate request ----------------------------------------------------------------------------------------------------

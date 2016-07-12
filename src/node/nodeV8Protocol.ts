@@ -196,6 +196,12 @@ export interface V8SetExceptionBreakResponse extends NodeV8Response {
 	};
 }
 
+export interface V8RestartFrameResponse extends NodeV8Response {
+	body: {
+		result: boolean;
+	};
+}
+
 // events
 
 export interface V8EventBody {
@@ -208,6 +214,10 @@ export interface V8EventBody {
 }
 
 // arguments
+
+export interface V8RestartFrameArgs {
+	frame?: number;
+}
 
 export interface V8EvaluateArgs {
 	expression: string;
@@ -322,6 +332,10 @@ export class NodeV8Protocol extends EE.EventEmitter {
 				}
 			});
 		});
+	}
+
+	public restartFrame(args: V8RestartFrameArgs, timeout: number = NodeV8Protocol.TIMEOUT) : Promise<V8RestartFrameResponse> {
+		return this.command2('restartframe', args);
 	}
 
 	public evaluate(args: V8EvaluateArgs, timeout: number = NodeV8Protocol.TIMEOUT) : Promise<V8EvaluateResponse> {
