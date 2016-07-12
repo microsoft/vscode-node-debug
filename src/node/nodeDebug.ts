@@ -1822,12 +1822,10 @@ export class NodeDebugSession extends DebugSession {
 								origin = localize('origin.from.remote.node', "read-only content from remote Node.js");
 							}
 
-							//name = Path.basename(localPath);	// do we really need this?
-
 							// source mapping is enabled
 							if (this._sourceMaps) {
 
-                            	// load script to find source reference
+								// load script to find source reference
 								return this._loadScript(script_val.id).then(script => {
 
 									if (this._sourceMaps.HasSourceMap(script.contents)) {
@@ -1896,27 +1894,6 @@ export class NodeDebugSession extends DebugSession {
 					this.log('sm', `_createStackFrameFromSourceMap: gen: '${localPath}' ${line}:${column} -> can't find source -> use generated file`);
 					return this._createStackFrameFromPath(frame, name, localPath, remotePath, origin, line, column);
 				});
-
-				/*
-				// verify that a file exists at path
-				if (FS.existsSync(mapresult.path)) {
-
-					// use this mapping
-					const src = new Source(Path.basename(mapresult.path), this.convertDebuggerPathToClient(mapresult.path));
-					return this._createStackFrameFromSource(frame, src, mapresult.line, mapresult.column);
-				}
-
-				// file doesn't exist at path
-				// if source map has inlined source use it
-				if (mapresult.content) {
-
-					this.log('sm', `_createStackFrameFromSourceMap: source '${mapresult.path}' doesn't exist -> use inlined source`);
-					const sourceHandle = this._sourceHandles.create(new SourceSource(0, mapresult.content));
-					origin = localize('origin.inlined.source.map', "read-only inlined content from source map");
-					const src = new Source(Path.basename(mapresult.path), null, sourceHandle, origin, { inlinePath: mapresult.path });
-					return this._createStackFrameFromSource(frame, src, mapresult.line, mapresult.column);
-				}
-				*/
 			}
 
 			this.log('sm', `_createStackFrameFromSourceMap: gen: '${localPath}' ${line}:${column} -> couldn't be mapped to source -> use generated file`);
@@ -2008,7 +1985,7 @@ export class NodeDebugSession extends DebugSession {
 	}
 
 	/**
-	 * Reads and caches files.
+	 * Returns (and caches) the file contents of path.
 	 */
 	private _readFile(path: string) : Promise<string>  {
 
@@ -2034,6 +2011,9 @@ export class NodeDebugSession extends DebugSession {
 		return file;
 	}
 
+	/**
+	 * a Promise based version of 'exists'
+	 */
 	private _existsFile(path: string) : Promise<boolean> {
 		return new Promise((completeDispatch, errorDispatch) => {
 			FS.exists(path, completeDispatch);
