@@ -57,6 +57,10 @@ export function normalizeDriveLetter(path: string): string {
 	return path;
 }
 
+export function pathCompare(path1: string, path2: string): boolean {
+	return normalizeDriveLetter(path1) === normalizeDriveLetter(path2);
+}
+
 /**
  * Given an absolute, normalized, and existing file path 'realPath' returns the exact path that the file has on disk.
  * On a case insensitive file system, the returned path might differ from the original path by character casing.

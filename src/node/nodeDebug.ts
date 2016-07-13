@@ -1343,7 +1343,7 @@ export class NodeDebugSession extends DebugSession {
 
 		}).then(generated => {
 
-			if (generated === path) {   // if generated and source are the same we don't need a sourcemap
+			if (PathUtils.pathCompare(generated, path)) {   // if generated and source are the same we don't need a sourcemap
 				this.log('bp', `_mapSourceAndUpdateBreakpoints: source and generated are same -> ignore sourcemap`);
 				generated = null;
 			}
@@ -1544,7 +1544,7 @@ export class NodeDebugSession extends DebugSession {
 		// For this we check here whether a breakpoint is at the same location as the 'break-on-entry' location.
 		// If yes, then we plan for hitting the breakpoint instead of 'continue' over it!
 
-		if (!this._stopOnEntry && this._pathCompare(this._entryPath, path)) {	// only relevant if we do not stop on entry and have a matching file
+		if (!this._stopOnEntry && PathUtils.pathCompare(this._entryPath, path)) {	// only relevant if we do not stop on entry and have a matching file
 			if (this._entryLine === actualLine && this._entryColumn === actualColumn) {
 				// we do not have to 'continue' but we have to generate a stopped event instead
 				this._needContinue = false;
@@ -1554,10 +1554,6 @@ export class NodeDebugSession extends DebugSession {
 		}
 
 		return new Breakpoint(true, this.convertDebuggerLineToClient(actualLine), this.convertDebuggerColumnToClient(actualColumn));
-	}
-
-	private _pathCompare(path1: string, path2: string) {
-		return PathUtils.normalizeDriveLetter(path1) === PathUtils.normalizeDriveLetter(path2);
 	}
 
 	/**
