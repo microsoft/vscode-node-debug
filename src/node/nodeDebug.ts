@@ -1999,6 +1999,7 @@ export class NodeDebugSession extends DebugSession {
 	 */
 	private _readFile(path: string) : Promise<string>  {
 
+		path= PathUtils.normalizeDriveLetter(path);
 		let file = this._files.get(path);
 
 		if (!file) {
