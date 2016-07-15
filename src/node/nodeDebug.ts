@@ -2260,7 +2260,7 @@ export class NodeDebugSession extends DebugSession {
 				}
 
 				// if value 'undefined' trigger a getter
-				if (val.type === 'undefined' && !val.value && obj) {
+				if (this._node.v8Version && val.type === 'undefined' && !val.value && obj) {
 
 					const args = {
 						expression: `obj.${name}`,	// trigger call to getter
@@ -2307,6 +2307,16 @@ export class NodeDebugSession extends DebugSession {
 				return Promise.resolve(new Variable(name, (<V8Simple> val).value.toString()));
 			case 'boolean':
 				return Promise.resolve(new Variable(name, (<V8Simple> val).value.toString().toLowerCase()));	// node returns these boolean values capitalized
+
+			case 'set':
+			case 'map':
+				if (this._node.v8Version) {
+					if (val.type === 'set') {
+						return this._createSetVariable(name, val);
+					}
+					return this._createMapVariable(name, val);
+				}
+				// fall through!
 
 			case 'object':
 			case 'function':
@@ -2366,12 +2376,6 @@ export class NodeDebugSession extends DebugSession {
 				}
 				return Promise.resolve(new Variable(name, value, this._variableHandles.create(new PropertyContainer(val))));
 
-			case 'set':
-				return this._createSetVariable(name, val);
-
-			case 'map':
-				return this._createMapVariable(name, val);
-
 			case 'frame':
 			default:
 				return Promise.resolve(new Variable(name, (<V8Simple> val).value ? (<V8Simple> val).value.toString() : 'undefined'));
@@ -2386,13 +2390,12 @@ export class NodeDebugSession extends DebugSession {
 
 			let expander: VariableContainer;
 
-			if (length > this._chunkSize) {
+			if (typeof length === 'number' && length > this._chunkSize) {
 				expander = new ArrayContainer(array, length, this._chunkSize);
 			} else {
 				expander = new PropertyContainer(array);
 			}
-
-			return new Variable(name, `${array.className}[${(length >= 0) ? length.toString() : ''}]`, this._variableHandles.create(expander));
+			return new Variable(name, `${array.className}[${(typeof length === 'number' && length >= 0) ? length.toString() : ''}]`, this._variableHandles.create(expander));
 		});
 	}
 
@@ -2402,18 +2405,23 @@ export class NodeDebugSession extends DebugSession {
 			return Promise.resolve(array.vscode_size);
 		}
 
-		const args = {
-			expression: `array.length`,
-			disable_break: true,
-			additional_context: [
-				{ name: 'array', handle: array.handle }
-			]
-		};
+		if (this._node.v8Version) {
 
-		this.log('va', `_getArraySize: array.length`);
-		return this._node.evaluate(args).then(response => {
-			return +response.body.value;
-		});
+			const args = {
+				expression: `array.length`,
+				disable_break: true,
+				additional_context: [
+					{ name: 'array', handle: array.handle }
+				]
+			};
+
+			this.log('va', `_getArraySize: array.length`);
+			return this._node.evaluate(args).then(response => {
+				return +response.body.value;
+			});
+		}
+
+		return Promise.resolve(undefined);
 	}
 
 /*
@@ -2599,7 +2607,7 @@ export class NodeDebugSession extends DebugSession {
 
 		let str_val = <string>val.value;
 
-		if (NodeDebugSession.LONG_STRING_MATCHER.exec(str_val)) {
+		if (this._node.v8Version && NodeDebugSession.LONG_STRING_MATCHER.exec(str_val)) {
 
 			const args = {
 				expression: `str`,
@@ -2682,25 +2690,31 @@ export class NodeDebugSession extends DebugSession {
 
 	public _setPropertyValue(objHandle: number, propName: string, value: string) : Promise<string> {
 
-		if (propName[0] !== '[') {
-			propName = '.' + propName;
+		if (this._node.v8Version) {
+
+			if (propName[0] !== '[') {
+				propName = '.' + propName;
+			}
+
+			const args = {
+				global: true,
+				expression: `obj${propName} = ${value}`,
+				disable_break: true,
+				maxStringLength: NodeDebugSession.MAX_STRING_LENGTH,
+				additional_context: [
+					{ name: 'obj', handle: objHandle }
+				]
+			};
+
+			return this._node.evaluate(args).then(response => {
+				return this._createVariable('_setpropertyvalue', response.body).then(variable => {
+					return variable.value;
+				});
+			});
+
 		}
 
-		const args = {
-			global: true,
-			expression: `obj${propName} = ${value}`,
-			disable_break: true,
-			maxStringLength: NodeDebugSession.MAX_STRING_LENGTH,
-			additional_context: [
-				{ name: 'obj', handle: objHandle }
-			]
-		};
-
-		return this._node.evaluate(args).then(response => {
-			return this._createVariable('_setpropertyvalue', response.body).then(variable => {
-				return variable.value;
-			});
-		});
+		return Promise.reject(new Error(Expander.SET_VALUE_ERROR));
 	}
 
 	//--- pause request -------------------------------------------------------------------------------------------------------
