@@ -1871,6 +1871,15 @@ export class NodeDebugSession extends DebugSession {
 			}
 
 			return this._createStackFrameFromSource(frame, src, line, column);
+		}).catch(err => {
+
+			if (err.stack) {
+				this.log('7683', `${err.stack}`);
+			}
+			const name = localize('frame.error', "Error: {0}", err.message)
+			const frameReference = this._frameHandles.create(frame);
+			return new StackFrame(frameReference, name, null, 0, 0);
+
 		});
 	}
 
