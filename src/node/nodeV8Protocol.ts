@@ -281,7 +281,7 @@ export class NodeV8Protocol extends EE.EventEmitter {
 	private _contentLength: number;
 	private _sequence: number;
 	private _writableStream: NodeJS.WritableStream;
-	private _pendingRequests = new Map<number, NodeV8Response>();
+	private _pendingRequests = new Map<number, (response: NodeV8Response) => void>();
 	private _unresponsiveMode: boolean;
 	private _responseHook: (response: NodeV8Response) => void;
 
@@ -328,6 +328,10 @@ export class NodeV8Protocol extends EE.EventEmitter {
 				if (response.success) {
 					resolve(response);
 				} else {
+					if (!response.command) {
+						// some responses don't have the 'command' attribute.
+						response.command = command;
+					}
 					reject(response);
 				}
 			});
@@ -411,13 +415,13 @@ export class NodeV8Protocol extends EE.EventEmitter {
 		this.send('request', request);
 
 		if (cb) {
-			this._pendingRequests[request.seq] = cb;
+			this._pendingRequests.set(request.seq, cb);
 
 			const timer = setTimeout(() => {
 				clearTimeout(timer);
-				const clb = this._pendingRequests[request.seq];
+				const clb = this._pendingRequests.get(request.seq);
 				if (clb) {
-					delete this._pendingRequests[request.seq];
+					this._pendingRequests.delete(request.seq);
 					clb(new NodeV8Response(request, localize('runtime.timeout', "timeout after {0} ms", timeout)));
 
 					this._unresponsiveMode = true;
@@ -453,9 +457,9 @@ export class NodeV8Protocol extends EE.EventEmitter {
 				this.emitEvent(new NodeV8Event('diagnostic', { reason: 'responsive' }));
 			}
 			const response = <NodeV8Response> message;
-			const clb = this._pendingRequests[response.request_seq];
+			const clb = this._pendingRequests.get(response.request_seq);
 			if (clb) {
-				delete this._pendingRequests[response.request_seq];
+				this._pendingRequests.delete(response.request_seq);
 				if (this._responseHook) {
 					this._responseHook(response);
 				}
