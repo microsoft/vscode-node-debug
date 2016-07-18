@@ -1876,9 +1876,10 @@ export class NodeDebugSession extends DebugSession {
 			if (err.stack) {
 				this.log('7683', `${err.stack}`);
 			}
-			const name = localize('frame.error', "Error: {0}", err.message)
-			const frameReference = this._frameHandles.create(frame);
-			return new StackFrame(frameReference, name, null, 0, 0);
+
+			const func_name = this._getFrameName(frame);
+			const name = localize('frame.error', "{0} <error: {1}>", func_name, err.message)
+			return new StackFrame(this._frameHandles.create(frame), name);
 
 		});
 	}
@@ -1949,6 +1950,12 @@ export class NodeDebugSession extends DebugSession {
 	 */
 	private _createStackFrameFromSource(frame: V8Frame, src: Source, line: number, column: number) : StackFrame {
 
+		const name = this._getFrameName(frame);
+		const frameReference = this._frameHandles.create(frame);
+		return new StackFrame(frameReference, name, src, this.convertDebuggerLineToClient(line), this.convertDebuggerColumnToClient(column));
+	}
+
+	private _getFrameName(frame: V8Frame) {
 		let func_name: string;
 		const func_val = <V8Function> this._getValueFromCache(frame.func);
 		if (func_val) {
@@ -1960,9 +1967,7 @@ export class NodeDebugSession extends DebugSession {
 		if (!func_name || func_name.length === 0) {
 			func_name = localize('anonymous.function', "(anonymous function)");
 		}
-
-		const frameReference = this._frameHandles.create(frame);
-		return new StackFrame(frameReference, func_name, src, this.convertDebuggerLineToClient(line), this.convertDebuggerColumnToClient(column));
+		return func_name;
 	}
 
 	/**
