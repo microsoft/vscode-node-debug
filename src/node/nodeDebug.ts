@@ -30,7 +30,7 @@ import * as nls from 'vscode-nls';
 const localize = nls.config(process.env.VSCODE_NLS_CONFIG)();
 
 export interface VariableContainer {
-	Expand(session: NodeDebugSession): Promise<Variable[]>;
+	Expand(session: NodeDebugSession, start: number, count: number): Promise<Variable[]>;
 	SetValue(session: NodeDebugSession, name: string, value: string): Promise<string>;
 }
 
@@ -44,7 +44,7 @@ export class Expander implements VariableContainer {
 		this._expanderFunction = func;
 	}
 
-	public Expand(session: NodeDebugSession) : Promise<Variable[]> {
+	public Expand(session: NodeDebugSession, start: number, count: number) : Promise<Variable[]> {
 		return this._expanderFunction();
 	}
 
@@ -65,7 +65,7 @@ export class ArrayContainer implements VariableContainer {
 		this._chunkSize = chunkSize;
 	}
 
-	public Expand(session: NodeDebugSession) : Promise<Variable[]> {
+	public Expand(session: NodeDebugSession, start: number, count: number) : Promise<Variable[]> {
 		// first add named properties then add ranges
 		return session._createProperties(this._array, 'named').then(variables => {
 			for (let start = 0; start < this._length; start += this._chunkSize) {
@@ -94,7 +94,7 @@ export class RangeContainer implements VariableContainer {
 		this._count = count;
 	}
 
-	public Expand(session: NodeDebugSession) : Promise<Variable[]> {
+	public Expand(session: NodeDebugSession, start: number, count: number) : Promise<Variable[]> {
 		// experimental support for long arrays not relying on code injection
 		//return session._createLargeArrayElements(this._array, this._start, this._count);
 		return session._createProperties(this._array, 'range', this._start, this._count);
@@ -115,17 +115,24 @@ export class PropertyContainer implements VariableContainer {
 		this._this = ths;
 	}
 
-	public Expand(session: NodeDebugSession) : Promise<Variable[]> {
-		return session._createProperties(this._object, 'all').then(variables => {
-			if (this._this) {
-				return session._createVariable('this', this._this).then(variable => {
-					variables.push(variable);
+	public Expand(session: NodeDebugSession, start: number, count: number) : Promise<Variable[]> {
+
+		if (typeof start === 'number' && typeof count === 'number') {
+
+			return session._createProperties(this._object, 'range', start, count);
+
+		} else {
+			return session._createProperties(this._object, 'all').then(variables => {
+				if (this._this) {
+					return session._createVariable('this', this._this).then(variable => {
+						variables.push(variable);
+						return variables;
+					});
+				} else {
 					return variables;
-				});
-			} else {
-				return variables;
-			}
-		});
+				}
+			});
+		}
 	}
 
 	public SetValue(session: NodeDebugSession, name: string, value: string) : Promise<string> {
@@ -147,7 +154,7 @@ export class ScopeContainer implements VariableContainer {
 		this._this = ths;
 	}
 
-	public Expand(session: NodeDebugSession) : Promise<Variable[]> {
+	public Expand(session: NodeDebugSession, start: number, count: number) : Promise<Variable[]> {
 		return session._createProperties(this._object, 'all').then(variables => {
 			if (this._this) {
 				return session._createVariable('this', this._this).then(variable => {
@@ -2138,7 +2145,7 @@ export class NodeDebugSession extends DebugSession {
 		const reference = args.variablesReference;
 		const variablesContainer = this._variableHandles.get(reference);
 		if (variablesContainer) {
-			variablesContainer.Expand(this).then(variables => {
+			variablesContainer.Expand(this, args.start, args.count).then(variables => {
 				variables.sort(NodeDebugSession.compareVariableNames);
 				response.body = {
 					variables: variables
