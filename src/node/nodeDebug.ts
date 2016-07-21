@@ -299,6 +299,7 @@ export class NodeDebugSession extends DebugSession {
 	private _smartStep = false;		// try to automatically step over uninteresting source
 	private _mapToFilesOnDisk = true; // by default try to map node.js scripts to files on disk
 	private _compareContents = true;	// by default verify that script contents is same as file contents
+	private _frontendSupportPaging = false;
 
 	// session state
 	private _adapterID: string;
@@ -562,6 +563,10 @@ export class NodeDebugSession extends DebugSession {
 		this.log('la', `initializeRequest: adapterID: ${args.adapterID}`);
 
 		this._adapterID = args.adapterID;
+
+		if (typeof args.supportsVariablePaging === 'boolean') {
+			this._frontendSupportPaging = args.supportsVariablePaging;
+		}
 
 		//---- Send back feature and their options
 
@@ -2402,14 +2407,26 @@ export class NodeDebugSession extends DebugSession {
 
 		return this._getArraySize(array).then(length => {
 
-			let expander: VariableContainer;
+			if (this._frontendSupportPaging) {
 
-			if (typeof length === 'number' && length > this._chunkSize) {
-				expander = new ArrayContainer(array, length, this._chunkSize);
+					const expander = new PropertyContainer(array);
+					const v = new Variable(name, `${array.className}[${(typeof length === 'number' && length >= 0) ? length.toString() : ''}]`, this._variableHandles.create(expander));
+					if (typeof length === 'number') {
+						(<any>v).totalCount = length;
+					}
+					return v;
+
 			} else {
-				expander = new PropertyContainer(array);
+				let expander: VariableContainer;
+
+				if (typeof length === 'number' && length > this._chunkSize) {
+					expander = new ArrayContainer(array, length, this._chunkSize);
+				} else {
+					expander = new PropertyContainer(array);
+				}
+				return new Variable(name, `${array.className}[${(typeof length === 'number' && length >= 0) ? length.toString() : ''}]`, this._variableHandles.create(expander));
 			}
-			return new Variable(name, `${array.className}[${(typeof length === 'number' && length >= 0) ? length.toString() : ''}]`, this._variableHandles.create(expander));
+
 		});
 	}
 
