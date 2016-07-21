@@ -24,8 +24,8 @@
 		"node": "^4.1.1"
 	},
 	"dependencies": {
-		"vscode-debugprotocol": "^1.11.0-pre.5",
-		"vscode-debugadapter": "^1.11.0-pre.3",
+		"vscode-debugprotocol": "^1.11.0-pre.6",
+		"vscode-debugadapter": "^1.11.0-pre.5",
 		"source-map": "^0.5.3",
 		"vscode-nls": "^1.0.4"
 	},
@@ -64,11 +64,18 @@
 		"onCommand:extension.pickNodeProcess"
 	],
 	"contributes": {
+		"breakpoints": [
+			{
+				"language": "javascript"
+			},
+			{
+				"language": "javascriptreact"
+			}
+		],
 		"debuggers": [
 			{
 				"type": "node",
 				"label": "%node.label%",
-				"enableBreakpointsFor": { "languageIds": ["javascript", "javascriptreact"] },
 				"program": "./out/node/nodeDebug.js",
 				"runtime": "node",
 				"variables": {
@@ -258,7 +265,6 @@
 			{
 				"type": "extensionHost",
 				"label": "%extensionHost.label%",
-				"enableBreakpointsFor": { "languageIds": ["javascript"] },
 				"program": "./out/node/nodeDebug.js",
 				"runtime": "node",
 				"initialConfigurations": [{
