@@ -8,14 +8,14 @@
       "resolved": "https://registry.npmjs.org/source-map/-/source-map-0.5.6.tgz"
     },
     "vscode-debugadapter": {
-      "version": "1.11.0-pre.8",
-      "from": "vscode-debugadapter@>=1.11.0-pre.8 <2.0.0",
-      "resolved": "https://registry.npmjs.org/vscode-debugadapter/-/vscode-debugadapter-1.11.0-pre.8.tgz"
+      "version": "1.11.0-pre.11",
+      "from": "vscode-debugadapter@>=1.11.0-pre.11 <2.0.0",
+      "resolved": "https://registry.npmjs.org/vscode-debugadapter/-/vscode-debugadapter-1.11.0-pre.11.tgz"
     },
     "vscode-debugprotocol": {
-      "version": "1.11.0-pre.9",
-      "from": "vscode-debugprotocol@>=1.11.0-pre.9 <2.0.0",
-      "resolved": "https://registry.npmjs.org/vscode-debugprotocol/-/vscode-debugprotocol-1.11.0-pre.9.tgz"
+      "version": "1.11.0-pre.10",
+      "from": "vscode-debugprotocol@>=1.11.0-pre.10 <2.0.0",
+      "resolved": "https://registry.npmjs.org/vscode-debugprotocol/-/vscode-debugprotocol-1.11.0-pre.10.tgz"
     },
     "vscode-nls": {
       "version": "1.0.7",
