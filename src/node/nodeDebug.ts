@@ -34,18 +34,20 @@ export interface VariableContainer {
 	SetValue(session: NodeDebugSession, name: string, value: string): Promise<string>;
 }
 
+type ExpanderFunction = (start: number, count: number) => Promise<Variable[]>;
+
 export class Expander implements VariableContainer {
 
 	public static SET_VALUE_ERROR = localize('setVariable.error', "Setting value not supported");
 
-	private _expanderFunction : () => Promise<Variable[]>;
+	private _expanderFunction : ExpanderFunction;
 
-	public constructor(func: () => Promise<Variable[]>) {
+	public constructor(func: ExpanderFunction) {
 		this._expanderFunction = func;
 	}
 
 	public Expand(session: NodeDebugSession, start: number, count: number) : Promise<Variable[]> {
-		return this._expanderFunction();
+		return this._expanderFunction(start, count);
 	}
 
 	public SetValue(session: NodeDebugSession, name: string, value: string) : Promise<string> {
@@ -306,7 +308,7 @@ export class NodeDebugSession extends DebugSession {
 	private _smartStep = false;		// try to automatically step over uninteresting source
 	private _mapToFilesOnDisk = true; // by default try to map node.js scripts to files on disk
 	private _compareContents = true;	// by default verify that script contents is same as file contents
-	private _frontendSupportPaging = false;
+	private _frontendSupportsPaging = false;
 
 	// session state
 	private _adapterID: string;
@@ -572,7 +574,7 @@ export class NodeDebugSession extends DebugSession {
 		this._adapterID = args.adapterID;
 
 		if (typeof args.supportsVariablePaging === 'boolean') {
-			this._frontendSupportPaging = args.supportsVariablePaging;
+			this._frontendSupportsPaging = args.supportsVariablePaging;
 		}
 
 		//---- Send back feature and their options
@@ -2266,11 +2268,7 @@ export class NodeDebugSession extends DebugSession {
 	 * 'noBrackets' controls whether the index is enclosed in brackets.
 	 * If a value is undefined it probes for a getter.
 	 */
-	private _createPropertyVariables(obj: V8Object, properties: V8Property[], start?: number, noBrackets?: boolean) : Promise<Variable[]> {
-
-		if (typeof start !== 'number') {
-			start = 0;
-		}
+	private _createPropertyVariables(obj: V8Object, properties: V8Property[], start = 0, noBrackets?: boolean) : Promise<Variable[]> {
 
 		return this._resolveValues(properties).then(() => {
 			return Promise.all<Variable>(properties.map(property => {
@@ -2414,26 +2412,19 @@ export class NodeDebugSession extends DebugSession {
 
 		return this._getArraySize(array).then(length => {
 
-			if (this._frontendSupportPaging) {
+			const arraySize = (typeof length === 'number' && length >= 0) ? length.toString() : '';
+			const typeName = `${array.className}[${arraySize}]`;
 
-					const expander = new PropertyContainer(array);
-					const v = new Variable(name, `${array.className}[${(typeof length === 'number' && length >= 0) ? length.toString() : ''}]`, this._variableHandles.create(expander));
-					if (typeof length === 'number') {
-						(<any>v).totalCount = length;
-					}
-					return v;
-
+			if (this._frontendSupportsPaging) {
+				return new Variable(name, typeName, this._variableHandles.create(new PropertyContainer(array)), length);
 			} else {
-				let expander: VariableContainer;
-
 				if (typeof length === 'number' && length > this._chunkSize) {
-					expander = new ArrayContainer(array, length, this._chunkSize);
+					// we do our own paging
+					return new Variable(name, typeName, this._variableHandles.create(new ArrayContainer(array, length, this._chunkSize)));
 				} else {
-					expander = new PropertyContainer(array);
+					return new Variable(name, typeName, this._variableHandles.create(new PropertyContainer(array)));
 				}
-				return new Variable(name, `${array.className}[${(typeof length === 'number' && length >= 0) ? length.toString() : ''}]`, this._variableHandles.create(expander));
 			}
-
 		});
 	}
 
@@ -2507,23 +2498,28 @@ export class NodeDebugSession extends DebugSession {
 		return this._node.evaluate(args).then(response => {
 
 			const size = +response.body.value;
-
-			let expandFunc;
-			if (size > this._chunkSize) {
-				expandFunc = () => {
-					const variables = [];
-					for (let start = 0; start < size; start += this._chunkSize) {
-						let end = Math.min(start + this._chunkSize, size)-1;
-						let rangeExpander = new Expander(() => this._createSetElements(set, start, end));
-						variables.push(new Variable(`${start}..${end}`, ' ', this._variableHandles.create(rangeExpander)));
-					}
-					return Promise.resolve(variables);
-				};
+			const typeName = `Set[${size}]`;
+			let expandFunc: ExpanderFunction;
+			if (this._frontendSupportsPaging) {
+				expandFunc = (strt, cnt) => this._createSetElements(set, strt, strt+cnt-1);
+				return new Variable(name, typeName, this._variableHandles.create(new Expander(expandFunc)), size);
 			} else {
-				expandFunc = () => this._createSetElements(set, 0, size);
+				if (size > this._chunkSize) {
+					// we do our own paging
+					expandFunc = () => {
+						const variables = [];
+						for (let start = 0; start < size; start += this._chunkSize) {
+							let end = Math.min(start + this._chunkSize, size)-1;
+							let rangeExpander = new Expander(() => this._createSetElements(set, start, end));
+							variables.push(new Variable(`${start}..${end}`, ' ', this._variableHandles.create(rangeExpander)));
+						}
+						return Promise.resolve(variables);
+					};
+				} else {
+					expandFunc = () => this._createSetElements(set, 0, size);
+				}
+				return new Variable(name, typeName, this._variableHandles.create(new Expander(expandFunc)));
 			}
-
-			return new Variable(name, `Set[${size}]`, this._variableHandles.create(new Expander(expandFunc)));
 		});
 	}
 
@@ -2572,23 +2568,28 @@ export class NodeDebugSession extends DebugSession {
 		return this._node.evaluate(args).then(response => {
 
 			const size = +response.body.value;
-
-			let expandFunc;
-			if (size > this._chunkSize) {
-				expandFunc = () => {
-					const variables = [];
-					for (let start = 0; start < size; start += this._chunkSize) {
-						let end = Math.min(start + this._chunkSize, size)-1;
-						let rangeExpander = new Expander(() => this._createMapElements(map, start, end));
-						variables.push(new Variable(`${start}..${end}`, ' ', this._variableHandles.create(rangeExpander)));
-					}
-					return Promise.resolve(variables);
-				};
+			const typeName = `Map[${size}]`;
+			let expandFunc: ExpanderFunction;
+			if (this._frontendSupportsPaging) {
+				expandFunc = (strt, cnt) => this._createMapElements(map, strt, strt+cnt-1);
+				return new Variable(name, typeName, this._variableHandles.create(new Expander(expandFunc)), size);
 			} else {
-				expandFunc = () => this._createMapElements(map, 0, size);
+				if (size > this._chunkSize) {
+					// we do our own paging
+					expandFunc = () => {
+						const variables = [];
+						for (let start = 0; start < size; start += this._chunkSize) {
+							let end = Math.min(start + this._chunkSize, size)-1;
+							let rangeExpander = new Expander(() => this._createMapElements(map, start, end));
+							variables.push(new Variable(`${start}..${end}`, ' ', this._variableHandles.create(rangeExpander)));
+						}
+						return Promise.resolve(variables);
+					};
+				} else {
+					expandFunc = () => this._createMapElements(map, 0, size);
+				}
+				return new Variable(name, typeName, this._variableHandles.create(new Expander(expandFunc));
 			}
-
-			return new Variable(name, `Map[${size}]`, this._variableHandles.create(new Expander(expandFunc)));
 		});
 	}
 

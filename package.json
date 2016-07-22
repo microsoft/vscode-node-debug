@@ -25,7 +25,7 @@
 	},
 	"dependencies": {
 		"vscode-debugprotocol": "^1.11.0-pre.9",
-		"vscode-debugadapter": "^1.11.0-pre.7",
+		"vscode-debugadapter": "^1.11.0-pre.8",
 		"source-map": "^0.5.3",
 		"vscode-nls": "^1.0.4"
 	},
