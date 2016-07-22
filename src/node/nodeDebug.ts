@@ -2588,7 +2588,7 @@ export class NodeDebugSession extends DebugSession {
 				} else {
 					expandFunc = () => this._createMapElements(map, 0, size);
 				}
-				return new Variable(name, typeName, this._variableHandles.create(new Expander(expandFunc));
+				return new Variable(name, typeName, this._variableHandles.create(new Expander(expandFunc)));
 			}
 		});
 	}
