@@ -240,10 +240,15 @@ interface CommonArguments {
 	outDir?: string;
 	/** Try to automatically step over uninteresting source. */
 	smartStep?: boolean;
+
+	// unofficial flags
+
 	/** Step back supported. */
 	stepBack?: boolean;
 	/** Control mapping of node.js scripts to files on disk. */
 	mapToFilesOnDisk?: boolean;
+	/** If true node-debug lets the frontend do the variable paging. */
+	frontendVariablePaging?: boolean;
 }
 
 /**
@@ -304,11 +309,11 @@ export class NodeDebugSession extends DebugSession {
 
 	// options
 	private _tryToInjectExtension = true;
-	private _chunkSize = 100;		// chunk size for large data structures
-	private _smartStep = false;		// try to automatically step over uninteresting source
-	private _mapToFilesOnDisk = true; // by default try to map node.js scripts to files on disk
+	private _chunkSize = 100;			// chunk size for large data structures
+	private _smartStep = false;			// try to automatically step over uninteresting source
+	private _mapToFilesOnDisk = true; 	// by default try to map node.js scripts to files on disk
 	private _compareContents = true;	// by default verify that script contents is same as file contents
-	private _frontendSupportsPaging = false;
+	private _variablePaging = false;	// we do not yet know whether frontend supports variable paging
 
 	// session state
 	private _adapterID: string;
@@ -574,7 +579,7 @@ export class NodeDebugSession extends DebugSession {
 		this._adapterID = args.adapterID;
 
 		if (typeof args.supportsVariablePaging === 'boolean') {
-			this._frontendSupportsPaging = args.supportsVariablePaging;
+			this._variablePaging = args.supportsVariablePaging;
 		}
 
 		//---- Send back feature and their options
@@ -863,12 +868,18 @@ export class NodeDebugSession extends DebugSession {
 			this._stepBack = args.stepBack;
 		}
 
-		if (typeof args.smartStep === 'boolean') {
-			this._smartStep = args.smartStep;
-		}
-
 		if (typeof args.mapToFilesOnDisk === 'boolean') {
 			this._mapToFilesOnDisk = args.mapToFilesOnDisk;
+		}
+
+		if (typeof args.frontendVariablePaging === 'boolean') {
+			this._variablePaging = this._variablePaging && args.frontendVariablePaging;
+		} else {
+			this._variablePaging = false; 	// by default variable paging in the frontend is disabled
+		}
+
+		if (typeof args.smartStep === 'boolean') {
+			this._smartStep = args.smartStep;
 		}
 
 		if (typeof args.stopOnEntry === 'boolean') {
@@ -2415,7 +2426,7 @@ export class NodeDebugSession extends DebugSession {
 			const arraySize = (typeof length === 'number' && length >= 0) ? length.toString() : '';
 			const typeName = `${array.className}[${arraySize}]`;
 
-			if (this._frontendSupportsPaging) {
+			if (this._variablePaging) {
 				return new Variable(name, typeName, this._variableHandles.create(new PropertyContainer(array)), length);
 			} else {
 				if (typeof length === 'number' && length > this._chunkSize) {
@@ -2500,7 +2511,7 @@ export class NodeDebugSession extends DebugSession {
 			const size = +response.body.value;
 			const typeName = `Set[${size}]`;
 			let expandFunc: ExpanderFunction;
-			if (this._frontendSupportsPaging) {
+			if (this._variablePaging) {
 				expandFunc = (strt, cnt) => this._createSetElements(set, strt, strt+cnt-1);
 				return new Variable(name, typeName, this._variableHandles.create(new Expander(expandFunc)), size);
 			} else {
@@ -2570,7 +2581,7 @@ export class NodeDebugSession extends DebugSession {
 			const size = +response.body.value;
 			const typeName = `Map[${size}]`;
 			let expandFunc: ExpanderFunction;
-			if (this._frontendSupportsPaging) {
+			if (this._variablePaging) {
 				expandFunc = (strt, cnt) => this._createMapElements(map, strt, strt+cnt-1);
 				return new Variable(name, typeName, this._variableHandles.create(new Expander(expandFunc)), size);
 			} else {
