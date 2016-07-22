@@ -324,7 +324,7 @@ export class NodeV8Protocol extends EE.EventEmitter {
 
 	public command2(command: string, args?: any, timeout: number = NodeV8Protocol.TIMEOUT) : Promise<NodeV8Response> {
 		return new Promise((resolve, reject) => {
-			this.command(command, args, response => {
+			this._command(command, args, timeout, response => {
 				if (response.success) {
 					resolve(response);
 				} else {
