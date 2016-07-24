@@ -2253,7 +2253,8 @@ export class NodeDebugSession extends DebugSession {
 						}
 						break;
 					case 'range':
-						if (typeof name === 'number' && name >= start && name < start+count) {
+						const ix = +name;
+						if (ix >= start && ix < start+count) {
 							selectedProperties.push(property);
 						}
 						break;
@@ -2421,17 +2422,20 @@ export class NodeDebugSession extends DebugSession {
 
 	private _createArrayVariable(name: string, array: V8Object) : Promise<Variable> {
 
-		return this._getArraySize(array).then(length => {
+		return this._getArraySize(array).then(pair => {
 
-			const arraySize = (typeof length === 'number' && length >= 0) ? length.toString() : '';
+			const indexedSize = pair[0];
+			const namedSize = pair[1];
+
+			const arraySize = (typeof indexedSize === 'number' && indexedSize >= 0) ? indexedSize.toString() : '';
 			const typeName = `${array.className}[${arraySize}]`;
 
 			if (this._variablePaging) {
-				return new Variable(name, typeName, this._variableHandles.create(new PropertyContainer(array)), length);
+				return new Variable(name, typeName, this._variableHandles.create(new PropertyContainer(array)), indexedSize, namedSize);
 			} else {
-				if (typeof length === 'number' && length > this._chunkSize) {
+				if (typeof indexedSize === 'number' && indexedSize > this._chunkSize) {
 					// we do our own paging
-					return new Variable(name, typeName, this._variableHandles.create(new ArrayContainer(array, length, this._chunkSize)));
+					return new Variable(name, typeName, this._variableHandles.create(new ArrayContainer(array, indexedSize, this._chunkSize)));
 				} else {
 					return new Variable(name, typeName, this._variableHandles.create(new PropertyContainer(array)));
 				}
@@ -2439,16 +2443,16 @@ export class NodeDebugSession extends DebugSession {
 		});
 	}
 
-	private _getArraySize(array: V8Object) : Promise<number> {
+	private _getArraySize(array: V8Object) : Promise<number[]> {
 
 		if (typeof array.vscode_size === 'number') {
-			return Promise.resolve(array.vscode_size);
+			return Promise.resolve([ array.vscode_size, array.vscode_size2 ]);
 		}
 
 		if (this._node.v8Version) {
 
 			const args = {
-				expression: `array.length`,
+				expression: `JSON.stringify([ array.length, Object.keys(array).length+1-array.length ])`,
 				disable_break: true,
 				additional_context: [
 					{ name: 'array', handle: array.handle }
@@ -2457,7 +2461,8 @@ export class NodeDebugSession extends DebugSession {
 
 			this.log('va', `_getArraySize: array.length`);
 			return this._node.evaluate(args).then(response => {
-				return +response.body.value;
+				const pair = JSON.parse(<string>response.body.value);
+				return [ pair[0], pair[1] ];
 			});
 		}
 

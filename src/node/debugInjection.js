@@ -21,11 +21,15 @@
 	 * because 'propertyNames' no longer takes a filter argument.
 	 */
 	var indexedPropertyCount;
+	var namedPropertyCount;
 	var namedProperties;
 	try {
 		var PropertyKind = vm.runInDebugContext('PropertyKind');
 		indexedPropertyCount = function(mirror) {
 			return mirror.propertyNames(PropertyKind.Indexed).length;
+		};
+		namedPropertyCount = function(mirror) {
+			return mirror.propertyNames(PropertyKind.Named).length;
 		};
 		namedProperties = function(mirror) {
 			return mirror.propertyNames(PropertyKind.Named);
@@ -37,6 +41,17 @@
 			for (var i = 0; i < names.length; i++) {
 				var name = names[i];
 				if (name.length > 0 && name[0] >= '0' && name[0] <= '9') {
+					n++;
+				}
+			}
+			return n;
+		};
+		namedPropertyCount = function(mirror) {
+			var n = 0;
+			const names = mirror.propertyNames();
+			for (var i = 0; i < names.length; i++) {
+				var name = names[i];
+				if (name.length === 0 || name[0] < '0' || name[0] > '9') {
 					n++;
 				}
 			}
@@ -155,9 +170,11 @@
  	 */
 	var dehydrate = function(mirror) {
 		var size = -1;
+		var size2 = -1;
 
 		if (mirror.isArray()) {
 			size = mirror.length();
+			size2 = namedPropertyCount(mirror);
 		} else if (mirror.isObject()) {
 			switch (mirror.className()) {
 			case 'ArrayBuffer':
@@ -171,6 +188,7 @@
 			case 'Float32Array':
 			case 'Float64Array':
 				size = indexedPropertyCount(mirror);
+				size2 = namedPropertyCount(mirror);
 				break;
 			default:
 				break;
@@ -182,8 +200,8 @@
 				handle: mirror.handle(),
 				type: 'object',
 				className: mirror.className(),
-				vscode_size: size
-				//value: mirror.className()
+				vscode_size: size,
+				vscode_size2: size2
 			};
 		}
 		return mirror;

@@ -69,6 +69,7 @@ export interface V8Simple extends V8Handle {
 export interface V8Object extends V8Simple {
 
 	vscode_size?: number;
+	vscode_size2?: number;
 
 	className?: string;
 	constructorFunction?: V8Ref;
