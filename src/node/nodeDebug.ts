@@ -1282,6 +1282,22 @@ export class NodeDebugSession extends DebugSession {
 			}
 		}
 
+		if (typeof args.sourceModified === 'boolean' && args.sourceModified) {
+			// as long as node debug doesn't implement 'hot code replacement' we have to ignore this request and return all breakpoints as unverified.
+
+			const bps: Breakpoint[] = [];
+			for (let i = 0; i < sbs.length; i++) {
+				const b: DebugProtocol.Breakpoint = new Breakpoint(false);
+				b.message = localize('file.on.disk.changed', "Unverified because file on disk has changed. Please restart debug session.");
+				bps.push(b);
+			}
+			response.body = {
+				breakpoints: bps
+			};
+			this.sendResponse(response);
+			return;
+		}
+
 		const source = args.source;
 
 		if (source.adapterData) {
