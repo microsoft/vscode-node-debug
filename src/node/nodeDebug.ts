@@ -112,9 +112,7 @@ export class SetMapContainer implements VariableContainer {
 	public Expand(session: NodeDebugSession, filter: string, start: number, count: number) : Promise<Variable[]> {
 
 		if (filter === 'named') {
-			// the follwoing does not seem to work in node:
-			// there are no properties available on maps and sets.
-			return session._createProperties(this._object, 'named');
+			return session._createSetMapProperties(this._object);
 		}
 
 		if (this._object.type === 'set') {
@@ -2443,8 +2441,7 @@ export class NodeDebugSession extends DebugSession {
 
 			this.log('va', `_getArraySize: array.length`);
 			return this._node.evaluate(args).then(response => {
-				const pair = JSON.parse(<string>response.body.value);
-				return [ pair[0], pair[1] ];
+				return JSON.parse(<string>response.body.value);
 			});
 		}
 
@@ -2475,6 +2472,21 @@ export class NodeDebugSession extends DebugSession {
 		});
 	}
 
+	public _createSetMapProperties(obj: V8Handle) : Promise<Variable[]> {
+
+		const args = {
+			expression: `var r = {}; Object.keys(obj).forEach(k => { r[k] = obj[k] }); r`,
+			disable_break: true,
+			additional_context: [
+				{ name: 'obj', handle: obj.handle }
+			]
+		};
+
+		return this._node.evaluate(args).then(response => {
+			return this._createProperties(response.body, 'named');
+		});
+	}
+
 	public _createSetElements(set: V8Handle, start: number, count: number) : Promise<Variable[]> {
 
 		const args = {
@@ -2489,7 +2501,7 @@ export class NodeDebugSession extends DebugSession {
 		return this._node.evaluate(args).then(response => {
 
 			const properties = response.body.properties;
-			const selectedProperties = new Array<any>();
+			const selectedProperties = new Array<V8Property>();
 
 			for (let property of properties) {
 				if (isIndex(property.name)) {
@@ -2516,7 +2528,7 @@ export class NodeDebugSession extends DebugSession {
 		return this._node.evaluate(args).then(response => {
 
 			const properties = response.body.properties;
-			const selectedProperties = new Array<any>();
+			const selectedProperties = new Array<V8Property>();
 
 			for (let property of properties) {
 				if (isIndex(property.name)) {
