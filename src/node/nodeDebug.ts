@@ -55,58 +55,6 @@ export class Expander implements VariableContainer {
 	}
 }
 
-export class ArrayContainer implements VariableContainer {
-
-	private _array: V8Object;
-	private _length: number;
-	private _chunkSize: number;
-
-	public constructor(array: V8Object, length: number, chunkSize: number) {
-		this._array = array;
-		this._length = length;
-		this._chunkSize = chunkSize;
-	}
-
-	public Expand(session: NodeDebugSession, filter: string, start: number, count: number) : Promise<Variable[]> {
-		// first add named properties then add ranges
-		return session._createProperties(this._array, 'named').then(variables => {
-			for (let start = 0; start < this._length; start += this._chunkSize) {
-				const end = Math.min(start + this._chunkSize, this._length)-1;
-				const count = end-start+1;
-				variables.push(new Variable(`[${start}..${end}]`, ' ', session._variableHandles.create(new RangeContainer(this._array, start, count))));
-			}
-			return variables;
-		});
-	}
-
-	public SetValue(session: NodeDebugSession, name: string, value: string) : Promise<string> {
-		return session._setPropertyValue(this._array.handle, name, value);
-	}
-}
-
-export class RangeContainer implements VariableContainer {
-
-	private _array: V8Object;
-	private _start: number;
-	private _count: number;
-
-	public constructor(array, start: number, count: number) {
-		this._array = array;
-		this._start = start;
-		this._count = count;
-	}
-
-	public Expand(session: NodeDebugSession, filter: string, start: number, count: number) : Promise<Variable[]> {
-		// experimental support for long arrays not relying on code injection
-		//return session._createLargeArrayElements(this._array, this._start, this._count);
-		return session._createProperties(this._array, 'range', this._start, this._count);
-	}
-
-	public SetValue(session: NodeDebugSession, name: string, value: string) : Promise<string> {
-		return session._setPropertyValue(this._array.handle, name, value);
-	}
-}
-
 export class PropertyContainer implements VariableContainer {
 
 	private _object: V8Object;
@@ -150,6 +98,34 @@ export class PropertyContainer implements VariableContainer {
 
 	public SetValue(session: NodeDebugSession, name: string, value: string) : Promise<string> {
 		return session._setPropertyValue(this._object.handle, name, value);
+	}
+}
+
+export class SetMapContainer implements VariableContainer {
+
+	private _object: V8Object;
+
+	public constructor(obj: V8Object) {
+		this._object = obj;
+	}
+
+	public Expand(session: NodeDebugSession, filter: string, start: number, count: number) : Promise<Variable[]> {
+
+		if (filter === 'named') {
+			// the follwoing does not seem to work in node:
+			// there are no properties available on maps and sets.
+			return session._createProperties(this._object, 'named');
+		}
+
+		if (this._object.type === 'set') {
+			return session._createSetElements(this._object, start, count);
+		} else {
+			return session._createMapElements(this._object, start, count);
+		}
+	}
+
+	public SetValue(session: NodeDebugSession, name: string, value: string) : Promise<string> {
+		return Promise.reject(new Error(Expander.SET_VALUE_ERROR));
 	}
 }
 
@@ -258,8 +234,6 @@ interface CommonArguments {
 	stepBack?: boolean;
 	/** Control mapping of node.js scripts to files on disk. */
 	mapToFilesOnDisk?: boolean;
-	/** If true node-debug lets the frontend do the variable paging. */
-	frontendVariablePaging?: boolean;
 }
 
 /**
@@ -324,7 +298,6 @@ export class NodeDebugSession extends DebugSession {
 	private _smartStep = false;			// try to automatically step over uninteresting source
 	private _mapToFilesOnDisk = true; 	// by default try to map node.js scripts to files on disk
 	private _compareContents = true;	// by default verify that script contents is same as file contents
-	private _variablePaging = false;	// we do not yet know whether frontend supports variable paging
 
 	// session state
 	private _adapterID: string;
@@ -588,10 +561,6 @@ export class NodeDebugSession extends DebugSession {
 		this.log('la', `initializeRequest: adapterID: ${args.adapterID}`);
 
 		this._adapterID = args.adapterID;
-
-		if (typeof args.supportsVariablePaging === 'boolean') {
-			this._variablePaging = args.supportsVariablePaging;
-		}
 
 		//---- Send back feature and their options
 
@@ -881,12 +850,6 @@ export class NodeDebugSession extends DebugSession {
 
 		if (typeof args.mapToFilesOnDisk === 'boolean') {
 			this._mapToFilesOnDisk = args.mapToFilesOnDisk;
-		}
-
-		if (typeof args.frontendVariablePaging === 'boolean') {
-			this._variablePaging = this._variablePaging && args.frontendVariablePaging;
-		} else {
-			this._variablePaging = false; 	// by default variable paging in the frontend is disabled
 		}
 
 		if (typeof args.smartStep === 'boolean') {
@@ -2299,7 +2262,7 @@ export class NodeDebugSession extends DebugSession {
 
 				// create 'name'
 				let name: string;
-				if (typeof property.name === 'number') {
+				if (isIndex(property.name)) {
 					const ix = +property.name;
 					name = noBrackets ? `${start+ix}` : `[${start+ix}]`;
 				} else {
@@ -2358,12 +2321,9 @@ export class NodeDebugSession extends DebugSession {
 			case 'set':
 			case 'map':
 				if (this._node.v8Version) {
-					if (val.type === 'set') {
-						return this._createSetVariable(name, val);
-					}
-					return this._createMapVariable(name, val);
+					return this._createSetMapVariable(name, val);
 				}
-				// fall through!
+				// fall through and treat sets and maps as objects
 
 			case 'object':
 			case 'function':
@@ -2435,22 +2395,17 @@ export class NodeDebugSession extends DebugSession {
 
 		return this._getArraySize(array).then(pair => {
 
-			const indexedSize = pair[0];
-			const namedSize = pair[1];
+			let indexedSize: number;
+			let namedSize: number;
+			let arraySize = '';
 
-			const arraySize = (typeof indexedSize === 'number' && indexedSize >= 0) ? indexedSize.toString() : '';
-			const typeName = `${array.className}[${arraySize}]`;
-
-			if (this._variablePaging) {
-				return new Variable(name, typeName, this._variableHandles.create(new PropertyContainer(array)), indexedSize, namedSize);
-			} else {
-				if (typeof indexedSize === 'number' && indexedSize > this._chunkSize) {
-					// we do our own paging
-					return new Variable(name, typeName, this._variableHandles.create(new ArrayContainer(array, indexedSize, this._chunkSize)));
-				} else {
-					return new Variable(name, typeName, this._variableHandles.create(new PropertyContainer(array)));
-				}
+			if (pair) {
+				indexedSize = pair[0];
+				namedSize = pair[1];
+				arraySize = indexedSize.toString();
 			}
+
+			return new Variable(name, `${array.className}[${arraySize}]`, this._variableHandles.create(new PropertyContainer(array)), indexedSize, namedSize);
 		});
 	}
 
@@ -2480,96 +2435,48 @@ export class NodeDebugSession extends DebugSession {
 		return Promise.resolve(undefined);
 	}
 
-/*
-	private _createLargeArrayElements(array: any, start: number, count: number) : Promise<Variable[]> {
+	//--- ES6 Set/Map support
+
+	private _createSetMapVariable(name: string, obj: V8Handle) : Promise<Variable> {
 
 		const args = {
-			expression: `array.slice(${start}, ${start+count})`,
+			// initially we need only the size
+			expression: `JSON.stringify([ obj.size, Object.keys(obj).length ])`,
 			disable_break: true,
 			additional_context: [
-				{ name: 'array', handle: array.handle }
+				{ name: 'obj', handle: obj.handle }
 			]
 		};
 
-		this.log('va', `_createLargeArrayElements: array.slice`);
+		this.log('va', `_createSetMapVariable: ${obj.type}.size`);
 		return this._node.evaluate(args).then(response => {
 
-			const properties = response.body.properties;
-			const selectedProperties = new Array<any>();
-
-			for (let property of properties) {
-				const name = property.name;
-				if (typeof name === 'number' || (typeof name === 'string' && name[0] >= '0' && name[0] <= '9')) {
-					selectedProperties.push(property);
-				}
-			}
-
-			return this._createPropertyVariables(null, selectedProperties);
+			const pair = JSON.parse(<string>response.body.value);
+			const indexedSize = pair[0];
+			const namedSize = pair[1];
+			const typename = (obj.type === 'set') ? 'Set' : 'Map';
+			return new Variable(name, `${typename}[${indexedSize}]`, this._variableHandles.create(new SetMapContainer(obj)), indexedSize, namedSize);
 		});
 	}
-*/
-	//--- ES6 Set support
 
-	private _createSetVariable(name: string, set: V8Handle) : Promise<Variable> {
+	public _createSetElements(set: V8Handle, start: number, count: number) : Promise<Variable[]> {
 
 		const args = {
-			// initially we need only the size of the set
-			expression: `set.size`,
+			expression: `var r = [], i = 0; set.forEach(v => { if (i >= ${start} && i < ${start+count}) r.push(v); i++; }); r`,
 			disable_break: true,
 			additional_context: [
 				{ name: 'set', handle: set.handle }
 			]
 		};
 
-		this.log('va', `_createSetVariable: set.size`);
-		return this._node.evaluate(args).then(response => {
-
-			const size = +response.body.value;
-			const typeName = `Set[${size}]`;
-			let expandFunc: ExpanderFunction;
-			if (this._variablePaging) {
-				expandFunc = (strt, cnt) => this._createSetElements(set, strt, strt+cnt-1);
-				return new Variable(name, typeName, this._variableHandles.create(new Expander(expandFunc)), size);
-			} else {
-				if (size > this._chunkSize) {
-					// we do our own paging
-					expandFunc = () => {
-						const variables = [];
-						for (let start = 0; start < size; start += this._chunkSize) {
-							let end = Math.min(start + this._chunkSize, size)-1;
-							let rangeExpander = new Expander(() => this._createSetElements(set, start, end));
-							variables.push(new Variable(`${start}..${end}`, ' ', this._variableHandles.create(rangeExpander)));
-						}
-						return Promise.resolve(variables);
-					};
-				} else {
-					expandFunc = () => this._createSetElements(set, 0, size);
-				}
-				return new Variable(name, typeName, this._variableHandles.create(new Expander(expandFunc)));
-			}
-		});
-	}
-
-	private _createSetElements(set: V8Handle, start: number, end: number) : Promise<Variable[]> {
-
-		const args = {
-			expression: `var r = [], i = 0; set.forEach(v => { if (i >= ${start} && i <= ${end}) r.push(v); i++; }); r`,
-			disable_break: true,
-			additional_context: [
-				{ name: 'set', handle: set.handle }
-			]
-		};
-
-		const length = end-start+1;
-		this.log('va', `_createSetElements: set.slice ${start} ${length}`);
+		this.log('va', `_createSetElements: set.slice ${start} ${count}`);
 		return this._node.evaluate(args).then(response => {
 
 			const properties = response.body.properties;
 			const selectedProperties = new Array<any>();
 
 			for (let property of properties) {
-				const name = property.name;
-				if (typeof name === 'number' || (typeof name === 'string' && name[0] >= '0' && name[0] <= '9')) {
+				if (isIndex(property.name)) {
 					selectedProperties.push(property);
 				}
 			}
@@ -2578,60 +2485,17 @@ export class NodeDebugSession extends DebugSession {
 		});
 	}
 
-	//--- ES6 map support
-
-	private _createMapVariable(name: string, map: V8Handle) : Promise<Variable> {
-
-		const args = {
-			// initially we need only the size of the map
-			expression: `map.size`,
-			disable_break: true,
-			additional_context: [
-				{ name: 'map', handle: map.handle }
-			]
-		};
-
-		this.log('va', `_createMapVariable: map.size`);
-		return this._node.evaluate(args).then(response => {
-
-			const size = +response.body.value;
-			const typeName = `Map[${size}]`;
-			let expandFunc: ExpanderFunction;
-			if (this._variablePaging) {
-				expandFunc = (strt, cnt) => this._createMapElements(map, strt, strt+cnt-1);
-				return new Variable(name, typeName, this._variableHandles.create(new Expander(expandFunc)), size);
-			} else {
-				if (size > this._chunkSize) {
-					// we do our own paging
-					expandFunc = () => {
-						const variables = [];
-						for (let start = 0; start < size; start += this._chunkSize) {
-							let end = Math.min(start + this._chunkSize, size)-1;
-							let rangeExpander = new Expander(() => this._createMapElements(map, start, end));
-							variables.push(new Variable(`${start}..${end}`, ' ', this._variableHandles.create(rangeExpander)));
-						}
-						return Promise.resolve(variables);
-					};
-				} else {
-					expandFunc = () => this._createMapElements(map, 0, size);
-				}
-				return new Variable(name, typeName, this._variableHandles.create(new Expander(expandFunc)));
-			}
-		});
-	}
-
-	private _createMapElements(map: V8Handle, start: number, end: number) : Promise<Variable[]> {
+	public _createMapElements(map: V8Handle, start: number, count: number) : Promise<Variable[]> {
 
 		// for each slot of the map we create three slots in a helper array: label, key, value
 		const args = {
-			expression: `var r=[],i=0; map.forEach((v,k) => { if (i>=${start} && i<=${end}) { r.push(k+' → '+v); r.push(k); r.push(v);} i++; }); r`,
+			expression: `var r=[],i=0; map.forEach((v,k) => { if (i >= ${start} && i < ${start+count}) { r.push(k+' → '+v); r.push(k); r.push(v);} i++; }); r`,
 			disable_break: true,
 			additional_context: [
 				{ name: 'map', handle: map.handle }
 			]
 		};
 
-		const count = end-start+1;
 		this.log('va', `_createMapElements: map.slice ${start} ${count}`);
 		return this._node.evaluate(args).then(response => {
 
@@ -2639,8 +2503,7 @@ export class NodeDebugSession extends DebugSession {
 			const selectedProperties = new Array<any>();
 
 			for (let property of properties) {
-				const name = property.name;
-				if (typeof name === 'number' || (typeof name === 'string' && name[0] >= '0' && name[0] <= '9')) {
+				if (isIndex(property.name)) {
 					selectedProperties.push(property);
 				}
 			}
@@ -3270,14 +3133,14 @@ export class NodeDebugSession extends DebugSession {
 
 	private static extractNumber(s: string): string {
 		if (s[0] === '[' && s[s.length-1] === ']') {
-			s = s.substring(1, s.length - 1);
-			const p = s.indexOf('..');
-			if (p >= 0) {
-				s = s.substring(0, p);
-			}
+			return s.substring(1, s.length - 1);
 		}
 		return s;
 	}
+}
+
+function isIndex(name: string | number) {
+	return typeof name === 'number' || (typeof name === 'string' && name.length > 0 && name[0] >= '0' && name[0] <= '9');
 }
 
 function endsWith(str, suffix): boolean {
