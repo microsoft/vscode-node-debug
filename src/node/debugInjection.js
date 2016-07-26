@@ -126,7 +126,7 @@
 	 * This new protocol request makes it possible to retrieve a range of values from a
 	 * large object.
 	 * If 'start' is specified, 'count' indexed properties are returned.
-	 * If 'start' is omitted, the first 'count' named properties are returned.
+	 * If 'start' is omitted, all named properties are returned.
  	 */
 	DebugCommandProcessor.prototype.dispatch_['vscode_slice'] = function(request, response) {
 		var handle = request.arguments.handle;
