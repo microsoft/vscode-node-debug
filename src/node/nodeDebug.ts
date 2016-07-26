@@ -2313,7 +2313,7 @@ export class NodeDebugSession extends DebugSession {
 	 * Create a Variable with the given name and value.
 	 * For structured values the variable object will have a corresponding expander.
 	 */
-	public _createVariable(name: string, val: V8Handle) : Promise<Variable> {
+	public _createVariable(name: string, val: V8Handle) : Promise<DebugProtocol.Variable> {
 
 		if (!val) {
 			return Promise.resolve(null);
@@ -2771,11 +2771,13 @@ export class NodeDebugSession extends DebugSession {
 
 		this._node.command(this._nodeInjectionAvailable ? 'vscode_evaluate' : 'evaluate', evalArgs, (resp: V8EvaluateResponse) => {
 			if (resp.success) {
-				this._createVariable('evaluate', resp.body).then((v: Variable) => {
+				this._createVariable('evaluate', resp.body).then(v => {
 					if (v) {
 						response.body = {
 							result: v.value,
-							variablesReference: v.variablesReference
+							variablesReference: v.variablesReference,
+							namedVariables: v.namedVariables,
+							indexedVariables: v.indexedVariables
 						};
 					} else {
 						response.success = false;
