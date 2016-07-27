@@ -8,6 +8,7 @@
 	var CHUNK_SIZE = 100;			// break large objects into chunks of this size
 	var ARGUMENT_COUNT_INDEX = 3;	// index of Argument count field in FrameDetails
 	var LOCAL_COUNT_INDEX = 4;		// index of Local count field in FrameDetails
+	var INDEX_PATTERN = /^[0-9]+$/;
 
 	// try to load 'vm' even if 'require' isn't available in the current context
 	var vm = process.mainModule ? process.mainModule.require('vm') : require('vm');
@@ -22,14 +23,21 @@
 	 */
 	var indexedPropertyCount;
 	var namedPropertyCount;
+	var hasManyProperties;
 	var namedProperties;
 	try {
 		var PropertyKind = vm.runInDebugContext('PropertyKind');
+		if (!PropertyKind) {
+			throw new Error("undef");
+		}
 		indexedPropertyCount = function(mirror) {
 			return mirror.propertyNames(PropertyKind.Indexed).length;
 		};
 		namedPropertyCount = function(mirror) {
 			return mirror.propertyNames(PropertyKind.Named).length;
+		};
+		hasManyProperties = function(mirror, limit) {
+			return mirror.propertyNames(PropertyKind.Named | PropertyKind.Indexed, limit).length >= limit;
 		};
 		namedProperties = function(mirror) {
 			return mirror.propertyNames(PropertyKind.Named);
@@ -39,8 +47,7 @@
 			var n = 0;
 			const names = mirror.propertyNames();
 			for (var i = 0; i < names.length; i++) {
-				var name = names[i];
-				if (name.length > 0 && name[0] >= '0' && name[0] <= '9') {
+				if (isIndex(names[i])) {
 					n++;
 				}
 			}
@@ -50,25 +57,38 @@
 			var n = 0;
 			const names = mirror.propertyNames();
 			for (var i = 0; i < names.length; i++) {
-				var name = names[i];
-				if (name.length === 0 || name[0] < '0' || name[0] > '9') {
+				if (!isIndex(names[i])) {
 					n++;
 				}
 			}
 			return n;
+		};
+		hasManyProperties = function(mirror, limit) {
+			return mirror.propertyNames().length >= limit;
 		};
 		namedProperties = function(mirror) {
 			var named = [];
 			const names = mirror.propertyNames();
 			for (var i = 0; i < names.length; i++) {
 				var name = names[i];
-				if (name.length === 0 || name[0] < '0' || name[0] > '9') {
+				if (!isIndex(name)) {
 					named.push(name);
 				}
 			}
 			return named;
 		};
 	}
+
+	var isIndex = function(name) {
+		switch (typeof name) {
+			case 'number':
+				return true;
+			case 'string':
+				return INDEX_PATTERN.test(name);
+			default:
+				return false;
+		}
+	};
 
 	/**
 	 * In old versions of node it was possible to monkey patch the JSON response serializer.
@@ -88,7 +108,9 @@
 					if (m.handle() < 0) {
 						// we cannot drop transient objects from 'refs' because they cannot be looked up later
 					} else {
-						if (m.propertyNames(PropertyKind.Indexed | PropertyKind.Named, CHUNK_SIZE).length >= CHUNK_SIZE) continue;
+						if (hasManyProperties(m, CHUNK_SIZE)) {
+							continue;
+						}
 					}
 				}
 
@@ -123,21 +145,31 @@
 	}
 
 	/**
-	 * This new protocol request makes it possible to retrieve a range of values from a
-	 * large object.
-	 * If 'start' is specified, 'count' indexed properties are returned.
-	 * If 'start' is omitted, all named properties are returned.
+	 * This new protocol request makes it possible to retrieve a range of values from a large object.
+	 * 'mode' controls whether 'named' or 'indexed' or 'all' types of properties are returned.
+	 * For 'indexed' or 'all' mode 'start' and 'count' specify the range of properties to return.
  	 */
 	DebugCommandProcessor.prototype.dispatch_['vscode_slice'] = function(request, response) {
 		var handle = request.arguments.handle;
 		var start = request.arguments.start;
 		var count = request.arguments.count;
+		var mode = request.arguments.mode;
 		var mirror = LookupMirror(handle);
 		if (!mirror) {
 			return response.failed('Object #' + handle + '# not found');
 		}
 		var result = [];
-		if (typeof start === 'number') {
+		if (mode === 'named' || mode === 'all') {
+			if (mirror.isArray() || mirror.isObject()) {
+				var names = namedProperties(mirror);
+				for (var i = 0; i < names.length; i++) {
+					var name = names[i];
+					var p = mirror.property(name);
+					result.push({ name: name, value: p.value() });
+				}
+			}
+		}
+		if (mode === 'indexed' || mode === 'all') {
 			if (mirror.isArray()) {
 				var a = mirror.indexedPropertiesFromRange(start, start+count-1);
 				for (var i = 0; i < a.length; i++) {
@@ -149,15 +181,6 @@
 					result.push({ name: j.toString(), value: p.value() });
 				}
 			}
-		} else {
-			if (mirror.isArray() || mirror.isObject()) {
-				var names = namedProperties(mirror);
-				for (var i = 0; i < names.length; i++) {
-					var name = names[i];
-					var p = mirror.property(name);
-					result.push({ name: name, value: p.value() });
-				}
-			}
 		}
 		response.body = {
 			result: result
@@ -166,15 +189,15 @@
 
 	/**
 	 * If the passed mirror object is a large array or object this function
-	 * returns the mirror without its properties but with a size attribute ('vscode_size') instead.
+	 * returns the mirror without its properties but with two size attributes ('vscode_namedCnt', 'vscode_indexedCnt') instead.
  	 */
 	var dehydrate = function(mirror) {
-		var size = -1;
-		var size2 = -1;
+		var namedCnt = -1;
+		var indexedCnt = -1;
 
 		if (mirror.isArray()) {
-			size = mirror.length();
-			size2 = namedPropertyCount(mirror);
+			namedCnt = namedPropertyCount(mirror);
+			indexedCnt = mirror.length();
 		} else if (mirror.isObject()) {
 			switch (mirror.className()) {
 			case 'ArrayBuffer':
@@ -187,21 +210,21 @@
 			case 'Uint32Array':
 			case 'Float32Array':
 			case 'Float64Array':
-				size = indexedPropertyCount(mirror);
-				size2 = namedPropertyCount(mirror);
+				namedCnt = namedPropertyCount(mirror);
+				indexedCnt = indexedPropertyCount(mirror);
 				break;
 			default:
 				break;
 			}
 		}
 
-		if (size > CHUNK_SIZE) {
+		if (indexedCnt > CHUNK_SIZE) {
 			return {
-				handle: mirror.handle(),
 				type: 'object',
+				handle: mirror.handle(),
 				className: mirror.className(),
-				vscode_size: size,
-				vscode_size2: size2
+				vscode_namedCnt: namedCnt,
+				vscode_indexedCnt: indexedCnt
 			};
 		}
 		return mirror;

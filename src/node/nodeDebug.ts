@@ -81,7 +81,7 @@ export class PropertyContainer implements VariableContainer {
 		}
 
 		if (typeof start === 'number' && typeof count === 'number') {
-			return session._createProperties(this._object, 'range', start, count);
+			return session._createProperties(this._object, 'indexed', start, count);
 		} else {
 			return session._createProperties(this._object, 'all').then(variables => {
 				if (this._this) {
@@ -2172,10 +2172,10 @@ export class NodeDebugSession extends DebugSession {
 	 * Returns indexed or named properties for the given structured object as a variables array.
 	 * There are three modes:
 	 * 'all': add all properties (indexed and named)
-	 * 'range': add 'count' indexed properties starting at 'start'
+	 * 'indexed': add 'count' indexed properties starting at 'start'
 	 * 'named': add only the named properties.
 	 */
-	public _createProperties(obj: V8Object, mode: 'named' | 'range' | 'all', start = 0, count = 0) : Promise<Variable[]> {
+	public _createProperties(obj: V8Object, mode: 'named' | 'indexed' | 'all', start = 0, count?: number) : Promise<Variable[]> {
 
 		if (obj && !obj.properties) {
 
@@ -2183,34 +2183,25 @@ export class NodeDebugSession extends DebugSession {
 
 			if (this._nodeInjectionAvailable) {
 				const handle = obj.handle;
-				switch (mode) {
-					case 'range':
-					case 'all':
-						// try to use "vscode_size" from injected code
-						if (typeof obj.vscode_size === 'number' && typeof handle === 'number' && handle !== 0) {
-							if (obj.vscode_size >= 0) {
-								this.log('va', `_createProperties: vscode_slice ${start} ${count}`);
-								return this._node.command2('vscode_slice', { handle: handle, start: start, count: count }).then(resp => {
-									const items = resp.body.result;
-									return Promise.all<Variable>(items.map(item => {
-										return this._createVariable(`[${item.name}]`, item.value);
-									}));
-								});
-							}
-						}
-						break;
 
-					case 'named':
-						if (typeof obj.vscode_size === 'number' && typeof handle === 'number' && handle !== 0) {
-							this.log('va', `_createProperties: vscode_slice`);
-							return this._node.command2('vscode_slice', { handle: handle, count: count }).then(resp => {
-								const items = resp.body.result;
-								return Promise.all<Variable>(items.map(item => {
-									return this._createVariable(item.name, item.value);
-								}));
-							});
-						}
-						break;
+				if (typeof obj.vscode_indexedCnt === 'number' && typeof handle === 'number' && handle !== 0) {
+
+					if (count === undefined) {
+						count = obj.vscode_indexedCnt;
+					}
+
+					var args = { handle, mode, start, count };
+
+					return this._node.command2('vscode_slice', args).then(resp => {
+						const items = resp.body.result;
+						return Promise.all<Variable>(items.map(item => {
+							if (isIndex(item.name)) {
+								return this._createVariable(`[${item.name}]`, item.value);
+							} else {
+								return this._createVariable(item.name, item.value);
+							}
+						}));
+					});
 				}
 			}
 
@@ -2240,7 +2231,7 @@ export class NodeDebugSession extends DebugSession {
 							selectedProperties.push(property);
 						}
 						break;
-					case 'range':
+					case 'indexed':
 						const ix = +name;
 						if (ix >= start && ix < start+count) {
 							selectedProperties.push(property);
@@ -2425,8 +2416,8 @@ export class NodeDebugSession extends DebugSession {
 
 	private _getArraySize(array: V8Object) : Promise<number[]> {
 
-		if (typeof array.vscode_size === 'number') {
-			return Promise.resolve([ array.vscode_size, array.vscode_size2 ]);
+		if (typeof array.vscode_indexedCnt === 'number') {
+			return Promise.resolve([ array.vscode_indexedCnt, array.vscode_namedCnt ]);
 		}
 
 		if (this._node.v8Version) {
@@ -3169,8 +3160,17 @@ export class NodeDebugSession extends DebugSession {
 	}
 }
 
+const INDEX_PATTERN = /^[0-9]+$/;
+
 function isIndex(name: string | number) {
-	return typeof name === 'number' || (typeof name === 'string' && name.length > 0 && name[0] >= '0' && name[0] <= '9');
+	switch (typeof name) {
+		case 'number':
+			return true;
+		case 'string':
+			return INDEX_PATTERN.test(<string>name);
+		default:
+			return false;
+	}
 }
 
 function endsWith(str, suffix): boolean {
