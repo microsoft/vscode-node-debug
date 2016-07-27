@@ -175,6 +175,7 @@ class InternalSourceBreakpoint {
 	column: number;
 	orgColumn: number;
 	condition: string;
+	verificationMessage: string;
 
 	constructor(line: number, column: number = 0, condition?: string) {
 		this.line = this.orgLine = line;
@@ -304,6 +305,7 @@ export class NodeDebugSession extends DebugSession {
 	private _functionBreakpoints = new Array<number>();	// node function breakpoint ids
 	private _scripts = new Map<number, Promise<Script>>();		// script cache
 	private _files = new Map<string, Promise<string>>();		// file cache
+	private _modifiedSources = new Set<string>();	// track edited files
 
 	// session configurations
 	private _noDebug = false;
@@ -1280,23 +1282,29 @@ export class NodeDebugSession extends DebugSession {
 			}
 		}
 
-		if (typeof args.sourceModified === 'boolean' && args.sourceModified) {
-			// as long as node debug doesn't implement 'hot code replacement' we have to ignore this request and return all breakpoints as unverified.
-
-			const bps: Breakpoint[] = [];
-			for (let i = 0; i < sbs.length; i++) {
-				const b: DebugProtocol.Breakpoint = new Breakpoint(false);
-				b.message = localize('file.on.disk.changed', "Unverified because file on disk has changed. Please restart debug session.");
-				bps.push(b);
-			}
-			response.body = {
-				breakpoints: bps
-			};
-			this.sendResponse(response);
-			return;
-		}
-
 		const source = args.source;
+
+		if (source.path) {
+			// as long as node debug doesn't implement 'hot code replacement' we have to mark all breakpoints as unverified.
+
+			let keepUnverified = false;
+
+			if (this._modifiedSources.has(source.path)) {
+				keepUnverified = true;
+			} else {
+				if (typeof args.sourceModified === 'boolean' && args.sourceModified) {
+					keepUnverified = true;
+					this._modifiedSources.add(source.path);
+				}
+			}
+
+			if (keepUnverified) {
+				const message = localize('file.on.disk.changed', "Unverified because file on disk has changed. Please restart debug session.");
+				for (let ibp of sbs) {
+					ibp.verificationMessage = message;
+				}
+			}
+		}
 
 		if (source.adapterData) {
 
@@ -1472,8 +1480,8 @@ export class NodeDebugSession extends DebugSession {
 
 		if (lb.line < 0) {
 			// ignore this breakpoint because it couldn't be source mapped successfully
-			const bp = new Breakpoint(false);
-			(<any>bp).message = localize('sourcemapping.fail.message', "Breakpoint ignored because generated code not found (source map problem?).");
+			const bp: DebugProtocol.Breakpoint = new Breakpoint(false);
+			bp.message = localize('sourcemapping.fail.message', "Breakpoint ignored because generated code not found (source map problem?).");
 			return Promise.resolve(bp);
 		}
 
@@ -1534,7 +1542,7 @@ export class NodeDebugSession extends DebugSession {
 							actualColumn = lb.orgColumn;
 						}
 
-						return this._setBreakpoint2(path, actualLine, actualColumn);
+						return this._setBreakpoint2(lb, path, actualLine, actualColumn);
 					});
 
 				} else {
@@ -1543,14 +1551,14 @@ export class NodeDebugSession extends DebugSession {
 				}
 			}
 
-			return this._setBreakpoint2(path, actualLine, actualColumn);
+			return this._setBreakpoint2(lb, path, actualLine, actualColumn);
 
 		}).catch(error => {
 			return new Breakpoint(false);
 		});
 	}
 
-	private _setBreakpoint2(path: string, actualLine: number, actualColumn: number) : Breakpoint {
+	private _setBreakpoint2(ibp: InternalSourceBreakpoint, path: string, actualLine: number, actualColumn: number) : Breakpoint {
 
 		// nasty corner case: since we ignore the break-on-entry event we have to make sure that we
 		// stop in the entry point line if the user has an explicit breakpoint there.
@@ -1566,7 +1574,13 @@ export class NodeDebugSession extends DebugSession {
 			}
 		}
 
-		return new Breakpoint(true, this.convertDebuggerLineToClient(actualLine), this.convertDebuggerColumnToClient(actualColumn));
+		if (ibp.verificationMessage) {
+			const bp: DebugProtocol.Breakpoint = new Breakpoint(false, this.convertDebuggerLineToClient(actualLine), this.convertDebuggerColumnToClient(actualColumn));
+			bp.message = ibp.verificationMessage;
+			return bp;
+		} else {
+			return new Breakpoint(true, this.convertDebuggerLineToClient(actualLine), this.convertDebuggerColumnToClient(actualColumn));
+		}
 	}
 
 	/**
