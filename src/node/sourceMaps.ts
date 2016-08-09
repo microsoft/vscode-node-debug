@@ -7,6 +7,10 @@ import * as Path from 'path';
 import * as FS from 'fs';
 import * as URL from 'url';
 import * as HTTP from 'http';
+import * as CRYPTO from 'crypto';
+import * as OS from 'os';
+import * as XHR from 'request-light';
+
 import {SourceMapConsumer} from 'source-map';
 import * as PathUtils from './pathUtilities';
 import {NodeDebugSession} from './nodeDebug';
@@ -343,36 +347,40 @@ export class SourceMaps implements ISourceMaps {
 
 		if (u.protocol === 'http:' || u.protocol === 'https:') {
 
-			let p = this._httpCache.get(uri);
-			if (!p) {
-				p = new Promise((resolve, reject) => {
+			// use sha256 to ensure the hash value can be used in filenames
+			const hash = CRYPTO.createHash('sha256').update(uri).digest('hex');
 
-					var options = {
-						host: u.host,
-						path: u.path
+			let promise = this._httpCache.get(hash);
+			if (!promise) {
+
+				const cache_path = Path.join(OS.tmpdir(), 'com.microsoft.VSCode', 'node-debug', 'sm-cache');
+				const path = Path.join(cache_path, hash);
+
+				promise = Promise.resolve(FS.existsSync(path)).then(exists => {
+
+					if (exists) {
+						return this._readFile(path);
 					}
-					var request = HTTP.request(options, res => {
-						var data = '';
-						res.on('data', chunk =>  {
-							data += chunk;
-						});
-						res.on('end', () => {
-							resolve(data);
-						});
+
+					var options: XHR.XHROptions = {
+						url: uri,
+						followRedirects: 5
+					}
+
+					return XHR.xhr(options).then(response => {
+						return this._writeFile(path, response.responseText);
+					}).catch((error: XHR.XHRResponse) => {
+						return Promise.reject(XHR.getErrorStatusDescription(error.status) || error.toString());
 					});
-					request.on('error', err => {
-						reject(err);
-					});
-					request.end();
 				});
-				this._httpCache.set(uri, p);
+
+				this._httpCache.set(hash, promise);
 			}
-			return p;
+			return promise;
 		}
 
 		throw new Error(`url is not a valid source map`);
 	}
-
 
 	/**
 	 * Try to find the 'sourceMappingURL' in the file with the given path.
@@ -448,6 +456,19 @@ export class SourceMaps implements ISourceMaps {
 				} else {
 					resolve(fileContents);
 				}
+			});
+		});
+	}
+
+	private _writeFile(path: string, data: string): Promise<string> {
+		return new Promise((resolve, reject) => {
+			PathUtils.mkdirs(Path.dirname(path));
+			FS.writeFile(path, data, err => {
+				if (err) {
+					// ignore error
+					// reject(err);
+				}
+				resolve(data);
 			});
 		});
 	}

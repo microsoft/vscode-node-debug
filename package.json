@@ -27,7 +27,8 @@
 		"vscode-debugprotocol": "^1.11.0",
 		"vscode-debugadapter": "^1.11.0",
 		"source-map": "^0.5.3",
-		"vscode-nls": "^1.0.4"
+		"vscode-nls": "^1.0.4",
+		"request-light": "^0.1.0"
 	},
 	"repository": {
 		"type": "git",
