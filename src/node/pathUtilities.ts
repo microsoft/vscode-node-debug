@@ -106,6 +106,16 @@ export function realPath(path: string): string {
 	return null;
 }
 
+/**
+ * Make sure that all directories of the given path exist (like mkdir -p).
+ */
+export function mkdirs(path: string) {
+	if (!FS.existsSync(path)) {
+		mkdirs(Path.dirname(path));
+		FS.mkdirSync(path);
+	}
+}
+
 //---- the following functions work with Windows and Unix-style paths independent from the underlying OS.
 
 /**
