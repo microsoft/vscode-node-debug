@@ -336,7 +336,9 @@ export class NodeDebugSession extends DebugSession {
 	private _nodeInjectionAvailable = false;
 	private _needContinue: boolean;
 	private _needBreakpointEvent: boolean;
+	private _needDebuggerEvent: boolean;
 	private _gotEntryEvent: boolean;
+	private _gotDebuggerEvent = false;
 	private _entryPath: string;
 	private _entryLine: number;		// entry line in *.js file (not in the source file)
 	private _entryColumn: number;	// entry column in *.js file (not in the source file)
@@ -423,7 +425,7 @@ export class NodeDebugSession extends DebugSession {
 		if (eventBody.exception) {
 			this._exception = eventBody.exception;
 			exception_text = eventBody.exception.text;
-			reason = localize({ key: 'reason.exception', comment: ['https://github.com/Microsoft/vscode/issues/4568'] }, "exception");
+			reason = this._reasonText('exception');
 		}
 
 		// is breakpoint?
@@ -434,10 +436,10 @@ export class NodeDebugSession extends DebugSession {
 				if (!this._gotEntryEvent && id === 1) {	// 'stop on entry point' is implemented as a breakpoint with id 1
 					isEntry = true;
 					this.log('la', '_analyzeBreak: suppressed stop-on-entry event');
-					reason = localize({ key: 'reason.entry', comment: ['https://github.com/Microsoft/vscode/issues/4568'] }, "entry");
+					reason = this._reasonText('entry');
 					this._rememberEntryLocation(eventBody.script.name, eventBody.sourceLine, eventBody.sourceColumn);
 				} else {
-					reason = localize({ key: 'reason.breakpoint', comment: ['https://github.com/Microsoft/vscode/issues/4568'] }, "breakpoint");
+					reason = this._reasonText('breakpoint');
 				}
 			}
 		}
@@ -446,7 +448,8 @@ export class NodeDebugSession extends DebugSession {
 		if (!reason) {
 			const sourceLine = eventBody.sourceLineText;
 			if (sourceLine && sourceLine.indexOf('debugger') >= 0) {
-				reason = localize({ key: 'reason.debugger_statement', comment: ['https://github.com/Microsoft/vscode/issues/4568'] }, "debugger statement");
+				reason = this._reasonText('debugger');
+				this._gotDebuggerEvent = true;
 			}
 		}
 
@@ -455,9 +458,9 @@ export class NodeDebugSession extends DebugSession {
 
 			if (this._restartFramePending) {
 				this._restartFramePending = false;
-				reason = localize({ key: 'reason.restart', comment: ['https://github.com/Microsoft/vscode/issues/4568'] }, "frame entry");
+				reason = this._reasonText('frame_entry');
 			} else {
-				reason = localize({ key: 'reason.step', comment: ['https://github.com/Microsoft/vscode/issues/4568'] }, "step");
+				reason = this._reasonText('step');
 			}
 
 			// should we continue until we find a better place to stop?
@@ -475,6 +478,27 @@ export class NodeDebugSession extends DebugSession {
 		}
 
 		this._handleNodeBreakEvent2(reason, exception_text, isEntry);
+	}
+
+	private _reasonText(reason: string) {
+		switch (reason) {
+			case 'entry':
+				return localize({ key: 'reason.entry', comment: ['https://github.com/Microsoft/vscode/issues/4568'] }, "entry");
+			case 'exception':
+				return localize({ key: 'reason.exception', comment: ['https://github.com/Microsoft/vscode/issues/4568'] }, "exception");
+			case 'breakpoint':
+				return localize({ key: 'reason.breakpoint', comment: ['https://github.com/Microsoft/vscode/issues/4568'] }, "breakpoint");
+			case 'debugger':
+				return localize({ key: 'reason.debugger_statement', comment: ['https://github.com/Microsoft/vscode/issues/4568'] }, "debugger statement");
+			case 'frame_entry':
+				return localize({ key: 'reason.restart', comment: ['https://github.com/Microsoft/vscode/issues/4568'] }, "frame entry");
+			case 'step':
+				return localize({ key: 'reason.step', comment: ['https://github.com/Microsoft/vscode/issues/4568'] }, "step");
+			case 'user_request':
+				return localize({ key: 'reason.user_request', comment: ['https://github.com/Microsoft/vscode/issues/4568'] }, "user request");
+			default:
+				return reason;
+		}
 	}
 
 	private _handleNodeBreakEvent2(reason: string, exception_text: string, isEntry: boolean) {
@@ -1129,7 +1153,7 @@ export class NodeDebugSession extends DebugSession {
 	 * start the initialization sequence:
 	 * 1. wait for 'break-on-entry' (with timeout)
 	 * 2. send 'inititialized' event in order to trigger setBreakpointEvents request from client
-	 * 3. prepare for sending 'break-on-entry' or 'continue' later in _finishInitialize()
+	 * 3. prepare for sending 'break-on-entry' or 'continue' later in configurationDoneRequest()
 	 */
 	private _startInitialize(stopped: boolean, n: number = 0): void {
 
@@ -1191,14 +1215,18 @@ export class NodeDebugSession extends DebugSession {
 		}
 
 		if (this._stopOnEntry) {
-			// user has requested 'stop on entry' so send out a stop-on-entry
+			// user has requested 'stop on entry' so send out a stop-on-entry event
 			this.log('la', '_startInitialize2: fire stop-on-entry event');
-			this.sendEvent(new StoppedEvent(localize({ key: 'reason.entry', comment: ['https://github.com/Microsoft/vscode/issues/4568'] }, "entry"), NodeDebugSession.DUMMY_THREAD_ID));
+			this.sendEvent(new StoppedEvent(this._reasonText('entry'), NodeDebugSession.DUMMY_THREAD_ID));
 		}
 		else {
-			// since we are stopped but UI doesn't know about this, remember that we continue later in finishInitialize()
-			this.log('la', `_startInitialize2: remember to do a 'Continue' later`);
-			this._needContinue = true;
+			// since we are stopped but UI doesn't know about this, remember that we later do the right thing in configurationDoneRequest()
+			if (this._gotDebuggerEvent) {
+				this._needDebuggerEvent = true;
+			} else {
+				this.log('la', `_startInitialize2: remember to do a 'Continue' later`);
+				this._needContinue = true;
+			}
 		}
 	}
 
@@ -1561,7 +1589,7 @@ export class NodeDebugSession extends DebugSession {
 	private _setBreakpoint2(ibp: InternalSourceBreakpoint, path: string, actualLine: number, actualColumn: number) : Breakpoint {
 
 		// nasty corner case: since we ignore the break-on-entry event we have to make sure that we
-		// stop in the entry point line if the user has an explicit breakpoint there.
+		// stop in the entry point line if the user has an explicit breakpoint there (or if there is a 'debugger' statement).
 		// For this we check here whether a breakpoint is at the same location as the 'break-on-entry' location.
 		// If yes, then we plan for hitting the breakpoint instead of 'continue' over it!
 
@@ -1725,7 +1753,13 @@ export class NodeDebugSession extends DebugSession {
 		if (this._needBreakpointEvent) {	// we have to break on entry
 			this._needBreakpointEvent = false;
 			info = 'fire breakpoint event';
-			this.sendEvent(new StoppedEvent(localize({ key: 'reason.breakpoint', comment: ['https://github.com/Microsoft/vscode/issues/4568'] }, "breakpoint"), NodeDebugSession.DUMMY_THREAD_ID));
+			this.sendEvent(new StoppedEvent(this._reasonText('breakpoint'), NodeDebugSession.DUMMY_THREAD_ID));
+		}
+
+		if (this._needDebuggerEvent) {	// we have to break on entry
+			this._needDebuggerEvent = false;
+			info = 'fire debugger statement event';
+			this.sendEvent(new StoppedEvent(this._reasonText('debugger'), NodeDebugSession.DUMMY_THREAD_ID));
 		}
 
 		this.log('la', `configurationDoneRequest: ${info}`);
@@ -2685,7 +2719,7 @@ export class NodeDebugSession extends DebugSession {
 		this._node.command('suspend', null, (nodeResponse) => {
 			if (nodeResponse.success) {
 				this._stopped('pause');
-				this._lastStoppedEvent = new StoppedEvent(localize({ key: 'reason.user_request', comment: ['https://github.com/Microsoft/vscode/issues/4568'] }, "user request"), NodeDebugSession.DUMMY_THREAD_ID);
+				this._lastStoppedEvent = new StoppedEvent(this._reasonText('user_request'), NodeDebugSession.DUMMY_THREAD_ID);
 				this.sendResponse(response);
 				this.sendEvent(this._lastStoppedEvent);
 			} else {
