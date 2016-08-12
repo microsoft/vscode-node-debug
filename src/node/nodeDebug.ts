@@ -1736,7 +1736,7 @@ export class NodeDebugSession extends DebugSession {
 		});
 	}
 
-	//--- set exception request -----------------------------------------------------------------------------------------------
+	//--- configuration done request ------------------------------------------------------------------------------------------
 
 	protected configurationDoneRequest(response: DebugProtocol.ConfigurationDoneResponse, args: DebugProtocol.ConfigurationDoneArguments): void {
 
