@@ -43,14 +43,20 @@ var outDest = 'out';
 
 var BOM = [
 	outDest + '/node/*',
+	'node_modules/agent-base/**/*',
+	'node_modules/debug/**/*',
+	'node_modules/extend/**/*',
+	'node_modules/http-proxy-agent/**/*',
+	'node_modules/https-proxy-agent/**/*',
+	'node_modules/ms/**/*',
+	'node_modules/request-light/**/*',
 	'node_modules/source-map/**/*',
-	'node_modules/vscode-debugprotocol/**/*',
 	'node_modules/vscode-debugadapter/**/*',
+	'node_modules/vscode-debugprotocol/**/*',
 	'node_modules/vscode-nls/**/*',
 	'package.json',
 	'package.nls.json',
-	'ThirdPartyNotices.txt',
-	'LICENSE.txt'
+	'npm-shrinkwrap.json'
 ];
 
 var uploadDest = 'upload';
