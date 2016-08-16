@@ -87,8 +87,10 @@ class DefaultTerminalService implements ITerminalService {
 	public isOnPath(program: string): boolean {
 
 		try {
-			if (!FS.existsSync(DefaultTerminalService.WHICH)) {
+			if (FS.existsSync(DefaultTerminalService.WHICH)) {
 				CP.execSync(`${DefaultTerminalService.WHICH} '${program}'`);
+			} else {
+				// do not report error if 'which' doesn't exist
 			}
 			return true;
 		}
@@ -101,7 +103,8 @@ class DefaultTerminalService implements ITerminalService {
 class WindowsTerminalService extends DefaultTerminalService {
 
 	private static CMD = 'cmd.exe';
-	private static WHERE = 'where';
+	private static WHERE = 'C:\\Windows\\System32\\where.exe';
+	private static TASK_KILL = 'C:\\Windows\\System32\\taskkill.exe';
 
 	public launchInTerminal(dir: string, args: string[], envVars: { [key: string]: string; }): Promise<CP.ChildProcess> {
 
@@ -137,7 +140,7 @@ class WindowsTerminalService extends DefaultTerminalService {
 		// Therefore we use TASKKILL.EXE
 
 		try {
-			CP.execSync(`taskkill /F /T /PID ${pid}`);
+			CP.execSync(`${WindowsTerminalService.TASK_KILL} /F /T /PID ${pid}`);
 		}
 		catch (err) {
 		}
@@ -146,7 +149,11 @@ class WindowsTerminalService extends DefaultTerminalService {
 	public isOnPath(program: string): boolean {
 
 		try {
-			CP.execSync(`${WindowsTerminalService.WHERE} ${program}`);
+			if (FS.existsSync(WindowsTerminalService.WHERE)) {
+				CP.execSync(`${WindowsTerminalService.WHERE} ${program}`);
+			} else {
+				// do not report error if 'where' doesn't exist
+			}
 			return true;
 		}
 		catch (Exception) {
