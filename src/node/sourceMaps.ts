@@ -325,7 +325,7 @@ export class SourceMaps implements ISourceMaps {
 			return this._readFile(map_path);
 		}
 
-		if (u.protocol === 'data:' && u.host === 'application' && u.path.indexOf('/json;base64,') === 0) {
+		if (u.protocol === 'data:' && uri.indexOf('application/json') > 0 && uri.indexOf('base64') > 0) {
 
 			// if uri is data url source map is inlined in generated file
 			const pos = uri.lastIndexOf(',');
