@@ -48,6 +48,7 @@
 	"scope.exception": "Excepción",
 	"scope.global": "Global",
 	"scope.local": "Local",
+	"scope.local.with.count": "Local ({0} de {1})",
 	"scope.script": "Script",
 	"scope.unknown": "Tipo de ámbito desconocido: {0}",
 	"scope.with": "Con",
