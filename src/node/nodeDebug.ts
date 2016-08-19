@@ -2627,7 +2627,13 @@ export class NodeDebugSession extends DebugSession {
 
 	private _createStringVariable2(name, s: string) {
 		if (s) {
-			s = s.replace('\n', '\\n').replace('\r', '\\r');
+			s = s.replace(/\n|\r|\"/g, x => {
+				switch (x) {
+					case '\n': return '\\n';
+					case '\r': return '\\r';
+					case '\"': return '\\"';
+				}
+			});
 		}
 		return new Variable(name, `"${s}"`);
 	}
