@@ -26,6 +26,7 @@ import * as URL from 'url';
 import * as Path from 'path';
 import * as FS from 'fs';
 import * as nls from 'vscode-nls';
+import * as opn from 'opn';
 
 const localize = nls.config(process.env.VSCODE_NLS_CONFIG)();
 
@@ -253,6 +254,10 @@ interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArguments, C
 	env?: { [key: string]: string; };
 	/** If true launch the target in an external console. */
 	externalConsole?: boolean;
+	/** If set this will launch the browser with the url given */
+	launchBrowser?: string;
+	/** Number of milliseconds to delay the browser opening.  If set to "auto", it will open as soon as the tcp port is listening */
+	browserDelay?: string | number;
 }
 
 /**
@@ -761,6 +766,11 @@ export class NodeDebugSession extends DebugSession {
 			program = Path.basename(programPath);
 		}
 
+		if (args.browserDelay && !args.launchBrowser) {
+			this.sendAttributeMissingErrorResponse(response, 'launchBrowser');
+			return;
+		}
+
 		// we always break on entry (but if user did not request this, we will not stop in the UI).
 		let launchArgs = [ runtimeExecutable ];
 		if (! this._noDebug) {
@@ -792,6 +802,10 @@ export class NodeDebugSession extends DebugSession {
 					this.sendResponse(response);
 				} else {
 					this._attach(response, port, address, timeout);
+				}
+
+				if (args.launchBrowser) {
+					this._spawnBrowser(response, args.launchBrowser, args.browserDelay);
 				}
 
 			}).catch((error: TerminalError) => {
@@ -832,7 +846,56 @@ export class NodeDebugSession extends DebugSession {
 			} else {
 				this._attach(response, port, address, timeout);
 			}
+
+			if (args.launchBrowser) {
+				this._spawnBrowser(response, args.launchBrowser, args.browserDelay);
+			}
 		}
+	}
+
+	private _spawnBrowser(response: DebugProtocol.LaunchResponse, url: string, delay: string | number) {
+		if (delay === 'auto') {
+			var port = parseInt(URL.parse(url).port);
+			this._waitForTcp(port).then(() => {
+				opn(url);
+			}).catch(() => {
+				this.sendErrorResponse(response, 2010, localize('browser.failopen', "Failed to open browser due to timeout."));
+			});
+		}
+		else if (typeof delay === 'number') {
+			setTimeout(() => {
+				opn(url);
+			}, delay);
+		}
+		else if (!delay) {
+			opn(url); //no delay
+		}
+		else {
+			this.sendAttributeInvalidValueErrorResponse(response, 'browserDelay', delay.toString());
+		}
+	}
+
+	private _waitForTcp(port: number): Promise<void> {
+		return new Promise<void>((resolve, reject) => {
+			this._tryConnect(port, resolve, reject, 0);
+		});
+	}
+
+	private _tryConnect(port: number, resolve, reject, tries: number) {
+		if (tries > 20) {
+			return reject(new Error("Failed to connect"));
+		}
+
+		let client = Net.connect({ port: port }, () => {
+			resolve();
+			client.end();
+		});
+
+		client.on('error', () => {
+			setTimeout(() => {
+				this._tryConnect(port, resolve, reject, tries+1);
+			}, 1000);
+		});
 	}
 
 	private _sendLaunchCommandToConsole(args: string[]) {
@@ -2919,6 +2982,13 @@ export class NodeDebugSession extends DebugSession {
 	 */
 	private sendAttributeMissingErrorResponse(response: DebugProtocol.Response, attribute: string) {
 		this.sendErrorResponse(response, 2005, localize('attribute.missing', "Attribute '{0}' is missing or empty.", attribute));
+	}
+	
+	/**
+	 * 'Attribute invalid value' error
+	 */
+	private sendAttributeInvalidValueErrorResponse(response: DebugProtocol.Response, attribute: string, value: string) {
+		this.sendErrorResponse(response, 2011, localize('attribute.invalidvalue', "Attribute '{0}' has invalid value '{1}'.", attribute, value));
 	}
 
 	/**

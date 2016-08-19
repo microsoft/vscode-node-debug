@@ -16,6 +16,8 @@
 	"node.launch.args.description": "Command line arguments passed to the program.",
 	"node.launch.cwd.description": "Absolute path to the working directory of the program being debugged.",
 	"node.launch.runtimeExecutable.description": "Absolute path to the runtime executable to be used. Default is the runtime executable on the PATH.",
+	"node.launch.launchBrowser.description": "Url to open in the default browser on launch.",
+	"node.launch.browserDelay.description": "How long in milliseconds to delay the browser opening. If you set this to \"auto\", it will wait until the http listener has started.",
 	"node.launch.runtimeArgs.description": "Optional arguments passed to the runtime executable.",
 	"node.launch.env.description": "Environment variables passed to the program.",
 
@@ -33,6 +35,8 @@
 	"extensionHost.label": "VSCode Extension Development",
 
 	"extensionHost.launch.runtimeExecutable.description": "Absolute path to VS Code.",
+	"extensionHost.launch.launchBrowser.description": "Url to open default browser to.",
+	"extensionHost.launch.browserDelay.description": "How long to delay browser opening.",
 	"extensionHost.launch.args.description": "Command line arguments passed to the program.",
 	"extensionHost.launch.stopOnEntry.description": "Automatically stop the extension host after launch.",
 	"extensionHost.launch.sourceMaps.description": "Use JavaScript source maps.",

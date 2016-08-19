@@ -28,7 +28,8 @@
 		"vscode-debugadapter": "^1.11.0",
 		"source-map": "^0.5.3",
 		"vscode-nls": "^1.0.4",
-		"request-light": "^0.1.0"
+		"request-light": "^0.1.0",
+		"opn": "^4.0.2"
 	},
 	"repository": {
 		"type": "git",
@@ -157,6 +158,16 @@
 								"type": ["string", "null"],
 								"description": "%node.launch.runtimeExecutable.description%",
 								"default": null
+							},
+							"launchBrowser": {
+								"type": ["string", "null"],
+								"description": "%node.launch.launchBrowser.description%",
+								"default": "http://localhost:3000/"
+							},
+							"browserDelay": {
+								"type": ["string", "number", "null"],
+								"description": "%node.launch.browserDelay.description%",
+								"default": "auto"
 							},
 							"runtimeArgs": {
 								"type": "array",
@@ -287,6 +298,16 @@
 								"type": ["string", "null"],
 								"description": "%extensionHost.launch.runtimeExecutable.description%",
 								"default": "${execPath}"
+							},
+							"launchBrowser": {
+								"type": ["string", "null"],
+								"description": "%extensionHost.launch.launchBrowser.description%",
+								"default": "http://localhost:3000/"
+							},
+							"browserDelay": {
+								"type": ["string", "number", "null"],
+								"description": "%extensionHost.launch.browserDelay.description%",
+								"default": "auto"
 							},
 							"args": {
 								"type": "array",
