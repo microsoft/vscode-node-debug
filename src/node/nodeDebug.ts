@@ -1898,14 +1898,7 @@ export class NodeDebugSession extends DebugSession {
 
 								// load script to find source reference
 								return this._loadScript(script_val.id).then(script => {
-
-									if (this._sourceMaps.HasSourceMap(script.contents)) {
 										return this._createStackFrameFromSourceMap(frame, script.contents, name, localPath, remotePath, origin, line, column);
-									}
-
-									// content contains no source mapping (babel/register does this; see https://github.com/Microsoft/vscode-node-debug/issues/62)
-									// try to find the corresponding file
-									return this._createStackFrameFromPath(frame, name, localPath, remotePath, origin, line, column);
 								});
 							}
 

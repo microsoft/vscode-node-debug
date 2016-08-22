@@ -219,6 +219,24 @@ suite('Node Debug Adapter', () => {
 			});
 		});
 
+		test('should stop on a breakpoint in TypeScript source even without sourceMappingURL', () => {
+
+			const PROGRAM = Path.join(DATA_ROOT, 'sourcemap-no-sourceMappingURL/out/classes.js');
+			const OUT_DIR = Path.join(DATA_ROOT, 'sourcemap-no-sourceMappingURL/out');
+			const TS_SOURCE = Path.join(DATA_ROOT, 'sourcemap-no-sourceMappingURL/src/classes.ts');
+			const TS_LINE = 17;
+
+			return dc.hitBreakpoint({
+				program: PROGRAM,
+				sourceMaps: true,
+				outDir: OUT_DIR,
+				runtimeArgs: [ '--nolazy' ]
+			}, {
+				path: TS_SOURCE,
+				line: TS_LINE
+			});
+		});
+
 		test('should stop on a breakpoint in TypeScript even if breakpoint was set in JavaScript - Microsoft/vscode-node-debug#43', () => {
 
 			const PROGRAM = Path.join(DATA_ROOT, 'sourcemaps-2574/out/classes.js');

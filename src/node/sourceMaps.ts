@@ -49,13 +49,6 @@ export interface ISourceMaps {
 	 * line and column are 0 based.
 	 */
 	MapToSource(pathToGenerated: string, content: string, line: number, column: number): Promise<MappingResult>;
-
-	/*
-	 * Returns true if content contains a reference to a source map (or a data url with an inlined source map).
-	 */
-	HasSourceMap(content: string) : boolean;
-
-	LoadSourceMap(content: string) : Promise<SourceMap>;
 }
 
 
@@ -119,28 +112,6 @@ export class SourceMaps implements ISourceMaps {
 			}
 			return null;
 		});
-	}
-
-	public HasSourceMap(content: string) : boolean {
-		return this._findSourceMapUrlInFile(null, content) !== null;
-	}
-
-	public LoadSourceMap(content: string) : Promise<SourceMap> {
-
-		const uri = this._findSourceMapUrlInFile(null, content);
-		if (uri) {
-			return this._rawSourceMap(uri).then(sm => {
-				if (sm) {
-					return new SourceMap('mapPath', 'getPath', sm);
-				} else {
-					return null;
-				}
-			}).catch(err => {
-				return null;
-			});
-		} else {
-			return Promise.resolve(null);
-		}
 	}
 
 	//---- private -----------------------------------------------------------------------
