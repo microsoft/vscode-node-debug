@@ -166,8 +166,43 @@ suite('Node Debug Adapter', () => {
 				})
 			]);
 		});
+	});
 
-		test('should stop on a breakpoint in TypeScript source', () => {
+	suite('setBreakpoints in TypeScript', () => {
+
+		test('should stop on a breakpoint in source (all files top level)', () => {
+
+			const PROGRAM = Path.join(DATA_ROOT, 'sourcemaps-simple/classes.js');
+			const TS_SOURCE = Path.join(DATA_ROOT, 'sourcemaps-simple/classes.ts');
+			const TS_LINE = 17;
+
+			return dc.hitBreakpoint({
+				program: PROGRAM,
+				sourceMaps: true,
+				runtimeArgs: [ '--nolazy' ]
+			}, {
+				path: TS_SOURCE,
+				line: TS_LINE
+			});
+		});
+
+		test('should stop on a breakpoint in source (all files top level, missing sourceMappingURL)', () => {
+
+			const PROGRAM = Path.join(DATA_ROOT, 'sourcemaps-simple-no-sourceMappingURL/classes.js');
+			const TS_SOURCE = Path.join(DATA_ROOT, 'sourcemaps-simple-no-sourceMappingURL/classes.ts');
+			const TS_LINE = 17;
+
+			return dc.hitBreakpoint({
+				program: PROGRAM,
+				sourceMaps: true,
+				runtimeArgs: [ '--nolazy' ]
+			}, {
+				path: TS_SOURCE,
+				line: TS_LINE
+			});
+		});
+
+		test('should stop on a breakpoint in source', () => {
 
 			const PROGRAM = Path.join(DATA_ROOT, 'sourcemaps-inline/src/classes.ts');
 			const OUT_DIR = Path.join(DATA_ROOT, 'sourcemaps-inline/dist');
@@ -184,7 +219,7 @@ suite('Node Debug Adapter', () => {
 			});
 		});
 
-		test('should stop on a breakpoint in TypeScript source with spaces in paths', () => {
+		test('should stop on a breakpoint in source with spaces in paths', () => {
 
 			const PROGRAM = Path.join(DATA_ROOT, 'sourcemaps with spaces', 'the source/classes.ts');
 			const OUT_DIR = Path.join(DATA_ROOT, 'sourcemaps with spaces/the distribution');
@@ -201,7 +236,7 @@ suite('Node Debug Adapter', () => {
 			});
 		});
 
-		test('should stop on a breakpoint in TypeScript source - Microsoft/vscode#2574', () => {
+		test('should stop on a breakpoint in source - Microsoft/vscode#2574', () => {
 
 			const PROGRAM = Path.join(DATA_ROOT, 'sourcemaps-2574/out/classes.js');
 			const OUT_DIR = Path.join(DATA_ROOT, 'sourcemaps-2574/out');
@@ -219,7 +254,7 @@ suite('Node Debug Adapter', () => {
 			});
 		});
 
-		test('should stop on a breakpoint in TypeScript source even without sourceMappingURL', () => {
+		test('should stop on a breakpoint in source (sourceMappingURL missing)', () => {
 
 			const PROGRAM = Path.join(DATA_ROOT, 'sourcemap-no-sourceMappingURL/out/classes.js');
 			const OUT_DIR = Path.join(DATA_ROOT, 'sourcemap-no-sourceMappingURL/out');
@@ -237,7 +272,7 @@ suite('Node Debug Adapter', () => {
 			});
 		});
 
-		test('should stop on a breakpoint in TypeScript even if breakpoint was set in JavaScript - Microsoft/vscode-node-debug#43', () => {
+		test('should stop on a breakpoint in source even if breakpoint was set in JavaScript - Microsoft/vscode-node-debug#43', () => {
 
 			const PROGRAM = Path.join(DATA_ROOT, 'sourcemaps-2574/out/classes.js');
 			const OUT_DIR = Path.join(DATA_ROOT, 'sourcemaps-2574/out');
@@ -260,7 +295,7 @@ suite('Node Debug Adapter', () => {
 			});
 		});
 
-		test('should stop on a breakpoint in TypeScript even if program\'s entry point is in JavaScript', () => {
+		test('should stop on a breakpoint in source even if program\'s entry point is in JavaScript', () => {
 
 			const PROGRAM = Path.join(DATA_ROOT, 'sourcemaps-js-entrypoint/out/entry.js');
 			const OUT_DIR = Path.join(DATA_ROOT, 'sourcemaps-js-entrypoint/out');
