@@ -620,6 +620,9 @@ export class NodeDebugSession extends DebugSession {
 		// This debug adapter supports the restartFrame request
 		response.body.supportsRestartFrame = true;
 
+		// This debug adapter supports the completions request
+		response.body.supportsCompletionsRequest = true;
+
 		this.sendResponse(response);
 	}
 
@@ -2788,6 +2791,22 @@ export class NodeDebugSession extends DebugSession {
 
 	protected evaluateRequest(response: DebugProtocol.EvaluateResponse, args: DebugProtocol.EvaluateArguments): void {
 
+		/*
+		if (args.expression.indexOf('%') === 0) {
+
+			const text = args.expression.substr(1);
+
+			const cargs: DebugProtocol.CompletionsArguments = {
+				column: text.length,
+				text: text,
+				frameId: args.frameId
+			};
+
+			this.completionsRequest(<any>response, cargs);
+			return;
+		}
+		*/
+
 		const expression = args.expression;
 
 		const evalArgs = {
@@ -2897,6 +2916,94 @@ export class NodeDebugSession extends DebugSession {
 		}
 
 		return script;
+	}
+
+	//--- source request ------------------------------------------------------------------------------------------------------
+
+	protected completionsRequest(response: DebugProtocol.CompletionsResponse, args: DebugProtocol.CompletionsArguments): void {
+
+		//const EX = /(?:(?:((?:\w+\.)+)(\w*))|(\w+))$/;
+		const EX = /(?:(?:((?:[$a-zA-Z_][$\w]*(?:\[.+\])?\.)+)(\w*(?:\[.+\])?))|([$a-zA-Z_][$\w]*(?:\[.+\])?))$/;
+
+		const line = args.text;
+		const column = args.column;
+
+		const prefix = line.substring(0, column);
+		const postfix = line.substring(column);
+
+		let expression = "";
+		let filter = "";
+
+		var result = EX.exec(prefix);
+		if (result.length === 4) {
+			if (result[1]) {
+				expression = result[1];
+				if (expression[expression.length-1] === '.') {
+					expression = expression.substr(0, expression.length-1);
+				}
+			}
+			if (result[2]) {
+				filter = result[2];
+			}
+			if (result[3]) {
+				filter = result[3];
+			}
+		}
+
+		if (!expression) {
+			expression = 'global';
+		}
+
+		const evalArgs = {
+			expression: `JSON.stringify(Object.keys(${expression}))`,
+			disable_break: true,
+			maxStringLength: 100000
+		};
+		if (args.frameId > 0) {
+			const frame = this._frameHandles.get(args.frameId);
+			if (!frame) {
+				this.sendErrorResponse(response, 2020, 'stack frame not valid', null, ErrorDestination.Telemetry);
+				return;
+			}
+			const frameIx = frame.index;
+			(<any>evalArgs).frame = frameIx;
+		} else {
+			(<any>evalArgs).global = true;
+		}
+
+		this._node.evaluate(evalArgs).then(resp => {
+
+			let result = JSON.parse(<string>resp.body.value);
+
+			if (filter) {
+				result = result.filter(x => x.indexOf(filter) === 0 && filter.length < x.length);
+			}
+
+			const targets = result.map(label => {
+				return { label }
+			});
+
+			response.body = {
+				targets: targets
+			};
+
+			// for debugging only
+			//(<any>response.body).result = JSON.stringify((<any>response.body).targets);
+			//(<any>response.body).variablesReference = 0;
+
+			this.sendResponse(response);
+		}).catch(err => {
+
+			response.body = {
+				targets: []
+			};
+
+			// for debugging only
+			//(<any>response.body).result = "error: " + err.message;
+			//(<any>response.body).variablesReference = 0;
+
+			this.sendResponse(response);
+		});
 	}
 
 	//---- private helpers ----------------------------------------------------------------------------------------------------
