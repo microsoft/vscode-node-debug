@@ -294,9 +294,9 @@ export class NodeDebugSession extends DebugSession {
 	// options
 	private _tryToInjectExtension = true;
 	private _maxVariablesPerScope = 100;	// only load this many variables for a scope
-	private _smartStep = false;			// try to automatically step over uninteresting source
-	private _mapToFilesOnDisk = true; 	// by default try to map node.js scripts to files on disk
-	private _compareContents = true;	// by default verify that script contents is same as file contents
+	private _smartStep = false;				// try to automatically step over uninteresting source
+	private _mapToFilesOnDisk = true; 		// by default try to map node.js scripts to files on disk
+	private _compareContents = true;		// by default verify that script contents is same as file contents
 
 	// session state
 	private _adapterID: string;
@@ -1898,7 +1898,7 @@ export class NodeDebugSession extends DebugSession {
 
 								// load script to find source reference
 								return this._loadScript(script_val.id).then(script => {
-										return this._createStackFrameFromSourceMap(frame, script.contents, name, localPath, remotePath, origin, line, column);
+									return this._createStackFrameFromSourceMap(frame, script.contents, name, localPath, remotePath, origin, line, column);
 								});
 							}
 
