@@ -293,7 +293,7 @@ export class NodeDebugSession extends DebugSession {
 
 	// options
 	private _tryToInjectExtension = true;
-	private _chunkSize = 100;			// chunk size for large data structures
+	private _maxVariablesPerScope = 100;	// only load this many variables for a scope
 	private _smartStep = false;			// try to automatically step over uninteresting source
 	private _mapToFilesOnDisk = true; 	// by default try to map node.js scripts to files on disk
 	private _compareContents = true;	// by default verify that script contents is same as file contents
@@ -2136,7 +2136,7 @@ export class NodeDebugSession extends DebugSession {
 
 		if (this._nodeInjectionAvailable) {
 			cmd = 'vscode_scopes';
-			scopesArgs.maxLocals = this._chunkSize;
+			scopesArgs.maxLocals = this._maxVariablesPerScope;
 		}
 
 		this.log('va', `scopesRequest: scope ${frameIx}`);
