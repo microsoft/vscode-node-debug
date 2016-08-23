@@ -2930,6 +2930,14 @@ export class NodeDebugSession extends DebugSession {
 
 	protected completionsRequest(response: DebugProtocol.CompletionsResponse, args: DebugProtocol.CompletionsArguments): void {
 
+		/*
+			a 		->  ''		'a'
+			a.	    ->  'a'		''
+			a.b     ->  'a'		'b'
+			a.b.    ->  'a.b'	''
+			a.b.c   ->  'a.b'	'c'
+			a[x].   ->  'a[x]'	''
+		*/
 		//const EX = /(?:(?:((?:\w+\.)+)(\w*))|(\w+))$/;
 		const EX = /(?:(?:((?:[$a-zA-Z_][$\w]*(?:\[.+\])?\.)+)(\w*(?:\[.+\])?))|([$a-zA-Z_][$\w]*(?:\[.+\])?))$/;
 
