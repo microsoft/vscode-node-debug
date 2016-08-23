@@ -233,6 +233,8 @@ interface CommonArguments {
 	stepBack?: boolean;
 	/** Control mapping of node.js scripts to files on disk. */
 	mapToFilesOnDisk?: boolean;
+	/** make completion request available in evaluate request. */
+	completionInEvaluate?: boolean;
 }
 
 /**
@@ -291,6 +293,7 @@ export class NodeDebugSession extends DebugSession {
 	// tracing
 	private _trace: string[];
 	private _traceAll = false;
+	private _completionInEvaluate = false;
 
 	// options
 	private _tryToInjectExtension = true;
@@ -874,6 +877,10 @@ export class NodeDebugSession extends DebugSession {
 
 		if (typeof args.stepBack === 'boolean') {
 			this._stepBack = args.stepBack;
+		}
+
+		if (typeof args.completionInEvaluate === 'boolean') {
+			this._completionInEvaluate = args.completionInEvaluate;
 		}
 
 		if (typeof args.mapToFilesOnDisk === 'boolean') {
@@ -2794,8 +2801,7 @@ export class NodeDebugSession extends DebugSession {
 
 	protected evaluateRequest(response: DebugProtocol.EvaluateResponse, args: DebugProtocol.EvaluateArguments): void {
 
-		/*
-		if (args.expression.indexOf('%') === 0) {
+		if (this._completionInEvaluate && args.expression.indexOf('%') === 0) {
 
 			const text = args.expression.substr(1);
 
@@ -2808,7 +2814,6 @@ export class NodeDebugSession extends DebugSession {
 			this.completionsRequest(<any>response, cargs);
 			return;
 		}
-		*/
 
 		const expression = args.expression;
 
@@ -2938,7 +2943,7 @@ export class NodeDebugSession extends DebugSession {
 		let filter = "";
 
 		var result = EX.exec(prefix);
-		if (result.length === 4) {
+		if (result && result.length === 4) {
 			if (result[1]) {
 				expression = result[1];
 				if (expression[expression.length-1] === '.') {
@@ -2983,6 +2988,8 @@ export class NodeDebugSession extends DebugSession {
 				result = result.filter(x => x.indexOf(filter) === 0 && filter.length < x.length);
 			}
 
+			result = result.sort();
+
 			const targets = result.map(label => {
 				return { label }
 			});
@@ -2991,9 +2998,11 @@ export class NodeDebugSession extends DebugSession {
 				targets: targets
 			};
 
-			// for debugging only
-			//(<any>response.body).result = JSON.stringify((<any>response.body).targets);
-			//(<any>response.body).variablesReference = 0;
+			if (this._completionInEvaluate) {
+				// for trying completion in evaluate
+				(<any>response.body).result = JSON.stringify((<any>response.body).targets);
+				(<any>response.body).variablesReference = 0;
+			}
 
 			this.sendResponse(response);
 		}).catch(err => {
@@ -3002,9 +3011,11 @@ export class NodeDebugSession extends DebugSession {
 				targets: []
 			};
 
-			// for debugging only
-			//(<any>response.body).result = "error: " + err.message;
-			//(<any>response.body).variablesReference = 0;
+			if (this._completionInEvaluate) {
+				// for trying completion in evaluate
+				(<any>response.body).result = "error: " + err.message;
+				(<any>response.body).variablesReference = 0;
+			}
 
 			this.sendResponse(response);
 		});
