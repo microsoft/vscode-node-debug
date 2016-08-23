@@ -279,6 +279,7 @@ export class NodeDebugSession extends DebugSession {
 
 	private static NODE_TERMINATION_POLL_INTERVAL = 3000;
 	private static ATTACH_TIMEOUT = 10000;
+	private static RUNINTERMINAL_TIMEOUT = 3000;
 
 	private static NODE = 'node';
 	private static DUMMY_THREAD_ID = 1;
@@ -301,6 +302,7 @@ export class NodeDebugSession extends DebugSession {
 	private _smartStep = false;				// try to automatically step over uninteresting source
 	private _mapToFilesOnDisk = true; 		// by default try to map node.js scripts to files on disk
 	private _compareContents = true;		// by default verify that script contents is same as file contents
+	private _supportsRunInTerminalRequest = false;
 
 	// session state
 	private _adapterID: string;
@@ -590,6 +592,10 @@ export class NodeDebugSession extends DebugSession {
 
 		this._adapterID = args.adapterID;
 
+		if (typeof args.supportsRunInTerminalRequest === 'boolean') {
+			this._supportsRunInTerminalRequest = args.supportsRunInTerminalRequest;
+		}
+
 		//---- Send back feature and their options
 
 		// This debug adapter supports the configurationDoneRequest.
@@ -780,31 +786,62 @@ export class NodeDebugSession extends DebugSession {
 
 		if (this._externalConsole) {
 
-			Terminal.launchInTerminal(workingDirectory, launchArgs, args.env).then(term => {
+			if (this._supportsRunInTerminalRequest) {
 
-				if (term) {
-					// if we got a terminal process, we will track it
-					this._terminalProcess = term;
-					term.on('exit', () => {
-						this._terminalProcess = null;
-						this._terminated('terminal exited');
-					});
-				}
+				const termArgs : DebugProtocol.RunInTerminalRequestArguments = {
+					kind: 'integrated',
+					cwd: workingDirectory,
+					args: launchArgs,
+					env: args.env
+				};
 
-				// since node starts in a terminal, we cannot track it with an 'exit' handler
-				// plan for polling after we have gotten the process pid.
-				this._pollForNodeProcess = true;
+				this.runInTerminalRequest(termArgs, NodeDebugSession.RUNINTERMINAL_TIMEOUT, response => {
+					if (response.success) {
 
-				if (this._noDebug) {
-					this.sendResponse(response);
-				} else {
-					this._attach(response, port, address, timeout);
-				}
+						// since node starts in a terminal, we cannot track it with an 'exit' handler
+						// plan for polling after we have gotten the process pid.
+						this._pollForNodeProcess = true;
 
-			}).catch((error: TerminalError) => {
-				this.sendErrorResponseWithInfoLink(response, 2011, localize('VSND2011', "Cannot launch debug target in terminal ({0}).", '{_error}'), { _error: error.message }, error.linkId );
-				this._terminated('terminal error: ' + error.message);
-			});
+						if (this._noDebug) {
+							this.sendResponse(response);
+						} else {
+							this._attach(response, port, address, timeout);
+						}
+					} else {
+
+						this.sendErrorResponse(response, 2011, localize('VSND2011', "Cannot launch debug target in terminal ({0}).", '{_error}'), { _error: response.message } );
+						this._terminated('terminal error: ' + response.message);
+					}
+				});
+
+			} else {
+
+				Terminal.launchInTerminal(workingDirectory, launchArgs, args.env).then(term => {
+
+					if (term) {
+						// if we got a terminal process, we will track it
+						this._terminalProcess = term;
+						term.on('exit', () => {
+							this._terminalProcess = null;
+							this._terminated('terminal exited');
+						});
+					}
+
+					// since node starts in a terminal, we cannot track it with an 'exit' handler
+					// plan for polling after we have gotten the process pid.
+					this._pollForNodeProcess = true;
+
+					if (this._noDebug) {
+						this.sendResponse(response);
+					} else {
+						this._attach(response, port, address, timeout);
+					}
+
+				}).catch((error: TerminalError) => {
+					this.sendErrorResponseWithInfoLink(response, 2011, localize('VSND2011', "Cannot launch debug target in terminal ({0}).", '{_error}'), { _error: error.message }, error.linkId );
+					this._terminated('terminal error: ' + error.message);
+				});
+			}
 
 		} else {
 
