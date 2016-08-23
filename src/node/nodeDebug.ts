@@ -273,6 +273,7 @@ interface AttachRequestArguments extends DebugProtocol.AttachRequestArguments, C
 export class NodeDebugSession extends DebugSession {
 
 	private static MAX_STRING_LENGTH = 10000;	// max string size to return in 'evaluate' request
+	private static MAX_JSON_LENGTH = 500000;	// max size of stringified object to return in 'evaluate' request
 
 	private static NODE_TERMINATION_POLL_INTERVAL = 3000;
 	private static ATTACH_TIMEOUT = 10000;
@@ -2471,7 +2472,8 @@ export class NodeDebugSession extends DebugSession {
 				disable_break: true,
 				additional_context: [
 					{ name: 'array', handle: array.handle }
-				]
+				],
+				maxStringLength: NodeDebugSession.MAX_JSON_LENGTH
 			};
 
 			this.log('va', `_getArraySize: array.length`);
@@ -2493,7 +2495,8 @@ export class NodeDebugSession extends DebugSession {
 			disable_break: true,
 			additional_context: [
 				{ name: 'obj', handle: obj.handle }
-			]
+			],
+			maxStringLength: NodeDebugSession.MAX_JSON_LENGTH
 		};
 
 		this.log('va', `_createSetMapVariable: ${obj.type}.size`);
@@ -2957,8 +2960,9 @@ export class NodeDebugSession extends DebugSession {
 		const evalArgs = {
 			expression: `JSON.stringify(Object.keys(${expression}))`,
 			disable_break: true,
-			maxStringLength: 100000
+			maxStringLength: NodeDebugSession.MAX_JSON_LENGTH
 		};
+
 		if (args.frameId > 0) {
 			const frame = this._frameHandles.get(args.frameId);
 			if (!frame) {
