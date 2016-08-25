@@ -790,6 +790,7 @@ export class NodeDebugSession extends DebugSession {
 
 				const termArgs : DebugProtocol.RunInTerminalRequestArguments = {
 					kind: 'integrated',
+					title: localize('node.console.title', "Node Debug Console"),
 					cwd: workingDirectory,
 					args: launchArgs,
 					env: args.env
