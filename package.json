@@ -24,7 +24,7 @@
 		"node": "^4.1.1"
 	},
 	"dependencies": {
-		"vscode-debugprotocol": "^1.12.0-pre.2",
+		"vscode-debugprotocol": "^1.12.0-pre.3",
 		"vscode-debugadapter": "^1.12.0-pre.1",
 		"source-map": "^0.5.3",
 		"vscode-nls": "^1.0.4",

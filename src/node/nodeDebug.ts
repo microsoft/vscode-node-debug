@@ -3037,7 +3037,10 @@ export class NodeDebugSession extends DebugSession {
 			result = result.sort();
 
 			const targets = result.map(label => {
-				return { label }
+				return <DebugProtocol.CompletionItem> {
+					label: label,
+					type: 'function'
+				}
 			});
 
 			response.body = {
