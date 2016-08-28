@@ -237,6 +237,8 @@ interface CommonArguments {
 	completionInEvaluate?: boolean;
 }
 
+type ConsoleType = "internalConsole" | "integratedTerminal" | "externalTerminal";
+
 /**
  * This interface should always match the schema found in the node-debug extension manifest.
  */
@@ -253,8 +255,10 @@ interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArguments, C
 	runtimeArgs?: string[];
 	/** Optional environment variables to pass to the debuggee. The string valued properties of the 'environmentVariables' are used as key/value pairs. */
 	env?: { [key: string]: string; };
-	/** If true launch the target in an external console. */
+	/** Deprecated: if true launch the target in an external console. */
 	externalConsole?: boolean;
+	/** Where to launch the debug target. */
+	console?: ConsoleType;
 }
 
 /**
@@ -320,7 +324,7 @@ export class NodeDebugSession extends DebugSession {
 	private _remoteRoot: string;
 	private _restartMode = false;
 	private _sourceMaps: ISourceMaps;
-	private _externalConsole: boolean;
+	private _console: ConsoleType = "internalConsole";
 	private _stopOnEntry: boolean;
 	private _stepBack = false;
 
@@ -646,7 +650,20 @@ export class NodeDebugSession extends DebugSession {
 
 		this._noDebug = (typeof args.noDebug === 'boolean') && args.noDebug;
 
-		this._externalConsole = (typeof args.externalConsole === 'boolean') && args.externalConsole;
+		if (typeof args.console === 'string') {
+			switch (args.console) {
+				case "internalConsole":
+				case "integratedTerminal":
+				case "externalTerminal":
+					this._console = args.console;
+					break;
+				default:
+					this.sendErrorResponse(response, 2028, localize('VSND2028', "Unknown console type '{0}'.", args.console));
+					return;
+			}
+		} else if (typeof args.externalConsole === 'boolean' && args.externalConsole) {
+			this._console = "externalTerminal";
+		}
 
 		const port = args.port || random(3000, 50000);
 
@@ -784,9 +801,9 @@ export class NodeDebugSession extends DebugSession {
 		const address = args.address;
 		const timeout = args.timeout;
 
-		if (this._externalConsole) {
+		if (this._console === 'externalTerminal' || this._console === 'integratedTerminal') {
 
-			if (this._supportsRunInTerminalRequest) {
+			if (this._console === 'integratedTerminal' && this._supportsRunInTerminalRequest) {
 
 				const termArgs : DebugProtocol.RunInTerminalRequestArguments = {
 					kind: 'integrated',

@@ -98,7 +98,7 @@
 						"env": {
 							"NODE_ENV": "development"
 						},
-						"externalConsole": false,
+						"console": "internalConsole",
 						"sourceMaps": false,
 						"outDir": null
 					},
@@ -141,6 +141,11 @@
 								"type": "boolean",
 								"description": "%node.launch.externalConsole.description%",
 								"default": true
+							},
+							"console": {
+								"enum": [ "internalConsole", "integratedTerminal", "externalTerminal" ],
+								"description": "%node.launch.console.description%",
+								"default": "internalConsole"
 							},
 							"args": {
 								"type": "array",
