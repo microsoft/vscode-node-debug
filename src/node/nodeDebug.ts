@@ -233,8 +233,6 @@ interface CommonArguments {
 	stepBack?: boolean;
 	/** Control mapping of node.js scripts to files on disk. */
 	mapToFilesOnDisk?: boolean;
-	/** make completion request available in evaluate request. */
-	completionInEvaluate?: boolean;
 }
 
 type ConsoleType = "internalConsole" | "integratedTerminal" | "externalTerminal";
@@ -298,7 +296,6 @@ export class NodeDebugSession extends DebugSession {
 	// tracing
 	private _trace: string[];
 	private _traceAll = false;
-	private _completionInEvaluate = false;
 
 	// options
 	private _tryToInjectExtension = true;
@@ -932,10 +929,6 @@ export class NodeDebugSession extends DebugSession {
 
 		if (typeof args.stepBack === 'boolean') {
 			this._stepBack = args.stepBack;
-		}
-
-		if (typeof args.completionInEvaluate === 'boolean') {
-			this._completionInEvaluate = args.completionInEvaluate;
 		}
 
 		if (typeof args.mapToFilesOnDisk === 'boolean') {
@@ -2856,20 +2849,6 @@ export class NodeDebugSession extends DebugSession {
 
 	protected evaluateRequest(response: DebugProtocol.EvaluateResponse, args: DebugProtocol.EvaluateArguments): void {
 
-		if (this._completionInEvaluate && args.expression.indexOf('%') === 0) {
-
-			const text = args.expression.substr(1);
-
-			const cargs: DebugProtocol.CompletionsArguments = {
-				column: text.length,
-				text: text,
-				frameId: args.frameId
-			};
-
-			this.completionsRequest(<any>response, cargs);
-			return;
-		}
-
 		const expression = args.expression;
 
 		const evalArgs = {
@@ -3047,12 +3026,6 @@ export class NodeDebugSession extends DebugSession {
 
 			let result = JSON.parse(<string>resp.body.value);
 
-			if (filter) {
-				result = result.filter(x => x.indexOf(filter) === 0 && filter.length < x.length);
-			}
-
-			result = result.sort();
-
 			const targets = result.map(label => {
 				return <DebugProtocol.CompletionItem> {
 					label: label,
@@ -3063,26 +3036,13 @@ export class NodeDebugSession extends DebugSession {
 			response.body = {
 				targets: targets
 			};
-
-			if (this._completionInEvaluate) {
-				// for trying completion in evaluate
-				(<any>response.body).result = JSON.stringify((<any>response.body).targets);
-				(<any>response.body).variablesReference = 0;
-			}
-
 			this.sendResponse(response);
+
 		}).catch(err => {
 
 			response.body = {
 				targets: []
 			};
-
-			if (this._completionInEvaluate) {
-				// for trying completion in evaluate
-				(<any>response.body).result = "error: " + err.message;
-				(<any>response.body).variablesReference = 0;
-			}
-
 			this.sendResponse(response);
 		});
 	}
