@@ -137,6 +137,11 @@
 								"description": "%node.stopOnEntry.description%",
 								"default": true
 							},
+							"externalConsole": {
+								"type": "boolean",
+								"description": "%node.launch.externalConsole.description%",
+								"default": true
+							},
 							"console": {
 								"enum": [ "internalConsole", "integratedTerminal", "externalTerminal" ],
 								"description": "%node.launch.console.description%",
