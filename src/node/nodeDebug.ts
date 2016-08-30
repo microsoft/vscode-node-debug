@@ -3000,50 +3000,109 @@ export class NodeDebugSession extends DebugSession {
 			}
 		}
 
-		if (!expression) {
-			expression = 'global';
-		}
+		if (expression) {
 
-		const evalArgs = {
-			expression: `JSON.stringify(Object.keys(${expression}))`,
-			disable_break: true,
-			maxStringLength: NodeDebugSession.MAX_JSON_LENGTH
-		};
+			const evalArgs = {
+				expression: `JSON.stringify(Object.keys(${expression}))`,
+				disable_break: true,
+				maxStringLength: NodeDebugSession.MAX_JSON_LENGTH
+			};
 
-		if (args.frameId > 0) {
+			if (args.frameId > 0) {
+
+				const frame = this._frameHandles.get(args.frameId);
+				if (!frame) {
+					this.sendErrorResponse(response, 2020, 'stack frame not valid', null, ErrorDestination.Telemetry);
+					return;
+				}
+
+				const frameIx = frame.index;
+				(<any>evalArgs).frame = frameIx;
+			} else {
+				(<any>evalArgs).global = true;
+			}
+
+			this._node.evaluate(evalArgs).then(resp => {
+
+				let result = JSON.parse(<string>resp.body.value);
+
+				const targets = result.map(label => {
+					return <DebugProtocol.CompletionItem> {
+						label: label,
+						type: 'function'
+					}
+				});
+
+				response.body = {
+					targets: targets
+				};
+				this.sendResponse(response);
+
+			}).catch(err => {
+
+				response.body = {
+					targets: []
+				};
+				this.sendResponse(response);
+			});
+
+		} else {
+
 			const frame = this._frameHandles.get(args.frameId);
 			if (!frame) {
 				this.sendErrorResponse(response, 2020, 'stack frame not valid', null, ErrorDestination.Telemetry);
 				return;
 			}
-			const frameIx = frame.index;
-			(<any>evalArgs).frame = frameIx;
-		} else {
-			(<any>evalArgs).global = true;
+
+			this.scopesRequest2(frame).then(targets => {
+
+				response.body = {
+					targets: targets
+				};
+				this.sendResponse(response);
+
+			}).catch(err => {
+
+				response.body = {
+					targets: []
+				};
+				this.sendResponse(response);
+			});
 		}
+	}
 
-		this._node.evaluate(evalArgs).then(resp => {
+	protected scopesRequest2(frame: V8Frame): Promise<DebugProtocol.CompletionItem[]> {
 
-			let result = JSON.parse(<string>resp.body.value);
+		const frameIx = frame.index;
+		const frameThis = <V8Object> this._getValueFromCache(frame.receiver);
 
-			const targets = result.map(label => {
-				return <DebugProtocol.CompletionItem> {
-					label: label,
-					type: 'function'
+		const scopesArgs: any = {
+			frame_index: frameIx,
+			frameNumber: frameIx
+		};
+
+		return this._node.command2('scopes', scopesArgs).then(scopesResponse => {
+
+			const scopes = scopesResponse.body.scopes;
+			return this._resolveValues( scopes.map(scope => scope.object) ).then(resolved => {
+
+				let items = new Array<DebugProtocol.CompletionItem>();
+				for (let r of resolved) {
+					for (let p of r.properties) {
+						if (typeof p.name === 'string') {
+							items.push({
+								label: <string> p.name,
+								type: 'function'
+							});
+						}
+					}
 				}
+				return items;
 			});
 
-			response.body = {
-				targets: targets
-			};
-			this.sendResponse(response);
-
-		}).catch(err => {
-
-			response.body = {
-				targets: []
-			};
-			this.sendResponse(response);
+		}).catch(error => {
+			// in case of error return empty array
+			return [];
 		});
 	}
 
