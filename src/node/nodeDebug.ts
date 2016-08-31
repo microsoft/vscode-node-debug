@@ -2982,7 +2982,6 @@ export class NodeDebugSession extends DebugSession {
 		const postfix = line.substring(column);
 
 		let expression = "";
-		let filter = "";
 
 		var result = EX.exec(prefix);
 		if (result && result.length === 4) {
@@ -2991,12 +2990,6 @@ export class NodeDebugSession extends DebugSession {
 				if (expression[expression.length-1] === '.') {
 					expression = expression.substr(0, expression.length-1);
 				}
-			}
-			if (result[2]) {
-				filter = result[2];
-			}
-			if (result[3]) {
-				filter = result[3];
 			}
 		}
 
@@ -3024,17 +3017,20 @@ export class NodeDebugSession extends DebugSession {
 
 			this._node.evaluate(evalArgs).then(resp => {
 
-				let result = JSON.parse(<string>resp.body.value);
+				let names = JSON.parse(<string>resp.body.value);
 
-				const targets = result.map(label => {
-					return <DebugProtocol.CompletionItem> {
-						label: label,
-						type: 'function'
+				let items = new Array<DebugProtocol.CompletionItem>();
+				for (let name of names) {
+					if (!isIndex(name)) {
+						items.push({
+							label: <string> name,
+							type: 'function'
+						});
 					}
-				});
+				}
 
 				response.body = {
-					targets: targets
+					targets: items
 				};
 				this.sendResponse(response);
 
@@ -3089,7 +3085,7 @@ export class NodeDebugSession extends DebugSession {
 				let items = new Array<DebugProtocol.CompletionItem>();
 				for (let r of resolved) {
 					for (let p of r.properties) {
-						if (typeof p.name === 'string') {
+						if (!isIndex(p.name)) {
 							items.push({
 								label: <string> p.name,
 								type: 'function'
