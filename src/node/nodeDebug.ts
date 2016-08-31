@@ -2964,33 +2964,16 @@ export class NodeDebugSession extends DebugSession {
 
 	protected completionsRequest(response: DebugProtocol.CompletionsResponse, args: DebugProtocol.CompletionsArguments): void {
 
-		/*
-			a 		->  ''		'a'
-			a.	    ->  'a'		''
-			a.b     ->  'a'		'b'
-			a.b.    ->  'a.b'	''
-			a.b.c   ->  'a.b'	'c'
-			a[x].   ->  'a[x]'	''
-		*/
-		//const EX = /(?:(?:((?:\w+\.)+)(\w*))|(\w+))$/;
-		const EX = /(?:(?:((?:[$a-zA-Z_][$\w]*(?:\[.+\])?\.)+)(\w*(?:\[.+\])?))|([$a-zA-Z_][$\w]*(?:\[.+\])?))$/;
-
 		const line = args.text;
 		const column = args.column;
 
 		const prefix = line.substring(0, column);
 		const postfix = line.substring(column);
 
-		let expression = "";
-
-		var result = EX.exec(prefix);
-		if (result && result.length === 4) {
-			if (result[1]) {
-				expression = result[1];
-				if (expression[expression.length-1] === '.') {
-					expression = expression.substr(0, expression.length-1);
-				}
-			}
+		let expression: string;
+		const dot = prefix.lastIndexOf('.');
+		if (dot >= 0) {
+			expression = prefix.substr(0, dot);
 		}
 
 		if (expression) {
