@@ -2996,7 +2996,7 @@ export class NodeDebugSession extends DebugSession {
 		if (expression) {
 
 			const evalArgs = {
-				expression: `JSON.stringify(Object.keys(${expression}))`,
+				expression: `(function(x){var a=[];for(var o=x;o;o=o.__proto__){a.push(Object.keys(o))};return JSON.stringify(a)})(${expression})`,
 				disable_break: true,
 				maxStringLength: NodeDebugSession.MAX_JSON_LENGTH
 			};
@@ -3017,15 +3017,18 @@ export class NodeDebugSession extends DebugSession {
 
 			this._node.evaluate(evalArgs).then(resp => {
 
-				let names = JSON.parse(<string>resp.body.value);
-
 				let items = new Array<DebugProtocol.CompletionItem>();
-				for (let name of names) {
-					if (!isIndex(name)) {
-						items.push({
-							label: <string> name,
-							type: 'function'
-						});
+
+				let arrays = JSON.parse(<string>resp.body.value);
+
+				for (let i= 0; i < arrays.length; i++) {
+					for (let name of arrays[i]) {
+						if (!isIndex(name)) {
+							items.push({
+								label: <string> name,
+								type: i === 0 ? 'field': 'method'
+							});
+						}
 					}
 				}
 
