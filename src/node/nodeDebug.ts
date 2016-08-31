@@ -2996,7 +2996,7 @@ export class NodeDebugSession extends DebugSession {
 		if (expression) {
 
 			const evalArgs = {
-				expression: `(function(x){var a=[];for(var o=x;o;o=o.__proto__){a.push(Object.keys(o))};return JSON.stringify(a)})(${expression})`,
+				expression: `(function(x){var a=[];for(var o=x;o;o=o.__proto__){a.push(Object.getOwnPropertyNames(o))};return JSON.stringify(a)})(${expression})`,
 				disable_break: true,
 				maxStringLength: NodeDebugSession.MAX_JSON_LENGTH
 			};
@@ -3017,16 +3017,18 @@ export class NodeDebugSession extends DebugSession {
 
 			this._node.evaluate(evalArgs).then(resp => {
 
-				let items = new Array<DebugProtocol.CompletionItem>();
+				const set = new Set<string>();
+				const items = new Array<DebugProtocol.CompletionItem>();
 
 				let arrays = JSON.parse(<string>resp.body.value);
 
 				for (let i= 0; i < arrays.length; i++) {
 					for (let name of arrays[i]) {
-						if (!isIndex(name)) {
+						if (!isIndex(name) && !set.has(name)) {
+							set.add(name);
 							items.push({
 								label: <string> name,
-								type: i === 0 ? 'field': 'method'
+								type: 'property'
 							});
 						}
 					}
@@ -3085,12 +3087,14 @@ export class NodeDebugSession extends DebugSession {
 			const scopes = scopesResponse.body.scopes;
 			return this._resolveValues( scopes.map(scope => scope.object) ).then(resolved => {
 
-				let items = new Array<DebugProtocol.CompletionItem>();
+				const set = new Set<string | number>();
+				const items = new Array<DebugProtocol.CompletionItem>();
 				for (let r of resolved) {
-					for (let p of r.properties) {
-						if (!isIndex(p.name)) {
+					for (let property of r.properties) {
+						if (!isIndex(property.name) && !set.has(property.name)) {
+							set.add(property.name);
 							items.push({
-								label: <string> p.name,
+								label: <string> property.name,
 								type: 'function'
 							});
 						}
