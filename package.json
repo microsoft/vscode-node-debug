@@ -140,7 +140,9 @@
 							"externalConsole": {
 								"type": "boolean",
 								"description": "%node.launch.externalConsole.description%",
-								"default": true
+								"default": true,
+								"errorMessage": "%node.launch.externalConsole.error%",
+								"enum": []
 							},
 							"console": {
 								"enum": [ "internalConsole", "integratedTerminal", "externalTerminal" ],

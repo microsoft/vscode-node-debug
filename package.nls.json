@@ -12,7 +12,8 @@
 	"node.smartStep.description": "Automatically step through generated code that cannot be mapped back to the original source.",
 
 	"node.launch.program.description": "Absolute path to the program.",
-	"node.launch.externalConsole.description": "Launch debug target in external console (deprecated: use 'console' attribute instead).",
+	"node.launch.externalConsole.description": "Launch debug target in external console.",
+	"node.launch.externalConsole.error": "Deprecated: use 'console' attribute instead.",
 	"node.launch.console.description": "Where to launch the debug target: internal console, integrated terminal, or external terminal.",
 	"node.launch.args.description": "Command line arguments passed to the program.",
 	"node.launch.cwd.description": "Absolute path to the working directory of the program being debugged.",
