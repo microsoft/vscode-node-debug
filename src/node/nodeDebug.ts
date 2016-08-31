@@ -810,8 +810,8 @@ export class NodeDebugSession extends DebugSession {
 					env: args.env
 				};
 
-				this.runInTerminalRequest(termArgs, NodeDebugSession.RUNINTERMINAL_TIMEOUT, response => {
-					if (response.success) {
+				this.runInTerminalRequest(termArgs, NodeDebugSession.RUNINTERMINAL_TIMEOUT, runResponse => {
+					if (runResponse.success) {
 
 						// since node starts in a terminal, we cannot track it with an 'exit' handler
 						// plan for polling after we have gotten the process pid.
@@ -824,8 +824,8 @@ export class NodeDebugSession extends DebugSession {
 						}
 					} else {
 
-						this.sendErrorResponse(response, 2011, localize('VSND2011', "Cannot launch debug target in terminal ({0}).", '{_error}'), { _error: response.message } );
-						this._terminated('terminal error: ' + response.message);
+						this.sendErrorResponse(response, 2011, localize('VSND2011', "Cannot launch debug target in terminal ({0}).", '{_error}'), { _error: runResponse.message } );
+						this._terminated('terminal error: ' + runResponse.message);
 					}
 				});
 
