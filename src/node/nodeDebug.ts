@@ -18,7 +18,7 @@ import {
 	V8Ref, V8Handle, V8Property, V8Object, V8Simple, V8Function, V8Frame, V8Scope, V8Script
 } from './nodeV8Protocol';
 import {ISourceMaps, SourceMaps, SourceMap, Bias} from './sourceMaps';
-import {Terminal, TerminalError} from './terminal';
+import {Terminal} from './terminal';
 import * as PathUtils from './pathUtilities';
 import * as CP from 'child_process';
 import * as Net from 'net';
@@ -438,7 +438,7 @@ export class NodeDebugSession extends DebugSession {
 		// is breakpoint?
 		if (!reason) {
 			const breakpoints = eventBody.breakpoints;
-			if (isArray(breakpoints) && breakpoints.length > 0) {
+			if (Array.isArray(breakpoints) && breakpoints.length > 0) {
 				const id = breakpoints[0];
 				if (!this._gotEntryEvent && id === 1) {	// 'stop on entry point' is implemented as a breakpoint with id 1
 					isEntry = true;
@@ -798,49 +798,18 @@ export class NodeDebugSession extends DebugSession {
 		const address = args.address;
 		const timeout = args.timeout;
 
-		if (this._console === 'externalTerminal' || this._console === 'integratedTerminal') {
+		if (this._supportsRunInTerminalRequest && (this._console === 'externalTerminal' || this._console === 'integratedTerminal')) {
 
-			if (this._console === 'integratedTerminal' && this._supportsRunInTerminalRequest) {
+			const termArgs : DebugProtocol.RunInTerminalRequestArguments = {
+				kind: this._console === 'integratedTerminal' ? 'integrated' : 'external',
+				title: localize('node.console.title', "Node Debug Console"),
+				cwd: workingDirectory,
+				args: launchArgs,
+				env: args.env
+			};
 
-				const termArgs : DebugProtocol.RunInTerminalRequestArguments = {
-					kind: 'integrated',
-					title: localize('node.console.title', "Node Debug Console"),
-					cwd: workingDirectory,
-					args: launchArgs,
-					env: args.env
-				};
-
-				this.runInTerminalRequest(termArgs, NodeDebugSession.RUNINTERMINAL_TIMEOUT, runResponse => {
-					if (runResponse.success) {
-
-						// since node starts in a terminal, we cannot track it with an 'exit' handler
-						// plan for polling after we have gotten the process pid.
-						this._pollForNodeProcess = true;
-
-						if (this._noDebug) {
-							this.sendResponse(response);
-						} else {
-							this._attach(response, port, address, timeout);
-						}
-					} else {
-
-						this.sendErrorResponse(response, 2011, localize('VSND2011', "Cannot launch debug target in terminal ({0}).", '{_error}'), { _error: runResponse.message } );
-						this._terminated('terminal error: ' + runResponse.message);
-					}
-				});
-
-			} else {
-
-				Terminal.launchInTerminal(workingDirectory, launchArgs, args.env).then(term => {
-
-					if (term) {
-						// if we got a terminal process, we will track it
-						this._terminalProcess = term;
-						term.on('exit', () => {
-							this._terminalProcess = null;
-							this._terminated('terminal exited');
-						});
-					}
+			this.runInTerminalRequest(termArgs, NodeDebugSession.RUNINTERMINAL_TIMEOUT, runResponse => {
+				if (runResponse.success) {
 
 					// since node starts in a terminal, we cannot track it with an 'exit' handler
 					// plan for polling after we have gotten the process pid.
@@ -851,12 +820,12 @@ export class NodeDebugSession extends DebugSession {
 					} else {
 						this._attach(response, port, address, timeout);
 					}
+				} else {
 
-				}).catch((error: TerminalError) => {
-					this.sendErrorResponseWithInfoLink(response, 2011, localize('VSND2011', "Cannot launch debug target in terminal ({0}).", '{_error}'), { _error: error.message }, error.linkId );
-					this._terminated('terminal error: ' + error.message);
-				});
-			}
+					this.sendErrorResponse(response, 2011, localize('VSND2011', "Cannot launch debug target in terminal ({0}).", '{_error}'), { _error: runResponse.message } );
+					this._terminated('terminal error: ' + runResponse.message);
+				}
+			});
 
 		} else {
 
@@ -3413,16 +3382,12 @@ function isIndex(name: string | number) {
 	}
 }
 
-function endsWith(str, suffix): boolean {
+function endsWith(str: string, suffix: string): boolean {
 	return str.indexOf(suffix, str.length - suffix.length) !== -1;
 }
 
 function random(low: number, high: number): number {
 	return Math.floor(Math.random() * (high - low) + low);
-}
-
-function isArray(what: any): boolean {
-	return Object.prototype.toString.call(what) === '[object Array]';
 }
 
 function extendObject<T> (objectCopy: T, object: T): T {
