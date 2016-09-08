@@ -18,7 +18,6 @@ import {
 	V8Ref, V8Handle, V8Property, V8Object, V8Simple, V8Function, V8Frame, V8Scope, V8Script
 } from './nodeV8Protocol';
 import {ISourceMaps, SourceMaps, SourceMap, Bias} from './sourceMaps';
-import {Terminal} from './terminal';
 import * as PathUtils from './pathUtilities';
 import * as CP from 'child_process';
 import * as Net from 'net';
@@ -675,7 +674,7 @@ export class NodeDebugSession extends DebugSession {
 				return;
 			}
 		} else {
-			if (!Terminal.isOnPath(NodeDebugSession.NODE)) {
+			if (!PathUtils.isOnPath(NodeDebugSession.NODE)) {
 				this.sendErrorResponse(response, 2001, localize('VSND2001', "Cannot find runtime '{0}' on PATH.", '{_runtime}'), { _runtime: NodeDebugSession.NODE });
 				return;
 			}
@@ -1306,7 +1305,7 @@ export class NodeDebugSession extends DebugSession {
 					this._terminalProcess = null;
 					this._nodeProcessId = -1;
 					this.log('la', 'shutdown: kill debugee and sub-processes');
-					Terminal.killTree(pid);
+					NodeDebugSession.killTree(pid);
 				}
 			}
 
@@ -3366,6 +3365,29 @@ export class NodeDebugSession extends DebugSession {
 			return s.substring(1, s.length - 1);
 		}
 		return s;
+	}
+
+	private static killTree(processId: number): void {
+
+		if (process.platform === 'win32') {
+			const TASK_KILL = 'C:\\Windows\\System32\\taskkill.exe';
+
+			// when killing a process in Windows its child processes are *not* killed but become root processes.
+			// Therefore we use TASKKILL.EXE
+			try {
+				CP.execSync(`${TASK_KILL} /F /T /PID ${processId}`);
+			}
+			catch (err) {
+			}
+		} else {
+
+			// on linux and OS X we kill all direct and indirect child processes as well
+			try {
+				const cmd = Path.join(__dirname, './terminateProcess.sh');
+				CP.spawnSync(cmd, [ processId.toString() ]);
+			} catch (err) {
+			}
+		}
 	}
 }
 

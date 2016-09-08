@@ -31,8 +31,7 @@ var watchedSources = [
 ];
 
 var scripts = [
-	'src/node/terminateProcess.sh',
-	'src/node/TerminalHelper.scpt'
+	'src/node/terminateProcess.sh'
 ];
 
 var scripts2 = [
