@@ -333,7 +333,6 @@ export class NodeDebugSession extends DebugSession {
 	// internal state
 	private _isTerminated: boolean;
 	private _inShutdown: boolean;
-	private _terminalProcess: CP.ChildProcess;		// the terminal process or undefined
 	private _pollForNodeProcess = false;
 	private _exception: V8Object;
 	private _lastStoppedEvent: DebugProtocol.StoppedEvent;
@@ -567,12 +566,6 @@ export class NodeDebugSession extends DebugSession {
 	 */
 	private _terminated(reason: string): void {
 		this.log('la', `_terminated: ${reason}`);
-
-		if (this._terminalProcess) {
-			// if the debug adapter owns a terminal,
-			// we delay the TerminatedEvent so that the user can see the result of the process in the terminal.
-			return;
-		}
 
 		if (!this._isTerminated) {
 			this._isTerminated = true;
@@ -1299,10 +1292,9 @@ export class NodeDebugSession extends DebugSession {
 				// stop socket connection (otherwise node.js dies with ECONNRESET on Windows)
 				this._node.stop();
 
-				// kill the whole process tree by either starting with the terminal or with the node process
-				let pid = this._terminalProcess ? this._terminalProcess.pid : this._nodeProcessId;
+				// kill the whole process tree by starting with the node process
+				let pid = this._nodeProcessId;
 				if (pid > 0) {
-					this._terminalProcess = null;
 					this._nodeProcessId = -1;
 					this.log('la', 'shutdown: kill debugee and sub-processes');
 					NodeDebugSession.killTree(pid);
