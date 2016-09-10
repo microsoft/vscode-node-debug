@@ -126,7 +126,7 @@
 				],
 				"configurationAttributes": {
 					"launch": {
-						"required": ["program", "cwd"],
+						"required": [ "cwd" ],
 						"properties": {
 							"program": {
 								"type": "string",

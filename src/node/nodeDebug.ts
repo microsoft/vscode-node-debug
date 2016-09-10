@@ -659,10 +659,11 @@ export class NodeDebugSession extends DebugSession {
 		let runtimeExecutable = args.runtimeExecutable;
 		if (runtimeExecutable) {
 			if (!Path.isAbsolute(runtimeExecutable)) {
-				this.sendRelativePathErrorResponse(response, 'runtimeExecutable', runtimeExecutable);
-				return;
-			}
-			if (!FS.existsSync(runtimeExecutable)) {
+				if (!PathUtils.isOnPath(runtimeExecutable)) {
+					this.sendErrorResponse(response, 2001, localize('VSND2001', "Cannot find runtime '{0}' on PATH.", '{_runtime}'), { _runtime: runtimeExecutable });
+					return;
+				}
+			} else if (!FS.existsSync(runtimeExecutable)) {
 				this.sendNotExistErrorResponse(response, 'runtimeExecutable', runtimeExecutable);
 				return;
 			}
@@ -714,46 +715,46 @@ export class NodeDebugSession extends DebugSession {
 			if (PathUtils.normalizeDriveLetter(programPath) !== PathUtils.realPath(programPath)) {
 				this.outLine(localize('program.path.case.mismatch.warning', "Program path uses differently cased character as file on disk; this might result in breakpoints not being hit."));
 			}
-		} else {
-			this.sendAttributeMissingErrorResponse(response, 'program');
-			return;
 		}
 
-		if (NodeDebugSession.isJavaScript(programPath)) {
-			if (this._sourceMaps) {
-				// if programPath is a JavaScript file and sourceMaps are enabled, we don't know whether
-				// programPath is the generated file or whether it is the source (and we need source mapping).
-				// Typically this happens if a tool like 'babel' or 'uglify' is used (because they both transpile js to js).
-				// We use the source maps to find a 'source' file for the given js file.
+		if (programPath) {
+			if (NodeDebugSession.isJavaScript(programPath)) {
+				if (this._sourceMaps) {
+					// if programPath is a JavaScript file and sourceMaps are enabled, we don't know whether
+					// programPath is the generated file or whether it is the source (and we need source mapping).
+					// Typically this happens if a tool like 'babel' or 'uglify' is used (because they both transpile js to js).
+					// We use the source maps to find a 'source' file for the given js file.
+					this._sourceMaps.MapPathFromSource(programPath).then(generatedPath => {
+						if (generatedPath && generatedPath !== programPath) {
+							// programPath must be source because there seems to be a generated file for it
+							this.log('sm', `launchRequest: program '${programPath}' seems to be the source; launch the generated file '${generatedPath}' instead`);
+							programPath = generatedPath;
+						} else {
+							this.log('sm', `launchRequest: program '${programPath}' seems to be the generated file`);
+						}
+						this.launchRequest2(response, args, programPath, programArgs, runtimeExecutable, runtimeArgs, port);
+					});
+					return;
+				}
+			} else {
+				// node cannot execute the program directly
+				if (!this._sourceMaps) {
+					this.sendErrorResponse(response, 2002, localize('VSND2002', "Cannot launch program '{0}'; configuring source maps might help.", '{path}'), { path: programPath });
+					return;
+				}
 				this._sourceMaps.MapPathFromSource(programPath).then(generatedPath => {
-					if (generatedPath && generatedPath !== programPath) {
-						// programPath must be source because there seems to be a generated file for it
-						this.log('sm', `launchRequest: program '${programPath}' seems to be the source; launch the generated file '${generatedPath}' instead`);
-						programPath = generatedPath;
-					} else {
-						this.log('sm', `launchRequest: program '${programPath}' seems to be the generated file`);
+					if (!generatedPath) {	// cannot find generated file
+						this.sendErrorResponse(response, 2003, localize('VSND2003', "Cannot launch program '{0}'; setting the '{1}' attribute might help.", '{path}', 'outDir'), { path: programPath });
+						return;
 					}
+					this.log('sm', `launchRequest: program '${programPath}' seems to be the source; launch the generated file '${generatedPath}' instead`);
+					programPath = generatedPath;
 					this.launchRequest2(response, args, programPath, programArgs, runtimeExecutable, runtimeArgs, port);
 				});
 				return;
 			}
-		} else {
-			// node cannot execute the program directly
-			if (!this._sourceMaps) {
-				this.sendErrorResponse(response, 2002, localize('VSND2002', "Cannot launch program '{0}'; configuring source maps might help.", '{path}'), { path: programPath });
-				return;
-			}
-			this._sourceMaps.MapPathFromSource(programPath).then(generatedPath => {
-				if (!generatedPath) {	// cannot find generated file
-					this.sendErrorResponse(response, 2003, localize('VSND2003', "Cannot launch program '{0}'; setting the '{1}' attribute might help.", '{path}', 'outDir'), { path: programPath });
-					return;
-				}
-				this.log('sm', `launchRequest: program '${programPath}' seems to be the source; launch the generated file '${generatedPath}' instead`);
-				programPath = generatedPath;
-				this.launchRequest2(response, args, programPath, programArgs, runtimeExecutable, runtimeArgs, port);
-			});
-			return;
 		}
+
 		this.launchRequest2(response, args, programPath, programArgs, runtimeExecutable, runtimeArgs, port);
 	}
 
@@ -772,9 +773,11 @@ export class NodeDebugSession extends DebugSession {
 				return;
 			}
 			// if working dir is given and if the executable is within that folder, we make the executable path relative to the working dir
-			program = Path.relative(workingDirectory, programPath);
+			if (programPath) {
+				program = Path.relative(workingDirectory, programPath);
+			}
 		}
-		else {	// should not happen
+		else if (programPath) {	// should not happen
 			// if no working dir given, we use the direct folder of the executable
 			workingDirectory = Path.dirname(programPath);
 			program = Path.basename(programPath);
@@ -782,10 +785,14 @@ export class NodeDebugSession extends DebugSession {
 
 		// we always break on entry (but if user did not request this, we will not stop in the UI).
 		let launchArgs = [ runtimeExecutable ];
-		if (! this._noDebug) {
+		if (! this._noDebug && !args.port) {
 			launchArgs.push(`--debug-brk=${port}`);
 		}
-		launchArgs = launchArgs.concat(runtimeArgs, [ program ], programArgs);
+		launchArgs = launchArgs.concat(runtimeArgs);
+		if (program) {
+			launchArgs.push(program);
+		}
+		launchArgs = launchArgs.concat(programArgs);
 
 		const address = args.address;
 		const timeout = args.timeout;
