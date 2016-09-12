@@ -785,7 +785,7 @@ export class NodeDebugSession extends DebugSession {
 
 		// we always break on entry (but if user did not request this, we will not stop in the UI).
 		let launchArgs = [ runtimeExecutable ];
-		if (! this._noDebug && !args.port) {
+		if (! this._noDebug && !args.port) {		// if a port is given, we assume that the '--debug-brk' option is specified elsewhere
 			launchArgs.push(`--debug-brk=${port}`);
 		}
 		launchArgs = launchArgs.concat(runtimeArgs);
