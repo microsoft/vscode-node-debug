@@ -355,14 +355,15 @@ export class SourceMaps implements ISourceMaps {
 
 	/**
 	 * Try to find the 'sourceMappingURL' in the file with the given path.
-	 * Returns null if no source map url is found or if an error occured.
+	 * Returns null if no source map url is found at the end.
 	 */
 	private _findSourceMapUrlInFile(pathToGenerated: string, content: string): string {
 
 		try {
 			const contents = content || FS.readFileSync(pathToGenerated).toString();
 			const lines = contents.split('\n');
-			for (let line of lines) {
+			for (let l = lines.length-1; l >= 0; l--) {
+				const line = lines[l].trim();
 				const matches = SourceMaps.SOURCE_MAPPING_MATCHER.exec(line);
 				if (matches && matches.length === 2) {
 					const uri = matches[1].trim();
@@ -372,6 +373,10 @@ export class SourceMaps implements ISourceMaps {
 						this._log(`_findSourceMapUrlInFile: source map url found at end of generated content`);
 					}
 					return uri;
+				}
+				if (line.length > 0) {
+					// non empty line found that doesn't match sourceMappingURL -> give up
+					return null;
 				}
 			}
 		} catch (e) {
