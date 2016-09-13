@@ -15,19 +15,6 @@ export function makePathAbsolute(absPath: string, relPath: string): string {
 }
 
 /**
- * Remove the first segment of the given path and return the result.
- * The input path must use the path syntax of the underlying operating system.
- */
-export function removeFirstSegment(path: string): string {
-	const segments = path.split(Path.sep);
-	segments.shift();
-	if (segments.length > 0) {
-		return segments.join(Path.sep);
-	}
-	return null;
-}
-
-/**
  * Return the relative path between 'path' and 'target'.
  * The input paths must use the path syntax of the underlying operating system.
  */
