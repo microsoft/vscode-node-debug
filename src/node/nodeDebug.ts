@@ -228,6 +228,8 @@ interface CommonArguments {
 
 	// unofficial flags
 
+	/** out dir glob patterns */
+	outDirs?: string[];
 	/** Step back supported. */
 	stepBack?: boolean;
 	/** Control mapping of node.js scripts to files on disk. */
@@ -924,7 +926,7 @@ export class NodeDebugSession extends DebugSession {
 						return true;
 					}
 				}
-				this._sourceMaps = new SourceMaps(this, generatedCodeDirectory);
+				this._sourceMaps = new SourceMaps(this, generatedCodeDirectory, args.outDirs);
 			}
 		}
 

@@ -28,7 +28,8 @@
 		"vscode-debugadapter": "^1.13.0-pre.0",
 		"source-map": "^0.5.3",
 		"vscode-nls": "^1.0.4",
-		"request-light": "^0.1.0"
+		"request-light": "^0.1.0",
+		"globby": "^6.0.0"
 	},
 	"repository": {
 		"type": "git",
