@@ -55,7 +55,7 @@ export interface ISourceMaps {
 
 export class SourceMaps implements ISourceMaps {
 
-	private static SOURCE_MAPPING_MATCHER = new RegExp('//[#@] ?sourceMappingURL=(.+)$');
+	private static SOURCE_MAPPING_MATCHER = new RegExp('^//[#@] ?sourceMappingURL=(.+)$');
 
 	private _session: NodeDebugSession;
 	private _sourceMapCache = new Map<string, Promise<SourceMap>>();	// all cached source maps
@@ -255,7 +255,7 @@ export class SourceMaps implements ISourceMaps {
 	private _findSourceMapUrl(contents: string, pathToGenerated?: string): string {
 
 		const lines = contents.split('\n');
-		for (let l = lines.length-1; l >= 0; l--) {
+		for (let l = lines.length-1; l >= Math.max(lines.length-10, 0); l--) {	// only search for url in the last 10 lines
 			const line = lines[l].trim();
 			const matches = SourceMaps.SOURCE_MAPPING_MATCHER.exec(line);
 			if (matches && matches.length === 2) {
@@ -286,10 +286,6 @@ export class SourceMaps implements ISourceMaps {
 					}
 				}
 				return uri;
-			}
-			if (line.length > 0) {
-				// non empty line found that doesn't match sourceMappingURL -> give up
-				return null;
 			}
 		}
 		return null;
