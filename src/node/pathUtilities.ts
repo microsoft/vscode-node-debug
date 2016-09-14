@@ -44,6 +44,28 @@ export function normalizeDriveLetter(path: string): string {
 	return path;
 }
 
+/**
+ * Change back slashes to forward slashes;
+ * on Windows and macOS convert to lower case.
+ */
+export function pathNormalize(path: string) : string {
+	path = path.replace(/\\/g, '/');
+	if (process.platform === 'win32' || process.platform === 'darwin') {
+		path = path.toLowerCase();
+	}
+	return path;
+}
+
+/**
+ * On Windows change forward slashes to back slashes
+ */
+export function pathToNative(path: string): string {
+	if (process.platform === 'win32') {
+		path = path.replace(/\//g, '\\');
+	}
+	return path;
+}
+
 export function pathCompare(path1: string, path2: string): boolean {
 	return normalizeDriveLetter(path1) === normalizeDriveLetter(path2);
 }
