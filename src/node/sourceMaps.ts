@@ -11,7 +11,7 @@ import * as CRYPTO from 'crypto';
 import * as OS from 'os';
 import * as XHR from 'request-light';
 
-var globby = require('globby');
+var glob = require('glob');
 import {SourceMapConsumer} from 'source-map';
 import * as PathUtils from './pathUtilities';
 import {NodeDebugSession} from './nodeDebug';
@@ -52,6 +52,18 @@ export interface ISourceMaps {
 	MapToSource(pathToGenerated: string, content: string, line: number, column: number): Promise<MappingResult>;
 }
 
+function globby(globs: string[]): Promise<string[]> {
+	return new Promise<string[]>((c, e) => {
+		glob(globs[0], (err, files: string[]) => {
+			if (err) {
+				e(err);
+			} else {
+				c(files);
+			}
+		});
+	});
+}
+
 
 export class SourceMaps implements ISourceMaps {
 
@@ -73,13 +85,19 @@ export class SourceMaps implements ISourceMaps {
 		}
 
 		// try to find all source files upfront asynchroneously
-		this._preLoad = globby(generatedCodeGlobs).then(paths => {
-			return Promise.all(paths.map(path => {
-				return this._findSourceMapUrlInFile(path).then(uri => {
-					return uri ? this._getSourceMap(uri, path) : null;
+		if (generatedCodeGlobs.length > 0) {
+			this._preLoad = globby(generatedCodeGlobs).then(paths => {
+				return Promise.all(paths.map(path => {
+					return this._findSourceMapUrlInFile(path).then(uri => {
+						return uri ? this._getSourceMap(uri, path) : null;
+					});
+				})).then(() => {
+					return void 0;
 				});
-			}));
-		});
+			});
+		} else {
+			this._preLoad = Promise.resolve(void 0);
+		}
 	}
 
 	public MapPathFromSource(pathToSource: string): Promise<string> {

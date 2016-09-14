@@ -21,7 +21,7 @@ suite('Node Debug Adapter', () => {
 
 	setup( () => {
 		dc = new DebugClient('node', DEBUG_ADAPTER, 'node');
-		return dc.start();
+		return dc.start();	// add port to run as server
 	});
 
 	teardown( () => dc.stop() );

@@ -29,7 +29,7 @@
 		"source-map": "^0.5.3",
 		"vscode-nls": "^1.0.4",
 		"request-light": "^0.1.0",
-		"globby": "^6.0.0"
+		"glob": "^7.0.6"
 	},
 	"repository": {
 		"type": "git",
@@ -93,7 +93,7 @@
 						"stopOnEntry": false,
 						"args": [],
 						"cwd": "${workspaceRoot}",
-                        "preLaunchTask": null,
+						"preLaunchTask": null,
 						"runtimeExecutable": null,
 						"runtimeArgs": ["--nolazy"],
 						"env": {
