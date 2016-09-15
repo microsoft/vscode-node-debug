@@ -833,7 +833,7 @@ export class NodeDebugSession extends DebugSession {
 			this._sendLaunchCommandToConsole(launchArgs);
 
 			// merge environment variables into a copy of the process.env
-			const env = extendObject(extendObject( { }, process.env), args.env);
+			const env = PathUtils.extendObject(PathUtils.extendObject( { }, process.env), args.env);
 
 			const options = {
 				cwd: workingDirectory,
@@ -3412,16 +3412,5 @@ function endsWith(str: string, suffix: string): boolean {
 function random(low: number, high: number): number {
 	return Math.floor(Math.random() * (high - low) + low);
 }
-
-function extendObject<T> (objectCopy: T, object: T): T {
-
-	for (let key in object) {
-		if (object.hasOwnProperty(key)) {
-			objectCopy[key] = object[key];
-		}
-	}
-	return objectCopy;
-}
-
 
 DebugSession.run(NodeDebugSession);

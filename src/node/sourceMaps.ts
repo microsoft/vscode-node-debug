@@ -10,7 +10,6 @@ import * as CRYPTO from 'crypto';
 import * as OS from 'os';
 import * as XHR from 'request-light';
 
-var glob = require('glob');
 import { SourceMapConsumer } from 'source-map';
 import * as PathUtils from './pathUtilities';
 import { NodeDebugSession } from './nodeDebug';
@@ -50,19 +49,6 @@ export interface ISourceMaps {
 	MapToSource(pathToGenerated: string, content: string, line: number, column: number): Promise<MappingResult>;
 }
 
-function globby(globs: string[]): Promise<string[]> {
-	return new Promise<string[]>((c, e) => {
-		glob(globs[0], (err, files: string[]) => {
-			if (err) {
-				e(err);
-			} else {
-				c(files);
-			}
-		});
-	});
-}
-
-
 export class SourceMaps implements ISourceMaps {
 
 	private static SOURCE_MAPPING_MATCHER = new RegExp('^//[#@] ?sourceMappingURL=(.+)$');
@@ -84,7 +70,7 @@ export class SourceMaps implements ISourceMaps {
 
 		// try to find all source files upfront asynchroneously
 		if (generatedCodeGlobs.length > 0) {
-			this._preLoad = globby(generatedCodeGlobs).then(paths => {
+			this._preLoad = PathUtils.multiGlob(generatedCodeGlobs).then(paths => {
 				return Promise.all(paths.map(path => {
 					return this._findSourceMapUrlInFile(path).then(uri => {
 						return uri ? this._getSourceMap(uri, path) : null;
@@ -616,5 +602,4 @@ export class SourceMap {
 		}
 		return this.unfixPath(path);
 	}
-
 }

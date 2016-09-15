@@ -6,6 +6,7 @@
 import * as Path from 'path';
 import * as FS from 'fs';
 import * as CP from 'child_process';
+var glob = require('glob');
 
 /**
   * The input paths must use the path syntax of the underlying operating system.
@@ -245,3 +246,86 @@ export function makeRelative2(from: string, to: string): string {
 	}
 	return tos.join('/');
 }
+
+//---- globbing support -------------------------------------------------
+
+export function extendObject<T> (objectCopy: T, object: T): T {
+
+	for (let key in object) {
+		if (object.hasOwnProperty(key)) {
+			objectCopy[key] = object[key];
+		}
+	}
+	return objectCopy;
+}
+
+function isExclude(pattern) {
+	return pattern[0] === '!';
+}
+
+interface IGlobTask {
+	pattern: string;
+	opts: any;
+}
+
+export function multiGlob(patterns: string[], opts?): Promise<string[]> {
+
+	var globTasks = new Array<IGlobTask>();
+
+	opts = extendObject({
+		cache: Object.create(null),
+		statCache: Object.create(null),
+		realpathCache: Object.create(null),
+		symlinks: Object.create(null),
+		ignore: []
+	}, opts);
+
+	try {
+
+		patterns.forEach( (pattern, i) => {
+
+			if (isExclude(pattern)) {
+				return;
+			}
+
+			var ignore = patterns.slice(i).filter(isExclude).map( pattern => {
+				return pattern.slice(1);
+			});
+
+			globTasks.push({
+				pattern: pattern,
+				opts: extendObject(extendObject({}, opts), {
+					ignore: opts.ignore.concat(ignore)
+				})
+			});
+		});
+
+	} catch (err) {
+		return Promise.reject(err);
+	}
+
+	return Promise.all(globTasks.map(task => {
+
+		return new Promise<string[]>((c, e) => {
+			glob(task.pattern, task.opts, (err, files: string[]) => {
+				if (err) {
+					e(err);
+				} else {
+					c(files);
+				}
+			});
+		});
+
+	})).then(results =>  {
+
+		const set = new Set<string>();
+		for (let paths of results) {
+			for (let p of paths) {
+				set.add(p);
+			}
+		}
+		let array = [];
+		set.forEach(v => array.push(v));
+		return array;
+	});
+};

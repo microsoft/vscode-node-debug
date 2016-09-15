@@ -166,4 +166,25 @@ suite('pathUtilities', () => {
 			assert.equal(PathUtils.normalizeDriveLetter('c:\\hello\\world'), 'c:\\hello\\world');
 		});
 	});
+
+	suite('multiGlob', () => {
+
+		test('one pattern', () => {
+			return PathUtils.multiGlob([ "testdata/glob/**/*" ]).then( paths => {
+				assert.equal(paths.length, 9);
+			});
+		});
+
+		test('two patterns', () => {
+			return PathUtils.multiGlob([ "testdata/glob/f1/**/*", "testdata/glob/f2/**/*"]).then( paths => {
+				assert.equal(paths.length, 4);
+			});
+		});
+
+		test('two include, one exclude', () => {
+			return PathUtils.multiGlob([ "testdata/glob/**/*", "!testdata/glob/f2/**"]).then( paths => {
+				assert.equal(paths.length, 6);
+			});
+		});
+	});
 });
