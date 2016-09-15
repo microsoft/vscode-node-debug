@@ -282,7 +282,7 @@ export class NodeDebugSession extends DebugSession {
 
 	private static NODE_TERMINATION_POLL_INTERVAL = 3000;
 	private static ATTACH_TIMEOUT = 10000;
-	private static RUNINTERMINAL_TIMEOUT = 3000;
+	private static RUNINTERMINAL_TIMEOUT = 5000;
 
 	private static NODE = 'node';
 	private static DUMMY_THREAD_ID = 1;
