@@ -249,20 +249,6 @@ export function makeRelative2(from: string, to: string): string {
 
 //---- globbing support -------------------------------------------------
 
-export function extendObject<T> (objectCopy: T, object: T): T {
-
-	for (let key in object) {
-		if (object.hasOwnProperty(key)) {
-			objectCopy[key] = object[key];
-		}
-	}
-	return objectCopy;
-}
-
-function isExclude(pattern) {
-	return pattern[0] === '!';
-}
-
 interface IGlobTask {
 	pattern: string;
 	opts: any;
@@ -280,6 +266,8 @@ export function multiGlob(patterns: string[], opts?): Promise<string[]> {
 		ignore: []
 	}, opts);
 
+	const isExclude = pattern => pattern[0] === '!';
+
 	try {
 
 		patterns.forEach( (pattern, i) => {
@@ -288,9 +276,7 @@ export function multiGlob(patterns: string[], opts?): Promise<string[]> {
 				return;
 			}
 
-			var ignore = patterns.slice(i).filter(isExclude).map( pattern => {
-				return pattern.slice(1);
-			});
+			var ignore = patterns.slice(i).filter(isExclude).map(pattern => pattern.slice(1));
 
 			globTasks.push({
 				pattern: pattern,
@@ -329,3 +315,18 @@ export function multiGlob(patterns: string[], opts?): Promise<string[]> {
 		return array;
 	});
 };
+
+//---- misc
+
+/**
+ * Copy attributes from fromObject to toObject.
+ */
+export function extendObject<T> (toObject: T, fromObject: T): T {
+
+	for (let key in fromObject) {
+		if (fromObject.hasOwnProperty(key)) {
+			toObject[key] = fromObject[key];
+		}
+	}
+	return toObject;
+}
