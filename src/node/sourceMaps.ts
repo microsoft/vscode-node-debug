@@ -73,9 +73,14 @@ export class SourceMaps implements ISourceMaps {
 			this._preLoad = PathUtils.multiGlob(generatedCodeGlobs).then(paths => {
 				return Promise.all(paths.map(path => {
 					return this._findSourceMapUrlInFile(path).then(uri => {
-						return uri ? this._getSourceMap(uri, path) : null;
+						return this._getSourceMap(uri, path);
+					}).catch(err => {
+						return null;
 					});
-				})).then(() => {
+				})).then(results => {
+					return void 0;
+				}).catch( err => {
+					// silently ignore errors
 					return void 0;
 				});
 			});
@@ -277,6 +282,10 @@ export class SourceMaps implements ISourceMaps {
 	 * Returns a (cached) SourceMap specified via the given uri.
 	 */
 	private _getSourceMap(uri: URI, pathToGenerated?: string) : Promise<SourceMap> {
+
+		if (!uri) {
+			return Promise.resolve(null);
+		}
 
 		// use sha256 to ensure the hash value can be used in filenames
 		const hash = CRYPTO.createHash('sha256').update(uri.uri()).digest('hex');
