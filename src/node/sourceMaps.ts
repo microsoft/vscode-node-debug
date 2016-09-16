@@ -269,10 +269,11 @@ export class SourceMaps implements ISourceMaps {
 				let uri = matches[1].trim();
 				if (pathToGenerated) {
 					this._log(`_findSourceMapUrl: source map url found at end of generated file '${pathToGenerated}'`);
+					return URI.parse(uri, Path.dirname(pathToGenerated));
 				} else {
 					this._log(`_findSourceMapUrl: source map url found at end of generated content`);
+					return URI.parse(uri);
 				}
-				return URI.parse(uri, pathToGenerated);
 			}
 		}
 		return null;
@@ -305,18 +306,7 @@ export class SourceMaps implements ISourceMaps {
 
 		if (uri.isFile()) {
 
-			// a local file path
-			let map_path = decodeURI(uri.filePath());
-
-			// if path is relative make it absolute
-			if (!Path.isAbsolute(map_path)) {
-				if (pathToGenerated) {
-					map_path = PathUtils.makePathAbsolute(pathToGenerated, map_path);
-				} else {
-					throw new Error(`relative path but no base given`);
-				}
-			}
-
+			const map_path = uri.filePath();
 			return this._readFile(map_path).then(content => {
 				return this._registerSourceMap(new SourceMap(map_path, pathToGenerated, content));
 			});

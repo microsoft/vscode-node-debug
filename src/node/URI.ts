@@ -7,20 +7,64 @@ import * as Path from 'path';
 import * as URL from 'url';
 import * as PathUtils from './pathUtilities';
 
+function isWindows(absPath: string): boolean {
+	return /^[a-zA-Z]\:\\/.test(absPath);
+}
+
+function stripFirst(path: string, c: string) {
+	return path[0] === c ? path.substr(1) : path;
+}
+
+function stripLast(path: string, c: string) {
+	return path[path.length-1] === c ? path.substr(0, path.length-1) : path;
+}
+
 export class URI {
 	private _uri: string;
 	private _u: URL.Url;
 
-	static file(path: string, base?: string) {
+	/**
+	 * Creates a file URI from the given file path.
+	 * If path is relative, an absolute base path must be provided as well.
+	 * If base is missing or if base is not absolute, an exception is thrown.
+	 */
+	public static file(path: string, base?: string) {
 
-		if (!Path.isAbsolute(path)) {
-			path = PathUtils.makePathAbsolute(base, path);
+		if (typeof path !== 'string') {
+			throw new Error('string expected');
 		}
-		if (path[0] === '/') {
-			path = 'file://' + path;
-		} else {
-			path = 'file:///' + path;
+
+		if (!PathUtils.isAbsolutePath(path)) {
+			if (base) {
+
+				if (PathUtils.isAbsolutePath(base)) {
+					if (isWindows(base)) {
+						path = stripLast(base, '\\') + '\\' + stripFirst(path, '\\');
+					} else {
+						path = stripLast(base, '/') + '/' + stripFirst(path, '/');
+					}
+				} else {
+					throw new Error('base path not absolute');
+				}
+
+				//path = PathUtils.makePathAbsolute(base, path);
+			} else {
+				throw new Error('base path missing');
+			}
 		}
+
+		if (isWindows(path)) {	// is windows
+			path = path.replace(/\\/g, '/');
+		}
+
+		// simplify '/./' -> '/'
+		path = path.replace(/\/\.\//g, '/');
+
+		if (path[0] !== '/') {
+			path = '/' + path;
+		}
+
+		path = encodeURI('file://' + path);
 
 		const u = new URI();
 		u._uri = path;
@@ -33,7 +77,10 @@ export class URI {
 		return u;
 	}
 
-	static parse(uri: string, base?: string) {
+	/**
+	 * Creates a URI from the given string.
+	 */
+	public static parse(uri: string, base?: string) {
 
 		if (uri.indexOf('http:') === 0 || uri.indexOf('https:') === 0 || uri.indexOf('file:') === 0 || uri.indexOf('data:') === 0 ) {
 			const u = new URI();
@@ -62,8 +109,12 @@ export class URI {
 
 	filePath(): string {
 		let path = this._u.path;
+
+		path = decodeURI(this._u.path);
+
 		if (/^\/[a-zA-Z]\:\//.test(path)) {
 			path = path.substr(1);	// remove additional '/'
+			path = path.replace(/\//g, '\\');	// convert slashes to backslashes
 		}
 		return path;
 	}
