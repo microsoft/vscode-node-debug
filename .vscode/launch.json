@@ -11,7 +11,7 @@
 			],
 			"stopOnEntry": false,
 			"sourceMaps": true,
-			"outDir": "${workspaceRoot}/out"
+			"outFiles": [ "${workspaceRoot}/out/**/*.js" ]
 		},
 		{
 			"name": "Run Server",
@@ -22,10 +22,9 @@
 			"stopOnEntry": false,
 			"runtimeArgs": [ "--nolazy" ],
 			"args": [ "--server=4711" ],
-			"externalConsole": false,
 			"internalConsoleOptions": "openOnSessionStart",
 			"sourceMaps": true,
-			"outDir": "${workspaceRoot}/out"
+			"outFiles": [ "${workspaceRoot}/out/**/*.js" ]
 		},
 		{
 			"name": "Run Tests",
@@ -41,7 +40,7 @@
 				"./out/tests"
 			],
 			"sourceMaps": true,
-			"outDir": "${workspaceRoot}/out",
+			"outFiles": [ "${workspaceRoot}/out/**/*.js" ],
 			"internalConsoleOptions": "openOnSessionStart"
 		},
 		{
@@ -51,7 +50,7 @@
 			"restart": true,
 			"port": 5858,
 			"sourceMaps": true,
-			"outDir": "${workspaceRoot}/out"
+			"outFiles": [ "${workspaceRoot}/out/**/*.js" ]
 		}
 	]
 }
