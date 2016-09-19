@@ -202,7 +202,7 @@ suite('Node Debug Adapter', () => {
 			});
 		});
 
-		test('should stop on a breakpoint in source', () => {
+		test('should stop on a breakpoint in source (outDir)', () => {
 
 			const PROGRAM = Path.join(DATA_ROOT, 'sourcemaps-inline/src/classes.ts');
 			const OUT_DIR = Path.join(DATA_ROOT, 'sourcemaps-inline/dist');
@@ -219,7 +219,24 @@ suite('Node Debug Adapter', () => {
 			});
 		});
 
-		test('should stop on a breakpoint in source with spaces in paths', () => {
+		test('should stop on a breakpoint in source (outFiles)', () => {
+
+			const PROGRAM = Path.join(DATA_ROOT, 'sourcemaps-inline/src/classes.ts');
+			const OUT_FILES = Path.join(DATA_ROOT, 'sourcemaps-inline/dist/**/*.js');
+			const BREAKPOINT_LINE = 17;
+
+			return dc.hitBreakpoint({
+				program: PROGRAM,
+				sourceMaps: true,
+				outFiles: [ OUT_FILES ],
+				runtimeArgs: [ '--nolazy' ]
+			}, {
+				path: PROGRAM,
+				line: BREAKPOINT_LINE
+			});
+		});
+
+		test('should stop on a breakpoint in source with spaces in paths (outDir)', () => {
 
 			const PROGRAM = Path.join(DATA_ROOT, 'sourcemaps with spaces', 'the source/classes.ts');
 			const OUT_DIR = Path.join(DATA_ROOT, 'sourcemaps with spaces/the distribution');
@@ -235,6 +252,24 @@ suite('Node Debug Adapter', () => {
 				line: BREAKPOINT_LINE
 			});
 		});
+
+		test('should stop on a breakpoint in source with spaces in paths (outFiles)', () => {
+
+			const PROGRAM = Path.join(DATA_ROOT, 'sourcemaps with spaces', 'the source/classes.ts');
+			const OUT_FILES = Path.join(DATA_ROOT, 'sourcemaps with spaces/the distribution/**/*.js');
+			const BREAKPOINT_LINE = 17;
+
+			return dc.hitBreakpoint({
+				program: PROGRAM,
+				sourceMaps: true,
+				outFiles: [ OUT_FILES ],
+				runtimeArgs: [ '--nolazy' ]
+			}, {
+				path: PROGRAM,
+				line: BREAKPOINT_LINE
+			});
+		});
+
 
 		test('should stop on a breakpoint in source - Microsoft/vscode#2574', () => {
 

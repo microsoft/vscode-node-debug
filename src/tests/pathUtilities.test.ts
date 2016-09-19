@@ -175,6 +175,18 @@ suite('pathUtilities', () => {
 			});
 		});
 
+		test('one pattern with curly brackets', () => {
+			return PathUtils.multiGlob([ "testdata/glob/{f1,f2}/**/*" ]).then( paths => {
+				assert.equal(paths.length, 4);
+			});
+		});
+
+		test('one pattern with curly brackets, one exclude', () => {
+			return PathUtils.multiGlob([ "testdata/glob/{f1,f2,f3}/**/*", "!testdata/glob/f2/**" ]).then( paths => {
+				assert.equal(paths.length, 4);
+			});
+		});
+
 		test('two patterns', () => {
 			return PathUtils.multiGlob([ "testdata/glob/f1/**/*", "testdata/glob/f2/**/*"]).then( paths => {
 				assert.equal(paths.length, 4);
