@@ -223,13 +223,13 @@ interface CommonArguments {
 	sourceMaps?: boolean;
 	/** Where to look for the generated code. Only used if sourceMaps is true. */
 	outDir?: string;
+	/** output files glob patterns */
+	outFiles?: string[];
 	/** Try to automatically step over uninteresting source. */
 	smartStep?: boolean;
 
 	// unofficial flags
 
-	/** out dir glob patterns */
-	outDirs?: string[];
 	/** Step back supported. */
 	stepBack?: boolean;
 	/** Control mapping of node.js scripts to files on disk. */
@@ -926,7 +926,7 @@ export class NodeDebugSession extends DebugSession {
 						return true;
 					}
 				}
-				this._sourceMaps = new SourceMaps(this, generatedCodeDirectory, args.outDirs);
+				this._sourceMaps = new SourceMaps(this, generatedCodeDirectory, args.outFiles);
 			}
 		}
 

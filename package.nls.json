@@ -4,7 +4,8 @@
 	"node.label": "Node.js",
 
 	"node.sourceMaps.description": "Use JavaScript source maps (if they exist).",
-	"node.outDir.description": "If source maps are enabled, the generated code is expected in this directory. If not specified, the generated code is expected in the same directory as its source.",
+	"node.outDir.description": "If source maps are enabled, the generated code is expected in this directory. Deprecated: use 'outFiles' attribute instead.",
+	"node.outFiles.description": "If source maps are enabled, these glob patterns specify the generated JavaScript files. If a pattern starts with '!' the files are excluded. If not specified, the generated code is expected in the same directory as its source.",
 	"node.stopOnEntry.description": "Automatically stop program after launch.",
 	"node.port.description": "Debug port to attach to. Default is 5858.",
 	"node.address.description": "TCP/IP address of debug port (for Node.js >= 5.0 only). Default is 'localhost'.",
@@ -38,7 +39,8 @@
 	"extensionHost.launch.args.description": "Command line arguments passed to the program.",
 	"extensionHost.launch.stopOnEntry.description": "Automatically stop the extension host after launch.",
 	"extensionHost.launch.sourceMaps.description": "Use JavaScript source maps.",
-	"extensionHost.launch.outDir.description": "If source maps are enabled, the generated code is expected in this directory. If not specified, the generated code is expected in the same directory as its source.",
+	"extensionHost.launch.outDir.description": "If source maps are enabled, the generated code is expected in this directory. Deprecated: use 'outFiles' attribute instead.",
+	"extensionHost.launch.outFiles.description": "If source maps are enabled, these glob patterns specify the generated JavaScript files. If a pattern starts with '!' the files are excluded. If not specified, the generated code is expected in the same directory as its source.",
 	"extensionHost.smartStep.description": "Automatically step through generated code that cannot be mapped back to the original source.",
 
 	"extensionHost.launch.config.name": "Launch Extension"

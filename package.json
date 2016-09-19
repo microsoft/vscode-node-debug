@@ -101,7 +101,7 @@
 						},
 						"console": "internalConsole",
 						"sourceMaps": false,
-						"outDir": null
+						"outFiles": []
 					},
 					{
 						"name": "%node.attach.config.name%",
@@ -111,7 +111,7 @@
 						"address": "localhost",
 						"restart": false,
 						"sourceMaps": false,
-						"outDir": null,
+						"outFiles": [],
 						"localRoot": "${workspaceRoot}",
 						"remoteRoot": null
 					},
@@ -122,7 +122,7 @@
 						"processId": "${command.PickProcess}",
 						"port": 5858,
 						"sourceMaps": false,
-						"outDir": null
+						"outFiles": []
 					}
 				],
 				"configurationAttributes": {
@@ -188,6 +188,12 @@
 								"description": "%node.outDir.description%",
 								"default": null
 							},
+							"outFiles": {
+								"type": "array",
+								"description": "%node.outFiles.description%",
+								"items": { "type": "string" },
+								"default": []
+							},
 							"port": {
 								"type": "number",
 								"description": "%node.port.description%",
@@ -247,6 +253,12 @@
 								"description": "%node.outDir.description%",
 								"default": null
 							},
+							"outFiles": {
+								"type": "array",
+								"description": "%node.outFiles.description%",
+								"items": { "type": "string" },
+								"default": []
+							},
 							"stopOnEntry": {
 								"type": "boolean",
 								"description": "%node.stopOnEntry.description%",
@@ -284,7 +296,7 @@
 					"args": [ "--extensionDevelopmentPath=${workspaceRoot}" ],
 					"stopOnEntry": false,
 					"sourceMaps": true,
-					"outDir": "${workspaceRoot}/out",
+					"outDirs": [ "${workspaceRoot}/out/**/*.js" ],
 					"preLaunchTask": "npm"
 				}],
 				"configurationAttributes": {
@@ -316,6 +328,12 @@
 								"type": ["string", "null"],
 								"description": "%extensionHost.launch.outDir.description%",
 								"default": "out"
+							},
+							"outFiles": {
+								"type": "array",
+								"description": "%extensionHost.launch.outFiles.description%",
+								"items": { "type": "string" },
+								"default": []
 							},
 							"smartStep": {
 								"type": "boolean",
