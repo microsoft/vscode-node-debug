@@ -17,7 +17,7 @@ import {
 	V8EventBody,
 	V8Ref, V8Handle, V8Property, V8Object, V8Simple, V8Function, V8Frame, V8Scope, V8Script
 } from './nodeV8Protocol';
-import {ISourceMaps, SourceMaps, SourceMap, Bias} from './sourceMaps';
+import {ISourceMaps, SourceMaps, SourceMap} from './sourceMaps';
 import * as PathUtils from './pathUtilities';
 import * as CP from 'child_process';
 import * as Net from 'net';
@@ -76,7 +76,7 @@ export class PropertyContainer implements VariableContainer {
 				} else {
 					return variables;
 				}
-			});;
+			});
 		}
 
 		if (typeof start === 'number' && typeof count === 'number') {
@@ -322,7 +322,7 @@ export class NodeDebugSession extends DebugSession {
 	private _remoteRoot: string;
 	private _restartMode = false;
 	private _sourceMaps: ISourceMaps;
-	private _console: ConsoleType = "internalConsole";
+	private _console: ConsoleType = 'internalConsole';
 	private _stopOnEntry: boolean;
 	private _stepBack = false;
 
@@ -643,9 +643,9 @@ export class NodeDebugSession extends DebugSession {
 
 		if (typeof args.console === 'string') {
 			switch (args.console) {
-				case "internalConsole":
-				case "integratedTerminal":
-				case "externalTerminal":
+				case 'internalConsole':
+				case 'integratedTerminal':
+				case 'externalTerminal':
 					this._console = args.console;
 					break;
 				default:
@@ -653,7 +653,7 @@ export class NodeDebugSession extends DebugSession {
 					return;
 			}
 		} else if (typeof args.externalConsole === 'boolean' && args.externalConsole) {
-			this._console = "externalTerminal";
+			this._console = 'externalTerminal';
 		}
 
 		const port = args.port || random(3000, 50000);
@@ -1960,7 +1960,7 @@ export class NodeDebugSession extends DebugSession {
 			}
 
 			const func_name = this._getFrameName(frame);
-			const name = localize('frame.error', "{0} <error: {1}>", func_name, err.message)
+			const name = localize('frame.error', "{0} <error: {1}>", func_name, err.message);
 			return new StackFrame(this._frameHandles.create(frame), name);
 
 		});
@@ -2067,7 +2067,9 @@ export class NodeDebugSession extends DebugSession {
 
 					return Promise.all<any>([
 						this._readFile(path),
-						content ? Promise.resolve(content) : this._loadScript(script_id).then(script => { return script.contents } )
+						content
+							? Promise.resolve(content)
+							: this._loadScript(script_id).then(script => script.contents)
 					]).then(results => {
 						let fileContents = results[0];
 						const contents = results[1];
@@ -2259,7 +2261,7 @@ export class NodeDebugSession extends DebugSession {
 						count = obj.vscode_indexedCnt;
 					}
 
-					var args = { handle, mode, start, count };
+					const args = { handle, mode, start, count };
 
 					return this._node.command2('vscode_slice', args).then(resp => {
 						const items = resp.body.result;
@@ -2937,7 +2939,6 @@ export class NodeDebugSession extends DebugSession {
 		const column = args.column;
 
 		const prefix = line.substring(0, column);
-		const postfix = line.substring(column);
 
 		let expression: string;
 		const dot = prefix.lastIndexOf('.');
@@ -3027,7 +3028,6 @@ export class NodeDebugSession extends DebugSession {
 	protected scopesRequest2(frame: V8Frame): Promise<DebugProtocol.CompletionItem[]> {
 
 		const frameIx = frame.index;
-		const frameThis = <V8Object> this._getValueFromCache(frame.receiver);
 
 		const scopesArgs: any = {
 			frame_index: frameIx,
@@ -3067,13 +3067,6 @@ export class NodeDebugSession extends DebugSession {
 		if (this._trace && (this._traceAll || this._trace.indexOf(traceCategory) >= 0)) {
 			this.outLine(`${process.pid}: ${message}`);
 		}
-	}
-
-	/**
-	 * 'Attribute missing' error
-	 */
-	private sendAttributeMissingErrorResponse(response: DebugProtocol.Response, attribute: string) {
-		this.sendErrorResponse(response, 2005, localize('attribute.missing', "Attribute '{0}' is missing or empty.", attribute));
 	}
 
 	/**

@@ -6,7 +6,7 @@
 import * as Path from 'path';
 import * as FS from 'fs';
 import * as CP from 'child_process';
-var glob = require('glob');
+const glob = require('glob');
 
 /**
   * The input paths must use the path syntax of the underlying operating system.
@@ -256,7 +256,7 @@ interface IGlobTask {
 
 export function multiGlob(patterns: string[], opts?): Promise<string[]> {
 
-	var globTasks = new Array<IGlobTask>();
+	const globTasks = new Array<IGlobTask>();
 
 	opts = extendObject({
 		cache: Object.create(null),
@@ -276,7 +276,7 @@ export function multiGlob(patterns: string[], opts?): Promise<string[]> {
 				return;
 			}
 
-			var ignore = patterns.slice(i).filter(isExclude).map(pattern => pattern.slice(1));
+			const ignore = patterns.slice(i).filter(isExclude).map(pattern => pattern.slice(1));
 
 			globTasks.push({
 				pattern: pattern,

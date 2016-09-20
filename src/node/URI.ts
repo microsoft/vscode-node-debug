@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as Path from 'path';
 import * as URL from 'url';
 import * as PathUtils from './pathUtilities';
 

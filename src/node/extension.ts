@@ -153,7 +153,7 @@ export function activate(context: vscode.ExtensionContext) {
 		return listProcesses().then(items => {
 
 			let options : vscode.QuickPickOptions = {
-				placeHolder: "Pick the node.js or gulp process to attach to",
+				placeHolder: 'Pick the node.js or gulp process to attach to',
 				matchOnDescription: true,
 				matchOnDetail: true
 			};

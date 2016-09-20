@@ -5,7 +5,6 @@
 
 import * as Path from 'path';
 import * as FS from 'fs';
-import * as HTTP from 'http';
 import * as CRYPTO from 'crypto';
 import * as OS from 'os';
 import * as XHR from 'request-light';
@@ -343,10 +342,10 @@ export class SourceMaps implements ISourceMaps {
 					});
 				}
 
-				var options: XHR.XHROptions = {
+				const options: XHR.XHROptions = {
 					url: uri.uri(),
 					followRedirects: 5
-				}
+				};
 
 				return XHR.xhr(options).then(response => {
 					return this._writeFile(path, response.responseText).then(content => {
