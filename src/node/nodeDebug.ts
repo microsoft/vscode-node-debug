@@ -238,7 +238,7 @@ interface CommonArguments {
 	mapToFilesOnDisk?: boolean;
 }
 
-type ConsoleType = "internalConsole" | "integratedTerminal" | "externalTerminal";
+type ConsoleType = 'internalConsole' | 'integratedTerminal' | 'externalTerminal';
 
 /**
  * This interface should always match the schema found in the node-debug extension manifest.
