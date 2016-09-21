@@ -17,8 +17,9 @@ var del = require('del');
 var runSequence = require('run-sequence');
 var vzip = require('gulp-vinyl-zip');
 var es = require('event-stream');
+var typescript = require('typescript');
 
-var tsProject = ts.createProject('./src/tsconfig.json');
+var tsProject = ts.createProject('./src/tsconfig.json', { typescript });
 var nls = require('vscode-nls-dev');
 
 var inlineMap = true;
