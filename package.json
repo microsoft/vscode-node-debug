@@ -3,7 +3,8 @@
 	"displayName": "Node Debug",
 	"version": "1.6.0",
 	"publisher": "ms-vscode",
-	"description": "%extension.description%",
+	"description": "Visual Studio Code debugger extension for Node.js",
+	"icon": "images/node-debug-icon.svg",
 	"categories": [
 		"Debuggers"
 	],
@@ -21,7 +22,7 @@
 	},
 	"engines": {
 		"vscode": "^1.0.0",
-		"node": "^4.1.1"
+		"node": "^6.3.0"
 	},
 	"dependencies": {
 		"vscode-debugprotocol": "^1.13.0-pre.5",
