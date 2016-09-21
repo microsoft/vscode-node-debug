@@ -3,10 +3,8 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 
-
 import * as assert from 'assert';
 import * as PathUtils from '../node/pathUtilities';
-
 
 suite('pathUtilities', () => {
 

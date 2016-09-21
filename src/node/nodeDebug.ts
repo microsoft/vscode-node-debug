@@ -3,6 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+/// <reference path="../../node_modules/@types/es6-collections/index.d.ts" />
+
 import {
 	DebugSession, Thread, Source, StackFrame, Scope, Variable, Breakpoint,
 	TerminatedEvent, InitializedEvent, StoppedEvent, OutputEvent,

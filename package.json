@@ -39,7 +39,11 @@
 		"url": "https://github.com/Microsoft/vscode-node-debug/issues"
 	},
 	"devDependencies": {
+		"@types/es6-collections": "^0.5.29",
+		"@types/es6-promise": "0.0.32",
+		"@types/mocha": "^2.2.32",
 		"@types/node": "^6.0.39",
+		"@types/source-map": "^0.1.27",
 		"gulp": "^3.9.1",
 		"gulp-util": "^3.0.7",
 		"gulp-typescript": "^2.14.0",

@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+/// <reference path="../../node_modules/@types/mocha/index.d.ts" />
 
 import assert = require('assert');
 import * as Path from 'path';
