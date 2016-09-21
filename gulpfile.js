@@ -92,8 +92,12 @@ gulp.task('upload', function(callback) {
 	runSequence('zip', 'internal-upload', callback);
 });
 
+gulp.task('publish', function(callback) {
+	runSequence('build', 'add-i18n', 'vsce-publish', callback);
+});
+
 gulp.task('clean', function() {
-	return del(['out/**', 'upload/**']);
+	return del(['out/**', 'upload/**', 'package.nls.*.json']);
 })
 
 gulp.task('ts-watch', ['internal-build'], function(cb) {
@@ -175,6 +179,16 @@ gulp.task('internal-upload', function() {
 			key: process.env.AZURE_STORAGE_ACCESS_KEY,
 			container: 'debuggers'
 		}));
+});
+
+gulp.task('add-i18n', function() {
+	return gulp.src(['package.nls.json'])
+		.pipe(nls.createAdditionalLanguageFiles(nls.coreLanguages, 'i18n'))
+		.pipe(gulp.dest('.'));
+});
+
+gulp.task('vsce-publish', function() {
+	return;
 });
 
 var allTypeScript = [
