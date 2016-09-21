@@ -84,7 +84,7 @@
 		"debuggers": [
 			{
 				"type": "node",
-				"label": "%node.label%",
+				"label": "Node.js",
 				"program": "./out/node/nodeDebug.js",
 				"runtime": "node",
 				"variables": {
