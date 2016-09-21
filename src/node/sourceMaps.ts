@@ -9,7 +9,7 @@ import * as CRYPTO from 'crypto';
 import * as OS from 'os';
 import * as XHR from 'request-light';
 
-import { SourceMapConsumer } from 'source-map';
+import * as SM from 'source-map';
 import * as PathUtils from './pathUtilities';
 import { NodeDebugSession } from './nodeDebug';
 import { URI } from './URI';
@@ -413,7 +413,7 @@ export class SourceMap {
 	private _generatedFile: string;		// the generated file to which this source map belongs to
 	private _sources: string[];			// the sources of the generated file (relative to sourceRoot)
 	private _sourceRoot: string;		// the common prefix for the source (can be a URL)
-	private _smc: SourceMapConsumer;	// the internal source map
+	private _smc: SM.SourceMapConsumer;	// the internal source map
 
 
 	public constructor(mapPath: string, generatedPath: string, json: string) {
@@ -451,7 +451,7 @@ export class SourceMap {
 					: source;
 			});
 		try {
-			this._smc = new SourceMapConsumer(sm);
+			this._smc = new SM.SourceMapConsumer(sm);
 		} catch (e) {
 			// ignore exception and leave _smc undefined
 		}
@@ -480,7 +480,7 @@ export class SourceMap {
 	 * Finds the nearest source location for the given location in the generated file.
 	 * Returns null if sourcemap is invalid.
 	 */
-	public originalPositionFor(line: number, column: number, bias: Bias): SourceMap.MappedPosition {
+	public originalPositionFor(line: number, column: number, bias: Bias): SM.MappedPosition {
 
 		if (!this._smc) {
 			return null;
@@ -513,7 +513,7 @@ export class SourceMap {
 	 * Finds the nearest location in the generated file for the given source location.
 	 * Returns null if sourcemap is invalid.
 	 */
-	public generatedPositionFor(absPath: string, line: number, column: number, bias: Bias): SourceMap.Position {
+	public generatedPositionFor(absPath: string, line: number, column: number, bias: Bias): SM.Position {
 
 		if (!this._smc) {
 			return null;
