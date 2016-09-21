@@ -59,7 +59,8 @@ export class NodeV8Event extends NodeV8Message {
 
 export interface V8Handle {
 	handle: number;
-	type: 'undefined' | 'null' | 'boolean' | 'number' | 'string' | 'object' | 'function' | 'frame';
+	type: 'undefined' | 'null' | 'boolean' | 'number' | 'string' | 'object' | 'function' | 'frame'
+		| 'set' | 'map' | 'regexp' | 'promise' | 'generator' | 'error';
 }
 
 export interface V8Simple extends V8Handle {
