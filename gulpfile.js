@@ -10,14 +10,12 @@ var sourcemaps = require('gulp-sourcemaps');
 var log = require('gulp-util').log;
 var tslint = require("gulp-tslint");
 var filter = require('gulp-filter');
-var azure = require('gulp-azure-storage');
 var uglify = require('gulp-uglify');
-var git = require('git-rev-sync');
 var del = require('del');
 var runSequence = require('run-sequence');
-var vzip = require('gulp-vinyl-zip');
 var es = require('event-stream');
 var typescript = require('typescript');
+var cp = require('child_process');
 
 var tsProject = ts.createProject('./src/tsconfig.json', { typescript });
 var nls = require('vscode-nls-dev');
@@ -27,8 +25,7 @@ var inlineSource = false;
 
 var watchedSources = [
 	'src/**/*',
-	'!src/tests/data/**',
-	'typings/**/*.ts'
+	'!src/tests/data/**'
 ];
 
 var scripts = [
@@ -41,36 +38,6 @@ var scripts2 = [
 
 var outDest = 'out';
 
-var BOM = [
-	outDest + '/node/*',
-	'node_modules/agent-base/**/*',
-	'node_modules/balanced-match/**/*',
-	'node_modules/brace-expansion/**/*',
-	'node_modules/concat-map/**/*',
-	'node_modules/debug/**/*',
-	'node_modules/extend/**/*',
-	'node_modules/fs.realpath/**/*',
-	'node_modules/glob/**/*',
-	'node_modules/http-proxy-agent/**/*',
-	'node_modules/https-proxy-agent/**/*',
-	'node_modules/inflight/**/*',
-	'node_modules/inherits/**/*',
-	'node_modules/minimatch/**/*',
-	'node_modules/ms/**/*',
-	'node_modules/once/**/*',
-	'node_modules/path-is-absolute/**/*',
-	'node_modules/request-light/**/*',
-	'node_modules/source-map/**/*',
-	'node_modules/vscode-debugadapter/**/*',
-	'node_modules/vscode-debugprotocol/**/*',
-	'node_modules/vscode-nls/**/*',
-	'node_modules/wrappy/**/*',
-	'package.json',
-	'package.nls.json',
-	'npm-shrinkwrap.json'
-];
-
-var uploadDest = 'upload';
 
 gulp.task('default', function(callback) {
 	runSequence('build', callback);
@@ -84,20 +51,16 @@ gulp.task('build', function(callback) {
 	runSequence('clean', 'internal-nls-build', callback);
 });
 
-gulp.task('zip', function(callback) {
-	runSequence('build', 'internal-zip', callback);
-});
-
-gulp.task('upload', function(callback) {
-	runSequence('zip', 'internal-upload', callback);
-});
-
 gulp.task('publish', function(callback) {
 	runSequence('build', 'add-i18n', 'vsce-publish', callback);
 });
 
+gulp.task('package', function(callback) {
+	runSequence('build', 'add-i18n', 'vsce-package', callback);
+});
+
 gulp.task('clean', function() {
-	return del(['out/**', 'upload/**', 'package.nls.*.json']);
+	return del(['out/**', 'package.nls.*.json', 'node-debug-*.vsix']);
 })
 
 gulp.task('ts-watch', ['internal-build'], function(cb) {
@@ -156,39 +119,26 @@ gulp.task('internal-nls-compile', function() {
 	return compile(true);
 });
 
-gulp.task('internal-zip', function(callback) {
-	var dest = uploadDest;
-	try {
-		dest += '/' + git.short();
-	}
-	catch(e) {
-		// silently ignore
-	}
-	var f = filter(['package.nls.json'], { restore: true });
-	return gulp.src(BOM, { base: '.' })
-		.pipe(f)
-		.pipe(nls.createAdditionalLanguageFiles(nls.coreLanguages, 'i18n'))
-		.pipe(f.restore)
-		.pipe(vzip.dest(dest + '/node-debug.zip'));
-});
-
-gulp.task('internal-upload', function() {
-	return gulp.src('upload/**/*')
-		.pipe(azure.upload({
-			account: process.env.AZURE_STORAGE_ACCOUNT,
-			key: process.env.AZURE_STORAGE_ACCESS_KEY,
-			container: 'debuggers'
-		}));
-});
-
 gulp.task('add-i18n', function() {
 	return gulp.src(['package.nls.json'])
 		.pipe(nls.createAdditionalLanguageFiles(nls.coreLanguages, 'i18n'))
 		.pipe(gulp.dest('.'));
 });
 
-gulp.task('vsce-publish', function() {
-	return;
+gulp.task('vsce-publish', function(cb) {
+	var cmd = cp.spawn('./node_modules/.bin/vsce', [ 'publish' ], { stdio: 'inherit' });
+	cmd.on('close', code => {
+		log(`vsce exited with ${code}`);
+		cb(code);
+	});
+});
+
+gulp.task('vsce-package', function(cb) {
+	var cmd = cp.spawn('./node_modules/.bin/vsce', [ 'package' ], { stdio: 'inherit' });
+	cmd.on('close', code => {
+		log(`vsce exited with ${code}`);
+		cb(code);
+	});
 });
 
 var allTypeScript = [

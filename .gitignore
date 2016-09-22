@@ -5,3 +5,4 @@
 /upload/
 npm-debug.log
 package.nls.*.json
+node-debug-*.vsix
