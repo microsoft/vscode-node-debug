@@ -1035,7 +1035,7 @@ export class NodeDebugSession extends DebugSession {
 				this._terminated('socket error');
 			} else {
 				// we are not yet connected so retry a few times
-				if (err.code === 'ECONNREFUSED' || err.code === 'ECONNRESET') {
+				if ((<any>err).code === 'ECONNREFUSED' || (<any>err).code === 'ECONNRESET') {
 					const now = new Date().getTime();
 					if (now < endTime) {
 						setTimeout(() => {
