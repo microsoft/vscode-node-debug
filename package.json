@@ -1,7 +1,7 @@
 {
 	"name": "node-debug",
 	"displayName": "Node Debug",
-	"version": "1.6.2",
+	"version": "1.6.4",
 	"publisher": "ms-vscode",
 	"description": "%extension.description%",
 	"icon": "images/node-debug-icon.svg",
@@ -254,6 +254,7 @@
 				"label": "%extensionHost.label%",
 				"program": "./out/node/nodeDebug.js",
 				"runtime": "node",
+				"aiKey": "AIF-d9b70cd4-b9f9-4d70-929b-a071c400b217",
 				"initialConfigurations": [{
 					"name": "%extensionHost.launch.config.name%",
 					"type": "extensionHost",
