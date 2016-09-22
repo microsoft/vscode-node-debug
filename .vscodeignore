@@ -7,4 +7,3 @@ testdata/**/*
 .vscode/**/*
 appveyor.yml
 gulpfile.js
-README.md

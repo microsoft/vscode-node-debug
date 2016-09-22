@@ -1,4 +1,8 @@
 {
+	"extension.description": "Visual Studio Code debugger extension for Node.js",
+
+	"node.label": "Node.js",
+
 	"node.sourceMaps.description": "Use JavaScript source maps (if they exist).",
 	"node.outDir.description": "If source maps are enabled, the generated code is expected in this directory. Deprecated: use 'outFiles' attribute instead.",
 	"node.outFiles.description": "If source maps are enabled, these glob patterns specify the generated JavaScript files. If a pattern starts with '!' the files are excluded. If not specified, the generated code is expected in the same directory as its source.",
@@ -29,7 +33,7 @@
 
 	"node.processattach.config.name": "Attach to Process",
 
-	"extensionHost.label": "VSCode Extension Development",
+	"extensionHost.label": "VS Code Extension Development",
 
 	"extensionHost.launch.runtimeExecutable.description": "Absolute path to VS Code.",
 	"extensionHost.launch.args.description": "Command line arguments passed to the program.",
