@@ -71,7 +71,8 @@
 	},
 	"main": "./out/node/extension",
 	"activationEvents": [
-		"onCommand:extension.pickNodeProcess"
+		"onCommand:extension.pickNodeProcess",
+		"onCommand:extension.provideInitialConfigurations"
 	],
 	"contributes": {
 		"breakpoints": [
@@ -92,47 +93,7 @@
 					"PickProcess": "extension.pickNodeProcess"
 				},
 				"aiKey": "AIF-d9b70cd4-b9f9-4d70-929b-a071c400b217",
-				"initialConfigurations": [
-					{
-						"name": "%node.launch.config.name%",
-						"type": "node",
-						"request": "launch",
-						"program": "${workspaceRoot}/app.js",
-						"stopOnEntry": false,
-						"args": [],
-						"cwd": "${workspaceRoot}",
-						"preLaunchTask": null,
-						"runtimeExecutable": null,
-						"runtimeArgs": ["--nolazy"],
-						"env": {
-							"NODE_ENV": "development"
-						},
-						"console": "internalConsole",
-						"sourceMaps": false,
-						"outFiles": []
-					},
-					{
-						"name": "%node.attach.config.name%",
-						"type": "node",
-						"request": "attach",
-						"port": 5858,
-						"address": "localhost",
-						"restart": false,
-						"sourceMaps": false,
-						"outFiles": [],
-						"localRoot": "${workspaceRoot}",
-						"remoteRoot": null
-					},
-					{
-						"name": "%node.processattach.config.name%",
-						"type": "node",
-						"request": "attach",
-						"processId": "${command.PickProcess}",
-						"port": 5858,
-						"sourceMaps": false,
-						"outFiles": []
-					}
-				],
+				"initialConfigurations": "extension.provideInitialConfigurations",
 				"configurationAttributes": {
 					"launch": {
 						"required": [ "cwd" ],

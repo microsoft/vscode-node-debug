@@ -6,7 +6,10 @@
 
 import * as vscode from 'vscode';
 import { spawn, exec } from 'child_process';
-import { basename } from 'path';
+import { basename, join, isAbsolute } from 'path';
+import * as nls from 'vscode-nls';
+import * as fs from 'fs';
+const localize = nls.config(process.env.VSCODE_NLS_CONFIG)();
 
 interface ProcessItem extends vscode.QuickPickItem {
 	pid: string;	// payload for the QuickPick UI
@@ -146,9 +149,51 @@ function listProcesses() : Promise<ProcessItem[]> {
 	});
 }
 
+const initialConfigurations = [
+	{
+		name: localize('node.launch.config.name', "Launch"),
+		type: 'node',
+		request: 'launch',
+		program: '${workspaceRoot}/app.js',
+		stopOnEntry: false,
+		args: [],
+		cwd: '${workspaceRoot}',
+		preLaunchTask: null,
+		runtimeExecutable: null,
+		runtimeArgs: ['--nolazy'],
+		env: {
+			'NODE_ENV': 'development'
+		},
+		console: 'internalConsole',
+		sourceMaps: false,
+		outFiles: []
+	},
+	{
+		name: localize('node.attach.config.name', "Attach"),
+		type: 'node',
+		request: 'attach',
+		port: 5858,
+		address: 'localhost',
+		restart: false,
+		sourceMaps: false,
+		outFiles: [],
+		localRoot: '${workspaceRoot}',
+		remoteRoot: null
+	},
+	{
+		name: localize('node.processattach.config.name', "Attach to Process"),
+		type: 'node',
+		request: 'attach',
+		processId: '${command.PickProcess}',
+		port: 5858,
+		sourceMaps: false,
+		outFiles: []
+	}
+];
+
 export function activate(context: vscode.ExtensionContext) {
 
-	let disposable = vscode.commands.registerCommand('extension.pickNodeProcess', () => {
+	let pickNodeProcess = vscode.commands.registerCommand('extension.pickNodeProcess', () => {
 
 		return listProcesses().then(items => {
 
@@ -164,8 +209,34 @@ export function activate(context: vscode.ExtensionContext) {
 		});
 
 	});
+	context.subscriptions.push(pickNodeProcess);
 
-	context.subscriptions.push(disposable);
+	context.subscriptions.push(vscode.commands.registerCommand('extension.provideInitialConfigurations', () => {
+		const packageJsonPath = join(vscode.workspace.rootPath, 'package.json');
+		let program = null;
+		
+		try {
+			const jsonContent = fs.readFileSync(packageJsonPath, 'utf8');
+			const jsonObject = JSON.parse(jsonContent);
+			if (jsonObject.main) {
+				program = jsonObject.main;
+			} else if (jsonObject.scripts && typeof jsonObject.scripts.start === 'string') {
+				program = (<string>jsonObject.scripts.start).split(' ').pop();
+			}
+
+		} catch (error) { }
+		
+		if (program) {
+			program = isAbsolute(program) ? program : join('${workspaceRoot}', program);
+			initialConfigurations.forEach(config => {
+				if (config['program']) {
+					config['program'] = program;
+				}
+			});
+		}
+			
+		return JSON.stringify(initialConfigurations);
+	}));
 }
 
 export function deactivate() {
