@@ -83,7 +83,7 @@
 		"debuggers": [
 			{
 				"type": "node",
-				"label": "%node.label%",
+				"label": "Node.js",
 				"program": "./out/node/nodeDebug.js",
 				"runtime": "node",
 				"variables": {
@@ -251,7 +251,7 @@
 			},
 			{
 				"type": "extensionHost",
-				"label": "%extensionHost.label%",
+				"label": "VS Code Extension Development",
 				"program": "./out/node/nodeDebug.js",
 				"runtime": "node",
 				"aiKey": "AIF-d9b70cd4-b9f9-4d70-929b-a071c400b217",
