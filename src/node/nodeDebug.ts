@@ -3,7 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-/// <reference path="../../node_modules/@types/es6-collections/index.d.ts" />
+/// <reference types="es6-collections" />
+/// <reference types="node" />
 
 import {
 	DebugSession, Thread, Source, StackFrame, Scope, Variable, Breakpoint,

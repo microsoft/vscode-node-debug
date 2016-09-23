@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-/// <reference path="../../node_modules/@types/es6-promise/index.d.ts" />
+/// <reference types="es6-promise" />
 
 import * as Path from 'path';
 import * as FS from 'fs';
