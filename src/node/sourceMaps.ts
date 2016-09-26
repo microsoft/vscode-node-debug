@@ -245,7 +245,7 @@ export class SourceMaps implements ISourceMaps {
 	private _findSourceMapUrlInFile(pathToGenerated: string, content?: string): Promise<URI> {
 
 		if (content) {
-			return Promise.resolve(this._findSourceMapUrl(content));
+			return Promise.resolve(this._findSourceMapUrl(content, pathToGenerated));
 		}
 
 		return this._readFile(pathToGenerated).then(content => {
@@ -260,7 +260,7 @@ export class SourceMaps implements ISourceMaps {
 	 * Relative file paths are converted into absolute paths.
 	 * Returns null if no source map url is found.
 	 */
-	private _findSourceMapUrl(contents: string, pathToGenerated?: string): URI {
+	private _findSourceMapUrl(contents: string, pathToGenerated: string): URI {
 
 		const lines = contents.split('\n');
 		for (let l = lines.length-1; l >= Math.max(lines.length-10, 0); l--) {	// only search for url in the last 10 lines
