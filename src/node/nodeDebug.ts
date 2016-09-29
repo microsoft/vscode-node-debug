@@ -749,7 +749,7 @@ export class NodeDebugSession extends DebugSession {
 				}
 				this._sourceMaps.MapPathFromSource(programPath).then(generatedPath => {
 					if (!generatedPath) {	// cannot find generated file
-						this.sendErrorResponse(response, 2003, localize('VSND2003', "Cannot launch program '{0}'; setting the '{1}' attribute might help.", '{path}', 'outDir'), { path: programPath });
+						this.sendErrorResponse(response, 2003, localize('VSND2003', "Cannot launch program '{0}'; setting the '{1}' attribute might help.", '{path}', 'outFiles'), { path: programPath });
 						return;
 					}
 					this.log('sm', `launchRequest: program '${programPath}' seems to be the source; launch the generated file '${generatedPath}' instead`);
