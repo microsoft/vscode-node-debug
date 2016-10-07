@@ -310,7 +310,7 @@ export class SourceMaps implements ISourceMaps {
 			const map_path = uri.filePath();
 			return this._readFile(map_path).then(content => {
 				return this._registerSourceMap(new SourceMap(map_path, pathToGenerated, content));
-			});
+			}, err => null);
 		}
 
 		if (uri.isData()) {
