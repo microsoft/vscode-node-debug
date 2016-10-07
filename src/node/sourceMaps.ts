@@ -294,8 +294,17 @@ export class SourceMaps implements ISourceMaps {
 
 		let promise = this._sourceMapCache.get(hash);
 		if (!promise) {
-			promise = this._loadSourceMap(uri, pathToGenerated, hash);
-			this._sourceMapCache.set(hash, promise);
+			try {
+				promise = this._loadSourceMap(uri, pathToGenerated, hash)
+					.catch(err => {
+						this._log(`_loadSourceMap: loading source map '${uri.uri()}' failed with exception: ${err}`);
+						return null;
+					});
+				this._sourceMapCache.set(hash, promise);
+			} catch (err) {
+				this._log(`_loadSourceMap: loading source map '${uri.uri()}' failed with exception: ${err}`);
+				promise = Promise.resolve(null);
+			}
 		}
 		return promise;
 	}
@@ -310,7 +319,7 @@ export class SourceMaps implements ISourceMaps {
 			const map_path = uri.filePath();
 			return this._readFile(map_path).then(content => {
 				return this._registerSourceMap(new SourceMap(map_path, pathToGenerated, content));
-			}, err => null);
+			});
 		}
 
 		if (uri.isData()) {
