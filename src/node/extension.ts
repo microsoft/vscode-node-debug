@@ -165,7 +165,7 @@ const initialConfigurations = [
 			'NODE_ENV': 'development'
 		},
 		console: 'internalConsole',
-		sourceMaps: false,
+		sourceMaps: true,
 		outFiles: []
 	},
 	{
@@ -175,7 +175,7 @@ const initialConfigurations = [
 		port: 5858,
 		address: 'localhost',
 		restart: false,
-		sourceMaps: false,
+		sourceMaps: true,
 		outFiles: [],
 		localRoot: '${workspaceRoot}',
 		remoteRoot: null
@@ -186,7 +186,7 @@ const initialConfigurations = [
 		request: 'attach',
 		processId: '${command.PickProcess}',
 		port: 5858,
-		sourceMaps: false,
+		sourceMaps: true,
 		outFiles: []
 	}
 ];
