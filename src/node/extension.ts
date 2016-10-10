@@ -164,9 +164,7 @@ const initialConfigurations = [
 		env: {
 			'NODE_ENV': 'development'
 		},
-		console: 'internalConsole',
-		sourceMaps: true,
-		outFiles: []
+		console: 'internalConsole'
 	},
 	{
 		name: localize('node.attach.config.name', "Attach"),
@@ -175,8 +173,6 @@ const initialConfigurations = [
 		port: 5858,
 		address: 'localhost',
 		restart: false,
-		sourceMaps: true,
-		outFiles: [],
 		localRoot: '${workspaceRoot}',
 		remoteRoot: null
 	},
@@ -185,9 +181,7 @@ const initialConfigurations = [
 		type: 'node',
 		request: 'attach',
 		processId: '${command.PickProcess}',
-		port: 5858,
-		sourceMaps: true,
-		outFiles: []
+		port: 5858
 	}
 ];
 
@@ -232,6 +226,12 @@ export function activate(context: vscode.ExtensionContext) {
 				if (config['program']) {
 					config['program'] = program;
 				}
+			});
+		}
+		if (vscode.workspace.textDocuments.some(document => document.languageId === 'typescript' || document.languageId === 'coffeescript')) {
+			initialConfigurations.forEach(config => {
+				config['outFiles'] = [];
+				config['sourceMaps'] = true;
 			});
 		}
 			
