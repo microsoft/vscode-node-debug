@@ -152,36 +152,17 @@ function listProcesses() : Promise<ProcessItem[]> {
 const initialConfigurations = [
 	{
 		name: localize('node.launch.config.name', "Launch"),
+		program: '${workspaceRoot}/app.js',
 		type: 'node',
 		request: 'launch',
-		program: '${workspaceRoot}/app.js',
-		stopOnEntry: false,
 		args: [],
-		cwd: '${workspaceRoot}',
-		preLaunchTask: null,
-		runtimeExecutable: null,
-		runtimeArgs: ['--nolazy'],
-		env: {
-			'NODE_ENV': 'development'
-		},
-		console: 'internalConsole'
+		cwd: '${workspaceRoot}'
 	},
 	{
 		name: localize('node.attach.config.name', "Attach"),
-		type: 'node',
-		request: 'attach',
 		port: 5858,
-		address: 'localhost',
-		restart: false,
-		localRoot: '${workspaceRoot}',
-		remoteRoot: null
-	},
-	{
-		name: localize('node.processattach.config.name', "Attach to Process"),
 		type: 'node',
-		request: 'attach',
-		processId: '${command.PickProcess}',
-		port: 5858
+		request: 'attach'
 	}
 ];
 
