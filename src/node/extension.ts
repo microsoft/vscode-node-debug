@@ -173,7 +173,7 @@ export function activate(context: vscode.ExtensionContext) {
 		return listProcesses().then(items => {
 
 			let options : vscode.QuickPickOptions = {
-				placeHolder: 'Pick the node.js or gulp process to attach to',
+				placeHolder: localize('pickNodeProcess', "Pick the node.js or gulp process to attach to"),
 				matchOnDescription: true,
 				matchOnDetail: true
 			};
@@ -189,7 +189,7 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.commands.registerCommand('extension.provideInitialConfigurations', () => {
 		const packageJsonPath = join(vscode.workspace.rootPath, 'package.json');
 		let program = null;
-		
+
 		try {
 			const jsonContent = fs.readFileSync(packageJsonPath, 'utf8');
 			const jsonObject = JSON.parse(jsonContent);
@@ -200,7 +200,7 @@ export function activate(context: vscode.ExtensionContext) {
 			}
 
 		} catch (error) { }
-		
+
 		if (program) {
 			program = isAbsolute(program) ? program : join('${workspaceRoot}', program);
 			initialConfigurations.forEach(config => {
@@ -215,7 +215,7 @@ export function activate(context: vscode.ExtensionContext) {
 				config['sourceMaps'] = true;
 			});
 		}
-			
+
 		return JSON.stringify(initialConfigurations);
 	}));
 }
