@@ -216,7 +216,14 @@ export function activate(context: vscode.ExtensionContext) {
 			});
 		}
 
-		return JSON.stringify(initialConfigurations);
+		return [
+			'{',
+			'\t// See http://code.visualstudio.com/docs/editor/debugging#_launch-configurations',
+			'\t// for setting up \'launch.json\' for node debugging',
+			'\t"version": "0.2.0",',
+			'\t"configurations": ' + JSON.stringify(initialConfigurations, null, '\t').split('\n').map(line => '\t' + line).join('\n'),
+			'}'
+		].join('\n');
 	}));
 }
 
