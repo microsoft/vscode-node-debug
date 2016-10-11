@@ -1,5 +1,18 @@
 // Place your settings in this file to overwrite default and user settings.
 {
 	"tslint.rulesDirectory": "node_modules/tslint-microsoft-contrib",
-	"typescript.tsdk": "node_modules/typescript/lib"
+	"typescript.tsdk": "node_modules/typescript/lib",
+	"editor.insertSpaces": false,
+	"files.eol": "\n",
+	"files.trimTrailingWhitespace": true,
+	"files.exclude": {
+		".git": true,
+		".out": true,
+		"**/.DS_Store": true
+	},
+	"search.exclude": {
+		"**/node_modules": true,
+		"out*/**": true,
+		"i18n/**": true
+	}
 }
