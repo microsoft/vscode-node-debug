@@ -221,7 +221,7 @@ export function activate(context: vscode.ExtensionContext) {
 			'\t// See https://go.microsoft.com/fwlink/?linkid=830387',
 			'\t// for setting up \'launch.json\' for node debugging',
 			'\t"version": "0.2.0",',
-			'\t"configurations": ' + JSON.stringify(initialConfigurations, null, '\t').split('\n').map(line => '\t' + line).join('\n'),
+			'\t"configurations": ' + JSON.stringify(initialConfigurations, null, '\t').split('\n').map(line => '\t' + line).join('\n').trim(),
 			'}'
 		].join('\n');
 	}));
