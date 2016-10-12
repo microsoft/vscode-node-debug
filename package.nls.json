@@ -12,7 +12,7 @@
 	"node.timeout.description": "Retry for this number of milliseconds to connect to Node.js. Default is 10000 ms.",
 	"node.smartStep.description": "Automatically step through generated code that cannot be mapped back to the original source.",
 
-	"node.launch.program.description": "Absolute path to the program.",
+	"node.launch.program.description": "Absolute path to the program. Generated value is guessed by looking at package.json and opened files. Edit this attribute.",
 	"node.launch.externalConsole.description": "Launch debug target in external console.",
 	"node.launch.externalConsole.error": "Deprecated: use 'console' attribute instead.",
 	"node.launch.console.description": "Where to launch the debug target: internal console, integrated terminal, or external terminal.",

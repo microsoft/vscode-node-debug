@@ -151,19 +151,17 @@ function listProcesses() : Promise<ProcessItem[]> {
 
 const initialConfigurations = [
 	{
-		name: localize('node.launch.config.name', "Launch"),
 		type: 'node',
 		request: 'launch',
+		name: localize('node.launch.config.name', "Launch Program"),
 		program: '${workspaceRoot}/app.js',
-		args: [],
 		cwd: '${workspaceRoot}'
 	},
 	{
-		name: localize('node.attach.config.name', "Attach"),
 		type: 'node',
 		request: 'attach',
-		port: 5858,
-		processId: '${command.PickProcess}',
+		name: localize('node.attach.config.name', "Attach to Process"),
+		port: 5858
 	}
 ];
 
@@ -189,7 +187,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	context.subscriptions.push(vscode.commands.registerCommand('extension.provideInitialConfigurations', () => {
 		const packageJsonPath = join(vscode.workspace.rootPath, 'package.json');
-		let program = null;
+		let program = vscode.workspace.textDocuments.some(document => document.languageId === 'typescript') ? 'app.ts' : null;
 
 		try {
 			const jsonContent = fs.readFileSync(packageJsonPath, 'utf8');
@@ -219,12 +217,13 @@ export function activate(context: vscode.ExtensionContext) {
 		// Massage the configuration string, add an aditional tab and comment out processId
 		// Add an aditional empty line between attributes which the user should not edit
 		const configurationsMassaged = JSON.stringify(initialConfigurations, null, '\t').replace(',\n\t\t"processId', '\n\t\t//"processId')
-			.split('\n').map(line => '\t' + line).join('\n').trim().replace(new RegExp('request.*', 'g'), s => s + '\n');
+			.split('\n').map(line => '\t' + line).join('\n').trim();
 
 		return [
 			'{',
-			'\t// See https://go.microsoft.com/fwlink/?linkid=830387',
-			'\t// for setting up \'launch.json\' for node debugging',
+			'\t// Use IntelliSense to find out which attributes exist for node debugging',
+			'\t// Use hover for the description of the existing attributes',
+			'\t// For further information visit https://go.microsoft.com/fwlink/?linkid=830387',
 			'\t"version": "0.2.0",',
 			'\t"configurations": ' + configurationsMassaged,
 			'}'
