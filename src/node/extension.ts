@@ -152,17 +152,18 @@ function listProcesses() : Promise<ProcessItem[]> {
 const initialConfigurations = [
 	{
 		name: localize('node.launch.config.name', "Launch"),
-		program: '${workspaceRoot}/app.js',
 		type: 'node',
 		request: 'launch',
+		program: '${workspaceRoot}/app.js',
 		args: [],
 		cwd: '${workspaceRoot}'
 	},
 	{
 		name: localize('node.attach.config.name', "Attach"),
-		port: 5858,
 		type: 'node',
-		request: 'attach'
+		request: 'attach',
+		port: 5858,
+		processId: '${command.PickProcess}',
 	}
 ];
 
@@ -215,13 +216,17 @@ export function activate(context: vscode.ExtensionContext) {
 				config['sourceMaps'] = true;
 			});
 		}
+		// Massage the configuration string, add an aditional tab and comment out processId
+		// Add an aditional empty line between attributes which the user should not edit
+		const configurationsMassaged = JSON.stringify(initialConfigurations, null, '\t').replace(',\n\t\t"processId', '\n\t\t//"processId')
+			.split('\n').map(line => '\t' + line).join('\n').trim().replace(new RegExp('request.*', 'g'), s => s + '\n');
 
 		return [
 			'{',
 			'\t// See https://go.microsoft.com/fwlink/?linkid=830387',
 			'\t// for setting up \'launch.json\' for node debugging',
 			'\t"version": "0.2.0",',
-			'\t"configurations": ' + JSON.stringify(initialConfigurations, null, '\t').split('\n').map(line => '\t' + line).join('\n').trim(),
+			'\t"configurations": ' + configurationsMassaged,
 			'}'
 		].join('\n');
 	}));
