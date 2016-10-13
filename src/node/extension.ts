@@ -185,7 +185,7 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 	context.subscriptions.push(pickNodeProcess);
 
-	context.subscriptions.push(vscode.commands.registerCommand('extension.node.provideInitialConfigurations', () => {
+	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.provideInitialConfigurations', () => {
 		const packageJsonPath = join(vscode.workspace.rootPath, 'package.json');
 		let program = vscode.workspace.textDocuments.some(document => document.languageId === 'typescript') ? 'app.ts' : null;
 
