@@ -49,7 +49,7 @@
 		"gulp-util": "^3.0.7",
 		"gulp-typescript": "^2.14.0",
 		"gulp-tsb": "^2.0.0",
-		"gulp-sourcemaps": "^1.6.0",
+		"gulp-sourcemaps": "1.7.3",
 		"gulp-filter": "^3.0.1",
 		"gulp-tslint": "^6.1.1",
 		"gulp-uglify": "^2.0.0",
