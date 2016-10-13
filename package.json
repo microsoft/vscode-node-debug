@@ -69,7 +69,7 @@
 	"main": "./out/node/extension",
 	"activationEvents": [
 		"onCommand:extension.pickNodeProcess",
-		"onCommand:extension.provideInitialConfigurations"
+		"onCommand:extension.node.provideInitialConfigurations"
 	],
 	"contributes": {
 		"breakpoints": [
@@ -90,7 +90,7 @@
 					"PickProcess": "extension.pickNodeProcess"
 				},
 				"aiKey": "AIF-d9b70cd4-b9f9-4d70-929b-a071c400b217",
-				"initialConfigurations": "extension.provideInitialConfigurations",
+				"initialConfigurations": "extension.node.provideInitialConfigurations",
 				"configurationAttributes": {
 					"launch": {
 						"required": [ "cwd" ],
