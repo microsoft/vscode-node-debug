@@ -3163,7 +3163,7 @@ export class NodeDebugSession extends DebugSession {
 			if (errmsg.indexOf('unresponsive') >= 0) {
 				this.sendErrorResponse(response, 2015, localize('VSND2015', "Request '{_request}' was cancelled because Node.js is unresponsive."), { _request: nodeResponse.command } );
 			} else if (errmsg.indexOf('timeout') >= 0) {
-				this.sendErrorResponse(response, 2016, localize('VSND2016', "Node.js did not repond to request '{_request}' in a reasonable amount of time."), { _request: nodeResponse.command } );
+				this.sendErrorResponse(response, 2016, localize('VSND2016', "Node.js did not respond to request '{_request}' in a reasonable amount of time."), { _request: nodeResponse.command } );
 			} else {
 				this.sendErrorResponse(response, 2013, 'Node.js request \'{_request}\' failed (reason: {_error}).', { _request: nodeResponse.command, _error: errmsg }, ErrorDestination.Telemetry);
 			}
