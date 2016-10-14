@@ -170,6 +170,8 @@ class Script {
 	}
 }
 
+type HitterFunction = (hitCount: number) => boolean;
+
 class InternalSourceBreakpoint {
 
 	line: number;
@@ -177,12 +179,16 @@ class InternalSourceBreakpoint {
 	column: number;
 	orgColumn: number;
 	condition: string;
+	hitCount: number;
+	hitter: HitterFunction;
 	verificationMessage: string;
 
-	constructor(line: number, column: number = 0, condition?: string) {
+	constructor(line: number, column: number = 0, condition?: string, hitter?: HitterFunction) {
 		this.line = this.orgLine = line;
 		this.column = this.orgColumn = column;
 		this.condition = condition;
+		this.hitCount = 0;
+		this.hitter = hitter;
 	}
 }
 
@@ -296,6 +302,7 @@ export class NodeDebugSession extends DebugSession {
 
 	private static NODE_SHEBANG_MATCHER = new RegExp('#! */usr/bin/env +node');
 	private static LONG_STRING_MATCHER = /\.\.\. \(length: [0-9]+\)$/;
+	private static HITCOUNT_MATCHER = /(>|>=|=|<|<=|%)?\s*([0-9]+)/;
 
 	// tracing
 	private _trace: string[];
@@ -312,11 +319,12 @@ export class NodeDebugSession extends DebugSession {
 	// session state
 	private _adapterID: string;
 	private _node: NodeV8Protocol;
-	private _nodeProcessId: number = -1; 		// pid of the node runtime
-	private _functionBreakpoints = new Array<number>();	// node function breakpoint ids
-	private _scripts = new Map<number, Promise<Script>>();		// script cache
-	private _files = new Map<string, Promise<string>>();		// file cache
-	private _modifiedSources = new Set<string>();	// track edited files
+	private _nodeProcessId: number = -1; 					// pid of the node runtime
+	private _functionBreakpoints = new Array<number>();		// node function breakpoint ids
+	private _scripts = new Map<number, Promise<Script>>();	// script cache
+	private _files = new Map<string, Promise<string>>();	// file cache
+	private _modifiedSources = new Set<string>();			// track edited files
+	private _hitCounts = new Map<number, InternalSourceBreakpoint>();		// breakpoint ID -> ignore count
 
 	// session configurations
 	private _noDebug = false;
@@ -416,17 +424,6 @@ export class NodeDebugSession extends DebugSession {
 	 */
 	private _handleNodeBreakEvent(eventBody: V8EventBody) : void {
 
-		/*
-		// workaround: load sourcemap for this location to populate cache
-		if (this._sourceMaps) {
-			let path = body.script.name;
-			if (path && PathUtils.isAbsolutePath(path)) {
-				path = this._remoteToLocal(path);
-				this._sourceMaps.MapToSource(path, null, 0, 0);
-			}
-		}
-		*/
-
 		let isEntry = false;
 		let reason: string;
 		let exception_text: string;
@@ -449,6 +446,16 @@ export class NodeDebugSession extends DebugSession {
 					reason = this._reasonText('entry');
 					this._rememberEntryLocation(eventBody.script.name, eventBody.sourceLine, eventBody.sourceColumn);
 				} else {
+
+					let ibp = this._hitCounts.get(id);
+					if (ibp) {
+						ibp.hitCount++;
+						if (!ibp.hitter(ibp.hitCount)) {
+							this._node.command('continue');
+							return;
+						}
+					}
+
 					reason = this._reasonText('breakpoint');
 				}
 			}
@@ -1328,10 +1335,26 @@ export class NodeDebugSession extends DebugSession {
 		// prefer the new API: array of breakpoints
 		if (args.breakpoints) {
 			for (let b of args.breakpoints) {
+
+				let hitter: HitterFunction = null;
+				if (b.hitCondition) {
+					const result = NodeDebugSession.HITCOUNT_MATCHER.exec(b.hitCondition.trim());
+					if (result.length >= 3) {
+						const op = result[1] || '>=';
+						const value = result[2];
+						const expr = op === '%'
+							? `return (hitcnt % ${value}) === 0;`
+							: `return hitcnt ${op} ${value};`;
+						hitter = <HitterFunction> Function("hitcnt", expr);
+					} else {
+						// error
+					}
+				}
+
 				sbs.push(new InternalSourceBreakpoint(
 					this.convertClientLineToDebugger(b.line),
 					typeof b.column === 'number' ? this.convertClientColumnToDebugger(b.column) : 0,
-					b.condition)
+					b.condition, hitter)
 				);
 			}
 		} else {
@@ -1572,6 +1595,10 @@ export class NodeDebugSession extends DebugSession {
 
 			this.log('bp', `_setBreakpoint: ${JSON.stringify(args)}`);
 
+			if (lb.hitter) {
+				this._hitCounts.set(resp.body.breakpoint, lb);
+			}
+
 			let actualLine = args.line;
 			let actualColumn = args.column;
 
@@ -1778,7 +1805,7 @@ export class NodeDebugSession extends DebugSession {
 		if (this._needContinue) {	// we do not break on entry
 			this._needContinue = false;
 			info = 'do a \'Continue\'';
-			this._node.command('continue', null, (nodeResponse) => { });
+			this._node.command('continue');
 		}
 
 		if (this._needBreakpointEvent) {	// we have to break on entry
