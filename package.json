@@ -1,7 +1,7 @@
 {
 	"name": "node-debug",
 	"displayName": "Node Debug",
-	"version": "1.7.1",
+	"version": "1.7.3",
 	"publisher": "ms-vscode",
 	"description": "%extension.description%",
 	"icon": "images/node-debug-icon.svg",
@@ -21,7 +21,7 @@
 		"postinstall": "node ./node_modules/vscode/bin/install"
 	},
 	"engines": {
-		"vscode": "^1.6.0",
+		"vscode": "^1.7.0",
 		"node": "^5.10.0"
 	},
 	"dependencies": {
@@ -49,7 +49,7 @@
 		"gulp-util": "^3.0.7",
 		"gulp-typescript": "^2.14.0",
 		"gulp-tsb": "^2.0.0",
-		"gulp-sourcemaps": "1.7.3",
+		"gulp-sourcemaps": "^2.1.1",
 		"gulp-filter": "^3.0.1",
 		"gulp-tslint": "^6.1.1",
 		"gulp-uglify": "^2.0.0",

@@ -2296,11 +2296,7 @@ export class NodeDebugSession extends DebugSession {
 					return this._node.command2('vscode_slice', args).then(resp => {
 						const items = resp.body.result;
 						return Promise.all<Variable>(items.map(item => {
-							if (isIndex(item.name)) {
-								return this._createVariable(`[${item.name}]`, item.value);
-							} else {
-								return this._createVariable(item.name, item.value);
-							}
+							return this._createVariable(item.name, item.value);
 						}));
 					});
 				}
@@ -2357,10 +2353,9 @@ export class NodeDebugSession extends DebugSession {
 	/**
 	 * Resolves the given properties and returns them as an array of Variables.
 	 * If the properties are indexed (opposed to named), a value 'start' is added to the index number.
-	 * 'noBrackets' controls whether the index is enclosed in brackets.
 	 * If a value is undefined it probes for a getter.
 	 */
-	private _createPropertyVariables(obj: V8Object, properties: V8Property[], start = 0, noBrackets?: boolean) : Promise<Variable[]> {
+	private _createPropertyVariables(obj: V8Object, properties: V8Property[], start = 0) : Promise<Variable[]> {
 
 		return this._resolveValues(properties).then(() => {
 			return Promise.all<Variable>(properties.map(property => {
@@ -2370,7 +2365,7 @@ export class NodeDebugSession extends DebugSession {
 				let name: string;
 				if (isIndex(property.name)) {
 					const ix = +property.name;
-					name = noBrackets ? `${start+ix}` : `[${start+ix}]`;
+					name = `${start+ix}`;
 				} else {
 					name = <string> property.name;
 				}
@@ -2603,7 +2598,7 @@ export class NodeDebugSession extends DebugSession {
 				}
 			}
 
-			return this._createPropertyVariables(null, selectedProperties, start, true);
+			return this._createPropertyVariables(null, selectedProperties, start);
 		});
 	}
 
@@ -2750,13 +2745,9 @@ export class NodeDebugSession extends DebugSession {
 
 		if (this._node.v8Version) {
 
-			if (propName[0] !== '[') {
-				propName = '.' + propName;
-			}
-
 			const args = {
 				global: true,
-				expression: `obj${propName} = ${value}`,
+				expression: `obj['${propName}'] = ${value}`,
 				disable_break: true,
 				maxStringLength: NodeDebugSession.MAX_STRING_LENGTH,
 				additional_context: [
