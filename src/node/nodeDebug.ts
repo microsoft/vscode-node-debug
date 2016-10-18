@@ -2374,7 +2374,7 @@ export class NodeDebugSession extends DebugSession {
 				if (this._node.v8Version && val.type === 'undefined' && !val.value && obj) {
 
 					const args = {
-						expression: `obj.${name}`,	// trigger call to getter
+						expression: `obj['${name}']`,	// trigger call to getter
 						additional_context: [
 							{ name: 'obj', handle: obj.handle }
 						],
@@ -2545,8 +2545,7 @@ export class NodeDebugSession extends DebugSession {
 			disable_break: true,
 			additional_context: [
 				{ name: 'obj', handle: obj.handle }
-			],
-			maxStringLength: NodeDebugSession.MAX_JSON_LENGTH
+			]
 		};
 
 		this.log('va', `_createSetMapVariable: ${obj.type}.size`);
@@ -2657,10 +2656,10 @@ export class NodeDebugSession extends DebugSession {
 			const args = {
 				expression: `str`,
 				disable_break: true,
-				maxStringLength: NodeDebugSession.MAX_STRING_LENGTH,
 				additional_context: [
 					{ name: 'str', handle: val.handle }
-				]
+				],
+				maxStringLength: NodeDebugSession.MAX_STRING_LENGTH
 			};
 
 			this.log('va', `_createStringVariable: get full string`);
@@ -2748,10 +2747,10 @@ export class NodeDebugSession extends DebugSession {
 				global: true,
 				expression: `obj['${propName}'] = ${value}`,
 				disable_break: true,
-				maxStringLength: NodeDebugSession.MAX_STRING_LENGTH,
 				additional_context: [
 					{ name: 'obj', handle: objHandle }
-				]
+				],
+				maxStringLength: NodeDebugSession.MAX_STRING_LENGTH
 			};
 
 			return this._node.evaluate(args).then(response => {
