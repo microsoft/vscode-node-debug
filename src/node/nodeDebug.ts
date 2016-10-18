@@ -2501,8 +2501,8 @@ export class NodeDebugSession extends DebugSession {
 			let arraySize = '';
 
 			if (pair) {
-				indexedSize = pair[0];
-				namedSize = pair[1];
+				indexedSize = pair[0] || 0;
+				namedSize = pair[1] || 0;
 				arraySize = indexedSize.toString();
 			}
 
@@ -2519,12 +2519,11 @@ export class NodeDebugSession extends DebugSession {
 		if (this._node.v8Version) {
 
 			const args = {
-				expression: `JSON.stringify([ array.length, Object.keys(array).length+1-array.length ])`,
+				expression: array.className === 'ArrayBuffer' ? `JSON.stringify([ array.byteLength, 1 ])` : `JSON.stringify([ array.length, Object.keys(array).length+1-array.length ])`,
 				disable_break: true,
 				additional_context: [
 					{ name: 'array', handle: array.handle }
-				],
-				maxStringLength: NodeDebugSession.MAX_JSON_LENGTH
+				]
 			};
 
 			this.log('va', `_getArraySize: array.length`);
