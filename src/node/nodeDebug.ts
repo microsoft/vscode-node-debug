@@ -15,7 +15,7 @@ import {DebugProtocol} from 'vscode-debugprotocol';
 
 import {
 	NodeV8Protocol, NodeV8Event, NodeV8Response,
-	V8SetBreakpointArgs, V8SetExceptionBreakArgs,
+	V8SetBreakpointArgs, V8SetExceptionBreakArgs, V8SetVariableValueArgs,
 	V8BacktraceResponse, V8ScopeResponse, V8EvaluateResponse, V8FrameResponse,
 	V8EventBody,
 	V8Ref, V8Handle, V8Property, V8Object, V8Simple, V8Function, V8Frame, V8Scope, V8Script
@@ -33,7 +33,7 @@ const localize = nls.config(process.env.VSCODE_NLS_CONFIG)();
 
 export interface VariableContainer {
 	Expand(session: NodeDebugSession, filter: string, start: number, count: number): Promise<Variable[]>;
-	SetValue(session: NodeDebugSession, name: string, value: string): Promise<string>;
+	SetValue(session: NodeDebugSession, name: string, value: string): Promise<Variable>;
 }
 
 type ExpanderFunction = (start: number, count: number) => Promise<Variable[]>;
@@ -52,7 +52,7 @@ export class Expander implements VariableContainer {
 		return this._expanderFunction(start, count);
 	}
 
-	public SetValue(session: NodeDebugSession, name: string, value: string) : Promise<string> {
+	public SetValue(session: NodeDebugSession, name: string, value: string) : Promise<Variable> {
 		return Promise.reject(new Error(Expander.SET_VALUE_ERROR));
 	}
 }
@@ -98,7 +98,7 @@ export class PropertyContainer implements VariableContainer {
 		}
 	}
 
-	public SetValue(session: NodeDebugSession, name: string, value: string) : Promise<string> {
+	public SetValue(session: NodeDebugSession, name: string, value: string) : Promise<Variable> {
 		return session._setPropertyValue(this._object.handle, name, value);
 	}
 }
@@ -124,7 +124,7 @@ export class SetMapContainer implements VariableContainer {
 		}
 	}
 
-	public SetValue(session: NodeDebugSession, name: string, value: string) : Promise<string> {
+	public SetValue(session: NodeDebugSession, name: string, value: string) : Promise<Variable> {
 		return Promise.reject(new Error(Expander.SET_VALUE_ERROR));
 	}
 }
@@ -156,7 +156,7 @@ export class ScopeContainer implements VariableContainer {
 		});
 	}
 
-	public SetValue(session: NodeDebugSession, name: string, value: string) : Promise<string> {
+	public SetValue(session: NodeDebugSession, name: string, value: string) : Promise<Variable> {
 		return session._setVariableValue(this._frame, this._scope, name, value);
 	}
 }
@@ -2695,10 +2695,23 @@ export class NodeDebugSession extends DebugSession {
 		const value = args.value;
 		const variablesContainer = this._variableHandles.get(reference);
 		if (variablesContainer) {
-			variablesContainer.SetValue(this, name, value).then(newValue => {
+			variablesContainer.SetValue(this, name, value).then(newVar => {
+				const v: DebugProtocol.Variable = newVar;
 				response.body = {
-					value: newValue
+					value: v.value
 				};
+				if (v.type) {
+					response.body.type = v.type;
+				}
+				if (v.variablesReference) {
+					response.body.variablesReference = v.variablesReference;
+				}
+				if (typeof v.indexedVariables === 'number') {
+					response.body.indexedVariables = v.indexedVariables;
+				}
+				if (typeof v.namedVariables === 'number') {
+					response.body.namedVariables = v.namedVariables;
+				}
 				this.sendResponse(response);
 			}).catch(err => {
 				this.sendErrorResponse(response, 2004, err.message);
@@ -2708,7 +2721,9 @@ export class NodeDebugSession extends DebugSession {
 		}
 	}
 
-	public _setVariableValue(frame: number, scope: number, name: string, value: string) : Promise<string> {
+	public _setVariableValue(frame: number, scope: number, name: string, value: string) : Promise<Variable> {
+
+		// first we are evaluating the new value
 
 		const evalArgs = {
 			expression: value,
@@ -2719,29 +2734,26 @@ export class NodeDebugSession extends DebugSession {
 
 		return this._node.evaluate(evalArgs).then(evalResponse => {
 
-			const args = {
+			const args: V8SetVariableValueArgs = {
 				scope: {
 					frameNumber: frame,
 					number: scope
 				},
 				name: name,
-				newValue: {
-					value: evalResponse.body.value,
-					type: evalResponse.body.type
-				}
+				newValue: evalResponse.body
 			};
 
 			return this._node.setVariableValue(args).then(response => {
-				return this._createVariable('_setVariableValue', response.body.newValue).then(variable => {
-					return variable.value;
-				});
+				return this._createVariable('_setVariableValue', response.body.newValue);
 			});
 		});
 	}
 
-	public _setPropertyValue(objHandle: number, propName: string, value: string) : Promise<string> {
+	public _setPropertyValue(objHandle: number, propName: string, value: string) : Promise<Variable> {
 
 		if (this._node.v8Version) {
+
+			// we are doing the evaluation of the new value and the assignment to an object property in a single evaluate.
 
 			const args = {
 				global: true,
@@ -2754,11 +2766,8 @@ export class NodeDebugSession extends DebugSession {
 			};
 
 			return this._node.evaluate(args).then(response => {
-				return this._createVariable('_setpropertyvalue', response.body).then(variable => {
-					return variable.value;
-				});
+				return this._createVariable('_setpropertyvalue', response.body);
 			});
-
 		}
 
 		return Promise.reject(new Error(Expander.SET_VALUE_ERROR));

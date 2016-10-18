@@ -247,8 +247,9 @@ export interface V8SetVariableValueArgs {
 	};
 	name: string;
 	newValue: {
-		value: boolean | number | string;
-		type: string;
+		type?: string;
+		value?: boolean | number | string;
+		handle?: number;
 	};
 }
 
