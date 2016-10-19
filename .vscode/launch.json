@@ -2,37 +2,33 @@
 	"version": "0.1.0",
 	"configurations": [
 		{
-			"name": "Run Extension",
 			"type": "extensionHost",
 			"request": "launch",
+			"name": "Run Extension",
 			"runtimeExecutable": "${execPath}",
 			"args": [
 				"--extensionDevelopmentPath=${workspaceRoot}"
 			],
-			"stopOnEntry": false,
 			"sourceMaps": true,
 			"outFiles": [ "${workspaceRoot}/out/**/*.js" ]
 		},
 		{
-			"name": "Run Server",
 			"type": "node",
 			"request": "launch",
+			"name": "Run Server",
 			"cwd": "${workspaceRoot}",
 			"program": "${workspaceRoot}/src/node/nodeDebug.ts",
-			"stopOnEntry": false,
-			"runtimeArgs": [ "--nolazy" ],
 			"args": [ "--server=4711" ],
-			"internalConsoleOptions": "openOnSessionStart",
 			"sourceMaps": true,
-			"outFiles": [ "${workspaceRoot}/out/**/*.js" ]
+			"outFiles": [ "${workspaceRoot}/out/**/*.js" ],
+			"internalConsoleOptions": "openOnSessionStart"
 		},
 		{
-			"name": "Run Tests",
 			"type": "node",
 			"request": "launch",
+			"name": "Run Tests",
 			"cwd": "${workspaceRoot}",
 			"program": "${workspaceRoot}/node_modules/mocha/bin/_mocha",
-			"runtimeArgs": [ "--nolazy" ],
 			"args": [
 				"-u", "tdd",
 				"--timeout", "999999",
@@ -44,9 +40,9 @@
 			"internalConsoleOptions": "openOnSessionStart"
 		},
 		{
-			"name": "Nodemon Attach",
 			"type": "node",
 			"request": "attach",
+			"name": "Nodemon Attach",
 			"restart": true,
 			"port": 5858,
 			"sourceMaps": true,
