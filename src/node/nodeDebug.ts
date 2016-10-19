@@ -687,7 +687,7 @@ export class NodeDebugSession extends DebugSession {
 			runtimeExecutable = NodeDebugSession.NODE;     // use node from PATH
 		}
 
-		const runtimeArgs = args.runtimeArgs || [];
+		const runtimeArgs = args.runtimeArgs || [ '--nolazy' ];
 		const programArgs = args.args || [];
 
 		// special code for 'extensionHost' debugging
