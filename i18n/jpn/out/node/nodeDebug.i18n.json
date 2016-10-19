@@ -46,7 +46,7 @@
 	"reason.user_request": "ユーザー要求",
 	"scope.block": "ブロック ",
 	"scope.catch": "Catch",
-	"scope.closure": "閉じる",
+	"scope.closure": "クロージャ",
 	"scope.exception": "例外",
 	"scope.global": "グローバル",
 	"scope.local": "ローカル",
