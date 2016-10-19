@@ -221,9 +221,9 @@ export function activate(context: vscode.ExtensionContext) {
 
 		return [
 			'{',
-			'\t// Use IntelliSense to find out which attributes exist for node debugging',
-			'\t// Use hover for the description of the existing attributes',
-			'\t// For further information visit https://go.microsoft.com/fwlink/?linkid=830387',
+			'\t// Use IntelliSense to find out which attributes exist for node debugging.',
+			'\t// Use hover for the description of the existing attributes.',
+			'\t// For further information visit https://go.microsoft.com/fwlink/?linkid=830387.',
 			'\t"version": "0.2.0",',
 			'\t"configurations": ' + configurationsMassaged,
 			'}'
