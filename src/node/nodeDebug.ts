@@ -31,8 +31,10 @@ import * as nls from 'vscode-nls';
 
 const localize = nls.config(process.env.VSCODE_NLS_CONFIG)();
 
+type FilterType = 'named' | 'indexed' | 'all';
+
 export interface VariableContainer {
-	Expand(session: NodeDebugSession, filter: string, start: number, count: number): Promise<Variable[]>;
+	Expand(session: NodeDebugSession, filter: FilterType, start: number, count: number): Promise<Variable[]>;
 	SetValue(session: NodeDebugSession, name: string, value: string): Promise<Variable>;
 }
 
@@ -67,7 +69,7 @@ export class PropertyContainer implements VariableContainer {
 		this._this = ths;
 	}
 
-	public Expand(session: NodeDebugSession, filter: string, start: number, count: number) : Promise<Variable[]> {
+	public Expand(session: NodeDebugSession, filter: FilterType, start: number, count: number) : Promise<Variable[]> {
 
 		if (filter === 'named') {
 			return session._createProperties(this._object, 'named').then(variables => {
@@ -111,7 +113,7 @@ export class SetMapContainer implements VariableContainer {
 		this._object = obj;
 	}
 
-	public Expand(session: NodeDebugSession, filter: string, start: number, count: number) : Promise<Variable[]> {
+	public Expand(session: NodeDebugSession, filter: FilterType, start: number, count: number) : Promise<Variable[]> {
 
 		if (filter === 'named') {
 			return session._createSetMapProperties(this._object);
@@ -143,8 +145,10 @@ export class ScopeContainer implements VariableContainer {
 		this._this = ths;
 	}
 
-	public Expand(session: NodeDebugSession, filter: string, start: number, count: number) : Promise<Variable[]> {
-		return session._createProperties(this._object, 'all').then(variables => {
+	public Expand(session: NodeDebugSession, filter: FilterType, start: number, count: number) : Promise<Variable[]> {
+		// TODO: remove the following statement after https://github.com/Microsoft/vscode/issues/14082 has been fixed
+		filter = 'all';
+		return session._createProperties(this._object, filter).then(variables => {
 			if (this._this) {
 				return session._createVariable('this', this._this).then(variable => {
 					variables.push(variable);
@@ -2244,10 +2248,13 @@ export class NodeDebugSession extends DebugSession {
 	//--- variables request ---------------------------------------------------------------------------------------------------
 
 	protected variablesRequest(response: DebugProtocol.VariablesResponse, args: DebugProtocol.VariablesArguments): void {
+
 		const reference = args.variablesReference;
 		const variablesContainer = this._variableHandles.get(reference);
+
 		if (variablesContainer) {
-			variablesContainer.Expand(this, args.filter, args.start, args.count).then(variables => {
+			const filter: FilterType = (args.filter === 'indexed' || args.filter === 'named') ? args.filter : 'all';
+			variablesContainer.Expand(this, filter, args.start, args.count).then(variables => {
 				variables.sort(NodeDebugSession.compareVariableNames);
 				response.body = {
 					variables: variables
@@ -2276,7 +2283,7 @@ export class NodeDebugSession extends DebugSession {
 	 * 'indexed': add 'count' indexed properties starting at 'start'
 	 * 'named': add only the named properties.
 	 */
-	public _createProperties(obj: V8Object, mode: 'named' | 'indexed' | 'all', start = 0, count?: number) : Promise<Variable[]> {
+	public _createProperties(obj: V8Object, mode: FilterType, start = 0, count?: number) : Promise<Variable[]> {
 
 		if (obj && !obj.properties) {
 
