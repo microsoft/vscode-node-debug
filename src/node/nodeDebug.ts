@@ -1349,7 +1349,7 @@ export class NodeDebugSession extends DebugSession {
 						const expr = op === '%'
 							? `return (hitcnt % ${value}) === 0;`
 							: `return hitcnt ${op} ${value};`;
-						hitter = <HitterFunction> Function("hitcnt", expr);
+						hitter = <HitterFunction> Function('hitcnt', expr);
 					} else {
 						// error
 					}
