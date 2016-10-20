@@ -21,14 +21,14 @@
 		"postinstall": "node ./node_modules/vscode/bin/install"
 	},
 	"engines": {
-		"vscode": "^1.7.0",
+		"vscode": "^1.6.0",
 		"node": "^5.10.0"
 	},
 	"dependencies": {
-		"vscode-debugprotocol": "^1.14.0-pre.1",
-		"vscode-debugadapter": "^1.14.0-pre.0",
+		"vscode-debugprotocol": "^1.14.0-pre.2",
+		"vscode-debugadapter": "^1.14.0-pre.2",
 		"source-map": "^0.5.3",
-		"vscode-nls": "^2.0.0",
+		"vscode-nls": "^2.0.1",
 		"request-light": "^0.1.0",
 		"glob": "^7.0.6"
 	},
@@ -58,13 +58,13 @@
 		"run-sequence": "*",
 		"mocha": "^2.4.5",
 		"tslint": "^3.15.1",
-		"typescript": "^2.0.2",
+		"typescript": "^2.0.3",
 		"vscode": "^0.11.18",
-		"vscode-nls-dev": "^2.0.0-beta.1",
-		"vscode-debugadapter-testsupport": "^1.13.0",
+		"vscode-nls-dev": "^2.0.1",
+		"vscode-debugadapter-testsupport": "^1.11.0-pre.0",
 		"event-stream": "^3.3.4",
 		"nodemon": "^1.10.2",
-		"vsce": "^1.12.0"
+		"vsce": "^1.15.0"
 	},
 	"main": "./out/node/extension",
 	"activationEvents": [
@@ -262,7 +262,7 @@
 					"runtimeExecutable": "${execPath}",
 					"args": [ "--extensionDevelopmentPath=${workspaceRoot}" ],
 					"sourceMaps": true,
-					"outDirs": [ "${workspaceRoot}/out/**/*.js" ],
+					"outFiles": [ "${workspaceRoot}/out/**/*.js" ],
 					"preLaunchTask": "npm"
 				}],
 				"configurationAttributes": {
