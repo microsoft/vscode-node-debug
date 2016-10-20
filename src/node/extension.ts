@@ -214,8 +214,8 @@ export function activate(context: vscode.ExtensionContext) {
 				config['sourceMaps'] = true;
 			});
 		}
-		// Massage the configuration string, add an aditional tab and comment out processId
-		// Add an aditional empty line between attributes which the user should not edit
+		// Massage the configuration string, add an aditional tab and comment out processId.
+		// Add an aditional empty line between attributes which the user should not edit.
 		const configurationsMassaged = JSON.stringify(initialConfigurations, null, '\t').replace(',\n\t\t"processId', '\n\t\t//"processId')
 			.split('\n').map(line => '\t' + line).join('\n').trim();
 
