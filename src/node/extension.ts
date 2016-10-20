@@ -9,6 +9,7 @@ import { spawn, exec } from 'child_process';
 import { basename, join, isAbsolute } from 'path';
 import * as nls from 'vscode-nls';
 import * as fs from 'fs';
+
 const localize = nls.config(process.env.VSCODE_NLS_CONFIG)();
 
 interface ProcessItem extends vscode.QuickPickItem {
