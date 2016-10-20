@@ -2460,6 +2460,7 @@ export class NodeDebugSession extends DebugSession {
 					case 'Generator':
 					case 'Object':
 						return this._resolveValues( [ object.constructorFunction ] ).then((resolved: V8Function[]) => {
+
 							if (resolved[0]) {
 								const constructor_name = <string>resolved[0].name;
 								if (constructor_name) {
@@ -2467,8 +2468,20 @@ export class NodeDebugSession extends DebugSession {
 								}
 							}
 
-							if (object.status) {	// promises and generators have a status attribute
-								value += ` { ${object.status} }`;
+							if (val.type === 'promise' || val.type === 'generator') {
+								if (object.status) {	// promises and generators have a status attribute
+									value += ` { ${object.status} }`;
+								}
+							} else {
+
+								if (object.properties) {
+									return this._objectPreview(object).then(preview => {
+										if (preview) {
+											value = `${value} ${preview}`;
+										}
+										return new Variable(name, value, this._variableHandles.create(new PropertyContainer(val)));
+									});
+								}
 							}
 
 							return new Variable(name, value, this._variableHandles.create(new PropertyContainer(val)));
@@ -2497,6 +2510,67 @@ export class NodeDebugSession extends DebugSession {
 		}
 	}
 
+	/**
+	 * creates something like this: {x: 123, y: "hhe", r1: "h", r2: "h", r3: "i"…}
+	 */
+	private _objectPreview(object: V8Object): Promise<string> {
+
+		if (object && object.properties && object.properties.length > 0) {
+
+			return this._createPropertyVariables(null, object.properties.slice(0, 3)).then(props => {
+
+				let preview = ' {';
+				for (let i = 0; i < props.length; i++) {
+
+					preview += `${props[i].name}: ${props[i].value}`;
+
+					if (i < props.length-1) {
+						preview += ', ';
+					} else {
+						if (object.properties.length > 5) {
+							preview += ' …';
+						}
+					}
+				}
+				preview += '}';
+
+				return preview;
+			});
+		}
+
+		return Promise.resolve(null);
+	}
+
+	/**
+	 * creates something like this: [ 1, 2, 3 ]
+	 */
+	private _arrayPreview(array: V8Object): Promise<string> {
+
+		if (array && array.properties && array.properties.length > 1) {
+			return this._createPropertyVariables(null, array.properties.slice(0, 3)).then(props => {
+
+				let preview = ' [';
+				for (let i = 0; i < props.length; i++) {
+
+					preview += `${props[i].value}`;
+
+					if (i < props.length-1) {
+						preview += ', ';
+					} else {
+						if (array.properties.length > 5) {
+							preview += ' …';
+						}
+					}
+				}
+				preview += ']';
+
+				return preview;
+			});
+		}
+
+		return Promise.resolve(null);
+	}
+
 	//--- long array support
 
 	private _createArrayVariable(name: string, array: V8Object) : Promise<Variable> {
@@ -2513,7 +2587,14 @@ export class NodeDebugSession extends DebugSession {
 				arraySize = indexedSize.toString();
 			}
 
-			return new Variable(name, `${array.className}[${arraySize}]`, this._variableHandles.create(new PropertyContainer(array)), indexedSize, namedSize);
+			return this._arrayPreview(array).then(preview => {
+
+				let v = `${array.className}(${arraySize})`;
+				if (preview) {
+					v = `${v}${preview}`;
+				}
+				return new Variable(name, v, this._variableHandles.create(new PropertyContainer(array)), indexedSize, namedSize);
+			});
 		});
 	}
 
