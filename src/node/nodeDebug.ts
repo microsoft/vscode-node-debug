@@ -365,7 +365,7 @@ export class NodeDebugSession extends DebugSession {
 	private _entryLine: number;		// entry line in *.js file (not in the source file)
 	private _entryColumn: number;	// entry column in *.js file (not in the source file)
 	private _smartStepCount = 0;
-
+	private _catchRejects = false;
 
 	public constructor() {
 		super();
@@ -432,8 +432,22 @@ export class NodeDebugSession extends DebugSession {
 		let reason: string;
 		let exception_text: string;
 
+		// in order to identify reject calls and debugger statements extract source at current location
+		let source: string = null;
+		if (eventBody.sourceLineText && typeof eventBody.sourceColumn === 'number') {
+			source = eventBody.sourceLineText.substr(eventBody.sourceColumn);
+		}
+
 		// is exception?
 		if (eventBody.exception) {
+
+			// if this is exception originates from a 'reject', skip it
+			if (!this._catchRejects && source && source.indexOf('reject') == 0) {
+				this._node.command('continue');
+				return;
+			}
+
+			// remember exception
 			this._exception = eventBody.exception;
 			exception_text = eventBody.exception.text;
 			reason = this._reasonText('exception');
@@ -467,8 +481,7 @@ export class NodeDebugSession extends DebugSession {
 
 		// is debugger statement?
 		if (!reason) {
-			const sourceLine = eventBody.sourceLineText;
-			if (sourceLine && sourceLine.indexOf('debugger') >= 0) {
+			if (source && source.indexOf('debugger') == 0) {
 				reason = this._reasonText('debugger');
 				this._gotDebuggerEvent = true;
 			}
@@ -1781,10 +1794,12 @@ export class NodeDebugSession extends DebugSession {
 			type: 'all',
 			enabled: false
 		};
+		this._catchRejects = false;
 		const filters = args.filters;
 		if (filters) {
 			if (filters.indexOf('all') >= 0) {
 				nodeArgs.enabled = true;
+				this._catchRejects = true;
 			} else if (filters.indexOf('uncaught') >= 0) {
 				nodeArgs.type = 'uncaught';
 				nodeArgs.enabled = true;
