@@ -441,10 +441,15 @@ export class NodeDebugSession extends DebugSession {
 		// is exception?
 		if (eventBody.exception) {
 
-			// if this is exception originates from a 'reject', skip it
-			if (!this._catchRejects && source && source.indexOf('reject') == 0) {
-				this._node.command('continue');
-				return;
+			// if this exception originates from a 'reject', skip it if 'All Exception' is not set.
+			if (source && source.indexOf('reject') === 0) {
+				if (!this._catchRejects) {
+					this._node.command('continue');
+					return;
+				}
+				if (eventBody.exception.text === 'undefined') {
+					eventBody.exception.text = 'reject';
+				}
 			}
 
 			// remember exception
