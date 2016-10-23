@@ -314,6 +314,7 @@ export class NodeDebugSession extends DebugSession {
 
 	// options
 	private _tryToInjectExtension = true;
+	private _skipRejects = false;			// do not stop on rejected promises
 	private _maxVariablesPerScope = 100;	// only load this many variables for a scope
 	private _smartStep = false;				// try to automatically step over uninteresting source
 	private _mapToFilesOnDisk = true; 		// by default try to map node.js scripts to files on disk
@@ -442,7 +443,7 @@ export class NodeDebugSession extends DebugSession {
 		if (eventBody.exception) {
 
 			// if this exception originates from a 'reject', skip it if 'All Exception' is not set.
-			if (source && source.indexOf('reject') === 0) {
+			if (this._skipRejects && source && source.indexOf('reject') === 0) {
 				if (!this._catchRejects) {
 					this._node.command('continue');
 					return;
