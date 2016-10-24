@@ -297,6 +297,8 @@ export class NodeDebugSession extends DebugSession {
 	private static ATTACH_TIMEOUT = 10000;
 	private static RUNINTERMINAL_TIMEOUT = 5000;
 
+	private static PREVIEW_PROPERTIES = 3;		// maximum number of properties to show in object/array preview
+
 	private static NODE = 'node';
 	private static DUMMY_THREAD_ID = 1;
 	private static DUMMY_THREAD_NAME = 'Node';
@@ -2385,7 +2387,7 @@ export class NodeDebugSession extends DebugSession {
 	 * If the properties are indexed (opposed to named), a value 'start' is added to the index number.
 	 * If a value is undefined it probes for a getter.
 	 */
-	private _createPropertyVariables(obj: V8Object, properties: V8Property[], start = 0) : Promise<Variable[]> {
+	private _createPropertyVariables(obj: V8Object, properties: V8Property[], doPreview = true, start = 0) : Promise<Variable[]> {
 
 		return this._resolveValues(properties).then(() => {
 			return Promise.all<Variable>(properties.map(property => {
@@ -2414,13 +2416,13 @@ export class NodeDebugSession extends DebugSession {
 
 					this.log('va', `_createPropertyVariables: trigger getter`);
 					return this._node.evaluate(args).then(response => {
-						return this._createVariable(name, response.body);
+						return this._createVariable(name, response.body, doPreview);
 					}).catch(err => {
 						return new Variable(name, 'undefined');
 					});
 
 				} else {
-					return this._createVariable(name, val);
+					return this._createVariable(name, val, doPreview);
 				}
 			}));
 		});
@@ -2430,7 +2432,7 @@ export class NodeDebugSession extends DebugSession {
 	 * Create a Variable with the given name and value.
 	 * For structured values the variable object will have a corresponding expander.
 	 */
-	public _createVariable(name: string, val: V8Handle) : Promise<DebugProtocol.Variable> {
+	public _createVariable(name: string, val: V8Handle, doPreview: boolean = true) : Promise<DebugProtocol.Variable> {
 
 		if (!val) {
 			return Promise.resolve(null);
@@ -2475,7 +2477,7 @@ export class NodeDebugSession extends DebugSession {
 					case 'Int16Array': case 'Uint16Array':
 					case 'Int32Array': case 'Uint32Array':
 					case 'Float32Array': case 'Float64Array':
-						return this._createArrayVariable(name, val);
+						return this._createArrayVariable(name, val, doPreview);
 
 					case 'RegExp':
 						return Promise.resolve(new Variable(name, text, this._variableHandles.create(new PropertyContainer(val))));
@@ -2498,7 +2500,7 @@ export class NodeDebugSession extends DebugSession {
 							} else {
 
 								if (object.properties) {
-									return this._objectPreview(object).then(preview => {
+									return this._objectPreview(object, doPreview).then(preview => {
 										if (preview) {
 											value = `${value} ${preview}`;
 										}
@@ -2534,13 +2536,13 @@ export class NodeDebugSession extends DebugSession {
 	}
 
 	/**
-	 * creates something like this: {x: 123, y: "hhe", r1: "h", r2: "h", r3: "i"…}
+	 * creates something like this: {a: 123, b: "hi", c: true …}
 	 */
-	private _objectPreview(object: V8Object): Promise<string> {
+	private _objectPreview(object: V8Object, doPreview: boolean): Promise<string> {
 
-		if (object && object.properties && object.properties.length > 0) {
+		if (doPreview && object && object.properties && object.properties.length > 0) {
 
-			return this._createPropertyVariables(null, object.properties.slice(0, 3)).then(props => {
+			return this._createPropertyVariables(null, object.properties.slice(0, NodeDebugSession.PREVIEW_PROPERTIES), false).then(props => {
 
 				let preview = ' {';
 				for (let i = 0; i < props.length; i++) {
@@ -2550,7 +2552,7 @@ export class NodeDebugSession extends DebugSession {
 					if (i < props.length-1) {
 						preview += ', ';
 					} else {
-						if (object.properties.length > 5) {
+						if (object.properties.length > NodeDebugSession.PREVIEW_PROPERTIES) {
 							preview += ' …';
 						}
 					}
@@ -2565,12 +2567,13 @@ export class NodeDebugSession extends DebugSession {
 	}
 
 	/**
-	 * creates something like this: [ 1, 2, 3 ]
+	 * creates something like this: [ 1, 2, 3 …]
 	 */
-	private _arrayPreview(array: V8Object, length: number): Promise<string> {
+	private _arrayPreview(array: V8Object, length: number, doPreview: boolean): Promise<string> {
 
-		if (array && array.properties && length > 0) {
-			return this._createPropertyVariables(null, array.properties.slice(0, 3)).then(props => {
+		if (doPreview && array && array.properties && length > 0) {
+
+			return this._createPropertyVariables(null, array.properties.slice(0, NodeDebugSession.PREVIEW_PROPERTIES), false).then(props => {
 
 				let preview = ' [';
 				for (let i = 0; i < props.length; i++) {
@@ -2580,7 +2583,7 @@ export class NodeDebugSession extends DebugSession {
 					if (i < props.length-1) {
 						preview += ', ';
 					} else {
-						if (array.properties.length > 5) {
+						if (array.properties.length > NodeDebugSession.PREVIEW_PROPERTIES) {
 							preview += ' …';
 						}
 					}
@@ -2596,7 +2599,7 @@ export class NodeDebugSession extends DebugSession {
 
 	//--- long array support
 
-	private _createArrayVariable(name: string, array: V8Object) : Promise<Variable> {
+	private _createArrayVariable(name: string, array: V8Object, doPreview: boolean) : Promise<Variable> {
 
 		return this._getArraySize(array).then(pair => {
 
@@ -2610,8 +2613,7 @@ export class NodeDebugSession extends DebugSession {
 				arraySize = indexedSize.toString();
 			}
 
-			return this._arrayPreview(array, indexedSize).then(preview => {
-
+			return this._arrayPreview(array, indexedSize, doPreview).then(preview => {
 				let v = `${array.className}(${arraySize})`;
 				if (preview) {
 					v = `${v}${preview}`;
@@ -2707,7 +2709,7 @@ export class NodeDebugSession extends DebugSession {
 				}
 			}
 
-			return this._createPropertyVariables(null, selectedProperties, start);
+			return this._createPropertyVariables(null, selectedProperties, true, start);
 		});
 	}
 
