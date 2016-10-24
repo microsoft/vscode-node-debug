@@ -2352,14 +2352,16 @@ export class NodeDebugSession extends DebugSession {
 						selectedProperties.push(property);
 						break;
 					case 'named':
-						if (typeof name === 'string') {
+						if (!isIndex(name)) {
 							selectedProperties.push(property);
 						}
 						break;
 					case 'indexed':
-						const ix = +name;
-						if (ix >= start && ix < start+count) {
-							selectedProperties.push(property);
+						if (isIndex(name)) {
+							const ix = +name;
+							if (ix >= start && ix < start+count) {
+								selectedProperties.push(property);
+							}
 						}
 						break;
 				}
