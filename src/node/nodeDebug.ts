@@ -146,8 +146,6 @@ export class ScopeContainer implements VariableContainer {
 	}
 
 	public Expand(session: NodeDebugSession, filter: FilterType, start: number, count: number) : Promise<Variable[]> {
-		// TODO: remove the following statement after https://github.com/Microsoft/vscode/issues/14082 has been fixed
-		filter = 'all';
 		return session._createProperties(this._object, filter).then(variables => {
 			if (this._this) {
 				return session._createVariable('this', this._this).then(variable => {
