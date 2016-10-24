@@ -2567,9 +2567,9 @@ export class NodeDebugSession extends DebugSession {
 	/**
 	 * creates something like this: [ 1, 2, 3 ]
 	 */
-	private _arrayPreview(array: V8Object): Promise<string> {
+	private _arrayPreview(array: V8Object, length: number): Promise<string> {
 
-		if (array && array.properties && array.properties.length > 1) {
+		if (array && array.properties && length > 0) {
 			return this._createPropertyVariables(null, array.properties.slice(0, 3)).then(props => {
 
 				let preview = ' [';
@@ -2610,7 +2610,7 @@ export class NodeDebugSession extends DebugSession {
 				arraySize = indexedSize.toString();
 			}
 
-			return this._arrayPreview(array).then(preview => {
+			return this._arrayPreview(array, indexedSize).then(preview => {
 
 				let v = `${array.className}(${arraySize})`;
 				if (preview) {
