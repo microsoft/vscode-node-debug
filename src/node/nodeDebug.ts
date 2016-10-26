@@ -295,7 +295,8 @@ export class NodeDebugSession extends DebugSession {
 	private static ATTACH_TIMEOUT = 10000;
 	private static RUNINTERMINAL_TIMEOUT = 5000;
 
-	private static PREVIEW_PROPERTIES = 3;		// maximum number of properties to show in object/array preview
+	private static PREVIEW_PROPERTIES = 3;			// maximum number of properties to show in object/array preview
+	private static PREVIEW_MAX_STRING_LENGTH = 50;	// truncate long strings for object/array preview
 
 	private static NODE = 'node';
 	private static DUMMY_THREAD_ID = 1;
@@ -2443,7 +2444,7 @@ export class NodeDebugSession extends DebugSession {
 				return Promise.resolve(new Variable(name, val.type));
 
 			case 'string':
-				return this._createStringVariable(name, val);
+				return this._createStringVariable(name, val, doPreview ? undefined : NodeDebugSession.PREVIEW_MAX_STRING_LENGTH);
 			case 'number':
 				return Promise.resolve(new Variable(name, (<V8Simple> val).value.toString()));
 			case 'boolean':
@@ -2759,9 +2760,16 @@ export class NodeDebugSession extends DebugSession {
 
 	//--- long string support
 
-	private _createStringVariable(name: string, val: V8Simple) : Promise<Variable> {
+	private _createStringVariable(name: string, val: V8Simple, maxLength: number) : Promise<Variable> {
 
 		let str_val = <string>val.value;
+
+		if (typeof maxLength === 'number') {
+			if (str_val.length > maxLength) {
+				str_val = str_val.substr(0, maxLength) + '…';
+			}
+			return Promise.resolve(this._createStringVariable2(name, str_val));
+		}
 
 		if (this._node.v8Version && NodeDebugSession.LONG_STRING_MATCHER.exec(str_val)) {
 
