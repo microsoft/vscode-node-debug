@@ -2612,7 +2612,7 @@ export class NodeDebugSession extends DebugSession {
 			}
 
 			return this._arrayPreview(array, indexedSize, doPreview).then(preview => {
-				let v = `${array.className}(${arraySize})`;
+				let v = `${array.className}[${arraySize}]`;
 				if (preview) {
 					v = `${v}${preview}`;
 				}
