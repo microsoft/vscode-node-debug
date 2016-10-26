@@ -2540,7 +2540,7 @@ export class NodeDebugSession extends DebugSession {
 
 		if (doPreview && object && object.properties && object.properties.length > 0) {
 
-			return this._createPropertyVariables(null, object.properties.slice(0, NodeDebugSession.PREVIEW_PROPERTIES), false).then(props => {
+			return this._createPropertyVariables(object, object.properties.slice(0, NodeDebugSession.PREVIEW_PROPERTIES), false).then(props => {
 
 				let preview = ' {';
 				for (let i = 0; i < props.length; i++) {
@@ -2572,7 +2572,7 @@ export class NodeDebugSession extends DebugSession {
 		if (doPreview && array && array.properties && length > 0) {
 
 			const n = Math.min(length, NodeDebugSession.PREVIEW_PROPERTIES);
-			return this._createPropertyVariables(null, array.properties.slice(0, n), false).then(props => {
+			return this._createPropertyVariables(array, array.properties.slice(0, n), false).then(props => {
 
 				let preview = ' [';
 				for (let i = 0; i < props.length; i++) {
