@@ -711,7 +711,7 @@ export class NodeDebugSession extends DebugSession {
 			runtimeExecutable = NodeDebugSession.NODE;     // use node from PATH
 		}
 
-		const runtimeArgs = args.runtimeArgs || [ '--nolazy' ];
+		let runtimeArgs = args.runtimeArgs || [];
 		const programArgs = args.args || [];
 
 		// special code for 'extensionHost' debugging
@@ -737,6 +737,7 @@ export class NodeDebugSession extends DebugSession {
 			return;
 		}
 
+
 		let programPath = args.program;
 		if (programPath) {
 			if (!Path.isAbsolute(programPath)) {
@@ -753,6 +754,8 @@ export class NodeDebugSession extends DebugSession {
 			}
 		}
 
+		runtimeArgs = args.runtimeArgs || [ '--nolazy' ];
+		
 		if (programPath) {
 			if (NodeDebugSession.isJavaScript(programPath)) {
 				if (this._sourceMaps) {
