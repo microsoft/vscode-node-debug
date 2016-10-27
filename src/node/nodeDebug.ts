@@ -2543,7 +2543,7 @@ export class NodeDebugSession extends DebugSession {
 
 			return this._createPropertyVariables(object, object.properties.slice(0, NodeDebugSession.PREVIEW_PROPERTIES), false).then(props => {
 
-				let preview = ' {';
+				let preview = '{';
 				for (let i = 0; i < props.length; i++) {
 
 					preview += `${props[i].name}: ${props[i].value}`;
@@ -2575,7 +2575,7 @@ export class NodeDebugSession extends DebugSession {
 			const n = Math.min(length, NodeDebugSession.PREVIEW_PROPERTIES);
 			return this._createPropertyVariables(array, array.properties.slice(0, n), false).then(props => {
 
-				let preview = ' [';
+				let preview = '[';
 				for (let i = 0; i < props.length; i++) {
 
 					preview += `${props[i].value}`;
@@ -2616,7 +2616,7 @@ export class NodeDebugSession extends DebugSession {
 			return this._arrayPreview(array, indexedSize, doPreview).then(preview => {
 				let v = `${array.className}[${arraySize}]`;
 				if (preview) {
-					v = `${v}${preview}`;
+					v = `${v} ${preview}`;
 				}
 				return new Variable(name, v, this._variableHandles.create(new PropertyContainer(array)), indexedSize, namedSize);
 			});
