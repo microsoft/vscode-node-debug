@@ -27,7 +27,7 @@
 	"node.launch.env.description": "Variabili di ambiente passate al programma.",
 	"node.launch.externalConsole.description": "Avvia la destinazione di debug nella console esterna.",
 	"node.launch.externalConsole.error": "Deprecato: in sostituzione usare l'attributo 'console'.",
-	"node.launch.program.description": "Percorso assoluto del programma.",
+	"node.launch.program.description": "Percorso assoluto del programma. Per ipotizzare il valore generato, esaminare package.json e i file aperti. Modificare questo attributo.",
 	"node.launch.runtimeArgs.description": "Argomenti facoltativi passati all'eseguibile del runtime.",
 	"node.launch.runtimeExecutable.description": "Runtime da usare. Corrisponde a un percorso assoluto o al nome di un runtime disponibile in PATH. Se viene omesso, si presuppone che sia 'node'.",
 	"node.outDir.description": "Se sono abilitati i mapping di origine, in questa directory è previsto il codice generato. Deprecato: usare l'attributo 'outFiles'.",

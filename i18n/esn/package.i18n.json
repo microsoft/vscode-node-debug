@@ -27,7 +27,7 @@
 	"node.launch.env.description": "Variables de entorno pasadas al programa.",
 	"node.launch.externalConsole.description": "El destino de depuración se inicia en una consola externa.",
 	"node.launch.externalConsole.error": "En desuso: utilice el atributo 'console' en su lugar.",
-	"node.launch.program.description": "Ruta de acceso absoluta al programa.",
+	"node.launch.program.description": "Ruta de acceso absoluta al programa. El valor generado se infiere de package.json y de los archivos abiertos. Edite este atributo.",
 	"node.launch.runtimeArgs.description": "Argumentos opcionales pasados al ejecutable del runtime.",
 	"node.launch.runtimeExecutable.description": "Runtime que se va a usar. Puede ser una ruta de acceso absoluta o el nombre de un runtime disponible en PATH. Si se omite, se asume que es \"node\".",
 	"node.outDir.description": "Si los mapas de origen están habilitados, el código generado se espera en este directorio. En desuso: use el atributo \"outFiles\" en su lugar.",

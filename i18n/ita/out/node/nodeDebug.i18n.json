@@ -21,7 +21,6 @@
 	"VSND2023": "Non sono disponibili stack di chiamate.",
 	"VSND2028": "Il tipo di console '{0}' è sconosciuto.",
 	"anonymous.function": "(funzione anonima)",
-	"attribute.missing": "L'attributo '{0}' manca o è vuoto.",
 	"attribute.path.not.absolute": "L'attributo '{0}' non è assoluto ('{1}'). Per renderlo assoluto, provare ad aggiungere '{2}' come prefisso.",
 	"attribute.path.not.exist": "L'attributo '{0}' non esiste ('{1}').",
 	"eval.invalid.expression": "espressione non valida: {0}",
