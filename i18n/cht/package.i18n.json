@@ -27,7 +27,7 @@
 	"node.launch.env.description": "傳遞給程式的環境變數。",
 	"node.launch.externalConsole.description": "在外部主控台內啟動偵錯目標。",
 	"node.launch.externalConsole.error": "取代: 請改用 'console' 屬性。",
-	"node.launch.program.description": "程式的絕對路徑。",
+	"node.launch.program.description": "程式的絕對路徑。透過查看 package.json 及開啟的檔案猜測產生的值。編輯此屬性。",
 	"node.launch.runtimeArgs.description": "傳遞給執行階段可執行檔的選擇性引數。",
 	"node.launch.runtimeExecutable.description": "要使用的執行階段。可以是 PATH 上可用的執行階段絕對路徑或名稱。如果省略，即假設為 'node'。",
 	"node.outDir.description": "如果已啟用來源對應，產生的程式碼就會位於此目錄。取代: 改用 'outFiles' 屬性。",

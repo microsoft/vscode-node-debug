@@ -27,7 +27,7 @@
 	"node.launch.env.description": "传递给程序的环境变量。",
 	"node.launch.externalConsole.description": "启动外部控制台的调试目标。",
 	"node.launch.externalConsole.error": "已弃用: 改用 \"console\" 特性。",
-	"node.launch.program.description": "程序的绝对路径。",
+	"node.launch.program.description": "程序的绝对路径。通过查看 package.json 和打开的文件猜测所生成的值。编辑此属性。",
 	"node.launch.runtimeArgs.description": "传递给运行时可执行文件的可选参数。",
 	"node.launch.runtimeExecutable.description": "要使用的运行时。一个绝对路径或路径上可用的运行时名称。如果假定省略“节点”。",
 	"node.outDir.description": "如果启用源映射，则此目录中应有生成的代码。已弃用: 改用 \"outFiles\" 属性。",

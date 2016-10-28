@@ -27,7 +27,7 @@
 	"node.launch.env.description": "환경 변수가 프로그램에 전달되었습니다.",
 	"node.launch.externalConsole.description": "외부 콘솔에서 디버그 대상을 시작합니다.",
 	"node.launch.externalConsole.error": "사용되지 않음: 대신 'console' 특성을 사용하세요.",
-	"node.launch.program.description": "프로그램의 절대 경로입니다.",
+	"node.launch.program.description": "프로그램의 절대 경로입니다. 생성된 값은 package.json 및 열린 파일을 보고 추측한 것입니다. 이 특성을 편집하세요.",
 	"node.launch.runtimeArgs.description": "선택적 인수가 런타임 실행 파일에 전달되었습니다.",
 	"node.launch.runtimeExecutable.description": "사용할 런타임입니다. PATH에서 사용할 수 있는 런타임의 절대 경로 또는 이름입니다. 생략하면 'node'가 가정됩니다.",
 	"node.outDir.description": "소스 맵이 사용되는 경우 생성된 코드가 이 디렉터리에 필요합니다. 사용되지 않는 경우 'outFiles' 특성을 대신 사용합니다.",

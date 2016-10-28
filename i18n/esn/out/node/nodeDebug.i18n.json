@@ -21,7 +21,6 @@
 	"VSND2023": "No hay ninguna pila de llamadas disponible.",
 	"VSND2028": "Tipo de consola desconocido: '{0}'.",
 	"anonymous.function": "(función anónima)",
-	"attribute.missing": "Falta el atributo '{0}' o está vacío.",
 	"attribute.path.not.absolute": "El atributo '{0}' no es absoluto ('{1}'). Pruebe a agregar '{2}' como prefijo para hacerlo absoluto.",
 	"attribute.path.not.exist": "El atributo '{0}' no existe ('{1}').",
 	"eval.invalid.expression": "expresión no válida: {0}",

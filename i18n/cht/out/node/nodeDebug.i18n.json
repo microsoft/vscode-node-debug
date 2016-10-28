@@ -21,7 +21,6 @@
 	"VSND2023": "沒有可用的呼叫堆疊。",
 	"VSND2028": "未知的主控台類型 '{0}'。",
 	"anonymous.function": "(匿名函式)",
-	"attribute.missing": "屬性 '{0}' 遺漏或空白。",
 	"attribute.path.not.absolute": "屬性 '{0}' 非絕對值 ('{1}')，請考慮加入 '{2}' 作為前置詞，使其成為絕對值。",
 	"attribute.path.not.exist": "屬性 '{0}' 不存在 ('{1}')。",
 	"eval.invalid.expression": "運算式無效: {0}",

@@ -21,7 +21,6 @@
 	"VSND2023": "Aucune pile des appels disponible.",
 	"VSND2028": "Type de console inconnu '{0}'.",
 	"anonymous.function": "(fonction anonyme)",
-	"attribute.missing": "L'attribut '{0}' est manquant ou vide.",
 	"attribute.path.not.absolute": "L'attribut '{0}' n'est pas absolu ('{1}') ; songez à ajouter '{2}' comme préfixe pour le rendre absolu.",
 	"attribute.path.not.exist": "L'attribut '{0}' n'existe pas ('{1}').",
 	"eval.invalid.expression": "expression non valide : {0}",

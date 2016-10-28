@@ -21,7 +21,6 @@
 	"VSND2023": "利用できる呼び出し履歴はありません。",
 	"VSND2028": "不明なコンソールの種類 '{0}'.",
 	"anonymous.function": "(匿名関数)",
-	"attribute.missing": "属性 '{0}'がないか空です。",
 	"attribute.path.not.absolute": "属性 '{0}' が絶対 ('{1}') ではありません。絶対的なものにするには、プレフィックスとして '{2}' を追加することを考慮してください。",
 	"attribute.path.not.exist": "属性 '{0}' が存在しません ('{1}')。",
 	"eval.invalid.expression": "正しくない式: {0}",
