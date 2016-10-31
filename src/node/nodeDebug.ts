@@ -755,7 +755,7 @@ export class NodeDebugSession extends DebugSession {
 		}
 
 		runtimeArgs = args.runtimeArgs || [ '--nolazy' ];
-		
+
 		if (programPath) {
 			if (NodeDebugSession.isJavaScript(programPath)) {
 				if (this._sourceMaps) {
@@ -2575,8 +2575,21 @@ export class NodeDebugSession extends DebugSession {
 
 		if (doPreview && array && array.properties && length > 0) {
 
-			const n = Math.min(length, NodeDebugSession.PREVIEW_PROPERTIES);
-			return this._createPropertyVariables(array, array.properties.slice(0, n), false).then(props => {
+			const previewProps = new Array<V8Property>();
+			for (let i = 0; i < array.properties.length; i++) {
+				const p = array.properties[i];
+				if (isIndex(p.name)) {
+					const ix = +p.name;
+					if (ix >= 0 && ix < NodeDebugSession.PREVIEW_PROPERTIES) {
+						previewProps.push(p);
+						if (previewProps.length >= NodeDebugSession.PREVIEW_PROPERTIES) {
+							break;
+						}
+					}
+				}
+			}
+
+			return this._createPropertyVariables(array, previewProps, false).then(props => {
 
 				let preview = '[';
 				for (let i = 0; i < props.length; i++) {
