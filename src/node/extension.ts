@@ -155,7 +155,7 @@ const initialConfigurations = [
 		type: 'node',
 		request: 'launch',
 		name: localize('node.launch.config.name', "Launch Program"),
-		program: '${workspaceRoot}/app.js',
+		program: join('${workspaceRoot}', 'app.js'),
 		cwd: '${workspaceRoot}'
 	},
 	{
