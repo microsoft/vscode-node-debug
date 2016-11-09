@@ -2958,6 +2958,12 @@ export class NodeDebugSession extends DebugSession {
  		});
  	}
 
+	protected reverseContinueRequest(response: DebugProtocol.ReverseContinueResponse, args: DebugProtocol.ReverseContinueArguments) : void {
+ 		this._node.command('continue', { stepaction: 'reverse' }, (nodeResponse) => {
+ 			this._sendNodeResponse(response, nodeResponse);
+ 		});
+ 	}
+
 	protected restartFrameRequest(response: DebugProtocol.RestartFrameResponse, args: DebugProtocol.RestartFrameArguments) : void {
 
 		const restartFrameArgs = {

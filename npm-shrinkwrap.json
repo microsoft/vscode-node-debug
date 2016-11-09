@@ -1,6 +1,6 @@
 {
   "name": "node-debug",
-  "version": "1.6.0",
+  "version": "1.8.0",
   "dependencies": {
     "agent-base": {
       "version": "1.0.2",
@@ -93,14 +93,14 @@
       "resolved": "https://registry.npmjs.org/source-map/-/source-map-0.5.6.tgz"
     },
     "vscode-debugadapter": {
-      "version": "1.14.0",
-      "from": "vscode-debugadapter@>=1.14.0 <2.0.0",
-      "resolved": "https://registry.npmjs.org/vscode-debugadapter/-/vscode-debugadapter-1.14.0.tgz"
+      "version": "1.15.0",
+      "from": "vscode-debugadapter@>=1.15.0 <2.0.0",
+      "resolved": "https://registry.npmjs.org/vscode-debugadapter/-/vscode-debugadapter-1.15.0-pre.1.tgz"
     },
     "vscode-debugprotocol": {
-      "version": "1.14.0",
-      "from": "vscode-debugprotocol@>=1.14.0 <2.0.0",
-      "resolved": "https://registry.npmjs.org/vscode-debugprotocol/-/vscode-debugprotocol-1.14.0.tgz"
+      "version": "1.15.0-pre.1",
+      "from": "vscode-debugprotocol@>=1.15.0 <2.0.0",
+      "resolved": "https://registry.npmjs.org/vscode-debugprotocol/-/vscode-debugprotocol-1.15.0-pre.1.tgz"
     },
     "vscode-nls": {
       "version": "2.0.1",
