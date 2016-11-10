@@ -265,6 +265,8 @@ interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArguments, C
 	runtimeArgs?: string[];
 	/** Optional environment variables to pass to the debuggee. The string valued properties of the 'environmentVariables' are used as key/value pairs. */
 	env?: { [key: string]: string; };
+	/** Optional path to .env file. */
+	envFile?: string;
 	/** Deprecated: if true launch the target in an external console. */
 	externalConsole?: boolean;
 	/** Where to launch the debug target. */
@@ -836,6 +838,30 @@ export class NodeDebugSession extends DebugSession {
 		const address = args.address;
 		const timeout = args.timeout;
 
+		let envVars = args.env;
+
+		// read env from disk and merge into envVars
+		if (args.envFile) {
+			try {
+				const buffer = FS.readFileSync(args.envFile, 'utf8');
+				const env = {}
+				buffer.split('\n').forEach( line => {
+					var r = line.match(/^\s*([\w\.\-]+)\s*=\s*(.*)?\s*$/);
+					if (r != null) {
+						var value = r[2] || '';
+						if (value.length > 0 && value.charAt(0) === '"' && value.charAt(value.length-1) === '"') {
+							value = value.replace(/\\n/gm, '\n')
+						}
+						env[r[1]] = value.replace(/(^['"]|['"]$)/g, '');
+					}
+				});
+				envVars = PathUtils.extendObject(env, args.env)	// launch config env vars overwrite .env vars
+			} catch (e) {
+				this.sendErrorResponse(response, 2029, localize('VSND2029', "Can't load environment variables from file ({0}).", '{_error}'), { _error: e.message });
+				return;
+			}
+		}
+
 		if (this._supportsRunInTerminalRequest && (this._console === 'externalTerminal' || this._console === 'integratedTerminal')) {
 
 			const termArgs : DebugProtocol.RunInTerminalRequestArguments = {
@@ -843,7 +869,7 @@ export class NodeDebugSession extends DebugSession {
 				title: localize('node.console.title', "Node Debug Console"),
 				cwd: workingDirectory,
 				args: launchArgs,
-				env: args.env
+				env: envVars
 			};
 
 			this.runInTerminalRequest(termArgs, NodeDebugSession.RUNINTERMINAL_TIMEOUT, runResponse => {
@@ -859,7 +885,6 @@ export class NodeDebugSession extends DebugSession {
 						this._attach(response, port, address, timeout);
 					}
 				} else {
-
 					this.sendErrorResponse(response, 2011, localize('VSND2011', "Cannot launch debug target in terminal ({0}).", '{_error}'), { _error: runResponse.message } );
 					this._terminated('terminal error: ' + runResponse.message);
 				}
@@ -870,11 +895,11 @@ export class NodeDebugSession extends DebugSession {
 			this._sendLaunchCommandToConsole(launchArgs);
 
 			// merge environment variables into a copy of the process.env
-			const env = PathUtils.extendObject(PathUtils.extendObject( { }, process.env), args.env);
+			envVars = PathUtils.extendObject(PathUtils.extendObject( {}, process.env), envVars);
 
 			const options = {
 				cwd: workingDirectory,
-				env: env
+				env: envVars
 			};
 
 			const nodeProcess = CP.spawn(runtimeExecutable, launchArgs.slice(1), options);
