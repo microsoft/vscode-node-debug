@@ -107,9 +107,8 @@
 							"externalConsole": {
 								"type": "boolean",
 								"description": "%node.launch.externalConsole.description%",
-								"default": true,
-								"errorMessage": "%node.launch.externalConsole.error%",
-								"enum": []
+								"deprecatedMessage": "%node.launch.externalConsole.deprecationMessage%",
+								"default": true
 							},
 							"console": {
 								"enum": [ "internalConsole", "integratedTerminal", "externalTerminal" ],
@@ -157,6 +156,7 @@
 							"outDir": {
 								"type": ["string", "null"],
 								"description": "%node.outDir.description%",
+								"deprecatedMessage": "%node.outDir.deprecationMessage%",
 								"default": null
 							},
 							"outFiles": {
@@ -222,6 +222,7 @@
 							"outDir": {
 								"type": ["string", "null"],
 								"description": "%node.outDir.description%",
+								"deprecatedMessage": "%node.outDir.deprecationMessage%",
 								"default": null
 							},
 							"outFiles": {
@@ -261,9 +262,9 @@
 				"runtime": "node",
 				"aiKey": "AIF-d9b70cd4-b9f9-4d70-929b-a071c400b217",
 				"initialConfigurations": [{
-					"name": "%extensionHost.launch.config.name%",
 					"type": "extensionHost",
 					"request": "launch",
+					"name": "%extensionHost.launch.config.name%",
 					"runtimeExecutable": "${execPath}",
 					"args": [ "--extensionDevelopmentPath=${workspaceRoot}" ],
 					"sourceMaps": true,
@@ -298,13 +299,14 @@
 							"outDir": {
 								"type": ["string", "null"],
 								"description": "%extensionHost.launch.outDir.description%",
-								"default": "out"
+								"deprecatedMessage": "%extensionHost.launch.outDir.deprecationMessage%",
+								"default": "${workspaceRoot}/out"
 							},
 							"outFiles": {
 								"type": "array",
 								"description": "%extensionHost.launch.outFiles.description%",
 								"items": { "type": "string" },
-								"default": []
+								"default": [ "${workspaceRoot}/out/**/*.js" ]
 							},
 							"smartStep": {
 								"type": "boolean",

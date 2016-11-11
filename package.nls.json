@@ -4,7 +4,8 @@
 	"node.label": "Node.js",
 
 	"node.sourceMaps.description": "Use JavaScript source maps (if they exist).",
-	"node.outDir.description": "If source maps are enabled, the generated code is expected in this directory. Deprecated: use 'outFiles' attribute instead.",
+	"node.outDir.description": "If source maps are enabled, the generated code is expected in this directory.",
+	"node.outDir.deprecationMessage": "Attribute 'outDir' is deprecated, use 'outFiles' instead.",
 	"node.outFiles.description": "If source maps are enabled, these glob patterns specify the generated JavaScript files. If a pattern starts with '!' the files are excluded. If not specified, the generated code is expected in the same directory as its source.",
 	"node.stopOnEntry.description": "Automatically stop program after launch.",
 	"node.port.description": "Debug port to attach to. Default is 5858.",
@@ -14,7 +15,7 @@
 
 	"node.launch.program.description": "Absolute path to the program. Generated value is guessed by looking at package.json and opened files. Edit this attribute.",
 	"node.launch.externalConsole.description": "Launch debug target in external console.",
-	"node.launch.externalConsole.error": "Deprecated: use 'console' attribute instead.",
+	"node.launch.externalConsole.deprecationMessage": "Attribute 'externalConsole' is deprecated, use 'console' instead.",
 	"node.launch.console.description": "Where to launch the debug target: internal console, integrated terminal, or external terminal.",
 	"node.launch.args.description": "Command line arguments passed to the program.",
 	"node.launch.cwd.description": "Absolute path to the working directory of the program being debugged.",
@@ -40,7 +41,8 @@
 	"extensionHost.launch.args.description": "Command line arguments passed to the program.",
 	"extensionHost.launch.stopOnEntry.description": "Automatically stop the extension host after launch.",
 	"extensionHost.launch.sourceMaps.description": "Use JavaScript source maps.",
-	"extensionHost.launch.outDir.description": "If source maps are enabled, the generated code is expected in this directory. Deprecated: use 'outFiles' attribute instead.",
+	"extensionHost.launch.outDir.description": "If source maps are enabled, the generated code is expected in this directory.",
+	"extensionHost.launch.outDir.deprecationMessage": "Attribute 'outDir' is deprecated, use 'outFiles' instead.",
 	"extensionHost.launch.outFiles.description": "If source maps are enabled, these glob patterns specify the generated JavaScript files. If a pattern starts with '!' the files are excluded. If not specified, the generated code is expected in the same directory as its source.",
 	"extensionHost.smartStep.description": "Automatically step through generated code that cannot be mapped back to the original source.",
 
