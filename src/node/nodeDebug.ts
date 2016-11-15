@@ -2809,7 +2809,7 @@ export class NodeDebugSession extends DebugSession {
 			if (str_val.length > maxLength) {
 				str_val = str_val.substr(0, maxLength) + '…';
 			}
-			return Promise.resolve(this._createStringVariable2(name, str_val));
+			return Promise.resolve(new Variable(name, this._escapeStringValue(str_val)));
 		}
 
 		if (this._node.v8Version && NodeDebugSession.LONG_STRING_MATCHER.exec(str_val)) {
@@ -2826,26 +2826,21 @@ export class NodeDebugSession extends DebugSession {
 			this.log('va', `_createStringVariable: get full string`);
 			return this._node.evaluate(args).then(response => {
 				str_val = <string> response.body.value;
-				return this._createStringVariable2(name, str_val);
+				return new Variable(name, this._escapeStringValue(str_val));
 			});
 
 		} else {
-			return Promise.resolve(this._createStringVariable2(name, str_val));
+			return Promise.resolve(new Variable(name, this._escapeStringValue(str_val)));
 		}
 	}
 
-	private _createStringVariable2(name, s: string) {
+	private _escapeStringValue(s: string) {
+		/* disabled for now because chrome dev tools doesn't escape quotes either
 		if (s) {
-			s = s.replace(/\n|\r|\"|\\/g, x => {
-				switch (x) {
-					case '\n': return '\\n';
-					case '\r': return '\\r';
-					case '\"': return '\\"';
-					case '\\': return '\\\\';
-				}
-			});
+			s = s.replace(/\"/g, '\\"');	// escape quotes because they are used as delimiters for a string
 		}
-		return new Variable(name, `"${s}"`);
+		*/
+		return `"${s}"`;
 	}
 
 	//--- setVariable request -------------------------------------------------------------------------------------------------
