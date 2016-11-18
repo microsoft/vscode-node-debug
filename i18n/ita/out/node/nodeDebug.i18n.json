@@ -20,6 +20,7 @@
 	"VSND2022": "Non sono disponibili stack di chiamate perché il programma è stato sospeso all'esterno di JavaScript.",
 	"VSND2023": "Non sono disponibili stack di chiamate.",
 	"VSND2028": "Il tipo di console '{0}' è sconosciuto.",
+	"VSND2029": "Non è possibile caricare le variabili di ambiente dal file ({0}).",
 	"anonymous.function": "(funzione anonima)",
 	"attribute.path.not.absolute": "L'attributo '{0}' non è assoluto ('{1}'). Per renderlo assoluto, provare ad aggiungere '{2}' come prefisso.",
 	"attribute.path.not.exist": "L'attributo '{0}' non esiste ('{1}').",

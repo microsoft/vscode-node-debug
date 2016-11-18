@@ -20,6 +20,7 @@
 	"VSND2022": "Aucune pile des appels car le programme est en pause hors de JavaScript.",
 	"VSND2023": "Aucune pile des appels disponible.",
 	"VSND2028": "Type de console inconnu '{0}'.",
+	"VSND2029": "Impossible de charger les variables d'environnement à partir du fichier ({0}).",
 	"anonymous.function": "(fonction anonyme)",
 	"attribute.path.not.absolute": "L'attribut '{0}' n'est pas absolu ('{1}') ; songez à ajouter '{2}' comme préfixe pour le rendre absolu.",
 	"attribute.path.not.exist": "L'attribut '{0}' n'existe pas ('{1}').",

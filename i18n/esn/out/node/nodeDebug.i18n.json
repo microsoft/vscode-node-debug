@@ -20,6 +20,7 @@
 	"VSND2022": "No hay ninguna pila de llamadas porque el programa se pausó fuera de JavaScript.",
 	"VSND2023": "No hay ninguna pila de llamadas disponible.",
 	"VSND2028": "Tipo de consola desconocido: '{0}'.",
+	"VSND2029": "No se pueden cargar las variables de entorno desde el archivo ({0}).",
 	"anonymous.function": "(función anónima)",
 	"attribute.path.not.absolute": "El atributo '{0}' no es absoluto ('{1}'). Pruebe a agregar '{2}' como prefijo para hacerlo absoluto.",
 	"attribute.path.not.exist": "El atributo '{0}' no existe ('{1}').",

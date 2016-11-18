@@ -20,6 +20,7 @@
 	"VSND2022": "Keine Aufrufliste verfügbar, weil das Programm außerhalb von JavaScript angehalten wurde.",
 	"VSND2023": "Es ist keine Aufrufliste verfügbar.",
 	"VSND2028": "Unbekannter Konsolentyp \"{0}\".",
+	"VSND2029": "Umgebungsvariablen können nicht aus Datei \"{0}\" geladen werden.",
 	"anonymous.function": "(anonyme Funktion)",
 	"attribute.path.not.absolute": "Das Attribut \"{0}\" ist nicht absolut (\"{1}\"). Fügen Sie ggf. \"{2}\" als Präfix hinzu, um es als absolut zu definieren.",
 	"attribute.path.not.exist": "Das Attribut \"{0}\" ist nicht vorhanden (\"{1}\").",
