@@ -35,6 +35,11 @@
 
 	"node.processattach.config.name": "Attach to Process",
 
+	"node.snippet.launch.label": "Node.js: Launch Configuration",
+	"node.snippet.launch.description": "A new configuration for launching a node program",
+	"node.snippet.attach.label": "Node.js: Attach Configuration",
+	"node.snippet.attach.description": "A new configuration for attaching to a running node program",
+
 	"extensionHost.label": "VS Code Extension Development",
 
 	"extensionHost.launch.runtimeExecutable.description": "Absolute path to VS Code.",

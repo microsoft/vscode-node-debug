@@ -83,7 +83,7 @@
 		"debuggers": [
 			{
 				"type": "node",
-				"label": "Node.js",
+				"label": "%node.label%",
 				"program": "./out/node/nodeDebug.js",
 				"runtime": "node",
 				"variables": {
@@ -91,6 +91,29 @@
 				},
 				"aiKey": "AIF-d9b70cd4-b9f9-4d70-929b-a071c400b217",
 				"initialConfigurations": "extension.node-debug.provideInitialConfigurations",
+				"configurationSnippets": [
+					{
+						"label": "%node.snippet.launch.label%",
+						"description": "%node.snippet.launch.description%",
+						"body": {
+							"type": "node",
+							"request": "launch",
+							"name": "{{2:Launch Program}}",
+							"program": "${workspaceRoot}/{{1:Program}}",
+							"cwd": "${workspaceRoot}"
+						}
+					},
+					{
+						"label": "%node.snippet.attach.label%",
+						"description": "%node.snippet.attach.description%",
+						"body": {
+							"type": "node",
+							"request": "attach",
+							"name": "{{2:Attach to Port}}",
+							"port": 5858
+						}
+					}
+				],
 				"configurationAttributes": {
 					"launch": {
 						"required": [ "cwd" ],
