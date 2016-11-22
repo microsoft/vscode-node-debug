@@ -492,7 +492,7 @@ export class NodeDebugSession extends DebugSession {
 
 		// is debugger statement?
 		if (!reason) {
-			if (source && source.indexOf('debugger') == 0) {
+			if (source && source.indexOf('debugger') === 0) {
 				reason = this._reasonText('debugger');
 				this._gotDebuggerEvent = true;
 			}
@@ -846,18 +846,18 @@ export class NodeDebugSession extends DebugSession {
 		if (args.envFile) {
 			try {
 				const buffer = FS.readFileSync(args.envFile, 'utf8');
-				const env = {}
+				const env = {};
 				buffer.split('\n').forEach( line => {
-					var r = line.match(/^\s*([\w\.\-]+)\s*=\s*(.*)?\s*$/);
-					if (r != null) {
-						var value = r[2] || '';
+					const r = line.match(/^\s*([\w\.\-]+)\s*=\s*(.*)?\s*$/);
+					if (r !== null) {
+						let value = r[2] || '';
 						if (value.length > 0 && value.charAt(0) === '"' && value.charAt(value.length-1) === '"') {
-							value = value.replace(/\\n/gm, '\n')
+							value = value.replace(/\\n/gm, '\n');
 						}
 						env[r[1]] = value.replace(/(^['"]|['"]$)/g, '');
 					}
 				});
-				envVars = PathUtils.extendObject(env, args.env)	// launch config env vars overwrite .env vars
+				envVars = PathUtils.extendObject(env, args.env); // launch config env vars overwrite .env vars
 			} catch (e) {
 				this.sendErrorResponse(response, 2029, localize('VSND2029', "Can't load environment variables from file ({0}).", '{_error}'), { _error: e.message });
 				return;
