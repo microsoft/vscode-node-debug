@@ -331,6 +331,8 @@ export class NodeDebugSession extends DebugSession {
 	private _functionBreakpoints = new Array<number>();		// node function breakpoint ids
 	private _scripts = new Map<number, Promise<Script>>();	// script cache
 	private _files = new Map<string, Promise<string>>();	// file cache
+	private _scriptId2Handle = new Map<number, number>();
+	private _inlinedContentHandle = new Map<string, number>();
 	private _modifiedSources = new Set<string>();			// track edited files
 	private _hitCounts = new Map<number, InternalSourceBreakpoint>();		// breakpoint ID -> ignore count
 
@@ -2032,7 +2034,7 @@ export class NodeDebugSession extends DebugSession {
 				}
 
 				// source not found locally -> prepare to stream source content from node backend.
-				const sourceHandle = this._sourceHandles.create(new SourceSource(script_val.id));
+				const sourceHandle = this._getScriptIdHandle(script_val.id);
 				src = new Source(name, null, sourceHandle, origin);
 			}
 
@@ -2071,7 +2073,7 @@ export class NodeDebugSession extends DebugSession {
 					// file doesn't exist at path: if source map has inlined source use it
 					if (mapresult.content) {
 						this.log('sm', `_createStackFrameFromSourceMap: source '${mapresult.path}' doesn't exist -> use inlined source`);
-						const sourceHandle = this._sourceHandles.create(new SourceSource(0, mapresult.content));
+						const sourceHandle = this._getInlinedContentHandle(mapresult.content);
 						origin = localize('origin.inlined.source.map', "read-only inlined content from source map");
 						const src = new Source(Path.basename(mapresult.path), null, sourceHandle, origin, { inlinePath: mapresult.path });
 						return this._createStackFrameFromSource(frame, src, mapresult.line, mapresult.column);
@@ -2085,6 +2087,15 @@ export class NodeDebugSession extends DebugSession {
 			this.log('sm', `_createStackFrameFromSourceMap: gen: '${localPath}' ${line}:${column} -> couldn't be mapped to source -> use generated file`);
 			return this._createStackFrameFromPath(frame, name, localPath, remotePath, origin, line, column);
 		});
+	}
+
+	private _getInlinedContentHandle(content: string) {
+		let handle = this._inlinedContentHandle.get(content);
+		if (!handle) {
+			handle = this._sourceHandles.create(new SourceSource(0, content));
+			this._inlinedContentHandle.set(content, handle);
+		}
+		return handle;
 	}
 
 	/**
@@ -2103,11 +2114,20 @@ export class NodeDebugSession extends DebugSession {
 				src = new Source(name, this.convertDebuggerPathToClient(localPath));
 			} else {
 				// we use the script's content streamed from node
-				const sourceHandle = this._sourceHandles.create(new SourceSource(script_id));
+				const sourceHandle = this._getScriptIdHandle(script_id);
 				src = new Source(name, null, sourceHandle, origin, { remotePath: remotePath	});	// assume it is a remote path
 			}
 			return this._createStackFrameFromSource(frame, src, line, column);
 		});
+	}
+
+	private _getScriptIdHandle(scriptId: number) {
+		let handle = this._scriptId2Handle.get(scriptId);
+		if (!handle) {
+			handle = this._sourceHandles.create(new SourceSource(scriptId));
+			this._scriptId2Handle.set(scriptId, handle);
+		}
+		return handle;
 	}
 
 	/**
