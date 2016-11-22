@@ -129,7 +129,6 @@
 							},
 							"externalConsole": {
 								"type": "boolean",
-								"description": "%node.launch.externalConsole.description%",
 								"deprecatedMessage": "%node.launch.externalConsole.deprecationMessage%",
 								"default": true
 							},
@@ -178,7 +177,6 @@
 							},
 							"outDir": {
 								"type": ["string", "null"],
-								"description": "%node.outDir.description%",
 								"deprecatedMessage": "%node.outDir.deprecationMessage%",
 								"default": null
 							},
@@ -244,7 +242,6 @@
 							},
 							"outDir": {
 								"type": ["string", "null"],
-								"description": "%node.outDir.description%",
 								"deprecatedMessage": "%node.outDir.deprecationMessage%",
 								"default": null
 							},
@@ -321,7 +318,6 @@
 							},
 							"outDir": {
 								"type": ["string", "null"],
-								"description": "%extensionHost.launch.outDir.description%",
 								"deprecatedMessage": "%extensionHost.launch.outDir.deprecationMessage%",
 								"default": "${workspaceRoot}/out"
 							},
