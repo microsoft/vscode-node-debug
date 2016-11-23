@@ -3,9 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-/// <reference types="es6-collections" />
-/// <reference types="node" />
-
 import {
 	DebugSession, Thread, Source, StackFrame, Scope, Variable, Breakpoint,
 	TerminatedEvent, InitializedEvent, StoppedEvent, OutputEvent,

@@ -93,7 +93,7 @@ gulp.task('internal-minify-scripts', function() {
 function compile(buildNls) {
 	var r = tsProject.src()
 		.pipe(sourcemaps.init())
-		.pipe(ts(tsProject)).js
+		.pipe(tsProject()).js
 		.pipe(buildNls ? nls.rewriteLocalizeCalls() : es.through())
 		.pipe(buildNls ? nls.createAdditionalLanguageFiles(nls.coreLanguages, 'i18n', 'out') : es.through());
 

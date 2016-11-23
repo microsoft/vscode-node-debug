@@ -3,8 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-/// <reference types="es6-promise" />
-
 import * as Path from 'path';
 import * as FS from 'fs';
 import * as CRYPTO from 'crypto';
