@@ -45,7 +45,7 @@ export interface ISourceMaps {
 	 * Map location in generated code to location in source language.
 	 * line and column are 0 based.
 	 */
-	MapToSource(pathToGenerated: string, content: string, line: number, column: number): Promise<MappingResult>;
+	MapToSource(pathToGenerated: string, content: string | null, line: number, column: number): Promise<MappingResult>;
 }
 
 export class SourceMaps implements ISourceMaps {
@@ -59,7 +59,7 @@ export class SourceMaps implements ISourceMaps {
 	private _preLoad: Promise<void>;
 
 
-	public constructor(session: NodeDebugSession, generatedCodeDirectory: string, generatedCodeGlobs: string[]) {
+	public constructor(session: NodeDebugSession, generatedCodeDirectory?: string, generatedCodeGlobs?: string[]) {
 		this._session = session;
 
 		generatedCodeGlobs = generatedCodeGlobs || [];
@@ -115,7 +115,7 @@ export class SourceMaps implements ISourceMaps {
 		});
 	}
 
-	public MapToSource(pathToGenerated: string, content: string, line: number, column: number): Promise<MappingResult> {
+	public MapToSource(pathToGenerated: string, content: string, line: number, column: number): Promise<MappingResult | null> {
 		return this._preLoad.then(() => {
 			return this._findGeneratedToSourceMapping(pathToGenerated, content).then(map => {
 				if (map) {
@@ -147,7 +147,7 @@ export class SourceMaps implements ISourceMaps {
 	 * The code relies on the source cache populated by the exhaustive search over the 'outDirs' glob patterns
 	 * and some heuristics.
 	 */
-	private _findSourceToGeneratedMapping(pathToSource: string): Promise<SourceMap> {
+	private _findSourceToGeneratedMapping(pathToSource: string): Promise<SourceMap | null> {
 
 		if (!pathToSource) {
 			return Promise.resolve(null);
@@ -207,7 +207,7 @@ export class SourceMaps implements ISourceMaps {
 	 * This is simple if the generated file has the 'sourceMappingURL' at the end.
 	 * If not, we are using some heuristics...
 	 */
-	private _findGeneratedToSourceMapping(pathToGenerated: string, content?: string): Promise<SourceMap> {
+	private _findGeneratedToSourceMapping(pathToGenerated: string, content?: string): Promise<SourceMap | null> {
 
 		if (!pathToGenerated) {
 			return Promise.resolve(null);
@@ -240,7 +240,7 @@ export class SourceMaps implements ISourceMaps {
 	 * Try to find the 'sourceMappingURL' in content or the file with the given path.
 	 * Returns null if no source map url is found or if an error occured.
 	 */
-	private _findSourceMapUrlInFile(pathToGenerated: string, content?: string): Promise<URI> {
+	private _findSourceMapUrlInFile(pathToGenerated: string, content?: string): Promise<URI | null> {
 
 		if (content) {
 			return Promise.resolve(this._findSourceMapUrl(content, pathToGenerated));
@@ -258,7 +258,7 @@ export class SourceMaps implements ISourceMaps {
 	 * Relative file paths are converted into absolute paths.
 	 * Returns null if no source map url is found.
 	 */
-	private _findSourceMapUrl(contents: string, pathToGenerated: string): URI {
+	private _findSourceMapUrl(contents: string, pathToGenerated: string): URI | null {
 
 		const lines = contents.split('\n');
 		for (let l = lines.length-1; l >= Math.max(lines.length-10, 0); l--) {	// only search for url in the last 10 lines
@@ -281,7 +281,7 @@ export class SourceMaps implements ISourceMaps {
 	/**
 	 * Returns a (cached) SourceMap specified via the given uri.
 	 */
-	private _getSourceMap(uri: URI, pathToGenerated?: string) : Promise<SourceMap> {
+	private _getSourceMap(uri: URI | null, pathToGenerated: string) : Promise<SourceMap | null> {
 
 		if (!uri) {
 			return Promise.resolve(null);
@@ -290,7 +290,7 @@ export class SourceMaps implements ISourceMaps {
 		// use sha256 to ensure the hash value can be used in filenames
 		const hash = CRYPTO.createHash('sha256').update(uri.uri()).digest('hex');
 
-		let promise = this._sourceMapCache.get(hash);
+		let promise: Promise<SourceMap | null> = this._sourceMapCache.get(hash);
 		if (!promise) {
 			try {
 				promise = this._loadSourceMap(uri, pathToGenerated, hash)
@@ -418,7 +418,7 @@ export class SourceMaps implements ISourceMaps {
 
 export class SourceMap {
 
-	private _sourcemapLocation: string;	// the directory where this sourcemap lives
+	private _sourcemapLocation: string | undefined;	// the directory where this sourcemap lives
 	private _generatedFile: string;		// the generated file to which this source map belongs to
 	private _sources: string[];			// the sources of the generated file (relative to sourceRoot)
 	private _sourceRoot: string;		// the common prefix for the source (can be a URL)
@@ -474,7 +474,7 @@ export class SourceMap {
 	}
 
 	public allSourcePaths(): string[] {
-		const paths = [];
+		const paths = new Array<string>();
 		for (let name of this._sources) {
 			if (!util.isAbsolute(name)) {
 				name = util.join(this._sourceRoot, name);
@@ -489,7 +489,7 @@ export class SourceMap {
 	 * Finds the nearest source location for the given location in the generated file.
 	 * Returns null if sourcemap is invalid.
 	 */
-	public originalPositionFor(line: number, column: number, bias: Bias): SM.MappedPosition {
+	public originalPositionFor(line: number, column: number, bias: Bias): SM.MappedPosition | null {
 
 		if (!this._smc) {
 			return null;
@@ -522,7 +522,7 @@ export class SourceMap {
 	 * Finds the nearest location in the generated file for the given source location.
 	 * Returns null if sourcemap is invalid.
 	 */
-	public generatedPositionFor(absPath: string, line: number, column: number, bias: Bias): SM.Position {
+	public generatedPositionFor(absPath: string, line: number, column: number, bias?: Bias): SM.Position | null {
 
 		if (!this._smc) {
 			return null;
@@ -551,7 +551,7 @@ export class SourceMap {
 	 *   (specifically the "normalize" function) gives incorrect results when passing in backslashes.
 	 * - paths starting with drive letters are not recognized as absolute by the source-map library.
 	 */
-	private fixPath(path: string, dflt?: string) : string {
+	private fixPath(path: string, dflt?: string) : string | undefined {
 		if (path) {
 			path = path.replace(/\\/g, '/');
 
@@ -584,7 +584,7 @@ export class SourceMap {
 	 * returns the first entry from the sources array that matches the given absPath
 	 * or null otherwise.
 	 */
-	private findSource(absPath: string): string {
+	private findSource(absPath: string): string | null {
 		absPath = PathUtils.pathNormalize(absPath);
 		for (let name of this._sources) {
 			if (!util.isAbsolute(name)) {

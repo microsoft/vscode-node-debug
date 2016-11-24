@@ -79,7 +79,7 @@ export function pathCompare(path1: string, path2: string): boolean {
  * realPath does not handle '..' or '.' path segments and it does not take the locale into account.
  * Since a drive letter of a Windows path cannot be looked up, realPath normalizes the drive letter to lower case.
  */
-export function realPath(path: string): string {
+export function realPath(path: string): string | null {
 
 	let dir = Path.dirname(path);
 	if (path === dir) {	// end recursion
@@ -165,7 +165,7 @@ export function isOnPath(program: string): boolean {
 /**
  * Returns true if the Windows or Unix-style path is absolute.
  */
-export function isAbsolutePath(path: string) {
+export function isAbsolutePath(path: string | null): boolean {
 	if (path) {
 		if (path.charAt(0) === '/') {
 			return true;
@@ -310,7 +310,7 @@ export function multiGlob(patterns: string[], opts?): Promise<string[]> {
 				set.add(p);
 			}
 		}
-		let array = [];
+		let array = new Array<string>();
 		set.forEach(v => array.push(v));
 		return array;
 	});

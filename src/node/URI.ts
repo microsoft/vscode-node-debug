@@ -107,9 +107,8 @@ export class URI {
 	}
 
 	filePath(): string {
-		let path = this._u.path;
-
-		path = decodeURI(this._u.path);
+		let path = <string> this._u.path;
+		path = decodeURI(path);
 
 		if (/^\/[a-zA-Z]\:\//.test(path)) {
 			path = path.substr(1);	// remove additional '/'
@@ -122,7 +121,7 @@ export class URI {
 		return this._u.protocol === 'data:' && this._uri.indexOf('application/json') > 0 && this._uri.indexOf('base64') > 0;
 	}
 
-	data(): string {
+	data(): string | null {
 		const pos = this._uri.lastIndexOf(',');
 		if (pos > 0) {
 			return this._uri.substr(pos+1);

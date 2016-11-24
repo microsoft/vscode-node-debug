@@ -131,7 +131,7 @@ suite('pathUtilities', () => {
 			test('on a case insensitive file system realPath might return different casing for a given path', () => {
 
 				const upper = path.toUpperCase();
-				const real = PathUtils.realPath(upper);
+				const real = <string> PathUtils.realPath(upper);
 
 				assert.notEqual(real, upper);
 				assert.equal(real, PathUtils.normalizeDriveLetter(path));		// make sure that drive letter is normalized on both

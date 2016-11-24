@@ -12,7 +12,7 @@ import {DebugProtocol} from 'vscode-debugprotocol';
 
 import {
 	NodeV8Protocol, NodeV8Event, NodeV8Response,
-	V8SetBreakpointArgs, V8SetExceptionBreakArgs, V8SetVariableValueArgs,
+	V8SetBreakpointArgs, V8SetExceptionBreakArgs, V8SetVariableValueArgs, V8RestartFrameArgs,
 	V8BacktraceResponse, V8ScopeResponse, V8EvaluateResponse, V8FrameResponse,
 	V8EventBody,
 	V8Ref, V8Handle, V8Property, V8Object, V8Simple, V8Function, V8Frame, V8Scope, V8Script
@@ -31,7 +31,7 @@ const localize = nls.config(process.env.VSCODE_NLS_CONFIG)();
 type FilterType = 'named' | 'indexed' | 'all';
 
 export interface VariableContainer {
-	Expand(session: NodeDebugSession, filter: FilterType, start: number, count: number): Promise<Variable[]>;
+	Expand(session: NodeDebugSession, filter: FilterType, start: number | undefined, count: number | undefined): Promise<Variable[]>;
 	SetValue(session: NodeDebugSession, name: string, value: string): Promise<Variable>;
 }
 
@@ -59,7 +59,7 @@ export class Expander implements VariableContainer {
 export class PropertyContainer implements VariableContainer {
 
 	private _object: V8Object;
-	private _this: V8Object;
+	private _this: V8Object | undefined;
 
 	public constructor(obj: V8Object, ths?: V8Object) {
 		this._object = obj;
@@ -72,7 +72,9 @@ export class PropertyContainer implements VariableContainer {
 			return session._createProperties(this._object, 'named').then(variables => {
 				if (this._this) {
 					return session._createVariable('this', this._this).then(variable => {
-						variables.push(variable);
+						if (variable) {
+							variables.push(variable);
+						}
 						return variables;
 					});
 				} else {
@@ -87,7 +89,9 @@ export class PropertyContainer implements VariableContainer {
 			return session._createProperties(this._object, 'all').then(variables => {
 				if (this._this) {
 					return session._createVariable('this', this._this).then(variable => {
-						variables.push(variable);
+						if (variable) {
+							variables.push(variable);
+						}
 						return variables;
 					});
 				} else {
@@ -133,7 +137,7 @@ export class ScopeContainer implements VariableContainer {
 	private _frame: number;
 	private _scope: number;
 	private _object: V8Object;
-	private _this: V8Object;
+	private _this: V8Object | undefined;
 
 	public constructor(scope: V8Scope, obj: V8Object, ths?: V8Object) {
 		this._frame = scope.frameIndex;
@@ -146,7 +150,9 @@ export class ScopeContainer implements VariableContainer {
 		return session._createProperties(this._object, filter).then(variables => {
 			if (this._this) {
 				return session._createVariable('this', this._this).then(variable => {
-					variables.push(variable);
+					if (variable) {
+						variables.push(variable);
+					}
 					return variables;
 				});
 			} else {
@@ -177,9 +183,9 @@ class InternalSourceBreakpoint {
 	orgLine: number;
 	column: number;
 	orgColumn: number;
-	condition: string;
+	condition: string | undefined;
 	hitCount: number;
-	hitter: HitterFunction;
+	hitter: HitterFunction | undefined;
 	verificationMessage: string;
 
 	constructor(line: number, column: number = 0, condition?: string, hitter?: HitterFunction) {
@@ -196,7 +202,7 @@ class InternalSourceBreakpoint {
  */
 class SourceSource {
 	scriptId: number;	// if 0 then source contains the file contents of a source map, otherwise a scriptID.
-	source: string;
+	source: string | undefined;
 
 	constructor(sid: number, content?: string) {
 		this.scriptId = sid;
@@ -337,7 +343,7 @@ export class NodeDebugSession extends DebugSession {
 	private _noDebug = false;
 	private _attachMode = false;
 	private _localRoot: string;
-	private _remoteRoot: string;
+	private _remoteRoot: string | undefined;
 	private _restartMode = false;
 	private _sourceMaps: ISourceMaps;
 	private _console: ConsoleType = 'internalConsole';
@@ -354,7 +360,7 @@ export class NodeDebugSession extends DebugSession {
 	private _isTerminated: boolean;
 	private _inShutdown: boolean;
 	private _pollForNodeProcess = false;
-	private _exception: V8Object;
+	private _exception: V8Object | undefined;
 	private _lastStoppedEvent: DebugProtocol.StoppedEvent;
 	private _restartFramePending: boolean;
 	private _stoppedReason: string;
@@ -432,11 +438,11 @@ export class NodeDebugSession extends DebugSession {
 	private _handleNodeBreakEvent(eventBody: V8EventBody) : void {
 
 		let isEntry = false;
-		let reason: string;
-		let exception_text: string;
+		let reason: string | undefined;
+		let exception_text: string | undefined;
 
 		// in order to identify reject calls and debugger statements extract source at current location
-		let source: string = null;
+		let source: string | null = null;
 		if (eventBody.sourceLineText && typeof eventBody.sourceColumn === 'number') {
 			source = eventBody.sourceLineText.substr(eventBody.sourceColumn);
 		}
@@ -476,7 +482,7 @@ export class NodeDebugSession extends DebugSession {
 					let ibp = this._hitCounts.get(id);
 					if (ibp) {
 						ibp.hitCount++;
-						if (!ibp.hitter(ibp.hitCount)) {
+						if (ibp.hitter && !ibp.hitter(ibp.hitCount)) {
 							this._node.command('continue');
 							return;
 						}
@@ -512,7 +518,7 @@ export class NodeDebugSession extends DebugSession {
 						this._node.command('continue', { stepaction: 'in' });
 						this._smartStepCount++;
 					} else {
-						this._handleNodeBreakEvent2(reason, exception_text, isEntry);
+						this._handleNodeBreakEvent2(<string>reason, exception_text, isEntry);
 					}
 				});
 				return;
@@ -543,7 +549,7 @@ export class NodeDebugSession extends DebugSession {
 		}
 	}
 
-	private _handleNodeBreakEvent2(reason: string, exception_text: string, isEntry: boolean) {
+	private _handleNodeBreakEvent2(reason: string, exception_text: string | undefined, isEntry: boolean) {
 		this._lastStoppedEvent = new StoppedEvent(reason, NodeDebugSession.DUMMY_THREAD_ID, exception_text);
 
 		if (!isEntry) {
@@ -627,6 +633,8 @@ export class NodeDebugSession extends DebugSession {
 		}
 
 		//---- Send back feature and their options
+
+		response.body = response.body || {};
 
 		// This debug adapter supports the configurationDoneRequest.
 		response.body.supportsConfigurationDoneRequest = true;
@@ -772,7 +780,7 @@ export class NodeDebugSession extends DebugSession {
 						} else {
 							this.log('sm', `launchRequest: program '${programPath}' seems to be the generated file`);
 						}
-						this.launchRequest2(response, args, programPath, programArgs, runtimeExecutable, runtimeArgs, port);
+						this.launchRequest2(response, args, programPath, programArgs, <string> runtimeExecutable, runtimeArgs, port);
 					});
 					return;
 				}
@@ -789,7 +797,7 @@ export class NodeDebugSession extends DebugSession {
 					}
 					this.log('sm', `launchRequest: program '${programPath}' seems to be the source; launch the generated file '${generatedPath}' instead`);
 					programPath = generatedPath;
-					this.launchRequest2(response, args, programPath, programArgs, runtimeExecutable, runtimeArgs, port);
+					this.launchRequest2(response, args, programPath, programArgs, <string> runtimeExecutable, runtimeArgs, port);
 				});
 				return;
 			}
@@ -800,7 +808,7 @@ export class NodeDebugSession extends DebugSession {
 
 	private launchRequest2(response: DebugProtocol.LaunchResponse, args: LaunchRequestArguments, programPath: string, programArgs: string[], runtimeExecutable: string, runtimeArgs: string[], port: number): void {
 
-		let program: string;
+		let program: string | undefined;
 		let workingDirectory = args.cwd;
 
 		if (workingDirectory) {
@@ -866,7 +874,7 @@ export class NodeDebugSession extends DebugSession {
 			const termArgs : DebugProtocol.RunInTerminalRequestArguments = {
 				kind: this._console === 'integratedTerminal' ? 'integrated' : 'external',
 				title: localize('node.console.title', "Node Debug Console"),
-				cwd: workingDirectory,
+				cwd: <string> workingDirectory,
 				args: launchArgs,
 				env: envVars
 			};
@@ -1060,7 +1068,7 @@ export class NodeDebugSession extends DebugSession {
 	/*
 	 * shared code used in launchRequest and attachRequest
 	 */
-	private _attach(response: DebugProtocol.Response, port: number, address: string, timeout: number): void {
+	private _attach(response: DebugProtocol.Response, port: number, address: string | undefined, timeout: number | undefined): void {
 
 		if (!port) {
 			port = 5858;
@@ -1083,7 +1091,7 @@ export class NodeDebugSession extends DebugSession {
 		socket.on('connect', err => {
 			this.log('la', '_attach: connected');
 			connected = true;
-			this._node.startDispatch(socket, socket);
+			this._node.startDispatch(<NodeJS.ReadableStream>socket, socket);
 			this._initialize(response);
 		});
 
@@ -1387,10 +1395,10 @@ export class NodeDebugSession extends DebugSession {
 		if (args.breakpoints) {
 			for (let b of args.breakpoints) {
 
-				let hitter: HitterFunction = null;
+				let hitter: HitterFunction | undefined;
 				if (b.hitCondition) {
 					const result = NodeDebugSession.HITCOUNT_MATCHER.exec(b.hitCondition.trim());
-					if (result.length >= 3) {
+					if (result && result.length >= 3) {
 						const op = result[1] || '>=';
 						const value = result[2];
 						const expr = op === '%'
@@ -1408,7 +1416,7 @@ export class NodeDebugSession extends DebugSession {
 					b.condition, hitter)
 				);
 			}
-		} else {
+		} else if (args.lines) {
 			// deprecated API: convert line number array
 			for (let l of args.lines) {
 				sbs.push(new InternalSourceBreakpoint(this.convertClientLineToDebugger(l)));
@@ -1454,7 +1462,7 @@ export class NodeDebugSession extends DebugSession {
 			}
 		}
 
-		if (source.sourceReference > 0) {
+		if (typeof source.sourceReference === 'number' && source.sourceReference > 0) {
 			const srcSource = this._sourceHandles.get(source.sourceReference);
 			if (srcSource && srcSource.scriptId) {
 				this._updateBreakpoints(response, null, srcSource.scriptId, sbs);
@@ -1486,7 +1494,7 @@ export class NodeDebugSession extends DebugSession {
 
 	private _mapSourceAndUpdateBreakpoints(response: DebugProtocol.SetBreakpointsResponse, path: string, lbs: InternalSourceBreakpoint[]) : void {
 
-		const generated: string = null;
+		let generated = '';
 
 		Promise.resolve(generated).then(generated => {
 
@@ -1499,7 +1507,7 @@ export class NodeDebugSession extends DebugSession {
 
 			if (PathUtils.pathCompare(generated, path)) {   // if generated and source are the same we don't need a sourcemap
 				this.log('bp', `_mapSourceAndUpdateBreakpoints: source and generated are same -> ignore sourcemap`);
-				generated = null;
+				generated = '';
 			}
 
 			if (generated) {
@@ -1551,7 +1559,7 @@ export class NodeDebugSession extends DebugSession {
 	/*
 	 * clear and set all breakpoints of a given source.
 	 */
-	private _updateBreakpoints(response: DebugProtocol.SetBreakpointsResponse, path: string, scriptId: number, lbs: InternalSourceBreakpoint[], sourcemap: boolean = false): void {
+	private _updateBreakpoints(response: DebugProtocol.SetBreakpointsResponse, path: string | null, scriptId: number, lbs: InternalSourceBreakpoint[], sourcemap = false): void {
 
 		// clear all existing breakpoints for the given path or script ID
 		this._node.listBreakpoints().then(nodeResponse => {
@@ -1609,7 +1617,7 @@ export class NodeDebugSession extends DebugSession {
 	/*
 	 * register a single breakpoint with node.
 	 */
-	private _setBreakpoint(scriptId: number, path: string, lb: InternalSourceBreakpoint, sourcemap: boolean) : Promise<Breakpoint> {
+	private _setBreakpoint(scriptId: number, path: string | null, lb: InternalSourceBreakpoint, sourcemap: boolean) : Promise<Breakpoint> {
 
 		if (lb.line < 0) {
 			// ignore this breakpoint because it couldn't be source mapped successfully
@@ -1635,7 +1643,7 @@ export class NodeDebugSession extends DebugSession {
 		} else {
 			args = {
 				type: 'scriptRegExp',
-				target: this._pathToRegexp(path),
+				target: <string> this._pathToRegexp(path),
 				line: lb.line,
 				column: lb.column,
 				condition: lb.condition
@@ -1650,8 +1658,8 @@ export class NodeDebugSession extends DebugSession {
 				this._hitCounts.set(resp.body.breakpoint, lb);
 			}
 
-			let actualLine = args.line;
-			let actualColumn = args.column;
+			let actualLine = args.line | undefined;
+			let actualColumn = args.column | undefined;
 
 			const al = resp.body.actual_locations;
 			if (al.length > 0) {
@@ -1659,7 +1667,7 @@ export class NodeDebugSession extends DebugSession {
 				actualColumn = this._adjustColumn(actualLine, al[0].column);
 			}
 
-			if (sourcemap) {
+			if (path && sourcemap) {
 
 				if (actualLine !== args.line || actualColumn !== args.column) {
 					// breakpoint location was adjusted by node.js so we have to map the new location back to source
@@ -1695,14 +1703,14 @@ export class NodeDebugSession extends DebugSession {
 		});
 	}
 
-	private _setBreakpoint2(ibp: InternalSourceBreakpoint, path: string, actualLine: number, actualColumn: number) : Breakpoint {
+	private _setBreakpoint2(ibp: InternalSourceBreakpoint, path: string | null, actualLine: number, actualColumn: number) : Breakpoint {
 
 		// nasty corner case: since we ignore the break-on-entry event we have to make sure that we
 		// stop in the entry point line if the user has an explicit breakpoint there (or if there is a 'debugger' statement).
 		// For this we check here whether a breakpoint is at the same location as the 'break-on-entry' location.
 		// If yes, then we plan for hitting the breakpoint instead of 'continue' over it!
 
-		if (!this._stopOnEntry && PathUtils.pathCompare(this._entryPath, path)) {	// only relevant if we do not stop on entry and have a matching file
+		if (!this._stopOnEntry && path && PathUtils.pathCompare(this._entryPath, path)) {	// only relevant if we do not stop on entry and have a matching file
 			if (this._entryLine === actualLine && this._entryColumn === actualColumn) {
 				// we do not have to 'continue' but we have to generate a stopped event instead
 				this._needContinue = false;
@@ -1723,7 +1731,7 @@ export class NodeDebugSession extends DebugSession {
 	/**
 	 * converts a path into a regular expression for use in the setbreakpoint request
 	 */
-	private _pathToRegexp(path: string): string {
+	private _pathToRegexp(path: string | null): string | null {
 
 		if (!path) {
 			return path;
@@ -1970,7 +1978,7 @@ export class NodeDebugSession extends DebugSession {
 			let line = frame.line;
 			let column = this._adjustColumn(line, frame.column);
 
-			let src: Source = null;
+			let src: Source | undefined;
 
 			let origin = localize('origin.from.node', "read-only content from Node.js");
 
@@ -1986,7 +1994,7 @@ export class NodeDebugSession extends DebugSession {
 
 						// first convert urls to paths
 						const u = URL.parse(name);
-						if (u.protocol === 'file:') {
+						if (u.protocol === 'file:' && u.path) {
 							// a local file path
 							name = decodeURI(u.path);
 						}
@@ -2032,20 +2040,16 @@ export class NodeDebugSession extends DebugSession {
 
 				// source not found locally -> prepare to stream source content from node backend.
 				const sourceHandle = this._getScriptIdHandle(script_val.id);
-				src = new Source(name, null, sourceHandle, origin);
+				src = new Source(name, undefined, sourceHandle, origin);
 			}
 
 			return this._createStackFrameFromSource(frame, src, line, column);
-		}).catch(err => {
 
-			if (err.stack) {
-				this.log('7683', `${err.stack}`);
-			}
+		}).catch(err => {
 
 			const func_name = this._getFrameName(frame);
 			const name = localize('frame.error', "{0} <error: {1}>", func_name, err.message);
 			return new StackFrame(this._frameHandles.create(frame), name);
-
 		});
 	}
 
@@ -2072,7 +2076,7 @@ export class NodeDebugSession extends DebugSession {
 						this.log('sm', `_createStackFrameFromSourceMap: source '${mapresult.path}' doesn't exist -> use inlined source`);
 						const sourceHandle = this._getInlinedContentHandle(mapresult.content);
 						origin = localize('origin.inlined.source.map', "read-only inlined content from source map");
-						const src = new Source(Path.basename(mapresult.path), null, sourceHandle, origin, { inlinePath: mapresult.path });
+						const src = new Source(Path.basename(mapresult.path), undefined, sourceHandle, origin, { inlinePath: mapresult.path });
 						return this._createStackFrameFromSource(frame, src, mapresult.line, mapresult.column);
 					}
 
@@ -2104,7 +2108,7 @@ export class NodeDebugSession extends DebugSession {
 		const script_val = <V8Script> this._getValueFromCache(frame.script);
 		const script_id = script_val.id;
 
-		return this._sameFile(localPath, this._compareContents, script_id, null).then(same => {
+		return this._sameFile(localPath, this._compareContents, script_id).then(same => {
 			let src: Source;
 			if (same) {
 				// we use the file on disk
@@ -2112,7 +2116,7 @@ export class NodeDebugSession extends DebugSession {
 			} else {
 				// we use the script's content streamed from node
 				const sourceHandle = this._getScriptIdHandle(script_id);
-				src = new Source(name, null, sourceHandle, origin, { remotePath: remotePath	});	// assume it is a remote path
+				src = new Source(name, undefined, sourceHandle, origin, { remotePath: remotePath	});	// assume it is a remote path
 			}
 			return this._createStackFrameFromSource(frame, src, line, column);
 		});
@@ -2131,7 +2135,7 @@ export class NodeDebugSession extends DebugSession {
 	 * Creates a StackFrame with the given source location information.
 	 * The name of the frame is extracted from the frame.
 	 */
-	private _createStackFrameFromSource(frame: V8Frame, src: Source, line: number, column: number) : StackFrame {
+	private _createStackFrameFromSource(frame: V8Frame, src: Source | undefined, line: number, column: number) : StackFrame {
 
 		const name = this._getFrameName(frame);
 		const frameReference = this._frameHandles.create(frame);
@@ -2139,7 +2143,7 @@ export class NodeDebugSession extends DebugSession {
 	}
 
 	private _getFrameName(frame: V8Frame) {
-		let func_name: string;
+		let func_name: string | undefined;
 		const func_val = <V8Function> this._getValueFromCache(frame.func);
 		if (func_val) {
 			func_name = func_val.inferredName;
@@ -2158,7 +2162,7 @@ export class NodeDebugSession extends DebugSession {
 	 * If compareContents is true and a script_id is given, _sameFile verifies that the
 	 * file's content matches the script's content.
 	 */
-	private _sameFile(path: string, compareContents: boolean, script_id: number, content: string) : Promise<boolean> {
+	private _sameFile(path: string, compareContents: boolean, script_id: number, content?: string) : Promise<boolean> {
 
 		return this._existsFile(path).then(exists => {
 
@@ -2270,7 +2274,7 @@ export class NodeDebugSession extends DebugSession {
 
 			return Promise.all(scopes.map(scope => {
 				const type = scope.type;
-				const extra = type === 1 ? frameThis : null;
+				const extra = type === 1 ? frameThis : undefined;
 				let expensive = type === 0;	// global scope is expensive
 
 				let scopeName: string;
@@ -2383,33 +2387,35 @@ export class NodeDebugSession extends DebugSession {
 		const selectedProperties = new Array<V8Property>();
 
 		let found_proto = false;
-		for (let property of obj.properties) {
+		if (obj.properties) {
+			for (let property of obj.properties) {
 
-			if ('name' in property) {	// bug #19654: only extract properties with a name
+				if ('name' in property) {	// bug #19654: only extract properties with a name
 
-				const name = property.name;
+					const name = property.name;
 
-				if (name === NodeDebugSession.PROTO) {
-					found_proto = true;
-				}
+					if (name === NodeDebugSession.PROTO) {
+						found_proto = true;
+					}
 
-				switch (mode) {
-					case 'all':
-						selectedProperties.push(property);
-						break;
-					case 'named':
-						if (!isIndex(name)) {
+					switch (mode) {
+						case 'all':
 							selectedProperties.push(property);
-						}
-						break;
-					case 'indexed':
-						if (isIndex(name)) {
-							const ix = +name;
-							if (ix >= start && ix < start+count) {
+							break;
+						case 'named':
+							if (!isIndex(name)) {
 								selectedProperties.push(property);
 							}
-						}
-						break;
+							break;
+						case 'indexed':
+							if (isIndex(name)) {
+								const ix = +name;
+								if (ix >= start && ix < start+count) {
+									selectedProperties.push(property);
+								}
+							}
+							break;
+					}
 				}
 			}
 		}
@@ -2431,7 +2437,7 @@ export class NodeDebugSession extends DebugSession {
 	 * If the properties are indexed (opposed to named), a value 'start' is added to the index number.
 	 * If a value is undefined it probes for a getter.
 	 */
-	private _createPropertyVariables(obj: V8Object, properties: V8Property[], doPreview = true, start = 0) : Promise<Variable[]> {
+	private _createPropertyVariables(obj: V8Object | null, properties: V8Property[], doPreview = true, start = 0) : Promise<Variable[]> {
 
 		return this._resolveValues(properties).then(() => {
 			return Promise.all<Variable>(properties.map(property => {
@@ -2476,11 +2482,13 @@ export class NodeDebugSession extends DebugSession {
 	 * Create a Variable with the given name and value.
 	 * For structured values the variable object will have a corresponding expander.
 	 */
-	public _createVariable(name: string, val: V8Handle, doPreview: boolean = true) : Promise<DebugProtocol.Variable> {
+	public _createVariable(name: string, val: V8Handle, doPreview: boolean = true) : Promise<DebugProtocol.Variable | null> {
 
 		if (!val) {
 			return Promise.resolve(null);
 		}
+
+		const simple = <V8Simple> val;
 
 		switch (val.type) {
 
@@ -2491,9 +2499,15 @@ export class NodeDebugSession extends DebugSession {
 			case 'string':
 				return this._createStringVariable(name, val, doPreview ? undefined : NodeDebugSession.PREVIEW_MAX_STRING_LENGTH);
 			case 'number':
-				return Promise.resolve(new Variable(name, (<V8Simple> val).value.toString()));
+				if (typeof simple.value === 'number') {
+					return Promise.resolve(new Variable(name, simple.value.toString()));
+				}
+				break;
 			case 'boolean':
-				return Promise.resolve(new Variable(name, (<V8Simple> val).value.toString().toLowerCase()));	// node returns these boolean values capitalized
+				if (typeof simple.value === 'boolean') {
+					return Promise.resolve(new Variable(name, simple.value.toString().toLowerCase()));	// node returns these boolean values capitalized
+				}
+				break;
 
 			case 'set':
 			case 'map':
@@ -2510,8 +2524,7 @@ export class NodeDebugSession extends DebugSession {
 			case 'error':
 
 				const object = <V8Object> val;
-				let value = object.className;
-				let text = object.text;
+				let value = <string> object.className;
 
 				switch (value) {
 
@@ -2524,42 +2537,49 @@ export class NodeDebugSession extends DebugSession {
 						return this._createArrayVariable(name, val, doPreview);
 
 					case 'RegExp':
-						return Promise.resolve(new Variable(name, text, this._variableHandles.create(new PropertyContainer(val))));
+						if (typeof object.text === 'string') {
+							return Promise.resolve(new Variable(name, object.text, this._variableHandles.create(new PropertyContainer(val))));
+						}
+						break;
 
 					case 'Generator':
 					case 'Object':
-						return this._resolveValues( [ object.constructorFunction ] ).then((resolved: V8Function[]) => {
+						if (typeof object.constructorFunction === 'string') {
+							return this._resolveValues( [ object.constructorFunction ] ).then((resolved: V8Function[]) => {
 
-							if (resolved[0]) {
-								const constructor_name = <string>resolved[0].name;
-								if (constructor_name) {
-									value = constructor_name;
+								if (resolved[0]) {
+									const constructor_name = <string>resolved[0].name;
+									if (constructor_name) {
+										value = constructor_name;
+									}
 								}
-							}
 
-							if (val.type === 'promise' || val.type === 'generator') {
-								if (object.status) {	// promises and generators have a status attribute
-									value += ` { ${object.status} }`;
+								if (val.type === 'promise' || val.type === 'generator') {
+									if (object.status) {	// promises and generators have a status attribute
+										value += ` { ${object.status} }`;
+									}
+								} else {
+
+									if (object.properties) {
+										return this._objectPreview(object, doPreview).then(preview => {
+											if (preview) {
+												value = `${value} ${preview}`;
+											}
+											return new Variable(name, value, this._variableHandles.create(new PropertyContainer(val)));
+										});
+									}
 								}
-							} else {
 
-								if (object.properties) {
-									return this._objectPreview(object, doPreview).then(preview => {
-										if (preview) {
-											value = `${value} ${preview}`;
-										}
-										return new Variable(name, value, this._variableHandles.create(new PropertyContainer(val)));
-									});
-								}
-							}
-
-							return new Variable(name, value, this._variableHandles.create(new PropertyContainer(val)));
-						});
+								return new Variable(name, value, this._variableHandles.create(new PropertyContainer(val)));
+							});
+						}
+						break;
 
 					case 'Function':
 					case 'Error':
 					default:
-						if (text) {
+						if (object.text) {
+							let text = object.text;
 							if (text.indexOf('\n') >= 0) {
 								// replace body of function with '...'
 								const pos = text.indexOf('{');
@@ -2575,16 +2595,19 @@ export class NodeDebugSession extends DebugSession {
 
 			case 'frame':
 			default:
-				return Promise.resolve(new Variable(name, (<V8Simple> val).value ? (<V8Simple> val).value.toString() : 'undefined'));
+				break;
 		}
+		return Promise.resolve(new Variable(name, simple.value ? simple.value.toString() : 'undefined'));
 	}
 
 	/**
 	 * creates something like this: {a: 123, b: "hi", c: true …}
 	 */
-	private _objectPreview(object: V8Object, doPreview: boolean): Promise<string> {
+	private _objectPreview(object: V8Object, doPreview: boolean): Promise<string | null> {
 
 		if (doPreview && object && object.properties && object.properties.length > 0) {
+
+			const propcnt = object.properties.length;
 
 			return this._createPropertyVariables(object, object.properties.slice(0, NodeDebugSession.PREVIEW_PROPERTIES), false).then(props => {
 
@@ -2596,7 +2619,7 @@ export class NodeDebugSession extends DebugSession {
 					if (i < props.length-1) {
 						preview += ', ';
 					} else {
-						if (object.properties.length > NodeDebugSession.PREVIEW_PROPERTIES) {
+						if (propcnt > NodeDebugSession.PREVIEW_PROPERTIES) {
 							preview += ' …';
 						}
 					}
@@ -2613,7 +2636,7 @@ export class NodeDebugSession extends DebugSession {
 	/**
 	 * creates something like this: [ 1, 2, 3 …]
 	 */
-	private _arrayPreview(array: V8Object, length: number, doPreview: boolean): Promise<string> {
+	private _arrayPreview(array: V8Object, length: number, doPreview: boolean): Promise<string | null> {
 
 		if (doPreview && array && array.properties && length > 0) {
 
@@ -2661,13 +2684,13 @@ export class NodeDebugSession extends DebugSession {
 
 		return this._getArraySize(array).then(pair => {
 
-			let indexedSize: number;
-			let namedSize: number;
+			let indexedSize = 0;
+			let namedSize = 0;
 			let arraySize = '';
 
-			if (pair) {
-				indexedSize = pair[0] || 0;
-				namedSize = pair[1] || 0;
+			if (pair.length >= 2) {
+				indexedSize = pair[0];
+				namedSize = pair[1];
 				arraySize = indexedSize.toString();
 			}
 
@@ -2703,7 +2726,7 @@ export class NodeDebugSession extends DebugSession {
 			});
 		}
 
-		return Promise.resolve(undefined);
+		return Promise.resolve([]);
 	}
 
 	//--- ES6 Set/Map support
@@ -2758,7 +2781,7 @@ export class NodeDebugSession extends DebugSession {
 		this.log('va', `_createSetElements: set.slice ${start} ${count}`);
 		return this._node.evaluate(args).then(response => {
 
-			const properties = response.body.properties;
+			const properties = response.body.properties || [];
 			const selectedProperties = new Array<V8Property>();
 
 			for (let property of properties) {
@@ -2785,7 +2808,7 @@ export class NodeDebugSession extends DebugSession {
 		this.log('va', `_createMapElements: map.slice ${start} ${count}`);
 		return this._node.evaluate(args).then(response => {
 
-			const properties = response.body.properties;
+			const properties = response.body.properties || [];
 			const selectedProperties = new Array<V8Property>();
 
 			for (let property of properties) {
@@ -2795,14 +2818,14 @@ export class NodeDebugSession extends DebugSession {
 			}
 
 			return this._resolveValues(selectedProperties).then(() => {
-				const variables = [];
+				const variables = new Array<Variable>();
 				for (let i = 0; i < selectedProperties.length; i += 3) {
 
 					const key = <V8Object> this._getValueFromCache(selectedProperties[i+1]);
 					const val = <V8Object> this._getValueFromCache(selectedProperties[i+2]);
 
-					const expander = new Expander(() => {
-						return Promise.all([
+					const expander = new Expander((start: number, count: number) => {
+						return Promise.all<Variable>([
 							this._createVariable('key', key),
 							this._createVariable('value', val)
 						]);
@@ -2818,7 +2841,7 @@ export class NodeDebugSession extends DebugSession {
 
 	//--- long string support
 
-	private _createStringVariable(name: string, val: V8Simple, maxLength: number) : Promise<Variable> {
+	private _createStringVariable(name: string, val: V8Simple, maxLength: number | undefined) : Promise<Variable> {
 
 		let str_val = <string>val.value;
 
@@ -3003,7 +3026,7 @@ export class NodeDebugSession extends DebugSession {
 
 	protected restartFrameRequest(response: DebugProtocol.RestartFrameResponse, args: DebugProtocol.RestartFrameArguments) : void {
 
-		const restartFrameArgs = {
+		const restartFrameArgs: V8RestartFrameArgs = {
 			frame: undefined
 		};
 
@@ -3035,7 +3058,7 @@ export class NodeDebugSession extends DebugSession {
 			disable_break: true,
 			maxStringLength: NodeDebugSession.MAX_STRING_LENGTH
 		};
-		if (args.frameId > 0) {
+		if (typeof args.frameId === 'number' && args.frameId > 0) {
 			const frame = this._frameHandles.get(args.frameId);
 			if (!frame) {
 				this.sendErrorResponse(response, 2020, 'stack frame not valid', null, ErrorDestination.Telemetry);
@@ -3148,7 +3171,7 @@ export class NodeDebugSession extends DebugSession {
 
 		const prefix = line.substring(0, column);
 
-		let expression: string;
+		let expression: string | undefined;
 		const dot = prefix.lastIndexOf('.');
 		if (dot >= 0) {
 			expression = prefix.substr(0, dot);
@@ -3162,7 +3185,7 @@ export class NodeDebugSession extends DebugSession {
 				maxStringLength: NodeDebugSession.MAX_JSON_LENGTH
 			};
 
-			if (args.frameId > 0) {
+			if (typeof args.frameId === 'number' && args.frameId > 0) {
 
 				const frame = this._frameHandles.get(args.frameId);
 				if (!frame) {
@@ -3210,7 +3233,10 @@ export class NodeDebugSession extends DebugSession {
 
 		} else {
 
-			const frame = this._frameHandles.get(args.frameId);
+			let frame: V8Frame | undefined;
+			if (typeof args.frameId === 'number' && args.frameId > 0) {
+				frame = this._frameHandles.get(args.frameId);
+			}
 			if (!frame) {
 				this.sendErrorResponse(response, 2020, 'stack frame not valid', null, ErrorDestination.Telemetry);
 				return;
@@ -3250,13 +3276,15 @@ export class NodeDebugSession extends DebugSession {
 				const set = new Set<string | number>();
 				const items = new Array<DebugProtocol.CompletionItem>();
 				for (let r of resolved) {
-					for (let property of r.properties) {
-						if (!isIndex(property.name) && !set.has(property.name)) {
-							set.add(property.name);
-							items.push({
-								label: <string> property.name,
-								type: 'function'
-							});
+					if (r.properties) {
+						for (let property of r.properties) {
+							if (!isIndex(property.name) && !set.has(property.name)) {
+								set.add(property.name);
+								items.push({
+									label: <string> property.name,
+									type: 'function'
+								});
+							}
 						}
 					}
 				}
@@ -3378,7 +3406,7 @@ export class NodeDebugSession extends DebugSession {
 		this._refCache.set(handle, obj);
 	}
 
-	private _getValueFromCache(container: V8Ref): V8Handle {
+	private _getValueFromCache(container: V8Ref): V8Handle | null {
 		const value = this._refCache.get(container.ref);
 		if (value) {
 			return value;
@@ -3400,12 +3428,22 @@ export class NodeDebugSession extends DebugSession {
 
 		if (needLookup.length > 0) {
 			return this._resolveToCache(needLookup).then(() => {
-				return mirrors.map(m => this._refCache.get(m.ref || m.handle));
+				return mirrors.map(m => this._getCache(m));
 			});
 		} else {
 			//return Promise.resolve(<V8Object[]>mirrors);
-			return Promise.resolve(mirrors.map(m => this._refCache.get(m.ref || m.handle)));
+			return Promise.resolve(mirrors.map(m => this._getCache(m)));
 		}
+	}
+
+	private _getCache(m: V8Ref): V8Object | null {
+		if (typeof m.ref === 'number') {
+			return this._refCache.get(m.ref);
+		}
+		if (typeof m.handle === 'number') {
+			return this._refCache.get(m.handle);
+		}
+		return null;
 	}
 
 	private _resolveToCache(handles: number[]) : Promise<V8Object[]> {

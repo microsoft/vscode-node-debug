@@ -59,7 +59,7 @@ function listProcesses() : Promise<ProcessItem[]> {
 								cmd = cmd.replace('\\??\\', '');
 							}
 
-							let executable_path : string;
+							let executable_path: string | undefined;
 							let args : string;
 							const matches2 = EXECUTABLE_ARGS.exec(cmd);
 							if (matches2 && matches2.length >= 2) {
@@ -188,7 +188,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.provideInitialConfigurations', () => {
 		const packageJsonPath = join(vscode.workspace.rootPath, 'package.json');
-		let program = vscode.workspace.textDocuments.some(document => document.languageId === 'typescript') ? 'app.ts' : null;
+		let program = vscode.workspace.textDocuments.some(document => document.languageId === 'typescript') ? 'app.ts' : undefined;
 
 		try {
 			const jsonContent = fs.readFileSync(packageJsonPath, 'utf8');
@@ -199,7 +199,9 @@ export function activate(context: vscode.ExtensionContext) {
 				program = (<string>jsonObject.scripts.start).split(' ').pop();
 			}
 
-		} catch (error) { }
+		} catch (error) {
+			// silently ignore
+		}
 
 		if (program) {
 			program = isAbsolute(program) ? program : join('${workspaceRoot}', program);

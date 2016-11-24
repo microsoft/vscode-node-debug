@@ -5,6 +5,9 @@
 		"noImplicitAny": false,
 		"removeComments": false,
 		"preserveConstEnums": true,
-		"target": "es5"
+		"target": "es5",
+		"strictNullChecks": true,
+		"noUnusedParameters": false,
+		"noUnusedLocals": true
 	}
 }

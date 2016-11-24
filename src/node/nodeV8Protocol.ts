@@ -93,7 +93,7 @@ export interface V8Function extends V8Object {
 export interface V8Script extends V8Handle {
 	name: string;
 	id: number;
-	source?: string;
+	source: string;
 }
 
 export interface V8Ref {
@@ -218,7 +218,7 @@ export interface V8EventBody {
 // arguments
 
 export interface V8RestartFrameArgs {
-	frame?: number;
+	frame: number | undefined;
 }
 
 export interface V8EvaluateArgs {
@@ -286,7 +286,7 @@ export class NodeV8Protocol extends EE.EventEmitter {
 	private _writableStream: NodeJS.WritableStream;
 	private _pendingRequests = new Map<number, (response: NodeV8Response) => void>();
 	private _unresponsiveMode: boolean;
-	private _responseHook: (response: NodeV8Response) => void;
+	private _responseHook: ((response: NodeV8Response) => void) | undefined;
 
 	public embeddedHostVersion: number = -1;
 	public v8Version: string;
@@ -392,7 +392,7 @@ export class NodeV8Protocol extends EE.EventEmitter {
 	// ---- private ------------------------------------------------------------
 
 
-	private _command(command: string, args: any, timeout: number, cb: (response: NodeV8Response) => void) : void {
+	private _command(command: string, args: any, timeout: number, cb?: (response: NodeV8Response) => void) : void {
 
 		const request: any = {
 			command: command
