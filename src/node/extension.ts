@@ -102,7 +102,7 @@ function listProcesses() : Promise<ProcessItem[]> {
 			const PID_CMD = new RegExp('^\\s*([0-9]+)\\s+(.+)$');
 			const MAC_APPS = new RegExp('^.*/(.*).(?:app|bundle)/Contents/.*$');
 
-			exec('ps -ax -o pid=,command=', (err, stdout, stderr) => {
+			exec('ps -ax -o pid=,command=', { maxBuffer: 1000*1024 }, (err, stdout, stderr) => {
 
 				if (err || stderr) {
 					reject(err || stderr.toString());
