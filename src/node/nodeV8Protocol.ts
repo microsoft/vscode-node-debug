@@ -288,8 +288,9 @@ export class NodeV8Protocol extends EE.EventEmitter {
 	private _unresponsiveMode: boolean;
 	private _responseHook: ((response: NodeV8Response) => void) | undefined;
 
+	public hostVersion: string | undefined;
 	public embeddedHostVersion: number = -1;
-	public v8Version: string;
+	public v8Version: string | undefined;
 
 	public constructor(responseHook?: (response: NodeV8Response) => void) {
 		super();
@@ -513,6 +514,10 @@ export class NodeV8Protocol extends EE.EventEmitter {
 									this.embeddedHostVersion = (parseInt(match[1])*100 + parseInt(match[2]))*100 + parseInt(match[3]);
 								} else if (pair[1] === 'Electron') {
 									this.embeddedHostVersion = 60300; // TODO this needs to be detected in a smarter way by looking at the V8 version in Electron
+								}
+								const match1 = pair[1].match(/node\s(v\d+\.\d+\.\d+)/);
+								if (match1 && match1.length === 2) {
+									this.hostVersion = match1[1];
 								}
 								break;
 							case 'Content-Length':

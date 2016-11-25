@@ -1902,8 +1902,16 @@ export class NodeDebugSession extends DebugSession {
 					}
 				}
 			}
-			if (threads.length === 0) {
-				threads.push(new Thread(NodeDebugSession.DUMMY_THREAD_ID, NodeDebugSession.DUMMY_THREAD_NAME));
+			if (threads.length === 0) { // always return at least one thread
+				let name = NodeDebugSession.DUMMY_THREAD_NAME;
+				if (this._nodeProcessId > 0 && this._node.hostVersion) {
+					name = `${name} (${this._nodeProcessId}, ${this._node.hostVersion})`;
+				} else if (this._nodeProcessId > 0) {
+					name = `${name} (${this._nodeProcessId})`;
+				} else if (this._node.hostVersion) {
+					name = `${name} (${this._node.hostVersion})`;
+				}
+				threads.push(new Thread(NodeDebugSession.DUMMY_THREAD_ID, name));
 			}
 			response.body = {
 				threads: threads
