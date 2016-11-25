@@ -4,7 +4,7 @@
 		{
 			"type": "extensionHost",
 			"request": "launch",
-			"name": "Run Extension",
+			"name": "Extension",
 			"runtimeExecutable": "${execPath}",
 			"args": [
 				"--extensionDevelopmentPath=${workspaceRoot}"
@@ -15,7 +15,7 @@
 		{
 			"type": "node",
 			"request": "launch",
-			"name": "Run Server",
+			"name": "Server",
 			"cwd": "${workspaceRoot}",
 			"program": "${workspaceRoot}/src/node/nodeDebug.ts",
 			"args": [ "--server=4711" ],
@@ -26,7 +26,7 @@
 		{
 			"type": "node",
 			"request": "launch",
-			"name": "Run Tests",
+			"name": "Tests",
 			"cwd": "${workspaceRoot}",
 			"program": "${workspaceRoot}/node_modules/mocha/bin/_mocha",
 			"args": [
@@ -47,6 +47,12 @@
 			"port": 5858,
 			"sourceMaps": true,
 			"outFiles": [ "${workspaceRoot}/out/**/*.js" ]
+		}
+	],
+	"compounds": [
+		{
+			"name": "Extension + Server",
+			"configurations": [ "Extension", "Server" ]
 		}
 	]
 }
