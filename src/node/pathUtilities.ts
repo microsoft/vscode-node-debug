@@ -7,6 +7,7 @@ import * as Path from 'path';
 import * as FS from 'fs';
 import * as CP from 'child_process';
 const glob = require('glob');
+const minimatch = require('minimatch');
 
 /**
   * The input paths must use the path syntax of the underlying operating system.
@@ -315,6 +316,19 @@ export function multiGlob(patterns: string[], opts?): Promise<string[]> {
 		return array;
 	});
 };
+
+export function multiGlobMatches(patterns: string[], path: string): boolean {
+
+	var matched = false;
+	for (const p of patterns) {
+		const isExclude = p[0] === '!';
+		if (matched !== isExclude) {
+			break;
+		}
+		matched = minimatch(path, p);
+	}
+	return matched;
+}
 
 //---- misc
 

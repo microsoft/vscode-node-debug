@@ -197,4 +197,35 @@ suite('pathUtilities', () => {
 			});
 		});
 	});
+
+	suite('multiGlobMatches', () => {
+
+		test('simple', () => {
+			const patterns = [ '/foo/**/*.js' ];
+			assert.equal(PathUtils.multiGlobMatches(patterns, '/foo/abc.js'), true);
+			assert.equal(PathUtils.multiGlobMatches(patterns, '/foo/abc.ts'), false);
+			assert.equal(PathUtils.multiGlobMatches(patterns, '/foo/bar/xyz/abc.js'), true);
+		});
+
+		test('braces', () => {
+			const patterns = [ '/{foo,bar}/**/*.js' ];
+			assert.equal(PathUtils.multiGlobMatches(patterns, '/foo/abc.js'), true);
+			assert.equal(PathUtils.multiGlobMatches(patterns, '/bar/abc.js'), true);
+			assert.equal(PathUtils.multiGlobMatches(patterns, '/xyz/abc.js'), false);
+		});
+
+		test('negate braces', () => {
+			const patterns = [ '**/*.js', '!/{foo,bar}/**/*.js' ];
+			assert.equal(PathUtils.multiGlobMatches(patterns, '/foo/abc.js'), false);
+			assert.equal(PathUtils.multiGlobMatches(patterns, '/bar/abc.js'), false);
+			assert.equal(PathUtils.multiGlobMatches(patterns, '/xyz/abc.js'), true);
+		});
+
+		test('include/exclude', () => {
+			const patterns = [ '**/*.js', '!/foo/**/bar.js' ];
+			assert.equal(PathUtils.multiGlobMatches(patterns, '/foo/xyz.js'), true);
+			assert.equal(PathUtils.multiGlobMatches(patterns, '/foo/bar.js'), false);
+		});
+
+	});
 });

@@ -241,6 +241,8 @@ interface CommonArguments {
 	outFiles?: string[];
 	/** Try to automatically step over uninteresting source. */
 	smartStep?: boolean;
+	/** automatically skip these files. */
+	skipFiles?: string[];
 
 	// unofficial flags
 
@@ -323,6 +325,7 @@ export class NodeDebugSession extends DebugSession {
 	private _skipRejects = false;			// do not stop on rejected promises
 	private _maxVariablesPerScope = 100;	// only load this many variables for a scope
 	private _smartStep = false;				// try to automatically step over uninteresting source
+	private _skipFiles: string[] | undefined;	// skip glob patterns
 	private _mapToFilesOnDisk = true; 		// by default try to map node.js scripts to files on disk
 	private _compareContents = true;		// by default verify that script contents is same as file contents
 	private _supportsRunInTerminalRequest = false;
@@ -375,6 +378,7 @@ export class NodeDebugSession extends DebugSession {
 	private _entryColumn: number;	// entry column in *.js file (not in the source file)
 	private _smartStepCount = 0;
 	private _catchRejects = false;
+	private _disableSkipFiles = false;
 
 	public constructor() {
 		super();
@@ -439,7 +443,6 @@ export class NodeDebugSession extends DebugSession {
 
 		let isEntry = false;
 		let reason: string | undefined;
-		let exception_text: string | undefined;
 
 		// in order to identify reject calls and debugger statements extract source at current location
 		let source: string | null = null;
@@ -449,6 +452,11 @@ export class NodeDebugSession extends DebugSession {
 
 		// is exception?
 		if (eventBody.exception) {
+
+			if (this._skip(eventBody)) {
+				this._node.command('continue');
+				return;
+			}
 
 			// if this exception originates from a 'reject', skip it if 'All Exception' is not set.
 			if (this._skipRejects && source && source.indexOf('reject') === 0) {
@@ -463,14 +471,18 @@ export class NodeDebugSession extends DebugSession {
 
 			// remember exception
 			this._exception = eventBody.exception;
-			exception_text = eventBody.exception.text;
-			reason = this._reasonText('exception');
+			this._handleNodeBreakEvent2(this._reasonText('exception'), isEntry, eventBody.exception.text);
+
+			return;
 		}
 
 		// is breakpoint?
 		if (!reason) {
 			const breakpoints = eventBody.breakpoints;
 			if (Array.isArray(breakpoints) && breakpoints.length > 0) {
+
+				this._disableSkipFiles = this._skip(eventBody);
+
 				const id = breakpoints[0];
 				if (!this._gotEntryEvent && id === 1) {	// 'stop on entry point' is implemented as a breakpoint with id 1
 					isEntry = true;
@@ -478,7 +490,6 @@ export class NodeDebugSession extends DebugSession {
 					reason = this._reasonText('entry');
 					this._rememberEntryLocation(eventBody.script.name, eventBody.sourceLine, eventBody.sourceColumn);
 				} else {
-
 					let ibp = this._hitCounts.get(id);
 					if (ibp) {
 						ibp.hitCount++;
@@ -511,21 +522,23 @@ export class NodeDebugSession extends DebugSession {
 				reason = this._reasonText('step');
 			}
 
-			// should we continue until we find a better place to stop?
-			if (this._smartStep) {
-				this._skipGenerated(eventBody).then(r => {
-					if (r) {
-						this._node.command('continue', { stepaction: 'in' });
-						this._smartStepCount++;
-					} else {
-						this._handleNodeBreakEvent2(<string>reason, exception_text, isEntry);
-					}
-				});
-				return;
+			if (!this._disableSkipFiles) {
+				// should we continue until we find a better place to stop?
+				if ((this._smartStep && this._sourceMaps) || this._skipFiles) {
+					this._skipGenerated(eventBody).then(r => {
+						if (r) {
+							this._node.command('continue', { stepaction: 'in' });
+							this._smartStepCount++;
+						} else {
+							this._handleNodeBreakEvent2(<string>reason, isEntry);
+						}
+					});
+					return;
+				}
 			}
 		}
 
-		this._handleNodeBreakEvent2(reason, exception_text, isEntry);
+		this._handleNodeBreakEvent2(reason, isEntry);
 	}
 
 	private _reasonText(reason: string) {
@@ -549,7 +562,7 @@ export class NodeDebugSession extends DebugSession {
 		}
 	}
 
-	private _handleNodeBreakEvent2(reason: string, exception_text: string | undefined, isEntry: boolean) {
+	private _handleNodeBreakEvent2(reason: string, isEntry: boolean, exception_text?: string) {
 		this._lastStoppedEvent = new StoppedEvent(reason, NodeDebugSession.DUMMY_THREAD_ID, exception_text);
 
 		if (!isEntry) {
@@ -562,26 +575,46 @@ export class NodeDebugSession extends DebugSession {
 	}
 
 	/**
-	 * Returns true if a source location of the gievn event should be skipped.
+	 * Returns true if a source location of the given event should be skipped.
+	 */
+	private _skip(event: V8EventBody) : boolean {
+
+		if (this._skipFiles) {
+
+			let path = event.script.name;
+			if (path && PathUtils.isAbsolutePath(path)) {
+
+				// if launch.json defines localRoot and remoteRoot try to convert remote path back to a local path
+				let localPath = this._remoteToLocal(path);
+
+				return PathUtils.multiGlobMatches(this._skipFiles, localPath);
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Returns true if a source location of the given event should be skipped.
 	 */
 	private _skipGenerated(event: V8EventBody) : Promise<boolean> {
 
-		if (!this._sourceMaps) {
-			// proceed as normal
-			return Promise.resolve(false);
-		}
-
-		let line = event.sourceLine;
-		let column = this._adjustColumn(line, event.sourceColumn);
-
-		let remotePath = event.script.name;
-
-		if (remotePath && PathUtils.isAbsolutePath(remotePath)) {
+		let path = event.script.name;
+		if (path && PathUtils.isAbsolutePath(path)) {
 
 			// if launch.json defines localRoot and remoteRoot try to convert remote path back to a local path
-			let localPath = this._remoteToLocal(remotePath);
+			let localPath = this._remoteToLocal(path);
+
+			if (this._skipFiles) {
+				if (PathUtils.multiGlobMatches(this._skipFiles, localPath)) {
+					return Promise.resolve(true);
+				}
+				return Promise.resolve(false);
+			}
 
 			// try to map
+			let line = event.sourceLine;
+			let column = this._adjustColumn(line, event.sourceColumn);
+
 			return this._sourceMaps.MapToSource(localPath, null, line, column).then(mapresult => {
 				return ! mapresult;
 			});
@@ -976,6 +1009,9 @@ export class NodeDebugSession extends DebugSession {
 
 		if (typeof args.smartStep === 'boolean') {
 			this._smartStep = args.smartStep;
+		}
+		if (typeof args.skipFiles) {
+			this._skipFiles = args.skipFiles;
 		}
 
 		if (typeof args.stopOnEntry === 'boolean') {
@@ -2995,6 +3031,7 @@ export class NodeDebugSession extends DebugSession {
 	//--- continue request ----------------------------------------------------------------------------------------------------
 
 	protected continueRequest(response: DebugProtocol.ContinueResponse, args: DebugProtocol.ContinueArguments): void {
+		this._disableSkipFiles = false;
 		this._node.command('continue', null, nodeResponse => {
 			this._sendNodeResponse(response, nodeResponse);
 		});
@@ -3015,6 +3052,7 @@ export class NodeDebugSession extends DebugSession {
 	}
 
 	protected stepOutRequest(response: DebugProtocol.StepOutResponse, args: DebugProtocol.StepOutArguments) : void {
+		this._disableSkipFiles = false;
 		this._node.command('continue', { stepaction: 'out' }, nodeResponse => {
 			this._sendNodeResponse(response, nodeResponse);
 		});
@@ -3027,6 +3065,7 @@ export class NodeDebugSession extends DebugSession {
  	}
 
 	protected reverseContinueRequest(response: DebugProtocol.ReverseContinueResponse, args: DebugProtocol.ReverseContinueArguments) : void {
+		this._disableSkipFiles = false;
  		this._node.command('continue', { stepaction: 'reverse' }, (nodeResponse) => {
  			this._sendNodeResponse(response, nodeResponse);
  		});

@@ -1,7 +1,7 @@
 {
 	"name": "node-debug",
 	"displayName": "Node Debug",
-	"version": "1.8.5",
+	"version": "1.8.6",
 	"publisher": "ms-vscode",
 	"description": "%extension.description%",
 	"icon": "images/node-debug-icon.svg",
@@ -27,10 +27,11 @@
 	"dependencies": {
 		"vscode-debugprotocol": "^1.15.0-pre.4",
 		"vscode-debugadapter": "^1.15.0-pre.5",
-		"source-map": "^0.5.6",
+		"source-map": "0.5.6",
 		"vscode-nls": "^2.0.1",
 		"request-light": "^0.1.0",
-		"glob": "^7.0.6"
+		"glob": "7.1.1",
+		"minimatch": "3.0.3"
 	},
 	"repository": {
 		"type": "git",
@@ -139,7 +140,7 @@
 							},
 							"args": {
 								"type": "array",
-								"description": "%node.launch.args.description%",
+								"description": "%launch.args.description%",
 								"items": { "type": "string" },
 								"default": []
 							},
@@ -177,12 +178,12 @@
 							},
 							"outDir": {
 								"type": ["string", "null"],
-								"deprecatedMessage": "%node.outDir.deprecationMessage%",
+								"deprecatedMessage": "%outDir.deprecationMessage%",
 								"default": null
 							},
 							"outFiles": {
 								"type": "array",
-								"description": "%node.outFiles.description%",
+								"description": "%outFiles.description%",
 								"items": { "type": "string" },
 								"default": []
 							},
@@ -203,8 +204,14 @@
 							},
 							"smartStep": {
 								"type": "boolean",
-								"description": "%node.smartStep.description%",
+								"description": "%smartStep.description%",
 								"default": true
+							},
+							"skipFiles": {
+								"type": "array",
+								"description": "%skipFiles.description%",
+								"items": { "type": "string" },
+								"default": []
 							}
 						}
 					},
@@ -242,12 +249,12 @@
 							},
 							"outDir": {
 								"type": ["string", "null"],
-								"deprecatedMessage": "%node.outDir.deprecationMessage%",
+								"deprecatedMessage": "%outDir.deprecationMessage%",
 								"default": null
 							},
 							"outFiles": {
 								"type": "array",
-								"description": "%node.outFiles.description%",
+								"description": "%outFiles.description%",
 								"items": { "type": "string" },
 								"default": []
 							},
@@ -268,8 +275,14 @@
 							},
 							"smartStep": {
 								"type": "boolean",
-								"description": "%node.smartStep.description%",
+								"description": "%smartStep.description%",
 								"default": true
+							},
+							"skipFiles": {
+								"type": "array",
+								"description": "%skipFiles.description%",
+								"items": { "type": "string" },
+								"default": []
 							}
 						}
 					}
@@ -302,7 +315,7 @@
 							},
 							"args": {
 								"type": "array",
-								"description": "%extensionHost.launch.args.description%",
+								"description": "%launch.args.description%",
 								"items": { "type": "string" },
 								"default": [ "--extensionDevelopmentPath=${workspaceRoot}" ]
 							},
@@ -318,19 +331,25 @@
 							},
 							"outDir": {
 								"type": ["string", "null"],
-								"deprecatedMessage": "%extensionHost.launch.outDir.deprecationMessage%",
+								"deprecatedMessage": "%outDir.deprecationMessage%",
 								"default": "${workspaceRoot}/out"
 							},
 							"outFiles": {
 								"type": "array",
-								"description": "%extensionHost.launch.outFiles.description%",
+								"description": "%outFiles.description%",
 								"items": { "type": "string" },
 								"default": [ "${workspaceRoot}/out/**/*.js" ]
 							},
 							"smartStep": {
 								"type": "boolean",
-								"description": "%extensionHost.smartStep.description%",
+								"description": "%smartStep.description%",
 								"default": true
+							},
+							"skipFiles": {
+								"type": "array",
+								"description": "%skipFiles.description%",
+								"items": { "type": "string" },
+								"default": []
 							}
 						}
 					}
