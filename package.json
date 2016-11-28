@@ -98,8 +98,8 @@
 						"body": {
 							"type": "node",
 							"request": "launch",
-							"name": "{{2:Launch Program}}",
-							"program": "${workspaceRoot}/{{1:Program}}",
+							"name": "${2:Launch Program}",
+							"program": "${workspaceRoot}/${1:Program}",
 							"cwd": "${workspaceRoot}"
 						}
 					},
@@ -109,7 +109,7 @@
 						"body": {
 							"type": "node",
 							"request": "attach",
-							"name": "{{2:Attach to Port}}",
+							"name": "${2:Attach to Port}",
 							"port": 5858
 						}
 					}
