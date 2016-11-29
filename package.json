@@ -100,8 +100,8 @@
 							"type": "node",
 							"request": "launch",
 							"name": "${2:Launch Program}",
-							"program": "${workspaceRoot}/${1:Program}",
-							"cwd": "${workspaceRoot}"
+							"program": "\\${workspaceRoot}/${1:Program}",
+							"cwd": "\\${workspaceRoot}"
 						}
 					},
 					{
