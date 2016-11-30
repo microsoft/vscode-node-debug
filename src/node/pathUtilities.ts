@@ -319,7 +319,7 @@ export function multiGlob(patterns: string[], opts?): Promise<string[]> {
 
 export function multiGlobMatches(patterns: string[], path: string): boolean {
 
-	var matched = false;
+	let matched = false;
 	for (const p of patterns) {
 		const isExclude = p[0] === '!';
 		if (matched !== isExclude) {

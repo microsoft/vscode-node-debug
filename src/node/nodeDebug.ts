@@ -314,7 +314,7 @@ export class NodeDebugSession extends DebugSession {
 
 	private static NODE_SHEBANG_MATCHER = new RegExp('#! */usr/bin/env +node');
 	private static LONG_STRING_MATCHER = /\.\.\. \(length: [0-9]+\)$/;
-	private static HITCOUNT_MATCHER = /(>|>=|=|<|<=|%)?\s*([0-9]+)/;
+	private static HITCOUNT_MATCHER = /(>|>=|=|==|<|<=|%)?\s*([0-9]+)/;
 
 	// tracing
 	private _trace: string[];
@@ -1435,7 +1435,10 @@ export class NodeDebugSession extends DebugSession {
 				if (b.hitCondition) {
 					const result = NodeDebugSession.HITCOUNT_MATCHER.exec(b.hitCondition.trim());
 					if (result && result.length >= 3) {
-						const op = result[1] || '>=';
+						let op = result[1] || '>=';
+						if (op === '=') {
+							op = '==';
+						}
 						const value = result[2];
 						const expr = op === '%'
 							? `return (hitcnt % ${value}) === 0;`
