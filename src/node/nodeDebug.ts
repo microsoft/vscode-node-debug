@@ -3595,7 +3595,7 @@ export class NodeDebugSession extends DebugSession {
 	private static isJavaScript(path: string): boolean {
 
 		const name = Path.basename(path).toLowerCase();
-		if (endsWith(name, '.js')) {
+		if (endsWith(name, '.js') || endsWith(name, '.ts')) {
 			return true;
 		}
 
