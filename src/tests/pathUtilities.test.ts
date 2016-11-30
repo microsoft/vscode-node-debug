@@ -173,6 +173,14 @@ suite('pathUtilities', () => {
 			});
 		});
 
+		test('one pattern up', () => {
+			return PathUtils.multiGlob([ 'testdata/glob/f1/../f2/**/*' ]).then( paths => {
+				assert.equal(paths.length, 2);
+				assert.equal(paths[0], 'testdata/glob/f2/file21.js');
+				assert.equal(paths[1], 'testdata/glob/f2/file22.js');
+			});
+		});
+
 		test('one pattern with curly brackets', () => {
 			return PathUtils.multiGlob([ 'testdata/glob/{f1,f2}/**/*' ]).then( paths => {
 				assert.equal(paths.length, 4);

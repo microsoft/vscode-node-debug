@@ -312,7 +312,7 @@ export function multiGlob(patterns: string[], opts?): Promise<string[]> {
 			}
 		}
 		let array = new Array<string>();
-		set.forEach(v => array.push(v));
+		set.forEach(v => array.push(Path.posix.normalize(v)));
 		return array;
 	});
 };
