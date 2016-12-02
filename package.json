@@ -130,7 +130,7 @@
 							},
 							"externalConsole": {
 								"type": "boolean",
-								"deprecatedMessage": "%node.launch.externalConsole.deprecationMessage%",
+								"deprecationMessage": "%node.launch.externalConsole.deprecationMessage%",
 								"default": true
 							},
 							"console": {
@@ -178,7 +178,7 @@
 							},
 							"outDir": {
 								"type": ["string", "null"],
-								"deprecatedMessage": "%outDir.deprecationMessage%",
+								"deprecationMessage": "%outDir.deprecationMessage%",
 								"default": null
 							},
 							"outFiles": {
@@ -249,7 +249,7 @@
 							},
 							"outDir": {
 								"type": ["string", "null"],
-								"deprecatedMessage": "%outDir.deprecationMessage%",
+								"deprecationMessage": "%outDir.deprecationMessage%",
 								"default": null
 							},
 							"outFiles": {
@@ -331,7 +331,7 @@
 							},
 							"outDir": {
 								"type": ["string", "null"],
-								"deprecatedMessage": "%outDir.deprecationMessage%",
+								"deprecationMessage": "%outDir.deprecationMessage%",
 								"default": "${workspaceRoot}/out"
 							},
 							"outFiles": {
