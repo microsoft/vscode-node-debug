@@ -2591,36 +2591,34 @@ export class NodeDebugSession extends DebugSession {
 
 					case 'Generator':
 					case 'Object':
-						if (typeof object.constructorFunction === 'string') {
-							return this._resolveValues( [ object.constructorFunction ] ).then((resolved: V8Function[]) => {
+						return this._resolveValues(object.constructorFunction ? [object.constructorFunction] : [] ).then((resolved: V8Function[]) => {
 
-								if (resolved[0]) {
-									const constructor_name = <string>resolved[0].name;
-									if (constructor_name) {
-										value = constructor_name;
-									}
+							if (resolved.length > 0 && resolved[0]) {
+								const constructor_name = <string>resolved[0].name;
+								if (constructor_name) {
+									value = constructor_name;
 								}
+							}
 
-								if (val.type === 'promise' || val.type === 'generator') {
-									if (object.status) {	// promises and generators have a status attribute
-										value += ` { ${object.status} }`;
-									}
-								} else {
-
-									if (object.properties) {
-										return this._objectPreview(object, doPreview).then(preview => {
-											if (preview) {
-												value = `${value} ${preview}`;
-											}
-											return new Variable(name, value, this._variableHandles.create(new PropertyContainer(val)));
-										});
-									}
+							if (val.type === 'promise' || val.type === 'generator') {
+								if (object.status) {	// promises and generators have a status attribute
+									value += ` { ${object.status} }`;
 								}
+							} else {
 
-								return new Variable(name, value, this._variableHandles.create(new PropertyContainer(val)));
-							});
-						}
-						break;
+								if (object.properties) {
+									return this._objectPreview(object, doPreview).then(preview => {
+										if (preview) {
+											value = `${value} ${preview}`;
+										}
+										return new Variable(name, value, this._variableHandles.create(new PropertyContainer(val)));
+									});
+								}
+							}
+
+							return new Variable(name, value, this._variableHandles.create(new PropertyContainer(val)));
+						});
+						//break;
 
 					case 'Function':
 					case 'Error':
