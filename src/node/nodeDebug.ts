@@ -944,6 +944,7 @@ export class NodeDebugSession extends DebugSession {
 
 			const nodeProcess = CP.spawn(runtimeExecutable, launchArgs.slice(1), options);
 			nodeProcess.on('error', (error) => {
+				// tslint:disable-next-line:no-bitwise
 				this.sendErrorResponse(response, 2017, localize('VSND2017', "Cannot launch debug target ({0}).", '{_error}'), { _error: error.message }, ErrorDestination.Telemetry | ErrorDestination.User );
 				this._terminated(`failed to launch target (${error})`);
 			});
@@ -1697,8 +1698,8 @@ export class NodeDebugSession extends DebugSession {
 				this._hitCounts.set(resp.body.breakpoint, lb);
 			}
 
-			let actualLine = args.line | undefined;
-			let actualColumn = args.column | undefined;
+			let actualLine = <number> args.line;
+			let actualColumn = <number> args.column;
 
 			const al = resp.body.actual_locations;
 			if (al.length > 0) {

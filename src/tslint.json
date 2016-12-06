@@ -6,9 +6,10 @@
 		"no-duplicate-key": true,
 		"curly": true,
 		"class-name": true,
-		"semicolon": true,
+		"semicolon": [ true ],
 		"triple-equals": true,
 		"no-var-keyword": true,
+		"no-bitwise": true,
 		"no-unexternalized-strings": [
 			true,
 			{
