@@ -1,7 +1,7 @@
 {
 	"name": "node-debug",
 	"displayName": "Node Debug",
-	"version": "1.8.10",
+	"version": "1.8.11",
 	"publisher": "ms-vscode",
 	"description": "%extension.description%",
 	"icon": "images/node-debug-icon.svg",
@@ -100,7 +100,7 @@
 							"type": "node",
 							"request": "launch",
 							"name": "${2:Launch Program}",
-							"program": "^\"\\${workspaceRoot}/${1:Program}\"",
+							"program": "^\"\\${workspaceRoot}/${1:app.js}\"",
 							"cwd": "^\"\\${workspaceRoot}\""
 						}
 					},
