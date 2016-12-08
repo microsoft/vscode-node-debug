@@ -582,7 +582,7 @@ export class NodeDebugSession extends DebugSession {
 		if (this._skipFiles) {
 
 			let path = event.script.name;
-			if (path && PathUtils.isAbsolutePath(path)) {
+			if (path /*&& PathUtils.isAbsolutePath(path)*/) {
 
 				// if launch.json defines localRoot and remoteRoot try to convert remote path back to a local path
 				let localPath = this._remoteToLocal(path);
@@ -599,7 +599,7 @@ export class NodeDebugSession extends DebugSession {
 	private _skipGenerated(event: V8EventBody) : Promise<boolean> {
 
 		let path = event.script.name;
-		if (path && PathUtils.isAbsolutePath(path)) {
+		if (path /*&& PathUtils.isAbsolutePath(path)*/) {
 
 			// if launch.json defines localRoot and remoteRoot try to convert remote path back to a local path
 			let localPath = this._remoteToLocal(path);
