@@ -202,6 +202,11 @@
 								"description": "%node.timeout.description%",
 								"default": 10000
 							},
+							"restart": {
+								"type": "boolean",
+								"description": "%node.restart.description%",
+								"default": true
+							},
 							"smartStep": {
 								"type": "boolean",
 								"description": "%smartStep.description%",
@@ -239,7 +244,7 @@
 							},
 							"restart": {
 								"type": "boolean",
-								"description": "%node.attach.restart.description%",
+								"description": "%node.restart.description%",
 								"default": true
 							},
 							"sourceMaps": {

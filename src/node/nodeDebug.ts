@@ -243,6 +243,8 @@ interface CommonArguments {
 	smartStep?: boolean;
 	/** automatically skip these files. */
 	skipFiles?: string[];
+	/** Request frontend to restart session on termination. */
+	restart?: boolean;
 
 	// unofficial flags
 
@@ -282,8 +284,6 @@ interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArguments, C
  * This interface should always match the schema found in the node-debug extension manifest.
  */
 interface AttachRequestArguments extends DebugProtocol.AttachRequestArguments, CommonArguments {
-	/** Request frontend to restart session on termination. */
-	restart?: boolean;
 	/** Node's root directory. */
 	remoteRoot?: string;
 	/** VS Code's root directory. */
@@ -1019,6 +1019,10 @@ export class NodeDebugSession extends DebugSession {
 			this._stopOnEntry = args.stopOnEntry;
 		}
 
+		if (typeof args.restart === 'boolean') {
+			this._restartMode = args.restart;
+		}
+
 		if (!this._sourceMaps) {
 			if (typeof args.sourceMaps === 'boolean' && args.sourceMaps) {
 				const generatedCodeDirectory = args.outDir;
@@ -1052,10 +1056,6 @@ export class NodeDebugSession extends DebugSession {
 			this._attachMode = false;
 		} else {
 			this._attachMode = true;
-		}
-
-		if (typeof args.restart === 'boolean') {
-			this._restartMode = args.restart;
 		}
 
 		if (args.localRoot) {

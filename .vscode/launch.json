@@ -26,6 +26,21 @@
 		{
 			"type": "node",
 			"request": "launch",
+			"name": "Server (nodemon)",
+			"cwd": "${workspaceRoot}",
+			"runtimeExecutable": "npm",
+			"runtimeArgs": [
+				"run-script", "nodemon"
+			],
+			"restart": true,
+			"port": 5858,
+			"sourceMaps": true,
+			"outFiles": [ "${workspaceRoot}/out/**/*.js" ],
+			"console": "integratedTerminal"
+		},
+		{
+			"type": "node",
+			"request": "launch",
 			"name": "Tests",
 			"cwd": "${workspaceRoot}",
 			"program": "${workspaceRoot}/node_modules/mocha/bin/_mocha",
@@ -38,15 +53,6 @@
 			"sourceMaps": true,
 			"outFiles": [ "${workspaceRoot}/out/**/*.js" ],
 			"internalConsoleOptions": "openOnSessionStart"
-		},
-		{
-			"type": "node",
-			"request": "attach",
-			"name": "Nodemon Attach",
-			"restart": true,
-			"port": 5858,
-			"sourceMaps": true,
-			"outFiles": [ "${workspaceRoot}/out/**/*.js" ]
 		}
 	],
 	"compounds": [
