@@ -85,7 +85,6 @@ export interface V8Object extends V8Simple {
 }
 
 export interface V8Function extends V8Object {
-
 	name?: string;
 	inferredName?: string;
 }

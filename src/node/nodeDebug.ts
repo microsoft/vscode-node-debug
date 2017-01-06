@@ -311,6 +311,7 @@ export class NodeDebugSession extends DebugSession {
 	private static FIRST_LINE_OFFSET = 62;
 	private static PROTO = '__proto__';
 	private static DEBUG_INJECTION = 'debugInjection.js';
+	private static NODE_INTERNALS = '<node_internals>';
 
 	private static NODE_SHEBANG_MATCHER = new RegExp('#! */usr/bin/env +node');
 	private static LONG_STRING_MATCHER = /\.\.\. \(length: [0-9]+\)$/;
@@ -581,8 +582,8 @@ export class NodeDebugSession extends DebugSession {
 
 		if (this._skipFiles) {
 
-			let path = event.script.name;
-			if (path /*&& PathUtils.isAbsolutePath(path)*/) {
+			let path = this._scriptNameToPath(event.script.name);
+			if (path) {
 
 				// if launch.json defines localRoot and remoteRoot try to convert remote path back to a local path
 				let localPath = this._remoteToLocal(path);
@@ -598,8 +599,8 @@ export class NodeDebugSession extends DebugSession {
 	 */
 	private _skipGenerated(event: V8EventBody) : Promise<boolean> {
 
-		let path = event.script.name;
-		if (path /*&& PathUtils.isAbsolutePath(path)*/) {
+		let path = this._scriptNameToPath(event.script.name);
+		if (path) {
 
 			// if launch.json defines localRoot and remoteRoot try to convert remote path back to a local path
 			let localPath = this._remoteToLocal(path);
@@ -622,6 +623,17 @@ export class NodeDebugSession extends DebugSession {
 
 		// skip everything
 		return Promise.resolve(true);
+	}
+
+	/**
+	 * Special treatment for internal modules: we prepend '<internal>/'
+	 */
+	private _scriptNameToPath(scriptName: string): string {
+		if (scriptName && !PathUtils.isAbsolutePath(scriptName)) {
+			// scriptname is relative -> internal node module
+			return `${NodeDebugSession.NODE_INTERNALS}/${scriptName}`;
+		}
+		return scriptName;
 	}
 
 	/**
@@ -2033,6 +2045,7 @@ export class NodeDebugSession extends DebugSession {
 			const script_val = <V8Script> this._getValueFromCache(frame.script);
 			if (script_val) {
 				let name = script_val.name;
+				let path: string | undefined;
 
 				if (name) {
 
@@ -2073,6 +2086,7 @@ export class NodeDebugSession extends DebugSession {
 						}
 
 						// if we end up here, 'name' is not a path and is an internal module
+						path = this._scriptNameToPath(name);
 						origin = localize('origin.core.module', "read-only core module");
 
 					} else {
@@ -2088,7 +2102,7 @@ export class NodeDebugSession extends DebugSession {
 
 				// source not found locally -> prepare to stream source content from node backend.
 				const sourceHandle = this._getScriptIdHandle(script_val.id);
-				src = new Source(name, undefined, sourceHandle, origin);
+				src = new Source(name, path, sourceHandle, origin);
 			}
 
 			return this._createStackFrameFromSource(frame, src, line, column);
