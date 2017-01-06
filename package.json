@@ -25,8 +25,8 @@
 		"node": "^6.3.0"
 	},
 	"dependencies": {
-		"vscode-debugprotocol": "^1.15.0",
-		"vscode-debugadapter": "^1.15.0",
+		"vscode-debugprotocol": "^1.16.0-pre.0",
+		"vscode-debugadapter": "^1.16.0-pre.0",
 		"source-map": "0.5.6",
 		"vscode-nls": "^2.0.1",
 		"request-light": "^0.1.0",
