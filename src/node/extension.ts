@@ -187,20 +187,24 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(pickNodeProcess);
 
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.provideInitialConfigurations', () => {
-		const packageJsonPath = join(vscode.workspace.rootPath, 'package.json');
+
 		let program = vscode.workspace.textDocuments.some(document => document.languageId === 'typescript') ? 'app.ts' : undefined;
 
-		try {
-			const jsonContent = fs.readFileSync(packageJsonPath, 'utf8');
-			const jsonObject = JSON.parse(jsonContent);
-			if (jsonObject.main) {
-				program = jsonObject.main;
-			} else if (jsonObject.scripts && typeof jsonObject.scripts.start === 'string') {
-				program = (<string>jsonObject.scripts.start).split(' ').pop();
-			}
+		if (vscode.workspace.rootPath) {
+			const packageJsonPath = join(vscode.workspace.rootPath, 'package.json');
 
-		} catch (error) {
-			// silently ignore
+			try {
+				const jsonContent = fs.readFileSync(packageJsonPath, 'utf8');
+				const jsonObject = JSON.parse(jsonContent);
+				if (jsonObject.main) {
+					program = jsonObject.main;
+				} else if (jsonObject.scripts && typeof jsonObject.scripts.start === 'string') {
+					program = (<string>jsonObject.scripts.start).split(' ').pop();
+				}
+
+			} catch (error) {
+				// silently ignore
+			}
 		}
 
 		if (program) {
