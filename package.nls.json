@@ -46,6 +46,8 @@
 	"extensionHost.launch.runtimeExecutable.description": "Absolute path to VS Code.",
 	"extensionHost.launch.stopOnEntry.description": "Automatically stop the extension host after launch.",
 	"extensionHost.launch.sourceMaps.description": "Use JavaScript source maps.",
+	"extensionHost.snippet.launch.label": "VSCode Extension Development",
+	"extensionHost.snippet.launch.description": "A new configuration for launching a VS Code extension",
 
 	"extensionHost.launch.config.name": "Launch Extension"
 }

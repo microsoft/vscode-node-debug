@@ -299,15 +299,19 @@
 				"program": "./out/node/nodeDebug.js",
 				"runtime": "node",
 				"aiKey": "AIF-d9b70cd4-b9f9-4d70-929b-a071c400b217",
-				"initialConfigurations": [{
-					"type": "extensionHost",
-					"request": "launch",
-					"name": "%extensionHost.launch.config.name%",
-					"runtimeExecutable": "${execPath}",
-					"args": [ "--extensionDevelopmentPath=${workspaceRoot}" ],
-					"sourceMaps": true,
-					"outFiles": [ "${workspaceRoot}/out/**/*.js" ],
-					"preLaunchTask": "npm"
+				"configurationSnippets": [{
+					"label": "%extensionHost.snippet.launch.label%",
+					"description": "%extensionHost.snippet.launch.description%",
+					"body": {
+						"type": "extensionHost",
+						"request": "launch",
+						"name": "%extensionHost.launch.config.name%",
+						"runtimeExecutable": "^\"\\${execPath}\"",
+						"args": [ "^\"--extensionDevelopmentPath=\\${workspaceRoot}\"" ],
+						"sourceMaps": true,
+						"outFiles": [ "^\"\\${workspaceRoot}/out/**/*.js\"" ],
+						"preLaunchTask": "npm"
+					}
 				}],
 				"configurationAttributes": {
 					"launch": {
