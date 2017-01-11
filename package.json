@@ -70,7 +70,8 @@
 	"main": "./out/node/extension",
 	"activationEvents": [
 		"onCommand:extension.pickNodeProcess",
-		"onCommand:extension.node-debug.provideInitialConfigurations"
+		"onCommand:extension.node-debug.provideInitialConfigurations",
+		"onCommand:extension.node-debug.startSession"
 	],
 	"contributes": {
 		"breakpoints": [
@@ -92,6 +93,8 @@
 				},
 				"aiKey": "AIF-d9b70cd4-b9f9-4d70-929b-a071c400b217",
 				"initialConfigurations": "extension.node-debug.provideInitialConfigurations",
+				"languages": ["javascript"],
+				"startSessionCommand": "extension.node-debug.startSession",
 				"configurationSnippets": [
 					{
 						"label": "%node.snippet.launch.label%",

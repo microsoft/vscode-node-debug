@@ -236,6 +236,21 @@ export function activate(context: vscode.ExtensionContext) {
 			'}'
 		].join('\n');
 	}));
+
+	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.startSession', (config) => {
+		if (config.request === 'launch' && !config.program) {
+			const editor = vscode.window.activeTextEditor;
+			if (editor) {
+				config.program = editor.document.fileName;
+				config.type = 'node';
+				config.name = 'Launch';
+			}
+		}
+
+		if (config) {
+			vscode.commands.executeCommand('vscode.startDebug', config);
+		}
+	}));
 }
 
 export function deactivate() {
