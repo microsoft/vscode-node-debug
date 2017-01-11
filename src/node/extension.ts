@@ -6,7 +6,7 @@
 
 import * as vscode from 'vscode';
 import { spawn, exec } from 'child_process';
-import { basename, join, isAbsolute } from 'path';
+import { basename, join, isAbsolute, dirname } from 'path';
 import * as nls from 'vscode-nls';
 import * as fs from 'fs';
 
@@ -237,19 +237,20 @@ export function activate(context: vscode.ExtensionContext) {
 		].join('\n');
 	}));
 
-	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.startSession', (config) => {
-		if (config.request === 'launch' && !config.program) {
+	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.startSession', config => {
+
+		if (vscode.workspace.rootPath === undefined) {	// no-folder ('purple') mode
+			config.type = 'node';
+			config.name = 'Launch';
+			config.request = 'launch';
 			const editor = vscode.window.activeTextEditor;
 			if (editor) {
 				config.program = editor.document.fileName;
-				config.type = 'node';
-				config.name = 'Launch';
+				config.pwd = dirname(editor.document.fileName);
 			}
 		}
 
-		if (config) {
-			vscode.commands.executeCommand('vscode.startDebug', config);
-		}
+		vscode.commands.executeCommand('vscode.startDebug', config);
 	}));
 }
 
