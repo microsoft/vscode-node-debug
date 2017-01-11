@@ -166,6 +166,33 @@ const initialConfigurations = [
 	}
 ];
 
+function guessProgramFromPackage(folderPath: string): string | undefined {
+
+	let program: string | undefined;
+
+	try {
+		const packageJsonPath = join(folderPath, 'package.json');
+		const jsonContent = fs.readFileSync(packageJsonPath, 'utf8');
+		const jsonObject = JSON.parse(jsonContent);
+
+		if (jsonObject.main) {
+			program = jsonObject.main;
+		} else if (jsonObject.scripts && typeof jsonObject.scripts.start === 'string') {
+			// assume a start script of the form 'node server.js'
+			program = (<string>jsonObject.scripts.start).split(' ').pop();
+		}
+
+		if (program) {
+			program = isAbsolute(program) ? program : join('${workspaceRoot}', program);
+		}
+
+	} catch (error) {
+		// silently ignore
+	}
+
+	return program;
+}
+
 export function activate(context: vscode.ExtensionContext) {
 
 	let pickNodeProcess = vscode.commands.registerCommand('extension.pickNodeProcess', () => {
@@ -191,20 +218,7 @@ export function activate(context: vscode.ExtensionContext) {
 		let program = vscode.workspace.textDocuments.some(document => document.languageId === 'typescript') ? 'app.ts' : undefined;
 
 		if (vscode.workspace.rootPath) {
-			const packageJsonPath = join(vscode.workspace.rootPath, 'package.json');
-
-			try {
-				const jsonContent = fs.readFileSync(packageJsonPath, 'utf8');
-				const jsonObject = JSON.parse(jsonContent);
-				if (jsonObject.main) {
-					program = jsonObject.main;
-				} else if (jsonObject.scripts && typeof jsonObject.scripts.start === 'string') {
-					program = (<string>jsonObject.scripts.start).split(' ').pop();
-				}
-
-			} catch (error) {
-				// silently ignore
-			}
+			program = guessProgramFromPackage(vscode.workspace.rootPath);
 		}
 
 		if (program) {
@@ -239,14 +253,30 @@ export function activate(context: vscode.ExtensionContext) {
 
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.startSession', config => {
 
-		if (vscode.workspace.rootPath === undefined) {	// no-folder ('purple') mode
+		if (!config.request) { // if 'request' is missing interpret this as a missing launch.json
 			config.type = 'node';
 			config.name = 'Launch';
 			config.request = 'launch';
-			const editor = vscode.window.activeTextEditor;
-			if (editor) {
-				config.program = editor.document.fileName;
-				config.pwd = dirname(editor.document.fileName);
+
+			if (vscode.workspace.rootPath) {
+				// folder case: try to find entry point in package.json
+
+				config.program = guessProgramFromPackage(vscode.workspace.rootPath);
+				config.cwd = vscode.workspace.rootPath;
+			}
+
+			if (!config.program) {
+				// 'no folder' case (or no program found)
+
+				const editor = vscode.window.activeTextEditor;
+				if (editor && editor.document.languageId === 'javascript') {
+					config.program = editor.document.fileName;
+				}
+			}
+
+			if (!config.cwd && config.program) {
+				// fall back if 'cwd' not known: derive it from 'program'
+				config.cwd = dirname(config.program);
 			}
 		}
 
