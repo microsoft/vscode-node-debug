@@ -808,7 +808,9 @@ export class NodeDebugSession extends DebugSession {
 			}
 		}
 
-		runtimeArgs = args.runtimeArgs || [ '--nolazy' ];
+		if (!args.runtimeArgs && !this._noDebug) {
+			runtimeArgs = [ '--nolazy' ];
+		}
 
 		if (programPath) {
 			if (NodeDebugSession.isJavaScript(programPath)) {
