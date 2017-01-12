@@ -2121,6 +2121,8 @@ export class NodeDebugSession extends DebugSession {
 
 		let deemphasize = false;
 
+		name = Path.basename(name);
+
 		if (path && this._skipFiles && PathUtils.multiGlobMatches(this._skipFiles, path)) {
 			const skipped = localize('source.skipped', "skipped");
 			deemphasize = true;
