@@ -2104,7 +2104,7 @@ export class NodeDebugSession extends DebugSession {
 
 				// source not found locally -> prepare to stream source content from node backend.
 				const sourceHandle = this._getScriptIdHandle(script_val.id);
-				src = new Source(name, path, sourceHandle, origin);
+				src = this._createSource(name, path, sourceHandle, origin);
 			}
 
 			return this._createStackFrameFromSource(frame, src, line, column);
@@ -2115,6 +2115,25 @@ export class NodeDebugSession extends DebugSession {
 			const name = localize('frame.error', "{0} <error: {1}>", func_name, err.message);
 			return new StackFrame(this._frameHandles.create(frame), name);
 		});
+	}
+
+	private _createSource(name: string, path: string | undefined, sourceHandle: number = 0, origin?: string, data?: any): Source {
+
+		let deemphasize = false;
+
+		if (path && this._skipFiles && PathUtils.multiGlobMatches(this._skipFiles, path)) {
+			const skipped = localize('source.skipped', "skipped");
+			deemphasize = true;
+			name = `(${skipped}) ${name}`;
+		}
+
+		const src = new Source(name, path, sourceHandle, origin, data);
+
+		if (deemphasize) {
+			(<DebugProtocol.Source>src).presentationHint = 'deemphasize';
+		}
+
+		return src;
 	}
 
 	/**
@@ -2131,7 +2150,7 @@ export class NodeDebugSession extends DebugSession {
 
 					if (same) {
 						// use this mapping
-						const src = new Source(Path.basename(mapresult.path), this.convertDebuggerPathToClient(mapresult.path));
+						const src = this._createSource(mapresult.path, this.convertDebuggerPathToClient(mapresult.path));
 						return this._createStackFrameFromSource(frame, src, mapresult.line, mapresult.column);
 					}
 
@@ -2140,7 +2159,7 @@ export class NodeDebugSession extends DebugSession {
 						this.log('sm', `_createStackFrameFromSourceMap: source '${mapresult.path}' doesn't exist -> use inlined source`);
 						const sourceHandle = this._getInlinedContentHandle(mapresult.content);
 						origin = localize('origin.inlined.source.map', "read-only inlined content from source map");
-						const src = new Source(Path.basename(mapresult.path), undefined, sourceHandle, origin, { inlinePath: mapresult.path });
+						const src = this._createSource(mapresult.path, undefined, sourceHandle, origin, { inlinePath: mapresult.path });
 						return this._createStackFrameFromSource(frame, src, mapresult.line, mapresult.column);
 					}
 
@@ -2176,11 +2195,11 @@ export class NodeDebugSession extends DebugSession {
 			let src: Source;
 			if (same) {
 				// we use the file on disk
-				src = new Source(name, this.convertDebuggerPathToClient(localPath));
+				src = this._createSource(name, this.convertDebuggerPathToClient(localPath));
 			} else {
 				// we use the script's content streamed from node
 				const sourceHandle = this._getScriptIdHandle(script_id);
-				src = new Source(name, undefined, sourceHandle, origin, { remotePath: remotePath	});	// assume it is a remote path
+				src = this._createSource(name, undefined, sourceHandle, origin, { remotePath: remotePath });	// assume it is a remote path
 			}
 			return this._createStackFrameFromSource(frame, src, line, column);
 		});
