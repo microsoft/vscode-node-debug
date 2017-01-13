@@ -2120,17 +2120,18 @@ export class NodeDebugSession extends DebugSession {
 	private _createSource(hasSource: boolean, name: string, path: string | undefined, sourceHandle: number = 0, origin?: string, data?: any): Source {
 
 		let deemphasize = false;
-
-		name = Path.basename(name);
-
 		if (path && this._skipFiles && PathUtils.multiGlobMatches(this._skipFiles, path)) {
-			const skipped = localize('source.skipped', "skipped");
+			const skipped = localize('source.skipped', "skipped while stepping");
 			deemphasize = true;
-			name = `(${skipped}) ${name}`;
+			origin = origin ? `${origin} (${skipped})` : skipped;
 		} else if (!hasSource && this._smartStep && this._sourceMaps) {
+			const smartstep = localize('source.smartstep', "skipped due to 'smartStep'");
 			deemphasize = true;
-			name = `(smartStep) ${name}`;	// we do not translate 'smartStep' here.
+			origin = origin ? `${origin} (${smartstep})` : smartstep;
 		}
+
+		// make sure to only use the basename of a path
+		name = Path.basename(name);
 
 		const src = new Source(name, path, sourceHandle, origin, data);
 
