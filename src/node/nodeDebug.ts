@@ -2121,13 +2121,13 @@ export class NodeDebugSession extends DebugSession {
 
 		let deemphasize = false;
 		if (path && this._skipFiles && PathUtils.multiGlobMatches(this._skipFiles, path)) {
-			const skipped = localize('source.skipped', "skipped while stepping");
+			const skipFiles = localize('source.skipFiles', "skipped due to 'skipFiles'");
 			deemphasize = true;
-			origin = origin ? `${origin} (${skipped})` : skipped;
+			origin = origin ? `${origin} (${skipFiles})` : skipFiles;
 		} else if (!hasSource && this._smartStep && this._sourceMaps) {
-			const smartstep = localize('source.smartstep', "skipped due to 'smartStep'");
+			const smartStep = localize('source.smartstep', "skipped due to 'smartStep'");
 			deemphasize = true;
-			origin = origin ? `${origin} (${smartstep})` : smartstep;
+			origin = origin ? `${origin} (${smartStep})` : smartStep;
 		}
 
 		// make sure to only use the basename of a path
