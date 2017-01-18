@@ -215,14 +215,13 @@ export function activate(context: vscode.ExtensionContext) {
 
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.provideInitialConfigurations', () => {
 
-		let program = vscode.workspace.textDocuments.some(document => document.languageId === 'typescript') ? 'app.ts' : undefined;
+		let program = vscode.workspace.textDocuments.some(document => document.languageId === 'typescript') ? '${workspaceRoot}/app.ts' : undefined;
 
 		if (vscode.workspace.rootPath) {
 			program = guessProgramFromPackage(vscode.workspace.rootPath);
 		}
 
 		if (program) {
-			program = isAbsolute(program) ? program : join('${workspaceRoot}', program);
 			initialConfigurations.forEach(config => {
 				if (config['program']) {
 					config['program'] = program;
