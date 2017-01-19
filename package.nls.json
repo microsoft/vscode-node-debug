@@ -44,6 +44,8 @@
 	"node.snippet.attachProcess.description": "Open process picker to select node or gulp process to attach to",
 	"node.snippet.nodemon.label": "Node.js: Nodemon Setup",
 	"node.snippet.nodemon.description": "Use nodemon to relaunch a debug session on source changes",
+	"node.snippet.mocha.label": "Node.js: Mocha Tests",
+	"node.snippet.mocha.description": "Debug mocha tests",
 
 	"extensionHost.label": "VS Code Extension Development",
 

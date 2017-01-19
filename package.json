@@ -144,6 +144,24 @@
 							"console": "integratedTerminal",
 							"internalConsoleOptions": "neverOpen"
 						}
+					},
+					{
+						"label": "%node.snippet.mocha.label%",
+						"description": "%node.snippet.mocha.description%",
+						"body": {
+							"type": "node",
+							"request": "launch",
+							"name": "Mocha Tests",
+							"cwd": "^\"\\${workspaceRoot}\"",
+							"runtimeExecutable": "mocha",
+							"runtimeArgs": [
+								"-u", "tdd",
+								"--timeout", "999999",
+								"--colors",
+								"^\"\\${workspaceRoot}/${1:tests}\""
+							],
+							"internalConsoleOptions": "openOnSessionStart"
+						}
 					}
 				],
 				"configurationAttributes": {
