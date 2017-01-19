@@ -118,6 +118,17 @@
 						}
 					},
 					{
+						"label": "%node.snippet.attachProcess.label%",
+						"description": "%node.snippet.attachProcess.description%",
+						"body": {
+							"type": "node",
+							"request": "attach",
+							"name": "${2:Attach to Process}",
+							"processId": "^\"\\${command.PickProcess}\"",
+							"port": 5858
+						}
+					},
+					{
 						"label": "%node.snippet.nodemon.label%",
 						"description": "%node.snippet.nodemon.description%",
 						"body": {

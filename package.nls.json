@@ -36,11 +36,13 @@
 
 	"node.processattach.config.name": "Attach to Process",
 
-	"node.snippet.launch.label": "Node.js: Launch Configuration",
+	"node.snippet.launch.label": "Node.js: Launch Program",
 	"node.snippet.launch.description": "Launch a node program in debug mode",
-	"node.snippet.attach.label": "Node.js: Attach Configuration",
-	"node.snippet.attach.description": "Attach to a running node program",
-	"node.snippet.nodemon.label": "Node.js: Nodemon Configuration",
+	"node.snippet.attach.label": "Node.js: Attach to Port",
+	"node.snippet.attach.description": "Attach to the debug port of a running node program",
+	"node.snippet.attachProcess.label": "Node.js: Attach to Process",
+	"node.snippet.attachProcess.description": "Open process picker to select node or gulp process to attach to",
+	"node.snippet.nodemon.label": "Node.js: Nodemon Setup",
 	"node.snippet.nodemon.description": "Use nodemon to relaunch a debug session on source changes",
 
 	"extensionHost.label": "VS Code Extension Development",
