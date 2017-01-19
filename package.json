@@ -116,6 +116,23 @@
 							"name": "${2:Attach to Port}",
 							"port": 5858
 						}
+					},
+					{
+						"label": "%node.snippet.nodemon.label%",
+						"description": "%node.snippet.nodemon.description%",
+						"body": {
+							"type": "node",
+							"request": "launch",
+							"name": "nodemon",
+							"cwd": "^\"\\${workspaceRoot}\"",
+							"runtimeExecutable": "nodemon",
+							"runtimeArgs": [ "--debug=5858" ],
+							"program": "^\"\\${workspaceRoot}/${1:app.js}\"",
+							"restart": true,
+							"port": 5858,
+							"console": "integratedTerminal",
+							"internalConsoleOptions": "neverOpen"
+						}
 					}
 				],
 				"configurationAttributes": {
