@@ -108,6 +108,24 @@
 						}
 					},
 					{
+						"label": "%node.snippet.npm.label%",
+						"description": "%node.snippet.npm.description%",
+						"body": {
+							"type": "node",
+							"request": "launch",
+							"name": "${2:Launch via NPM}",
+							"runtimeExecutable": "npm",
+							"windows": {
+								"runtimeExecutable": "npm.cmd"
+							},
+							"runtimeArgs": [
+								"run-script", "debug"
+							],
+							"port": 5858,
+							"cwd": "^\"\\${workspaceRoot}\""
+						}
+					},
+					{
 						"label": "%node.snippet.attach.label%",
 						"description": "%node.snippet.attach.description%",
 						"body": {
@@ -163,6 +181,10 @@
 							"internalConsoleOptions": "openOnSessionStart"
 						}
 					}
+
+
+
+
 				],
 				"configurationAttributes": {
 					"launch": {
