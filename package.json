@@ -194,6 +194,18 @@
 							"console": "integratedTerminal",
 							"internalConsoleOptions": "neverOpen"
 						}
+					},
+					{
+						"label": "%node.snippet.gulp.label%",
+						"description": "%node.snippet.gulp.description%",
+						"body": {
+							"type": "node",
+							"request": "launch",
+							"name": "Gulp ${1:task}",
+							"cwd": "^\"\\${workspaceRoot}\"",
+							"program": "^\"\\${workspaceRoot}/node_modules/gulp/bin/gulp.js\"",
+							"args": [ "${1:task}" ]
+						}
 					}
 				],
 				"configurationAttributes": {
