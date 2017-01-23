@@ -48,6 +48,8 @@
 	"node.snippet.nodemon.description": "Use nodemon to relaunch a debug session on source changes",
 	"node.snippet.mocha.label": "Node.js: Mocha Tests",
 	"node.snippet.mocha.description": "Debug mocha tests",
+	"node.snippet.yo.label": "Node.js: Debug yeoman generator",
+	"node.snippet.yo.description": "Debug yeoman generator (install by running 'npm link' in project folder)",
 
 	"extensionHost.label": "VS Code Extension Development",
 

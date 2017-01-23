@@ -180,11 +180,21 @@
 							],
 							"internalConsoleOptions": "openOnSessionStart"
 						}
+					},
+					{
+						"label": "%node.snippet.yo.label%",
+						"description": "%node.snippet.yo.description%",
+						"body": {
+							"type": "node",
+							"request": "launch",
+							"name": "Yeoman ${1:generator}",
+							"program": "^\"\\${workspaceRoot}/node_modules/.bin/yo\"",
+							"args": [ "${1:generator}" ],
+							"cwd": "^\"\\${workspaceRoot}\"",
+							"console": "integratedTerminal",
+							"internalConsoleOptions": "neverOpen"
+						}
 					}
-
-
-
-
 				],
 				"configurationAttributes": {
 					"launch": {
