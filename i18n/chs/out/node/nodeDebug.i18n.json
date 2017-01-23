@@ -46,7 +46,7 @@
 	"reason.user_request": "用户请求",
 	"scope.block": "阻止",
 	"scope.catch": "Catch",
-	"scope.closure": "关闭",
+	"scope.closure": "闭包",
 	"scope.exception": "异常",
 	"scope.global": "全局",
 	"scope.local": "本地",
