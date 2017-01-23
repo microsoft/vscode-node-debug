@@ -233,9 +233,9 @@ interface CommonArguments {
 	timeout?: number;
 	/** Automatically stop target after launch. If not specified, target does not stop. */
 	stopOnEntry?: boolean;
-	/** Configure source maps. By default source maps are disabled. */
+	/** Configure source maps. By default source maps are enabled (since v1.9.11). */
 	sourceMaps?: boolean;
-	/** Where to look for the generated code. Only used if sourceMaps is true. */
+	/** obsolete: Where to look for the generated code. Only used if sourceMaps is true. */
 	outDir?: string;
 	/** output files glob patterns */
 	outFiles?: string[];
@@ -1038,6 +1038,9 @@ export class NodeDebugSession extends DebugSession {
 		}
 
 		if (!this._sourceMaps) {
+			if (args.sourceMaps === undefined) {
+				args.sourceMaps = true;
+			}
 			if (typeof args.sourceMaps === 'boolean' && args.sourceMaps) {
 				const generatedCodeDirectory = args.outDir;
 				if (generatedCodeDirectory) {

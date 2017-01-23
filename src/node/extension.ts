@@ -231,7 +231,6 @@ export function activate(context: vscode.ExtensionContext) {
 		if (vscode.workspace.textDocuments.some(document => document.languageId === 'typescript' || document.languageId === 'coffeescript')) {
 			initialConfigurations.forEach(config => {
 				config['outFiles'] = [];
-				config['sourceMaps'] = true;
 			});
 		}
 		// Massage the configuration string, add an aditional tab and comment out processId.

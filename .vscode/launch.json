@@ -9,7 +9,6 @@
 			"args": [
 				"--extensionDevelopmentPath=${workspaceRoot}"
 			],
-			"sourceMaps": true,
 			"outFiles": [ "${workspaceRoot}/out/**/*.js" ]
 		},
 		{
@@ -19,7 +18,6 @@
 			"cwd": "${workspaceRoot}",
 			"program": "${workspaceRoot}/src/node/nodeDebug.ts",
 			"args": [ "--server=4711" ],
-			"sourceMaps": true,
 			"outFiles": [ "${workspaceRoot}/out/**/*.js" ],
 			"internalConsoleOptions": "openOnSessionStart"
 		},
@@ -34,7 +32,6 @@
 			],
 			"restart": true,
 			"port": 5858,
-			"sourceMaps": true,
 			"outFiles": [ "${workspaceRoot}/out/**/*.js" ],
 			"console": "integratedTerminal"
 		},
@@ -50,7 +47,6 @@
 				"--colors",
 				"./out/tests"
 			],
-			"sourceMaps": true,
 			"outFiles": [ "${workspaceRoot}/out/**/*.js" ],
 			"internalConsoleOptions": "openOnSessionStart"
 		}
