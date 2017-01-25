@@ -191,7 +191,7 @@
 							"type": "node",
 							"request": "launch",
 							"name": "Yeoman ${1:generator}",
-							"program": "^\"\\${workspaceRoot}/node_modules/.bin/yo\"",
+							"program": "^\"\\${workspaceRoot}/node_modules/yo/lib/cli.js\"",
 							"args": [ "${1:generator}" ],
 							"cwd": "^\"\\${workspaceRoot}\"",
 							"console": "integratedTerminal",
