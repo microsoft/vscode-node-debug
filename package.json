@@ -93,7 +93,7 @@
 				},
 				"aiKey": "AIF-d9b70cd4-b9f9-4d70-929b-a071c400b217",
 				"initialConfigurations": "extension.node-debug.provideInitialConfigurations",
-				"languages": ["javascript"],
+				"languages": ["javascript", "typescript", "javascriptreact", "typescriptreact"],
 				"startSessionCommand": "extension.node-debug.startSession",
 				"configurationSnippets": [
 					{
