@@ -176,7 +176,7 @@
 								"-u", "tdd",
 								"--timeout", "999999",
 								"--colors",
-								"^\"\\${workspaceRoot}/${1:tests}\""
+								"^\"\\${workspaceRoot}/${1:test}\""
 							],
 							"internalConsoleOptions": "openOnSessionStart"
 						}
