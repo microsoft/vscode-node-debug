@@ -56,5 +56,7 @@
 	"scope.with": "和",
 	"setVariable.error": "不支持的设置值",
 	"source.not.found": "无法检索内容。",
+	"source.skipFiles": "因 \"skipFiles\" 而跳过",
+	"source.smartstep": "因 \"smartStep\" 而跳过",
 	"sourcemapping.fail.message": "由于未找到生成的代码，已忽略断点(是否是源映射问题?)。"
 }
