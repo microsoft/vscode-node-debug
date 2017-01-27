@@ -56,5 +56,7 @@
 	"scope.with": "With",
 	"setVariable.error": "Задание значения не поддерживается",
 	"source.not.found": "Не удалось извлечь содержимое.",
+	"source.skipFiles": "пропущено из-за skipFiles",
+	"source.smartstep": "пропущено из-за smartStep",
 	"sourcemapping.fail.message": "Точка останова игнорируется, потому что созданный код не найден (возможно, проблема с картой исходного кода)."
 }

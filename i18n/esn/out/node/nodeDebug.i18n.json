@@ -56,5 +56,7 @@
 	"scope.with": "Con",
 	"setVariable.error": "Valor de configuración no compatible",
 	"source.not.found": "No se pudo recuperar el contenido.",
+	"source.skipFiles": "omitido debido a \"skipFiles\"",
+	"source.smartstep": "omitido debido a \"smartStep\"",
 	"sourcemapping.fail.message": "Se ignoró el punto de interrupción porque el código generado no se encontró (puede que sea un problema del mapa de origen)."
 }

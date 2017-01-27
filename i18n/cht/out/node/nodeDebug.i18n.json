@@ -56,5 +56,7 @@
 	"scope.with": "with",
 	"setVariable.error": "不支援設定值",
 	"source.not.found": "無法擷取內容。",
+	"source.skipFiles": "因為 'skipFiles' 而跳過",
+	"source.smartstep": "因為 'smartStep' 而跳過",
 	"sourcemapping.fail.message": "因為找不到產生的程式碼 (來源對應問題?)，所以忽略中斷點。"
 }
