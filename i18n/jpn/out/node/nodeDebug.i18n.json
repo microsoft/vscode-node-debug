@@ -56,5 +56,7 @@
 	"scope.with": "with",
 	"setVariable.error": "設定値がサポートされていません",
 	"source.not.found": "コンテンツを取得できませんでした。",
+	"source.skipFiles": "'skipFiles' のためにスキップされました",
+	"source.smartstep": "'smartStep' のためにスキップされました",
 	"sourcemapping.fail.message": "生成されたコードが見つからないので、ブレークポイントが無視されました (ソース マップの問題?)。"
 }

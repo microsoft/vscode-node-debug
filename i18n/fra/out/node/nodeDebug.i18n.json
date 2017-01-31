@@ -56,5 +56,7 @@
 	"scope.with": "Avec",
 	"setVariable.error": "Valeur de paramètre non prise en charge",
 	"source.not.found": "Impossible de récupérer le contenu.",
+	"source.skipFiles": "ignoré en raison de 'skipFiles'",
+	"source.smartstep": "ignoré en raison de 'smartStep'",
 	"sourcemapping.fail.message": "Point d'arrêt ignoré, car le code généré est introuvable. Problème de mappage de source ?"
 }
