@@ -5,7 +5,7 @@
 'use strict';
 
 import * as vscode from 'vscode';
-import { spawn, exec } from 'child_process';
+import { spawn, spawnSync, exec } from 'child_process';
 import { basename, join, isAbsolute, dirname } from 'path';
 import * as nls from 'vscode-nls';
 import * as fs from 'fs';
@@ -276,6 +276,30 @@ export function activate(context: vscode.ExtensionContext) {
 				// fall back if 'cwd' not known: derive it from 'program'
 				config.cwd = dirname(config.program);
 			}
+		}
+
+		switch (config.protocol) {
+			case 'legacy':
+				config.type = 'node';
+				break;
+			case 'v8-inspector':
+				config.type = 'node2';
+				break;
+			case 'auto':
+			default:
+				const result = spawnSync('node', [ '--version' ]);
+				const r = result.stdout.toString();
+				config.type = 'node';
+				if (r) {
+					const match = r.match(/v(\d+)\.(\d+)\.(\d+)/);
+					if (match && match.length === 4) {
+						const version = (parseInt(match[1])*100 + parseInt(match[2]))*100 + parseInt(match[3]);
+						if (version >= 60500) {
+							config.type = 'node2';
+						}
+					}
+				}
+				break;
 		}
 
 		vscode.commands.executeCommand('vscode.startDebug', config);

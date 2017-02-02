@@ -215,6 +215,11 @@
 					"launch": {
 						"required": [ "cwd" ],
 						"properties": {
+							"protocol": {
+								"enum": [ "auto", "v8-inspector", "legacy" ],
+								"description": "%node.protocol.description%",
+								"default": "auto"
+							},
 							"program": {
 								"type": "string",
 								"description": "%node.launch.program.description%"
@@ -318,6 +323,11 @@
 					},
 					"attach": {
 						"properties": {
+							"protocol": {
+								"enum": [ "auto", "v8-inspector", "legacy" ],
+								"description": "%node.protocol.description%",
+								"default": "auto"
+							},
 							"processId": {
 								"type": "string",
 								"description": "%node.attach.processId.description%",

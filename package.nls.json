@@ -10,6 +10,7 @@
 
 	"launch.args.description": "Command line arguments passed to the program.",
 
+	"node.protocol.description": "Protocol to use for talking to Node.js.",
 	"node.sourceMaps.description": "Use JavaScript source maps (if they exist).",
 	"node.stopOnEntry.description": "Automatically stop program after launch.",
 	"node.port.description": "Debug port to attach to. Default is 5858.",
