@@ -56,5 +56,7 @@
 	"scope.with": "-",
 	"setVariable.error": "설정값이 지원되지 않습니다.",
 	"source.not.found": "콘텐츠를 검색할 수 없습니다.",
+	"source.skipFiles": "'skipFiles'로 인해 건너뜀",
+	"source.smartstep": "'smartStep'으로 인해 건너뜀",
 	"sourcemapping.fail.message": "생성된 코드를 찾을 수 없으므로 중단점이 무시되었습니다(소스 맵의 문제?)."
 }
