@@ -100,14 +100,14 @@
       "resolved": "https://registry.npmjs.org/source-map/-/source-map-0.5.6.tgz"
     },
     "vscode-debugadapter": {
-      "version": "1.16.0",
+      "version": "1.17.0-pre.0",
       "from": "vscode-debugadapter@>=1.16.0 <2.0.0",
-      "resolved": "https://registry.npmjs.org/vscode-debugadapter/-/vscode-debugadapter-1.16.0.tgz"
+      "resolved": "https://registry.npmjs.org/vscode-debugadapter/-/vscode-debugadapter-1.17.0-pre.0.tgz"
     },
     "vscode-debugprotocol": {
-      "version": "1.16.0",
+      "version": "1.17.0-pre.0",
       "from": "vscode-debugprotocol@>=1.16.0 <2.0.0",
-      "resolved": "https://registry.npmjs.org/vscode-debugprotocol/-/vscode-debugprotocol-1.16.0.tgz"
+      "resolved": "https://registry.npmjs.org/vscode-debugprotocol/-/vscode-debugprotocol-1.17.0-pre.0.tgz"
     },
     "vscode-nls": {
       "version": "2.0.1",

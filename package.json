@@ -1,7 +1,7 @@
 {
 	"name": "node-debug",
 	"displayName": "Node Debug",
-	"version": "1.10.0",
+	"version": "1.10.1",
 	"publisher": "ms-vscode",
 	"description": "%extension.description%",
 	"icon": "images/node-debug-icon.svg",
@@ -25,8 +25,8 @@
 		"node": "^6.3.0"
 	},
 	"dependencies": {
-		"vscode-debugprotocol": "^1.16.0",
-		"vscode-debugadapter": "^1.16.0",
+		"vscode-debugprotocol": "^1.17.0-pre.0",
+		"vscode-debugadapter": "^1.17.0-pre.0",
 		"source-map": "0.5.6",
 		"vscode-nls": "^2.0.1",
 		"request-light": "^0.1.0",
