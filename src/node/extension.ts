@@ -155,8 +155,7 @@ const initialConfigurations = [
 		type: 'node',
 		request: 'launch',
 		name: localize('node.launch.config.name', "Launch Program"),
-		program: '${file}',
-		cwd: '${workspaceRoot}'
+		program: '${file}'
 	},
 	{
 		type: 'node',
@@ -260,7 +259,6 @@ export function activate(context: vscode.ExtensionContext) {
 				// folder case: try to find entry point in package.json
 
 				config.program = guessProgramFromPackage(vscode.workspace.rootPath);
-				config.cwd = vscode.workspace.rootPath;
 			}
 
 			if (!config.program) {
@@ -271,9 +269,14 @@ export function activate(context: vscode.ExtensionContext) {
 					config.program = editor.document.fileName;
 				}
 			}
+		}
 
-			if (!config.cwd && config.program) {
-				// fall back if 'cwd' not known: derive it from 'program'
+		// make sure that 'launch' configs have a 'cwd' attribute set
+		if (config.request === 'launch' && !config.cwd) {
+			if (vscode.workspace.rootPath) {
+				config.cwd = vscode.workspace.rootPath;
+			} else if (config.program) {
+				// derive 'cwd' from 'program'
 				config.cwd = dirname(config.program);
 			}
 		}

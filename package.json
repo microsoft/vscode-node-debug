@@ -103,8 +103,7 @@
 							"type": "node",
 							"request": "launch",
 							"name": "${2:Launch Program}",
-							"program": "^\"\\${workspaceRoot}/${1:app.js}\"",
-							"cwd": "^\"\\${workspaceRoot}\""
+							"program": "^\"\\${workspaceRoot}/${1:app.js}\""
 						}
 					},
 					{
@@ -121,8 +120,7 @@
 							"runtimeArgs": [
 								"run-script", "debug"
 							],
-							"port": 5858,
-							"cwd": "^\"\\${workspaceRoot}\""
+							"port": 5858
 						}
 					},
 					{
@@ -153,7 +151,6 @@
 							"type": "node",
 							"request": "launch",
 							"name": "nodemon",
-							"cwd": "^\"\\${workspaceRoot}\"",
 							"runtimeExecutable": "nodemon",
 							"runtimeArgs": [ "--debug=5858" ],
 							"program": "^\"\\${workspaceRoot}/${1:app.js}\"",
@@ -170,7 +167,6 @@
 							"type": "node",
 							"request": "launch",
 							"name": "Mocha Tests",
-							"cwd": "^\"\\${workspaceRoot}\"",
 							"runtimeExecutable": "^\"\\${workspaceRoot}/node_modules/.bin/mocha\"",
 							"windows": {
 								"runtimeExecutable": "^\"\\${workspaceRoot}/node_modules/.bin/mocha.cmd\""
@@ -193,7 +189,6 @@
 							"name": "Yeoman ${1:generator}",
 							"program": "^\"\\${workspaceRoot}/node_modules/yo/lib/cli.js\"",
 							"args": [ "${1:generator}" ],
-							"cwd": "^\"\\${workspaceRoot}\"",
 							"console": "integratedTerminal",
 							"internalConsoleOptions": "neverOpen"
 						}
@@ -205,7 +200,6 @@
 							"type": "node",
 							"request": "launch",
 							"name": "Gulp ${1:task}",
-							"cwd": "^\"\\${workspaceRoot}\"",
 							"program": "^\"\\${workspaceRoot}/node_modules/gulp/bin/gulp.js\"",
 							"args": [ "${1:task}" ]
 						}
@@ -213,7 +207,6 @@
 				],
 				"configurationAttributes": {
 					"launch": {
-						"required": [ "cwd" ],
 						"properties": {
 							"protocol": {
 								"enum": [ "auto", "v8-inspector", "legacy" ],
