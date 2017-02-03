@@ -4,6 +4,7 @@
 
 'use strict';
 
+import * as http from 'http';
 import * as vscode from 'vscode';
 import { spawn, spawnSync, exec } from 'child_process';
 import { basename, join, isAbsolute, dirname } from 'path';
@@ -249,6 +250,7 @@ export function activate(context: vscode.ExtensionContext) {
 		].join('\n');
 	}));
 
+	const node2MinNodeVersion = 60900;
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.startSession', config => {
 
 		if (!config.request) { // if 'request' is missing interpret this as a missing launch.json
@@ -282,33 +284,84 @@ export function activate(context: vscode.ExtensionContext) {
 			}
 		}
 
-		switch (config.protocol) {
-			case 'legacy':
-				config.type = 'node';
-				break;
-			case 'v8-inspector':
-				config.type = 'node2';
-				break;
-			case 'auto':
-			default:
-				const result = spawnSync('node', [ '--version' ]);
-				const r = result.stdout.toString();
-				config.type = 'node';
-				if (r) {
-					const match = r.match(/v(\d+)\.(\d+)\.(\d+)/);
-					if (match && match.length === 4) {
-						const version = (parseInt(match[1])*100 + parseInt(match[2]))*100 + parseInt(match[3]);
-						if (version >= 60500) {
-							config.type = 'node2';
+		let checkAttach = Promise.resolve<any>();
+		if (config.request === 'attach' && !config.protocol) {
+			const address = config.address || '127.0.0.1';
+			const port = config.port || 9229;
+
+			config.protocol = 'legacy';
+			checkAttach = getURL(`http://${address}:${port}/json/version`).then(response => {
+				try {
+					const versionObject = JSON.parse(response);
+					if (versionObject.length > 0) {
+						const semVerString: string = versionObject[0].Browser;
+						if (semVerStringToInt(semVerString) >= node2MinNodeVersion) {
+							config.protocol = 'v8-inspector';
 						}
 					}
+				} catch (e) {
+					// Not JSON
 				}
-				break;
+			},
+			e => {
+				// Not v8-inspector
+			});
 		}
 
-		vscode.commands.executeCommand('vscode.startDebug', config);
+		checkAttach.then(() => {
+			switch (config.protocol) {
+				case 'legacy':
+					config.type = 'node';
+					break;
+				case 'v8-inspector':
+					config.type = 'node2';
+					break;
+				case 'auto':
+				default:
+					const result = spawnSync('node', [ '--version' ]);
+					const r = result.stdout.toString();
+					config.type = 'node';
+					if (r && semVerStringToInt(r) >= node2MinNodeVersion) {
+						config.type = 'node2';
+					}
+					break;
+			}
+
+			vscode.commands.executeCommand('vscode.startDebug', config);
+		});
 	}));
 }
 
 export function deactivate() {
+}
+
+function semVerStringToInt(vString: string): number {
+	const match = vString.match(/v(\d+)\.(\d+)\.(\d+)/);
+	if (match && match.length === 4) {
+		return (parseInt(match[1])*100 + parseInt(match[2]))*100 + parseInt(match[3]);
+	}
+
+	return -1;
+}
+
+/**
+ * Helper function to GET the contents of a url
+ */
+function getURL(url: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+        http.get(url, response => {
+            let responseData = '';
+            response.on('data', chunk => responseData += chunk);
+            response.on('end', () => {
+                // Sometimes the 'error' event is not fired. Double check here.
+                if (response.statusCode === 200) {
+                    resolve(responseData);
+                } else {
+                    reject(responseData);
+                }
+            });
+        }).on('error', e => {
+            reject(e);
+        });
+    });
 }
