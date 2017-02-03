@@ -15,7 +15,7 @@
 			"type": "node",
 			"request": "launch",
 			"name": "Server",
-			"cwd": "${workspaceRoot}",
+			"protocol": "legacy",
 			"program": "${workspaceRoot}/src/node/nodeDebug.ts",
 			"args": [ "--server=4711" ],
 			"outFiles": [ "${workspaceRoot}/out/**/*.js" ],
@@ -25,7 +25,7 @@
 			"type": "node",
 			"request": "launch",
 			"name": "Server (nodemon)",
-			"cwd": "${workspaceRoot}",
+			"protocol": "legacy",
 			"runtimeExecutable": "npm",
 			"runtimeArgs": [
 				"run-script", "nodemon"
@@ -39,7 +39,7 @@
 			"type": "node",
 			"request": "launch",
 			"name": "Tests",
-			"cwd": "${workspaceRoot}",
+			"protocol": "legacy",
 			"program": "${workspaceRoot}/node_modules/mocha/bin/_mocha",
 			"args": [
 				"-u", "tdd",
