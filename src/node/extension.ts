@@ -285,7 +285,7 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 
 		let checkAttach = Promise.resolve<any>();
-		if (config.request === 'attach' && !config.protocol) {
+		if (config.request === 'attach' && (!config.protocol || config.protocol === 'auto')) {
 			const address = config.address || '127.0.0.1';
 			const port = config.port || 9229;
 
