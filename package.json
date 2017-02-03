@@ -112,7 +112,7 @@
 						"body": {
 							"type": "node",
 							"request": "launch",
-							"name": "${2:Launch via NPM}",
+							"name": "${1:Launch via NPM}",
 							"runtimeExecutable": "npm",
 							"windows": {
 								"runtimeExecutable": "npm.cmd"
@@ -129,8 +129,21 @@
 						"body": {
 							"type": "node",
 							"request": "attach",
-							"name": "${2:Attach to Port}",
+							"name": "${1:Attach to Port}",
 							"port": 5858
+						}
+					},
+					{
+						"label": "%node.snippet.remoteattach.label%",
+						"description": "%node.snippet.remoteattach.description%",
+						"body": {
+							"type": "node",
+							"request": "attach",
+							"name": "${1:Attach to Remote}",
+							"address": "${2:TCP/IP address of process to be debugged}",
+							"port": 5858,
+							"localRoot": "^\"\\${workspaceRoot}\"",
+							"remoteRoot": "${3:Absolute path to the remote directory containing the program}"
 						}
 					},
 					{
@@ -139,7 +152,7 @@
 						"body": {
 							"type": "node",
 							"request": "attach",
-							"name": "${2:Attach to Process}",
+							"name": "${1:Attach to Process}",
 							"processId": "^\"\\${command.PickProcess}\"",
 							"port": 5858
 						}

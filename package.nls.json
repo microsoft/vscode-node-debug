@@ -14,7 +14,7 @@
 	"node.sourceMaps.description": "Use JavaScript source maps (if they exist).",
 	"node.stopOnEntry.description": "Automatically stop program after launch.",
 	"node.port.description": "Debug port to attach to. Default is 5858.",
-	"node.address.description": "TCP/IP address of debug port (for Node.js >= 5.0 only). Default is 'localhost'.",
+	"node.address.description": "TCP/IP address of process to be debugged (for Node.js >= 5.0 only). Default is 'localhost'.",
 	"node.timeout.description": "Retry for this number of milliseconds to connect to Node.js. Default is 10000 ms.",
 	"node.restart.description": "Restart session after Node.js has terminated.",
 
@@ -30,8 +30,8 @@
 	"node.launch.config.name": "Launch",
 
 	"node.attach.processId.description": "Id of process to attach to.",
-	"node.attach.localRoot.description": "The local source root that corresponds to the 'remoteRoot'.",
-	"node.attach.remoteRoot.description": "The source root of the remote host.",
+	"node.attach.localRoot.description": "Path to the local directory containing the program.",
+	"node.attach.remoteRoot.description": "Absolute path to the remote directory containing the program.",
 
 	"node.attach.config.name": "Attach",
 
@@ -43,6 +43,8 @@
 	"node.snippet.npm.description": "Launch a node program through an npm 'debug' script",
 	"node.snippet.attach.label": "Node.js: Attach to Port",
 	"node.snippet.attach.description": "Attach to the debug port of a running node program",
+	"node.snippet.remoteattach.label": "Node.js: Attach to Remote Program",
+	"node.snippet.remoteattach.description": "Attach to the debug port of a remote node program",
 	"node.snippet.attachProcess.label": "Node.js: Attach to Process",
 	"node.snippet.attachProcess.description": "Open process picker to select node or gulp process to attach to",
 	"node.snippet.nodemon.label": "Node.js: Nodemon Setup",
