@@ -216,6 +216,21 @@
 							"program": "^\"\\${workspaceRoot}/node_modules/gulp/bin/gulp.js\"",
 							"args": [ "${1:task}" ]
 						}
+					},
+					{
+						"label": "%node.snippet.electron.label%",
+						"description": "%node.snippet.electron.description%",
+						"body": {
+							"type": "node",
+							"request": "launch",
+							"name": "Electron Main",
+							"runtimeExecutable": "^\"\\${workspaceRoot}/node_modules/.bin/electron\"",
+							"windows": {
+								"runtimeExecutable": "^\"\\${workspaceRoot}/node_modules/.bin/electron.cmd\""
+							},
+							"program": "^\"\\${workspaceRoot}/main.js\"",
+							"protocol": "legacy"
+						}
 					}
 				],
 				"configurationAttributes": {

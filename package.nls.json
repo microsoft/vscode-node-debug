@@ -55,6 +55,8 @@
 	"node.snippet.yo.description": "Debug yeoman generator (install by running 'npm link' in project folder)",
 	"node.snippet.gulp.label": "Node.js: Gulp task",
 	"node.snippet.gulp.description": "Debug gulp task (make sure to have a local gulp installed in your project)",
+	"node.snippet.electron.label": "Node.js: Electron Main",
+	"node.snippet.electron.description": "Debug the Electron main process",
 
 	"extensionHost.label": "VS Code Extension Development",
 
