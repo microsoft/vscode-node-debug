@@ -250,7 +250,10 @@ export function activate(context: vscode.ExtensionContext) {
 		].join('\n');
 	}));
 
-	const node2MinNodeVersion = 60900;
+	// For launch, use v8-inspector for 6.9 because it's stable after that version. For attach, only require 6.3 because that's the
+	// minimum version where v8-inspector is supported at all.
+	const InspectorMinNodeVersionLaunch = 60900;
+	const InspectorMinNodeVersionAttach = 60300;
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.startSession', config => {
 
 		if (!config.request) { // if 'request' is missing interpret this as a missing launch.json
@@ -295,7 +298,7 @@ export function activate(context: vscode.ExtensionContext) {
 					const versionObject = JSON.parse(response);
 					if (versionObject.length > 0) {
 						const semVerString: string = versionObject[0].Browser;
-						if (semVerStringToInt(semVerString) >= node2MinNodeVersion) {
+						if (semVerString && semVerStringToInt(semVerString) >= InspectorMinNodeVersionAttach) {
 							config.protocol = 'v8-inspector';
 						}
 					}
@@ -321,7 +324,7 @@ export function activate(context: vscode.ExtensionContext) {
 					const result = spawnSync('node', [ '--version' ]);
 					const r = result.stdout.toString();
 					config.type = 'node';
-					if (r && semVerStringToInt(r) >= node2MinNodeVersion) {
+					if (r && semVerStringToInt(r) >= InspectorMinNodeVersionLaunch) {
 						config.type = 'node2';
 					}
 					break;
