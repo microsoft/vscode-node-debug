@@ -13,6 +13,9 @@ import * as fs from 'fs';
 
 const localize = nls.config(process.env.VSCODE_NLS_CONFIG)();
 
+const InspectorMinNodeVersionLaunch = 60900;
+const InspectorMinNodeVersionAttach = 60300;
+
 interface ProcessItem extends vscode.QuickPickItem {
 	pid: string;	// payload for the QuickPick UI
 }
@@ -252,8 +255,6 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// For launch, use v8-inspector for 6.9 because it's stable after that version. For attach, only require 6.3 because that's the
 	// minimum version where v8-inspector is supported at all.
-	const InspectorMinNodeVersionLaunch = 60900;
-	const InspectorMinNodeVersionAttach = 60300;
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.startSession', config => {
 
 		if (!config.request) { // if 'request' is missing interpret this as a missing launch.json
@@ -287,55 +288,64 @@ export function activate(context: vscode.ExtensionContext) {
 			}
 		}
 
-		let checkAttach = Promise.resolve<any>();
-		if (config.request === 'attach' && (!config.protocol || config.protocol === 'auto')) {
-			const address = config.address || '127.0.0.1';
-			const port = config.port || 9229;
-
-			config.protocol = 'legacy';
-			checkAttach = getURL(`http://${address}:${port}/json/version`).then(response => {
-				try {
-					const versionObject = JSON.parse(response);
-					if (versionObject.length > 0) {
-						const semVerString: string = versionObject[0].Browser;
-						if (semVerString && semVerStringToInt(semVerString) >= InspectorMinNodeVersionAttach) {
-							config.protocol = 'v8-inspector';
+		let fixConfig = Promise.resolve<any>();
+		switch (config.protocol) {
+			case 'legacy':
+				config.type = 'node';
+				break;
+			case 'v8-inspector':
+				config.type = 'node2';
+				break;
+			case 'auto':
+			default:
+				config.type = 'node'; // default
+				if (config.request === 'attach') {
+					fixConfig = getProtocolForAttach(config).then(protocol => {
+						if (protocol === 'v8-inspector') {
+							config.type = 'node2';
 						}
-					}
-				} catch (e) {
-					// Not JSON
-				}
-			},
-			e => {
-				// Not v8-inspector
-			});
-		}
-
-		checkAttach.then(() => {
-			switch (config.protocol) {
-				case 'legacy':
-					config.type = 'node';
-					break;
-				case 'v8-inspector':
-					config.type = 'node2';
-					break;
-				case 'auto':
-				default:
+					});
+				} else {
 					const result = spawnSync('node', [ '--version' ]);
 					const r = result.stdout.toString();
-					config.type = 'node';
 					if (r && semVerStringToInt(r) >= InspectorMinNodeVersionLaunch) {
 						config.type = 'node2';
 					}
-					break;
-			}
+				}
 
+				break;
+		}
+
+		fixConfig.then(() => {
 			vscode.commands.executeCommand('vscode.startDebug', config);
 		});
 	}));
 }
 
 export function deactivate() {
+}
+
+function getProtocolForAttach(config: any): Promise<string|undefined> {
+	const address = config.address || '127.0.0.1';
+	const port = config.port || 9229;
+
+	config.protocol = 'legacy';
+	return getURL(`http://${address}:${port}/json/version`).then(response => {
+		try {
+			const versionObject = JSON.parse(response);
+			if (versionObject.length > 0) {
+				const semVerString: string = versionObject[0].Browser;
+				if (semVerString && semVerStringToInt(semVerString) >= InspectorMinNodeVersionAttach) {
+					return 'v8-inspector';
+				}
+			}
+		} catch (e) {
+			// Not JSON
+		}
+	},
+	e => {
+		// Not v8-inspector
+	});
 }
 
 function semVerStringToInt(vString: string): number {
