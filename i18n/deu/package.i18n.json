@@ -37,7 +37,9 @@
 	"node.snippet.gulp.description": "Gulp-Aufgabe debuggen (in Ihrem Projekt muss ein lokales Gulp installiert sein)",
 	"node.snippet.gulp.label": "Node.js: Gulp-Aufgabe",
 	"node.snippet.launch.description": "Node-Programm im Debugmodus starten",
-	"node.snippet.launch.label": "Node.js: Startkonfiguration",
+	"node.snippet.launch.label": "Node.js: Programm starten",
+	"node.snippet.mocha.description": "Mocha-Tests debuggen",
+	"node.snippet.mocha.label": "Node.js: Mocha-Tests",
 	"node.snippet.nodemon.description": "Verwenden Sie Nodemon zum erneuten Starten einer Debugsitzung bei Quellenänderungen.",
 	"node.snippet.nodemon.label": "Node.js: Nodemon-Einrichtung",
 	"node.snippet.npm.description": "Node-Programm über ein npm-Debugskript starten",
@@ -47,6 +49,7 @@
 	"node.sourceMaps.description": "Verwendet JavaScript-Quellzuordnungen (wenn vorhanden).",
 	"node.stopOnEntry.description": "Beendet das Programm nach dem Start automatisch.",
 	"node.timeout.description": "Führt für diese Anzahl von Millisekunden Wiederholungsversuche aus, um eine Verbindung mit Node.js herzustellen. Der Standardwert sind 10.000 Millisekunden.",
+	"outDir.deprecationMessage": "Das Attribut \"outDir\" ist veraltet. Verwenden Sie stattdessen \"outFiles\".",
 	"outFiles.description": "Wenn Quellzuordnungen aktiviert sind, geben diese Globmuster die generierten JavaScript-Dateien an. Wenn ein Muster mit \"!\" beginnt, werden die Dateien ausgeschlossen. Wenn keine Angabe erfolgt, wird der generierte Code im gleichen Verzeichnis wie seine Quelle erwartet.",
 	"skipFiles.description": "Ein Array für Globmuster für Dateien, die beim Debuggen übersprungen werden.",
 	"smartStep.description": "Durchläuft automatisch den generierten Code, der nicht der ursprünglichen Quelle erneut zugeordnet werden kann."

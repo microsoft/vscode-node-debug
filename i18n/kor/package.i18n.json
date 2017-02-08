@@ -38,6 +38,8 @@
 	"node.snippet.gulp.label": "Node.js: Gulp 작업",
 	"node.snippet.launch.description": "디버그 모드에서 노드 프로그램 시작",
 	"node.snippet.launch.label": "Node.js: 프로그램 시작",
+	"node.snippet.mocha.description": "Mocha 테스트 디버그",
+	"node.snippet.mocha.label": "Node.js: Mocha 테스트",
 	"node.snippet.nodemon.description": "nodemon을 사용하여 소스 변경 내용에 대한 디버그 세션 다시 시작",
 	"node.snippet.nodemon.label": "Node.js: Nodemon 설정",
 	"node.snippet.npm.description": "npm 'debug' 스크립트를 통해 노드 프로그램 시작",
