@@ -16,6 +16,7 @@ const localize = nls.config(process.env.VSCODE_NLS_CONFIG)();
 const InspectorMinNodeVersionLaunch = 60900;
 const InspectorMinNodeVersionAttach = 60300;
 
+
 interface ProcessItem extends vscode.QuickPickItem {
 	pid: string;	// payload for the QuickPick UI
 }
@@ -289,6 +290,7 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 
 		let fixConfig = Promise.resolve<any>();
+
 		switch (config.protocol) {
 			case 'legacy':
 				config.type = 'node';
@@ -299,20 +301,41 @@ export function activate(context: vscode.ExtensionContext) {
 			case 'auto':
 			default:
 				config.type = 'node'; // default
-				if (config.request === 'attach') {
-					fixConfig = getProtocolForAttach(config).then(protocol => {
-						if (protocol === 'v8-inspector') {
-							config.type = 'node2';
-						}
-					});
-				} else {
-					const result = spawnSync('node', [ '--version' ]);
-					const r = result.stdout.toString();
-					if (r && semVerStringToInt(r) >= InspectorMinNodeVersionLaunch) {
-						config.type = 'node2';
-					}
-				}
 
+				switch (config.request) {
+
+					case 'attach':
+						fixConfig = getProtocolForAttach(config).then(protocol => {
+							if (protocol === 'v8-inspector') {
+								config.type = 'node2';
+							}
+						});
+						break;
+
+					case 'launch':
+						if (config.runtimeExecutable) {
+							config.__information = localize('protocol.switch.runtime.set', "Debugging with legacy protocol because a runtime executable is set.");
+						} else {
+							// only determine version if no runtimeExecutable is set (and 'node' on PATH is used)
+							const result = spawnSync('node', [ '--version' ]);
+							const semVerString = result.stdout.toString();
+							if (semVerString) {
+								if (semVerStringToInt(semVerString) >= InspectorMinNodeVersionLaunch) {
+									config.type = 'node2';
+									config.__information = localize('protocol.switch.inspector.version', "Debugging with v8-inspector protocol because Node {0} was detected.", semVerString.trim());
+								} else {
+									config.__information = localize('protocol.switch.legacy.version', "Debugging with legacy protocol because Node {0} was detected.", semVerString.trim());
+								}
+							} else {
+								config.__information = localize('protocol.switch.unknown.version', "Debugging with legacy protocol because Node version could not be determined.");
+							}
+						}
+						break;
+
+					default:
+						// should not happen
+						break;
+				}
 				break;
 		}
 
@@ -329,22 +352,29 @@ function getProtocolForAttach(config: any): Promise<string|undefined> {
 	const address = config.address || '127.0.0.1';
 	const port = config.port || 9229;
 
-	config.protocol = 'legacy';
 	return getURL(`http://${address}:${port}/json/version`).then(response => {
 		try {
 			const versionObject = JSON.parse(response);
 			if (versionObject.length > 0) {
 				const semVerString: string = versionObject[0].Browser;
-				if (semVerString && semVerStringToInt(semVerString) >= InspectorMinNodeVersionAttach) {
-					return 'v8-inspector';
+				if (semVerString) {
+					if (semVerStringToInt(semVerString) >= InspectorMinNodeVersionAttach) {
+						config.__information = localize('protocol.switch.inspector.version', "Debugging with v8-inspector protocol because Node {0} was detected.", semVerString.trim());
+						return 'v8-inspector';
+					} else {
+						config.__information = localize('protocol.switch.legacy.version', "Debugging with legacy protocol because Node {0} was detected.", semVerString.trim());
+						return undefined;
+					}
 				}
 			}
 		} catch (e) {
 			// Not JSON
 		}
+		config.__information = localize('protocol.switch.unknown.version', "Debugging with legacy protocol because Node version could not be determined.");
 	},
 	e => {
 		// Not v8-inspector
+		config.__information = localize('protocol.switch.unknown.version', "Debugging with legacy protocol because Node version could not be determined.");
 	});
 }
 
@@ -353,7 +383,6 @@ function semVerStringToInt(vString: string): number {
 	if (match && match.length === 4) {
 		return (parseInt(match[1])*100 + parseInt(match[2]))*100 + parseInt(match[3]);
 	}
-
 	return -1;
 }
 
