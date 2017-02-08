@@ -56,5 +56,7 @@
 	"scope.with": "Mit",
 	"setVariable.error": "Das Festlegen des Werts wird nicht unterstützt.",
 	"source.not.found": "Der Inhalt konnte nicht abgerufen werden.",
+	"source.skipFiles": "Aufgrund von \"skipFiles\" übersprungen",
+	"source.smartstep": "Aufgrund von \"smartStep\" übersprungen",
 	"sourcemapping.fail.message": "Der Haltepunkt wird ignoriert, weil der generierte Code nicht gefunden wurde (Quellzuordnungsproblem?)."
 }

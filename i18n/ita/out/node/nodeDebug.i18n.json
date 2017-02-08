@@ -56,5 +56,7 @@
 	"scope.with": "Con",
 	"setVariable.error": "Il valore dell'impostazione non è supportato",
 	"source.not.found": "Non è stato possibile recuperare il contenuto.",
+	"source.skipFiles": "ignorata a causa di 'skipFiles'",
+	"source.smartstep": "ignorata a causa di 'smartStep'",
 	"sourcemapping.fail.message": "Il punto di interruzione è stato ignorato perché il codice generato non è stato trovato. È possibile che si sia verificato un problema di mapping di origine."
 }
