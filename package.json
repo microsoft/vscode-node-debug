@@ -262,7 +262,13 @@
 								"default": true
 							},
 							"console": {
+								"type": "string",
 								"enum": [ "internalConsole", "integratedTerminal", "externalTerminal" ],
+								"enumDescriptions": [
+									"%node.launch.console.internalConsole.description%",
+									"%node.launch.console.integratedTerminal.description%",
+									"%node.launch.console.externalTerminal.description%"
+								],
 								"description": "%node.launch.console.description%",
 								"default": "internalConsole"
 							},
