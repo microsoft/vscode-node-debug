@@ -3304,16 +3304,26 @@ export class NodeDebugSession extends DebugSession {
 				const set = new Set<string>();
 				const items = new Array<DebugProtocol.CompletionItem>();
 
-				let arrays = JSON.parse(<string>resp.body.value);
+				let arrays = <string[]> JSON.parse(<string>resp.body.value);
 
 				for (let i= 0; i < arrays.length; i++) {
 					for (let name of arrays[i]) {
 						if (!isIndex(name) && !set.has(name)) {
 							set.add(name);
-							items.push({
-								label: <string> name,
+
+							const pi: DebugProtocol.CompletionItem = {
+								label: name,
 								type: 'property'
-							});
+							};
+
+							if (name.indexOf(' ') >= 0) {
+								pi.text = `['${name}']`;
+								if (dot > 0) {
+									pi.start = dot-1;
+								}
+							}
+
+							items.push(pi);
 						}
 					}
 				}
