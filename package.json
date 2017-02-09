@@ -180,11 +180,8 @@
 							"type": "node",
 							"request": "launch",
 							"name": "Mocha Tests",
-							"runtimeExecutable": "^\"\\${workspaceRoot}/node_modules/.bin/mocha\"",
-							"windows": {
-								"runtimeExecutable": "^\"\\${workspaceRoot}/node_modules/.bin/mocha.cmd\""
-							},
-							"runtimeArgs": [
+							"program": "^\"\\${workspaceRoot}/node_modules/mocha/bin/_mocha\"",
+							"args": [
 								"-u", "tdd",
 								"--timeout", "999999",
 								"--colors",
