@@ -351,9 +351,15 @@
 					"attach": {
 						"properties": {
 							"protocol": {
+								"type": "string",
 								"enum": [ "auto", "v8-inspector", "legacy" ],
+								"enumDescriptions": [
+									"%node.protocol.auto.description%",
+									"%node.protocol.v8-inspector.description%",
+									"%node.protocol.legacy.description%"
+								],
 								"description": "%node.protocol.description%",
-								"default": "auto"
+								"default": "legacy"
 							},
 							"processId": {
 								"type": "string",
