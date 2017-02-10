@@ -13,7 +13,10 @@ import * as fs from 'fs';
 
 const localize = nls.config(process.env.VSCODE_NLS_CONFIG)();
 
+// For launch, use v8-inspector starting with v6.9 because it's stable after that version.
 const InspectorMinNodeVersionLaunch = 60900;
+
+// For attach, only require v6.3 because that's the minimum version where v8-inspector is supported at all.
 const InspectorMinNodeVersionAttach = 60300;
 
 
@@ -198,6 +201,42 @@ function guessProgramFromPackage(folderPath: string): string | undefined {
 	return program;
 }
 
+function createInitialConfigurations(): string {
+
+	let program = vscode.workspace.textDocuments.some(document => document.languageId === 'typescript') ? '${workspaceRoot}/app.ts' : undefined;
+
+	if (vscode.workspace.rootPath) {
+		program = guessProgramFromPackage(vscode.workspace.rootPath);
+	}
+
+	if (program) {
+		initialConfigurations.forEach(config => {
+			if (config['program']) {
+				config['program'] = program;
+			}
+		});
+	}
+	if (vscode.workspace.textDocuments.some(document => document.languageId === 'typescript' || document.languageId === 'coffeescript')) {
+		initialConfigurations.forEach(config => {
+			config['outFiles'] = [];
+		});
+	}
+	// Massage the configuration string, add an aditional tab and comment out processId.
+	// Add an aditional empty line between attributes which the user should not edit.
+	const configurationsMassaged = JSON.stringify(initialConfigurations, null, '\t').replace(',\n\t\t"processId', '\n\t\t//"processId')
+		.split('\n').map(line => '\t' + line).join('\n').trim();
+
+	return [
+		'{',
+		'\t// Use IntelliSense to learn about possible Node.js debug attributes.',
+		'\t// Hover to view descriptions of existing attributes.',
+		'\t// For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387',
+		'\t"version": "0.2.0",',
+		'\t"configurations": ' + configurationsMassaged,
+		'}'
+	].join('\n');
+}
+
 export function activate(context: vscode.ExtensionContext) {
 
 	let pickNodeProcess = vscode.commands.registerCommand('extension.pickNodeProcess', () => {
@@ -219,46 +258,13 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(pickNodeProcess);
 
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.provideInitialConfigurations', () => {
-
-		let program = vscode.workspace.textDocuments.some(document => document.languageId === 'typescript') ? '${workspaceRoot}/app.ts' : undefined;
-
-		if (vscode.workspace.rootPath) {
-			program = guessProgramFromPackage(vscode.workspace.rootPath);
-		}
-
-		if (program) {
-			initialConfigurations.forEach(config => {
-				if (config['program']) {
-					config['program'] = program;
-				}
-			});
-		}
-		if (vscode.workspace.textDocuments.some(document => document.languageId === 'typescript' || document.languageId === 'coffeescript')) {
-			initialConfigurations.forEach(config => {
-				config['outFiles'] = [];
-			});
-		}
-		// Massage the configuration string, add an aditional tab and comment out processId.
-		// Add an aditional empty line between attributes which the user should not edit.
-		const configurationsMassaged = JSON.stringify(initialConfigurations, null, '\t').replace(',\n\t\t"processId', '\n\t\t//"processId')
-			.split('\n').map(line => '\t' + line).join('\n').trim();
-
-		return [
-			'{',
-			'\t// Use IntelliSense to learn about possible Node.js debug attributes.',
-			'\t// Hover to view descriptions of existing attributes.',
-			'\t// For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387',
-			'\t"version": "0.2.0",',
-			'\t"configurations": ' + configurationsMassaged,
-			'}'
-		].join('\n');
+		return createInitialConfigurations();
 	}));
 
-	// For launch, use v8-inspector for 6.9 because it's stable after that version. For attach, only require 6.3 because that's the
-	// minimum version where v8-inspector is supported at all.
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.startSession', config => {
 
-		if (!config.request) { // if 'request' is missing interpret this as a missing launch.json
+		if (Object.keys(config).length === 0) { // an empty config represents a missing launch.json
+
 			config.type = 'node';
 			config.name = 'Launch';
 			config.request = 'launch';
@@ -275,6 +281,9 @@ export function activate(context: vscode.ExtensionContext) {
 				const editor = vscode.window.activeTextEditor;
 				if (editor && editor.document.languageId === 'javascript') {
 					config.program = editor.document.fileName;
+				} else {
+					// give up by returning the initial configurations
+					return createInitialConfigurations();
 				}
 			}
 		}
@@ -288,6 +297,8 @@ export function activate(context: vscode.ExtensionContext) {
 				config.cwd = dirname(config.program);
 			}
 		}
+
+		// determine what protocol to use
 
 		let fixConfig = Promise.resolve<any>();
 
