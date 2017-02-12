@@ -1189,7 +1189,7 @@ export class NodeDebugSession extends DebugSession {
 		this._node.command('evaluate', { expression: 'process.pid', global: true }, (resp: V8EvaluateResponse) => {
 
 			let ok = resp.success;
-			if (resp.success) {
+			if (resp.success && resp.body.value !== undefined) {
 				this._nodeProcessId = +resp.body.value;
 				this.log('la', `_initialize: got process id ${this._nodeProcessId} from node`);
 			} else {
@@ -1336,7 +1336,7 @@ export class NodeDebugSession extends DebugSession {
 			if (this._nodeProcessId <= 0) {
 				// if we haven't gotten a process pid so far, we try it again
 				this._node.command('evaluate', { expression: 'process.pid', global: true }, (resp: V8EvaluateResponse) => {
-					if (resp.success) {
+					if (resp.success && resp.body.value !== undefined) {
 						this._nodeProcessId = +resp.body.value;
 						this.log('la', `_initialize: got process id ${this._nodeProcessId} from node (2nd try)`);
 					}
@@ -1990,7 +1990,7 @@ export class NodeDebugSession extends DebugSession {
 
 		const threadReference = args.threadId;
 		const startFrame = typeof args.startFrame === 'number' ? args.startFrame : 0;
-		const maxLevels = args.levels;
+		const maxLevels = typeof args.levels === 'number' ? args.levels : 10;
 
 		let totalFrames = 0;
 
@@ -2488,6 +2488,7 @@ export class NodeDebugSession extends DebugSession {
 
 		let found_proto = false;
 		if (obj.properties) {
+			count = count || obj.properties.length;
 			for (let property of obj.properties) {
 
 				if ('name' in property) {	// bug #19654: only extract properties with a name
