@@ -318,6 +318,7 @@ export class NodeDebugSession extends DebugSession {
 	private static NODE_SHEBANG_MATCHER = new RegExp('#! */usr/bin/env +node');
 	private static LONG_STRING_MATCHER = /\.\.\. \(length: [0-9]+\)$/;
 	private static HITCOUNT_MATCHER = /(>|>=|=|==|<|<=|%)?\s*([0-9]+)/;
+	private static PROPERTY_NAME_MATCHER = /^[$_\w][$_\w0-9]*$/;
 
 	// tracing
 	private _trace: string[];
@@ -3315,8 +3316,8 @@ export class NodeDebugSession extends DebugSession {
 								label: name,
 								type: 'property'
 							};
-
-							if (name.indexOf(' ') >= 0) {
+							if (!NodeDebugSession.PROPERTY_NAME_MATCHER.test(name)) {
+								// we cannot use dot notation
 								pi.text = `['${name}']`;
 								if (dot > 0) {
 									pi.start = dot-1;
