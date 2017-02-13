@@ -13,15 +13,39 @@ import * as fs from 'fs';
 
 const localize = nls.config(process.env.VSCODE_NLS_CONFIG)();
 
-// For launch, use v8-inspector starting with v6.9 because it's stable after that version.
-const InspectorMinNodeVersionLaunch = 60900;
 
-// For attach, only require v6.3 because that's the minimum version where v8-inspector is supported at all.
-const InspectorMinNodeVersionAttach = 60300;
+export function activate(context: vscode.ExtensionContext) {
 
+	context.subscriptions.push(vscode.commands.registerCommand('extension.pickNodeProcess', () => pickProcess()));
+
+	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.provideInitialConfigurations', () => createInitialConfigurations()));
+
+	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.startSession', config => startSession(config)));
+}
+
+export function deactivate() {
+}
+
+//---- extension.pickNodeProcess
 
 interface ProcessItem extends vscode.QuickPickItem {
 	pid: string;	// payload for the QuickPick UI
+}
+
+function pickProcess() {
+
+	return listProcesses().then(items => {
+
+		let options : vscode.QuickPickOptions = {
+			placeHolder: localize('pickNodeProcess', "Pick the node.js or gulp process to attach to"),
+			matchOnDescription: true,
+			matchOnDetail: true
+		};
+
+		return vscode.window.showQuickPick(items, options).then(item => {
+			return item ? item.pid : null;
+		});
+	});
 }
 
 function listProcesses() : Promise<ProcessItem[]> {
@@ -158,6 +182,11 @@ function listProcesses() : Promise<ProcessItem[]> {
 	});
 }
 
+//---- extension.node-debug.provideInitialConfigurations
+
+/*
+ * default configuration for node.js
+ */
 const initialConfigurations = [
 	{
 		type: 'node',
@@ -174,33 +203,9 @@ const initialConfigurations = [
 	}
 ];
 
-function guessProgramFromPackage(folderPath: string): string | undefined {
-
-	let program: string | undefined;
-
-	try {
-		const packageJsonPath = join(folderPath, 'package.json');
-		const jsonContent = fs.readFileSync(packageJsonPath, 'utf8');
-		const jsonObject = JSON.parse(jsonContent);
-
-		if (jsonObject.main) {
-			program = jsonObject.main;
-		} else if (jsonObject.scripts && typeof jsonObject.scripts.start === 'string') {
-			// assume a start script of the form 'node server.js'
-			program = (<string>jsonObject.scripts.start).split(' ').pop();
-		}
-
-		if (program) {
-			program = isAbsolute(program) ? program : join('${workspaceRoot}', program);
-		}
-
-	} catch (error) {
-		// silently ignore
-	}
-
-	return program;
-}
-
+/**
+ * returns an initial configuration json as a string
+ */
 function createInitialConfigurations(): string {
 
 	let program = vscode.workspace.textDocuments.some(document => document.languageId === 'typescript') ? '${workspaceRoot}/app.ts' : undefined;
@@ -237,126 +242,151 @@ function createInitialConfigurations(): string {
 	].join('\n');
 }
 
-export function activate(context: vscode.ExtensionContext) {
+/*
+ * try to find the entry point ('main') from the package.json
+ */
+function guessProgramFromPackage(folderPath: string): string | undefined {
 
-	let pickNodeProcess = vscode.commands.registerCommand('extension.pickNodeProcess', () => {
+	let program: string | undefined;
 
-		return listProcesses().then(items => {
+	try {
+		const packageJsonPath = join(folderPath, 'package.json');
+		const jsonContent = fs.readFileSync(packageJsonPath, 'utf8');
+		const jsonObject = JSON.parse(jsonContent);
 
-			let options : vscode.QuickPickOptions = {
-				placeHolder: localize('pickNodeProcess', "Pick the node.js or gulp process to attach to"),
-				matchOnDescription: true,
-				matchOnDetail: true
-			};
-
-			return vscode.window.showQuickPick(items, options).then(item => {
-				return item ? item.pid : null;
-			});
-		});
-
-	});
-	context.subscriptions.push(pickNodeProcess);
-
-	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.provideInitialConfigurations', () => {
-		return createInitialConfigurations();
-	}));
-
-	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.startSession', config => {
-
-		if (Object.keys(config).length === 0) { // an empty config represents a missing launch.json
-
-			config.type = 'node';
-			config.name = 'Launch';
-			config.request = 'launch';
-
-			if (vscode.workspace.rootPath) {
-				// folder case: try to find entry point in package.json
-
-				config.program = guessProgramFromPackage(vscode.workspace.rootPath);
-			}
-
-			if (!config.program) {
-				// 'no folder' case (or no program found)
-
-				const editor = vscode.window.activeTextEditor;
-				if (editor && editor.document.languageId === 'javascript') {
-					config.program = editor.document.fileName;
-				} else {
-					// give up by returning the initial configurations
-					return createInitialConfigurations();
-				}
-			}
+		if (jsonObject.main) {
+			program = jsonObject.main;
+		} else if (jsonObject.scripts && typeof jsonObject.scripts.start === 'string') {
+			// assume a start script of the form 'node server.js'
+			program = (<string>jsonObject.scripts.start).split(' ').pop();
 		}
 
-		// make sure that 'launch' configs have a 'cwd' attribute set
-		if (config.request === 'launch' && !config.cwd) {
-			if (vscode.workspace.rootPath) {
-				config.cwd = vscode.workspace.rootPath;
-			} else if (config.program) {
-				// derive 'cwd' from 'program'
-				config.cwd = dirname(config.program);
-			}
+		if (program) {
+			program = isAbsolute(program) ? program : join('${workspaceRoot}', program);
 		}
 
-		// determine what protocol to use
+	} catch (error) {
+		// silently ignore
+	}
 
-		let fixConfig = Promise.resolve<any>();
-
-		switch (config.protocol) {
-			case 'legacy':
-				config.type = 'node';
-				break;
-			case 'v8-inspector':
-				config.type = 'node2';
-				break;
-			case 'auto':
-			default:
-				config.type = 'node'; // default
-
-				switch (config.request) {
-
-					case 'attach':
-						fixConfig = getProtocolForAttach(config).then(protocol => {
-							if (protocol === 'v8-inspector') {
-								config.type = 'node2';
-							}
-						});
-						break;
-
-					case 'launch':
-						if (config.runtimeExecutable) {
-							config.__information = localize('protocol.switch.runtime.set', "Debugging with legacy protocol because a runtime executable is set.");
-						} else {
-							// only determine version if no runtimeExecutable is set (and 'node' on PATH is used)
-							const result = spawnSync('node', [ '--version' ]);
-							const semVerString = result.stdout.toString();
-							if (semVerString) {
-								if (semVerStringToInt(semVerString) >= InspectorMinNodeVersionLaunch) {
-									config.type = 'node2';
-									config.__information = localize('protocol.switch.inspector.version', "Debugging with v8-inspector protocol because Node {0} was detected.", semVerString.trim());
-								} else {
-									config.__information = localize('protocol.switch.legacy.version', "Debugging with legacy protocol because Node {0} was detected.", semVerString.trim());
-								}
-							} else {
-								config.__information = localize('protocol.switch.unknown.version', "Debugging with legacy protocol because Node version could not be determined.");
-							}
-						}
-						break;
-
-					default:
-						// should not happen
-						break;
-				}
-				break;
-		}
-
-		fixConfig.then(() => {
-			vscode.commands.executeCommand('vscode.startDebug', config);
-		});
-	}));
+	return program;
 }
 
-export function deactivate() {
+
+//---- extension.node-debug.startSession
+
+// For launch, use v8-inspector starting with v6.9 because it's stable after that version.
+const InspectorMinNodeVersionLaunch = 60900;
+
+// For attach, only require v6.3 because that's the minimum version where v8-inspector is supported at all.
+const InspectorMinNodeVersionAttach = 60300;
+
+
+/**
+ * The result type of the startSession command.
+ */
+class StartSessionResult {
+	status: 'ok' | 'initialConfiguration' | 'saveConfiguration';
+	content?: string;	// launch.json content for 'save'
+};
+
+function startSession(config: any): StartSessionResult {
+
+	if (Object.keys(config).length === 0) { // an empty config represents a missing launch.json
+
+		config.type = 'node';
+		config.name = 'Launch';
+		config.request = 'launch';
+
+		if (vscode.workspace.rootPath) {
+			// folder case: try to find entry point in package.json
+
+			config.program = guessProgramFromPackage(vscode.workspace.rootPath);
+		}
+
+		if (!config.program) {
+			// 'no folder' case (or no program found)
+
+			const editor = vscode.window.activeTextEditor;
+			if (editor && editor.document.languageId === 'javascript') {
+				config.program = editor.document.fileName;
+			} else {
+				return {
+					status: 'initialConfiguration'	// let VS Code create an initial configuration
+				};
+			}
+		}
+	}
+
+	// make sure that 'launch' configs have a 'cwd' attribute set
+	if (config.request === 'launch' && !config.cwd) {
+		if (vscode.workspace.rootPath) {
+			config.cwd = vscode.workspace.rootPath;
+		} else if (config.program) {
+			// derive 'cwd' from 'program'
+			config.cwd = dirname(config.program);
+		}
+	}
+
+	// determine what protocol to use
+
+	let fixConfig = Promise.resolve<any>();
+
+	switch (config.protocol) {
+		case 'legacy':
+			config.type = 'node';
+			break;
+		case 'v8-inspector':
+			config.type = 'node2';
+			break;
+		case 'auto':
+		default:
+			config.type = 'node'; // default
+
+			switch (config.request) {
+
+				case 'attach':
+					fixConfig = getProtocolForAttach(config).then(protocol => {
+						if (protocol === 'v8-inspector') {
+							config.type = 'node2';
+						}
+					});
+					break;
+
+				case 'launch':
+					if (config.runtimeExecutable) {
+						config.__information = localize('protocol.switch.runtime.set', "Debugging with legacy protocol because a runtime executable is set.");
+					} else {
+						// only determine version if no runtimeExecutable is set (and 'node' on PATH is used)
+						const result = spawnSync('node', [ '--version' ]);
+						const semVerString = result.stdout.toString();
+						if (semVerString) {
+							if (semVerStringToInt(semVerString) >= InspectorMinNodeVersionLaunch) {
+								config.type = 'node2';
+								config.__information = localize('protocol.switch.inspector.version', "Debugging with v8-inspector protocol because Node {0} was detected.", semVerString.trim());
+							} else {
+								config.__information = localize('protocol.switch.legacy.version', "Debugging with legacy protocol because Node {0} was detected.", semVerString.trim());
+							}
+						} else {
+							config.__information = localize('protocol.switch.unknown.version', "Debugging with legacy protocol because Node version could not be determined.");
+						}
+					}
+					break;
+
+				default:
+					// should not happen
+					break;
+			}
+			break;
+	}
+
+	fixConfig.then(() => {
+		vscode.commands.executeCommand('vscode.startDebug', config);
+	});
+
+	return {
+		status: 'ok'
+	};
 }
 
 function getProtocolForAttach(config: any): Promise<string|undefined> {
@@ -389,6 +419,9 @@ function getProtocolForAttach(config: any): Promise<string|undefined> {
 	});
 }
 
+/**
+ * convert the 3 parts of a semVer string into a single number
+ */
 function semVerStringToInt(vString: string): number {
 	const match = vString.match(/v(\d+)\.(\d+)\.(\d+)/);
 	if (match && match.length === 4) {
@@ -401,20 +434,20 @@ function semVerStringToInt(vString: string): number {
  * Helper function to GET the contents of a url
  */
 function getURL(url: string): Promise<string> {
-    return new Promise((resolve, reject) => {
-        http.get(url, response => {
-            let responseData = '';
-            response.on('data', chunk => responseData += chunk);
-            response.on('end', () => {
-                // Sometimes the 'error' event is not fired. Double check here.
-                if (response.statusCode === 200) {
-                    resolve(responseData);
-                } else {
-                    reject(responseData);
-                }
-            });
-        }).on('error', e => {
-            reject(e);
-        });
-    });
+	return new Promise((resolve, reject) => {
+		http.get(url, response => {
+			let responseData = '';
+			response.on('data', chunk => responseData += chunk);
+			response.on('end', () => {
+				// Sometimes the 'error' event is not fired. Double check here.
+				if (response.statusCode === 200) {
+					resolve(responseData);
+				} else {
+					reject(responseData);
+				}
+			});
+		}).on('error', e => {
+			reject(e);
+		});
+	});
 }
