@@ -275,10 +275,10 @@ function guessProgramFromPackage(folderPath: string): string | undefined {
 
 //---- extension.node-debug.startSession
 
-// For launch, use v8-inspector starting with v6.9 because it's stable after that version.
+// For launch, use inspector protocol starting with v6.9 because it's stable after that version.
 const InspectorMinNodeVersionLaunch = 60900;
 
-// For attach, only require v6.3 because that's the minimum version where v8-inspector is supported at all.
+// For attach, only require v6.3 because that's the minimum version where the inspector protocol is supported at all.
 const InspectorMinNodeVersionAttach = 60300;
 
 
@@ -336,7 +336,7 @@ function startSession(config: any): StartSessionResult {
 		case 'legacy':
 			config.type = 'node';
 			break;
-		case 'v8-inspector':
+		case 'inspector':
 			config.type = 'node2';
 			break;
 		case 'auto':
@@ -347,7 +347,7 @@ function startSession(config: any): StartSessionResult {
 
 				case 'attach':
 					fixConfig = getProtocolForAttach(config).then(protocol => {
-						if (protocol === 'v8-inspector') {
+						if (protocol === 'inspector') {
 							config.type = 'node2';
 						}
 					});
@@ -363,7 +363,7 @@ function startSession(config: any): StartSessionResult {
 						if (semVerString) {
 							if (semVerStringToInt(semVerString) >= InspectorMinNodeVersionLaunch) {
 								config.type = 'node2';
-								config.__information = localize('protocol.switch.inspector.version', "Debugging with v8-inspector protocol because Node {0} was detected.", semVerString.trim());
+								config.__information = localize('protocol.switch.inspector.version', "Debugging with inspector protocol because Node {0} was detected.", semVerString.trim());
 							} else {
 								config.__information = localize('protocol.switch.legacy.version', "Debugging with legacy protocol because Node {0} was detected.", semVerString.trim());
 							}
@@ -400,8 +400,8 @@ function getProtocolForAttach(config: any): Promise<string|undefined> {
 				const semVerString: string = versionObject[0].Browser;
 				if (semVerString) {
 					if (semVerStringToInt(semVerString) >= InspectorMinNodeVersionAttach) {
-						config.__information = localize('protocol.switch.inspector.version', "Debugging with v8-inspector protocol because Node {0} was detected.", semVerString.trim());
-						return 'v8-inspector';
+						config.__information = localize('protocol.switch.inspector.version', "Debugging with inspector protocol because Node {0} was detected.", semVerString.trim());
+						return 'inspector';
 					} else {
 						config.__information = localize('protocol.switch.legacy.version', "Debugging with legacy protocol because Node {0} was detected.", semVerString.trim());
 						return undefined;
@@ -414,7 +414,7 @@ function getProtocolForAttach(config: any): Promise<string|undefined> {
 		config.__information = localize('protocol.switch.unknown.version', "Debugging with legacy protocol because Node version could not be determined.");
 	},
 	e => {
-		// Not v8-inspector
+		// Not inspector
 		config.__information = localize('protocol.switch.unknown.version', "Debugging with legacy protocol because Node version could not be determined.");
 	});
 }

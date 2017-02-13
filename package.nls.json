@@ -12,7 +12,7 @@
 
 	"node.protocol.description": "Node.js debug protocol to use.",
 		"node.protocol.auto.description": "'auto' tries to detect the best protocol automatically.",
-		"node.protocol.v8-inspector.description": "'v8-inspector' is the new protocol supported by Node.js versions >= 6.3.",
+		"node.protocol.inspector.description": "'inspector' is the new protocol supported by Node.js versions >= 6.3.",
 		"node.protocol.legacy.description": "'legacy' is the old protocol supported by Node.js versions < 8.0.",
 
 	"node.sourceMaps.description": "Use JavaScript source maps (if they exist).",
