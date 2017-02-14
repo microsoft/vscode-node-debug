@@ -24,6 +24,9 @@
 		"vscode": "^1.8.0",
 		"node": "^6.3.0"
 	},
+	"extensionDependencies": [
+		"ms-vscode.node-debug2"
+	],
 	"dependencies": {
 		"vscode-debugprotocol": "^1.17.0-pre.2",
 		"vscode-debugadapter": "^1.17.0-pre.4",
