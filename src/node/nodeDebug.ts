@@ -252,8 +252,6 @@ interface CommonArguments {
 	stepBack?: boolean;
 	/** Control mapping of node.js scripts to files on disk. */
 	mapToFilesOnDisk?: boolean;
-	/** If set, print on debug console. */
-	__information?: string;
 }
 
 type ConsoleType = 'internalConsole' | 'integratedTerminal' | 'externalTerminal';
@@ -1011,10 +1009,6 @@ export class NodeDebugSession extends DebugSession {
 	 * returns true on error.
 	 */
 	private _processCommonArgs(response: DebugProtocol.Response, args: CommonArguments): boolean {
-
-		if (typeof args.__information === 'string') {
-			this.outLine(args.__information);
-		}
 
 		if (typeof args.trace === 'string') {
 			this._trace = args.trace.split(',');

@@ -355,7 +355,7 @@ function startSession(config: any): StartSessionResult {
 
 				case 'launch':
 					if (config.runtimeExecutable) {
-						config.__information = localize('protocol.switch.runtime.set', "Debugging with legacy protocol because a runtime executable is set.");
+						log(localize('protocol.switch.runtime.set', "Debugging with legacy protocol because a runtime executable is set."));
 					} else {
 						// only determine version if no runtimeExecutable is set (and 'node' on PATH is used)
 						const result = spawnSync('node', [ '--version' ]);
@@ -363,12 +363,12 @@ function startSession(config: any): StartSessionResult {
 						if (semVerString) {
 							if (semVerStringToInt(semVerString) >= InspectorMinNodeVersionLaunch) {
 								config.type = 'node2';
-								config.__information = localize('protocol.switch.inspector.version', "Debugging with inspector protocol because Node {0} was detected.", semVerString.trim());
+								log(localize('protocol.switch.inspector.version', "Debugging with inspector protocol because Node {0} was detected.", semVerString.trim()));
 							} else {
-								config.__information = localize('protocol.switch.legacy.version', "Debugging with legacy protocol because Node {0} was detected.", semVerString.trim());
+								log(localize('protocol.switch.legacy.version', "Debugging with legacy protocol because Node {0} was detected.", semVerString.trim()));
 							}
 						} else {
-							config.__information = localize('protocol.switch.unknown.version', "Debugging with legacy protocol because Node version could not be determined.");
+							log(localize('protocol.switch.unknown.version', "Debugging with legacy protocol because Node version could not be determined."));
 						}
 					}
 					break;
@@ -389,6 +389,10 @@ function startSession(config: any): StartSessionResult {
 	};
 }
 
+function log(message: string) {
+	vscode.commands.executeCommand('debug.logToDebugConsole', message);
+}
+
 function getProtocolForAttach(config: any): Promise<string|undefined> {
 	const address = config.address || '127.0.0.1';
 	const port = config.port || 9229;
@@ -400,10 +404,10 @@ function getProtocolForAttach(config: any): Promise<string|undefined> {
 				const semVerString: string = versionObject[0].Browser;
 				if (semVerString) {
 					if (semVerStringToInt(semVerString) >= InspectorMinNodeVersionAttach) {
-						config.__information = localize('protocol.switch.inspector.version', "Debugging with inspector protocol because Node {0} was detected.", semVerString.trim());
+						log(localize('protocol.switch.inspector.version', "Debugging with inspector protocol because Node {0} was detected.", semVerString.trim()));
 						return 'inspector';
 					} else {
-						config.__information = localize('protocol.switch.legacy.version', "Debugging with legacy protocol because Node {0} was detected.", semVerString.trim());
+						log(localize('protocol.switch.legacy.version', "Debugging with legacy protocol because Node {0} was detected.", semVerString.trim()));
 						return undefined;
 					}
 				}
@@ -411,11 +415,11 @@ function getProtocolForAttach(config: any): Promise<string|undefined> {
 		} catch (e) {
 			// Not JSON
 		}
-		config.__information = localize('protocol.switch.unknown.version', "Debugging with legacy protocol because Node version could not be determined.");
+		log(localize('protocol.switch.unknown.version', "Debugging with legacy protocol because Node version could not be determined."));
 	},
 	e => {
 		// Not inspector
-		config.__information = localize('protocol.switch.unknown.version', "Debugging with legacy protocol because Node version could not be determined.");
+		log(localize('protocol.switch.unknown.version', "Debugging with legacy protocol because Node version could not be determined."));
 	});
 }
 
