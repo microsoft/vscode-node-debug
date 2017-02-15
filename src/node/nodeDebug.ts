@@ -3315,7 +3315,10 @@ export class NodeDebugSession extends DebugSession {
 								// we cannot use dot notation
 								pi.text = `['${name}']`;
 								if (dot > 0) {
-									pi.start = dot-1;
+									// specify a range starting with the '.' and extending to the end of the line
+									// which will be replaced by the completion proposal.
+									pi.start = dot;
+									pi.length = line.length - dot;
 								}
 							}
 
