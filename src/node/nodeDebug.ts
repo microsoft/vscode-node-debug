@@ -1162,7 +1162,7 @@ export class NodeDebugSession extends DebugSession {
 					if (now < endTime) {
 						setTimeout(() => {
 							this.log('la', '_attach: retry socket.connect');
-							socket.connect(port);
+							socket.connect(port, address);
 						}, 200);		// retry after 200 ms
 					} else {
 						this.sendErrorResponse(response, 2009, localize('VSND2009', "Cannot connect to runtime process (timeout after {0} ms).", '{_timeout}'), { _timeout: timeout });
