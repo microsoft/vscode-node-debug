@@ -445,8 +445,12 @@ function getProtocolForAttach(config: any): Promise<string|undefined> {
 
 	const socket = new net.Socket();
 	const cleanup = () => {
-		socket.write(`"Content-Length: 50\r\n\r\n{"command":"disconnect","type":"request","seq":2}"`);
-		socket.end();
+		try {
+			socket.write(`"Content-Length: 50\r\n\r\n{"command":"disconnect","type":"request","seq":2}"`);
+			socket.end();
+		} catch (e) {
+			// ignore failure
+		}
 	};
 
 	return new Promise<{reason: string, protocol: string}>(resolve => {
@@ -477,6 +481,7 @@ function getProtocolForAttach(config: any): Promise<string|undefined> {
 			resolve(defaultResult);
 		}, 1000);
 	}).catch(err => {
+		cleanup();
 		return defaultResult;
 	}).then(result => {
 		cleanup();
