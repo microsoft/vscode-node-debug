@@ -898,7 +898,7 @@ export class NodeDebugSession extends DebugSession {
 		// read env from disk and merge into envVars
 		if (args.envFile) {
 			try {
-				const buffer = FS.readFileSync(args.envFile, 'utf8');
+				const buffer = PathUtils.stripBOM(FS.readFileSync(args.envFile, 'utf8'));
 				const env = {};
 				buffer.split('\n').forEach( line => {
 					const r = line.match(/^\s*([\w\.\-]+)\s*=\s*(.*)?\s*$/);
@@ -2308,7 +2308,7 @@ export class NodeDebugSession extends DebugSession {
 					if (err) {
 						errorDispatch(err);
 					} else {
-						completeDispatch(fileContents);
+						completeDispatch(PathUtils.stripBOM(fileContents));
 					}
 				});
 			});

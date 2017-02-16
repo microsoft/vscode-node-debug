@@ -392,7 +392,7 @@ export class SourceMaps implements ISourceMaps {
 				if (err) {
 					reject(err);
 				} else {
-					resolve(fileContents);
+					resolve(PathUtils.stripBOM(fileContents));
 				}
 			});
 		});
