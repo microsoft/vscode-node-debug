@@ -395,7 +395,12 @@ function log(message: string) {
 
 function getProtocolForAttach(config: any): Promise<string|undefined> {
 	const address = config.address || '127.0.0.1';
-	const port = config.port || 9229;
+	const port = config.port;
+	if (!port) {
+		// Probably a case where the process isn't in debug mode yet, and processId is specified
+		log(localize('protocol.switch.unknown.version', "Debugging with legacy protocol because Node version could not be determined."));
+		return Promise.resolve('legacy');
+	}
 
 	return getURL(`http://${address}:${port}/json/version`).then(response => {
 		try {
