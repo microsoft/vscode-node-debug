@@ -49,7 +49,7 @@
 	"node.sourceMaps.description": "JavaScript ソース マップを使用します (存在する場合)。",
 	"node.stopOnEntry.description": "起動後、プログラムを自動的に停止します。",
 	"node.timeout.description": "このミリ秒の間、Node.js への接続を再試行します。既定値は 10000 ミリ秒です。",
-	"outDir.deprecationMessage": "属性 'outDir' は使用されていません。代わりに 'outFiles' を使用してください。",
+	"outDir.deprecationMessage": "属性 'outDir' は非推奨です。代わりに 'outFiles' を使用してください。",
 	"outFiles.description": "ソース マップを有効にすると、これらの glob パターンは生成した JavaScript ファイルを指定します。パターンが '!' で始まる場合は、ファイルは除外されます。指定しない場合は、生成されたコードはそのソースと同じディレクトリ内にあると想定されます。",
 	"skipFiles.description": "デバッグ時にスキップするファイルの glob パターンの配列。",
 	"smartStep.description": "元のソースにマップし直すことができない、生成されたコードを自動的にステップ スルーします。"
