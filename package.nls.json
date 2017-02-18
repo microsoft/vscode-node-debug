@@ -11,9 +11,9 @@
 	"launch.args.description": "Command line arguments passed to the program.",
 
 	"node.protocol.description": "Node.js debug protocol to use.",
-		"node.protocol.auto.description": "'auto' tries to detect the best protocol automatically.",
-		"node.protocol.inspector.description": "'inspector' is the new protocol supported by Node.js versions >= 6.3.",
-		"node.protocol.legacy.description": "'legacy' is the old protocol supported by Node.js versions < 8.0.",
+		"node.protocol.auto.description": "try to detect the best protocol automatically",
+		"node.protocol.inspector.description": "new protocol supported by Node.js versions >= 6.3",
+		"node.protocol.legacy.description": "old protocol supported by Node.js versions < 8.0",
 
 	"node.sourceMaps.description": "Use JavaScript source maps (if they exist).",
 	"node.stopOnEntry.description": "Automatically stop program after launch.",
@@ -24,10 +24,10 @@
 
 	"node.launch.program.description": "Absolute path to the program. Generated value is guessed by looking at package.json and opened files. Edit this attribute.",
 	"node.launch.externalConsole.deprecationMessage": "Attribute 'externalConsole' is deprecated, use 'console' instead.",
-	"node.launch.console.description": "Where to launch the debug target",
-		"node.launch.console.internalConsole.description": "internalConsole: the VS Code Debug Console (which doesn't support to provide input for a program)",
-		"node.launch.console.integratedTerminal.description": "integratedTerminal: VS Code's integrated terminal",
-		"node.launch.console.externalTerminal.description": "externalTerminal: an external terminal that can be configured via user settings",
+	"node.launch.console.description": "Where to launch the debug target.",
+		"node.launch.console.internalConsole.description": "VS Code Debug Console (which doesn't support to read input from a program)",
+		"node.launch.console.integratedTerminal.description": "VS Code's integrated terminal",
+		"node.launch.console.externalTerminal.description": "external terminal that can be configured via user settings",
 
 	"node.launch.cwd.description": "Absolute path to the working directory of the program being debugged.",
 	"node.launch.runtimeExecutable.description": "Runtime to use. Either an absolute path or the name of a runtime available on the PATH. If omitted 'node' is assumed.",
