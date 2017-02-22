@@ -776,7 +776,7 @@ export class NodeDebugSession extends DebugSession {
 			// we always launch in 'debug-brk' mode, but we only show the break event if 'stopOnEntry' attribute is true.
 			let launchArgs = [ runtimeExecutable ];
 			if (!this._noDebug) {
-				if (typeof args.stopOnEntry === 'boolean' && args.stopOnEntry) {
+				if (typeof args.stopOnEntry === 'boolean' && args.stopOnEntry || programArgs.some(a => a.indexOf('--extensionTestsPath=') === 0)) {
 					launchArgs.push(`--debugBrkPluginHost=${port}`);
 				} else {
 					launchArgs.push(`--debugPluginHost=${port}`);
