@@ -3267,7 +3267,7 @@ export class NodeDebugSession extends DebugSession {
 		return script;
 	}
 
-	//--- source request ------------------------------------------------------------------------------------------------------
+	//--- completions request -------------------------------------------------------------------------------------------------
 
 	protected completionsRequest(response: DebugProtocol.CompletionsResponse, args: DebugProtocol.CompletionsArguments): void {
 
@@ -3413,6 +3413,19 @@ export class NodeDebugSession extends DebugSession {
 			// in case of error return empty array
 			return [];
 		});
+	}
+
+	//--- custom request ------------------------------------------------------------------------------------------------------
+
+	/**
+	 * Handle custom requests.
+	 */
+	protected customRequest(command: string, response: DebugProtocol.Response, args: any): void {
+		if (command === 'toggleSkipFileStatus') {
+			this.outLine(localize('toggleSkipFileStatus.not.implemented', "\"Toggle skipping this file\" is not yet implemented for the legacy protocol debugger."));
+		} else {
+			super.customRequest(command, response, args);
+		}
 	}
 
 	//---- private helpers ----------------------------------------------------------------------------------------------------
