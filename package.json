@@ -168,7 +168,7 @@
 							"type": "node",
 							"request": "attach",
 							"name": "${1:Attach to Process}",
-							"processId": "^\"\\${command.PickProcess}\"",
+							"processId": "^\"\\${command:PickProcess}\"",
 							"port": 5858
 						}
 					},
