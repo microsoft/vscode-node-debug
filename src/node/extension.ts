@@ -278,9 +278,6 @@ function guessProgramFromPackage(folderPath: string): string | undefined {
 // For launch, use inspector protocol starting with v6.9 because it's stable after that version.
 const InspectorMinNodeVersionLaunch = 60900;
 
-// For attach, only require v6.3 because that's the minimum version where the inspector protocol is supported at all.
-const InspectorMinNodeVersionAttach = 60300;
-
 
 /**
  * The result type of the startSession command.
@@ -405,16 +402,15 @@ function getProtocolForAttach(config: any): Promise<string|undefined> {
 	return getURL(`http://${address}:${port}/json/version`).then(response => {
 		try {
 			const versionObject = JSON.parse(response);
-			if (versionObject.length > 0) {
-				const semVerString: string = versionObject[0].Browser;
-				if (semVerString) {
-					if (semVerStringToInt(semVerString) >= InspectorMinNodeVersionAttach) {
-						log(localize('protocol.switch.inspector.version', "Debugging with inspector protocol because Node {0} was detected.", semVerString.trim()));
-						return 'inspector';
-					} else {
-						log(localize('protocol.switch.legacy.version', "Debugging with legacy protocol because Node {0} was detected.", semVerString.trim()));
-						return undefined;
-					}
+			const semVerString = versionObject &&
+				(versionObject.Browser || // Node v7+
+				(versionObject[0] && versionObject[0].Browser)); // Node v6-7
+
+			if (semVerString) {
+				const version = semVerString.match(/v\d+\.\d+\.\d+/);
+				if (version) {
+					log(localize('protocol.switch.inspector.version', "Debugging with inspector protocol because Node {0} was detected.", version[0]));
+					return 'inspector';
 				}
 			}
 		} catch (e) {
