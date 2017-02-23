@@ -1173,7 +1173,7 @@ export class NodeDebugSession extends DebugSession {
 							socket.connect(port, address);
 						}, 200);		// retry after 200 ms
 					} else {
-						this.sendErrorResponse(response, 2009, localize('VSND2009', "Cannot connect to runtime process (timeout after {0} ms).", '{_timeout}'), { _timeout: timeout });
+						this.sendErrorResponse(response, 2009, localize('VSND2009', "Cannot connect to runtime via 'legacy' protocol; consider using 'inspector' protocol (timeout after {0} ms).", '{_timeout}'), { _timeout: timeout });
 					}
 				} else {
 					this.sendErrorResponse(response, 2010, localize('VSND2010', "Cannot connect to runtime process (reason: {0}).", '{_error}'), { _error: err.message });
