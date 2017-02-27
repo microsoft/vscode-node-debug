@@ -6,5 +6,9 @@
 {
 	"node.attach.config.name": "Подключиться к процессу",
 	"node.launch.config.name": "Запустить программу",
-	"pickNodeProcess": "Выберите процесс node.js или gulp, к которому нужно подключиться."
+	"pickNodeProcess": "Выберите процесс node.js или gulp, к которому нужно подключиться.",
+	"protocol.switch.inspector.version": "Отладка с помощью протокола inspector, так как была обнаружена версия Node {0}.",
+	"protocol.switch.legacy.version": "Отладка с помощью протокола прежней версии, так как была обнаружена версия Node {0}.",
+	"protocol.switch.runtime.set": "Отладка с помощью протокола прежней версии, так как задан исполняемый файл среды выполнения.",
+	"protocol.switch.unknown.version": "Отладка с помощью протокола прежней версии, так как не удалось определить версию Node."
 }

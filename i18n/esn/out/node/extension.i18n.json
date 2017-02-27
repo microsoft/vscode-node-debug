@@ -6,5 +6,9 @@
 {
 	"node.attach.config.name": "Asociar al proceso",
 	"node.launch.config.name": "Iniciar programa",
-	"pickNodeProcess": "Elija el proceso de node.js o Gulp para la asociación"
+	"pickNodeProcess": "Elija el proceso de node.js o Gulp para la asociación",
+	"protocol.switch.inspector.version": "Depuración con el protocolo de inspector porque se detectó el nodo {0}.",
+	"protocol.switch.legacy.version": "Depuración con el protocolo heredado porque se detectó el nodo {0}.",
+	"protocol.switch.runtime.set": "Depuración con el protocolo heredado porque hay un ejecutable en tiempo de ejecución configurado.",
+	"protocol.switch.unknown.version": "Depuración con el protocolo heredado porque no se pudo determinar la versión del nodo."
 }

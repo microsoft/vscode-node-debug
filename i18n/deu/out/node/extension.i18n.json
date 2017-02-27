@@ -6,5 +6,9 @@
 {
 	"node.attach.config.name": "An den Prozess anfügen",
 	"node.launch.config.name": "Programm starten",
-	"pickNodeProcess": "\"Node.js\" oder Gulp-Prozess zum Anfügen auswählen"
+	"pickNodeProcess": "\"Node.js\" oder Gulp-Prozess zum Anfügen auswählen",
+	"protocol.switch.inspector.version": "Mit Inspektor-Protokoll debuggen, da Knoten {0} ermittelt wurde.",
+	"protocol.switch.legacy.version": "Mit Legacy-Protokoll debuggen, da Knoten {0} ermittelt wurde.",
+	"protocol.switch.runtime.set": "Mit Legacy-Protokoll debuggen, da eine ausführbaren Laufzeit festgelegt ist.",
+	"protocol.switch.unknown.version": "Mit Legacy-Protokoll debuggen, da die Knotenversion nicht ermittelt werden konnte."
 }

@@ -6,5 +6,9 @@
 {
 	"node.attach.config.name": "附加至處理序",
 	"node.launch.config.name": "啟動程式",
-	"pickNodeProcess": "挑選附加目標 node.js 或 Gulp 處理序"
+	"pickNodeProcess": "挑選附加目標 node.js 或 Gulp 處理序",
+	"protocol.switch.inspector.version": "因為偵測到節點 {0}，所以使用檢查通訊協定進行偵錯。",
+	"protocol.switch.legacy.version": "因為偵測到節點 {0}，所以使用傳統通訊協定進行偵錯。",
+	"protocol.switch.runtime.set": "因為已設定執行階段可執行檔，所以使用傳統通訊協定進行偵錯。",
+	"protocol.switch.unknown.version": "因為無法判斷節點版本，所以使用傳統通訊協定進行偵錯。"
 }

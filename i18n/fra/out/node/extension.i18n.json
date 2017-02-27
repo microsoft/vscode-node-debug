@@ -6,5 +6,9 @@
 {
 	"node.attach.config.name": "Attacher au processus",
 	"node.launch.config.name": "Lancer le programme",
-	"pickNodeProcess": "Sélectionnez le processus node.js ou gulp à attacher"
+	"pickNodeProcess": "Sélectionnez le processus node.js ou gulp à attacher",
+	"protocol.switch.inspector.version": "Débogage à l'aide du protocole inspector, car Node {0} a été détecté.",
+	"protocol.switch.legacy.version": "Débogage à l'aide du protocole hérité, car Node {0} a été détecté.",
+	"protocol.switch.runtime.set": "Débogage à l'aide du protocole hérité, car un exécutable (runtime) est défini.",
+	"protocol.switch.unknown.version": "Débogage à l'aide du protocole hérité, car la version de Node n'a pas pu être déterminée."
 }
