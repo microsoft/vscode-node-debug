@@ -3421,11 +3421,41 @@ export class NodeDebugSession extends DebugSession {
 	 * Handle custom requests.
 	 */
 	protected customRequest(command: string, response: DebugProtocol.Response, args: any): void {
-		if (command === 'toggleSkipFileStatus') {
-			this.outLine(localize('toggleSkipFileStatus.not.implemented', "\"Toggle skipping this file\" is not yet implemented for the legacy protocol debugger."));
-		} else {
-			super.customRequest(command, response, args);
+
+		switch (command) {
+			case 'getLoadScripts':
+				this.allLoadedScriptsRequest(response, args);
+				break;
+			case 'toggleSkipFileStatus':
+				this.outLine(localize('toggleSkipFileStatus.not.implemented', "\"Toggle skipping this file\" is not yet implemented for the legacy protocol debugger."));
+				this.sendResponse(response);
+				break;
+			default:
+				super.customRequest(command, response, args);
+				break;
 		}
+	}
+
+	private allLoadedScriptsRequest(response: DebugProtocol.Response, args: any) {
+
+		this._node.scripts( { types: 4 } ).then(resp => {
+			let result = Array<any>();
+			for (let script of resp.body) {
+				if (script.name) {
+					const name = Path.basename(script.name);
+					result.push({
+						label: name,
+						description: script.name === name ? '' : script.name,
+						source: new Source(name, script.name, this._getScriptIdHandle(script.id))
+					});
+				}
+			}
+			result = result.sort((a, b) => a.label.localeCompare(b.label));
+			response.body = { loadedScripts: result };
+			this.sendResponse(response);
+		}).catch(err => {
+			this.sendErrorResponse(response, 9999, `scripts error: ${err}`);
+		});
 	}
 
 	//---- private helpers ----------------------------------------------------------------------------------------------------

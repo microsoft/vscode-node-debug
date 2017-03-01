@@ -72,11 +72,27 @@
 	},
 	"main": "./out/node/extension",
 	"activationEvents": [
+		"onCommand:extension.node-debug.pickLoadedScript",
 		"onCommand:extension.pickNodeProcess",
 		"onCommand:extension.node-debug.provideInitialConfigurations",
 		"onCommand:extension.node-debug.startSession"
 	],
 	"contributes": {
+		"commands": [
+			{
+				"command": "extension.node-debug.pickLoadedScript",
+				"title": "%open.loaded.script%",
+				"category": "Debug"
+			}
+		],
+		"keybindings": [
+			{
+				"command": "extension.node-debug.pickLoadedScript",
+				"key": "ctrl+f4",
+				"mac": "cmd+f4",
+				"when": "debugType == 'node'"
+			}
+		],
 		"breakpoints": [
 			{
 				"language": "javascript"

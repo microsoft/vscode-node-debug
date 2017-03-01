@@ -16,6 +16,8 @@ const localize = nls.config(process.env.VSCODE_NLS_CONFIG)();
 
 export function activate(context: vscode.ExtensionContext) {
 
+	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.pickLoadedScript', () => pickLoadedScript()));
+
 	context.subscriptions.push(vscode.commands.registerCommand('extension.pickNodeProcess', () => pickProcess()));
 
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.provideInitialConfigurations', () => createInitialConfigurations()));
@@ -24,6 +26,45 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 export function deactivate() {
+}
+
+//---- loaded script picker
+
+interface ScriptItem extends vscode.QuickPickItem {
+	source?: any;	// Source
+}
+
+function pickLoadedScript() {
+
+	return listLoadedScripts().then(items => {
+
+		let options : vscode.QuickPickOptions = {
+			placeHolder: localize('select.script', "Select a script"),
+			matchOnDescription: true,
+			matchOnDetail: true
+		};
+
+		if (items === undefined) {
+			items = [ { label: localize('no.loaded.scripts', "No loaded scripts available"), description: "" } ];
+		}
+
+		vscode.window.showQuickPick(items, options).then(item => {
+			if (item && item.source) {
+				let uri = vscode.Uri.parse(`debug://internal/${item.source.path}?ref=${item.source.sourceReference}`);
+				vscode.workspace.openTextDocument(uri).then(doc => vscode.window.showTextDocument(doc));
+			}
+		});
+	});
+}
+
+function listLoadedScripts() : Thenable<ScriptItem[] | undefined> {
+	return vscode.commands.executeCommand<string[]>('workbench.customDebugRequest', 'getLoadScripts', {} ).then((reply: any) => {
+		if (reply && reply.success) {
+			return reply.body.loadedScripts;
+		} else {
+			return undefined;
+		}
+	});
 }
 
 //---- extension.pickNodeProcess
