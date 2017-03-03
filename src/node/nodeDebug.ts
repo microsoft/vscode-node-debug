@@ -1529,6 +1529,20 @@ export class NodeDebugSession extends DebugSession {
 			}
 		}
 
+		if (source.path && source.path.indexOf(`/${NodeDebugSession.NODE_INTERNALS}/`) === 0) {
+			// a core module
+			const path = source.path.substr(NodeDebugSession.NODE_INTERNALS.length+2);
+			this._findModule(path).then(scriptId => {
+				if (scriptId >= 0) {
+					this._updateBreakpoints(response, null, scriptId, sbs);
+				} else {
+					this.sendErrorResponse(response, 2019, localize('VSND2019', "Internal module {0} not found.", '{_module}'), { _module: path });
+				}
+				return;
+			});
+			return;
+		}
+
 		if (typeof source.sourceReference === 'number' && source.sourceReference > 0) {
 			const srcSource = this._sourceHandles.get(source.sourceReference);
 			if (srcSource && srcSource.scriptId) {
@@ -3442,6 +3456,7 @@ export class NodeDebugSession extends DebugSession {
 			let result = Array<any>();
 			for (let script of resp.body) {
 				if (script.name) {
+					script.name = this._scriptNameToPath(script.name);
 					const name = Path.basename(script.name);
 					result.push({
 						label: name,
