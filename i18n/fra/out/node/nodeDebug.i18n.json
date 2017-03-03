@@ -8,7 +8,7 @@
 	"VSND2002": "Impossible de lancer le programme '{0}'. Essayez éventuellement de configurer les mappages de sources.",
 	"VSND2003": "Impossible de lancer le programme '{0}' ; essayez de définir l'attribut '{1}'.",
 	"VSND2006": "Attacher au processus : '{0}' ne ressemble pas à un ID de processus.",
-	"VSND2009": "Impossible de se connecter au processus de runtime (délai d'expiration dépassé après {0} ms).",
+	"VSND2009": "Connexion impossible au runtime via le protocole 'legacy'. Utilisez plutôt le protocole 'inspector' (délai d'expiration dépassé après {0} ms).",
 	"VSND2010": "Impossible de se connecter au processus de runtime (raison : {0}).",
 	"VSND2011": "Impossible de lancer la cible de débogage dans le terminal ({0}).",
 	"VSND2015": "La requête '{_request}' a été annulée, car Node.js a cessé de répondre.",
@@ -58,5 +58,6 @@
 	"source.not.found": "Impossible de récupérer le contenu.",
 	"source.skipFiles": "ignoré en raison de 'skipFiles'",
 	"source.smartstep": "ignoré en raison de 'smartStep'",
-	"sourcemapping.fail.message": "Point d'arrêt ignoré, car le code généré est introuvable. Problème de mappage de source ?"
+	"sourcemapping.fail.message": "Point d'arrêt ignoré, car le code généré est introuvable. Problème de mappage de source ?",
+	"toggleSkipFileStatus.not.implemented": "\"Ignorer/Ne pas ignorer ce fichier\" n'est pas encore implémenté pour le débogueur de protocole hérité."
 }

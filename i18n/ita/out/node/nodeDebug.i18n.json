@@ -8,7 +8,7 @@
 	"VSND2002": "Non è possibile avviare il programma '{0}'. Per risolvere il problema, provare a configurare i mapping di origine.",
 	"VSND2003": "Non è possibile avviare il programma '{0}'. Per risolvere il problema, provare a impostare l'attributo '{1}'.",
 	"VSND2006": "Collegamento a processo: '{0}' non sembra essere un ID processo.",
-	"VSND2009": "Non è possibile connettersi al processo di runtime (timeout dopo {0} ms).",
+	"VSND2009": "Non è possibile connettersi al runtime tramite il protocollo 'legacy'. Provare a usare il protocollo 'inspector' (timeout dopo {0} ms).",
 	"VSND2010": "Non è possibile connettersi al processo di runtime (motivo: {0}).",
 	"VSND2011": "Non è possibile avviare la destinazione di debug nel terminale ({0}).",
 	"VSND2015": "La richiesta '{_request}' è stata annullata perché Node.js non risponde.",
@@ -58,5 +58,6 @@
 	"source.not.found": "Non è stato possibile recuperare il contenuto.",
 	"source.skipFiles": "ignorato a causa di 'skipFiles'",
 	"source.smartstep": "ignorato a causa di 'smartStep'",
-	"sourcemapping.fail.message": "Il punto di interruzione è stato ignorato perché il codice generato non è stato trovato. È possibile che si sia verificato un problema di mapping di origine."
+	"sourcemapping.fail.message": "Il punto di interruzione è stato ignorato perché il codice generato non è stato trovato. È possibile che si sia verificato un problema di mapping di origine.",
+	"toggleSkipFileStatus.not.implemented": "La funzionalità per ignorare o meno questo file non è ancora implementata per il debugger del protocollo legacy."
 }

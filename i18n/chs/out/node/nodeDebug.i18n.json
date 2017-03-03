@@ -8,7 +8,7 @@
 	"VSND2002": "无法启动计划“{0}”；配置源映射可能会有帮助。",
 	"VSND2003": "无法启动程序”{0}“；设置”{1}“属性可能会有帮助。",
 	"VSND2006": "附加到进程:“{0}”不像是进程 ID。",
-	"VSND2009": "无法连接到运行时进程({0} 毫秒后超时)。",
+	"VSND2009": "无法通过“旧”协议连接到运行时；请考虑采用“检查器”协议({0} 毫秒后超时)。",
 	"VSND2010": "无法连接到运行时进程(原因: {0})。",
 	"VSND2011": "无法在终端({0})中启动调试目标。",
 	"VSND2015": "由于 Node.js 无响应，已取消请求“{_request}”。",
@@ -58,5 +58,6 @@
 	"source.not.found": "无法检索内容。",
 	"source.skipFiles": "因 \"skipFiles\" 而跳过",
 	"source.smartstep": "因 \"smartStep\" 而跳过",
-	"sourcemapping.fail.message": "由于未找到生成的代码，已忽略断点(是否是源映射问题?)。"
+	"sourcemapping.fail.message": "由于未找到生成的代码，已忽略断点(是否是源映射问题?)。",
+	"toggleSkipFileStatus.not.implemented": "尚未对旧协议调试程序实现“切换跳过此文件”。"
 }
