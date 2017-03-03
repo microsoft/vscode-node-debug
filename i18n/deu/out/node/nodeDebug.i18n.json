@@ -8,7 +8,7 @@
 	"VSND2002": "Das Programm \"{0}\" kann nicht gestartet werden. Das Konfigurieren von Quellzuordnungen ist ggf. hilfreich.",
 	"VSND2003": "Das Programm \"{0}\" kann nicht gestartet werden. Das Festlegen des Attributs \"{1}\" ist ggf. hilfreich.",
 	"VSND2006": "An Prozess anfügen: \"{0}\" scheint keine Prozess-ID zu sein.",
-	"VSND2009": "Es kann keine Verbindung mit dem Laufzeitprozess hergestellt werden (Timeout nach {0} ms).",
+	"VSND2009": "Über das \"legacy\"-Protokoll kann keine Verbindung mit der Laufzeit hergestellt werden; verwenden Sie ggf. das \"inspector\"-Protokoll (Timeout nach {0} ms).",
 	"VSND2010": "Es kann keine Verbindung mit dem Laufzeitprozess hergestellt werden (Ursache: {0}).",
 	"VSND2011": "Das Debugziel im Terminal kann nicht gestartet werden ({0}).",
 	"VSND2015": "Die Anforderung \"{_request}\" wurde abgebrochen, weil Node.js nicht reagiert.",

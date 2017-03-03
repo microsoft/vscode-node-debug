@@ -7,6 +7,7 @@
 	"node.attach.config.name": "プロセスに添付",
 	"node.launch.config.name": "プログラムの起動",
 	"pickNodeProcess": "添付先の node.js プロセスか gulp プロセスを選びます",
+	"protocol.switch.attach.process": "以前のプロトコルでデバッグしています。ID によるプロセスへのアタッチは、以前のプロトコルに対してのみサポートされています。",
 	"protocol.switch.inspector.version": "ノード {0} が検出されたため、インスペクター プロトコルでデバッグしています。",
 	"protocol.switch.legacy.version": "ノード {0} が検出されたため、レガシ プロトコルでデバッグしています。",
 	"protocol.switch.runtime.set": "ランタイム実行可能ファイルが設定されているため、レガシ プロトコルでデバッグしています。",

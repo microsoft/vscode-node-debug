@@ -7,6 +7,7 @@
 	"node.attach.config.name": "Collega a processo",
 	"node.launch.config.name": "Avvia programma",
 	"pickNodeProcess": "Selezionare il processo node.js o gulp a cui collegarsi",
+	"protocol.switch.attach.process": "Il debug verrà eseguito con il protocollo legacy perché il collegamento a un processo in base all'ID è supportato solo per il protocollo legacy.",
 	"protocol.switch.inspector.version": "Debug con protocollo inspector perché è stato rilevato Node {0}.",
 	"protocol.switch.legacy.version": "Debug con protocollo legacy perché è stato rilevato Node {0}.",
 	"protocol.switch.runtime.set": "Debug con protocollo legacy perché è impostato un eseguibile di runtime.",
