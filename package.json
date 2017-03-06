@@ -379,6 +379,11 @@
 								"description": "%skipFiles.description%",
 								"items": { "type": "string" },
 								"default": []
+							},
+							"showAsyncStacks": {
+								"type": "boolean",
+								"description": "%node.showAsyncStacks.description%",
+								"default": true
 							}
 						}
 					},
@@ -461,6 +466,11 @@
 								"description": "%skipFiles.description%",
 								"items": { "type": "string" },
 								"default": []
+							},
+							"showAsyncStacks": {
+								"type": "boolean",
+								"description": "%node.showAsyncStacks.description%",
+								"default": true
 							}
 						}
 					}
