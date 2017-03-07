@@ -313,6 +313,7 @@ export class NodeDebugSession extends DebugSession {
 	private static PROTO = '__proto__';
 	private static DEBUG_INJECTION = 'debugInjection.js';
 	private static NODE_INTERNALS = '<node_internals>';
+	private static NODE_INTERNALS_PREFIX = /^<node_internals>[/\\]/;
 
 	private static NODE_SHEBANG_MATCHER = new RegExp('#! */usr/bin/env +node');
 	private static LONG_STRING_MATCHER = /\.\.\. \(length: [0-9]+\)$/;
@@ -636,6 +637,13 @@ export class NodeDebugSession extends DebugSession {
 			return `${NodeDebugSession.NODE_INTERNALS}/${scriptName}`;
 		}
 		return scriptName;
+	}
+
+	/**
+	 * Special treatment for internal modules: we remove '<internal>/' or '<internal>\'
+	 */
+	private _pathToScript(path: string): string {
+		return path.replace(NodeDebugSession.NODE_INTERNALS_PREFIX, '');
 	}
 
 	/**
@@ -1529,9 +1537,9 @@ export class NodeDebugSession extends DebugSession {
 			}
 		}
 
-		if (source.path && source.path.indexOf(`${NodeDebugSession.NODE_INTERNALS}/`) === 0) {
+		if (source.path && NodeDebugSession.NODE_INTERNALS_PREFIX.test(source.path)) {
 			// a core module
-			const path = source.path.substr(NodeDebugSession.NODE_INTERNALS.length+1);
+			const path = this._pathToScript(source.path);
 			this._findModule(path).then(scriptId => {
 				if (scriptId >= 0) {
 					this._updateBreakpoints(response, null, scriptId, sbs);
@@ -3224,15 +3232,9 @@ export class NodeDebugSession extends DebugSession {
 
 	protected sourceRequest(response: DebugProtocol.SourceResponse, args: DebugProtocol.SourceArguments): void {
 
-		if ((<any>args).source) {
-			const source = <Source> (<any>args).source;
+		if (args.source && args.source.path) {
 
-			let path = source.path;
-			if (path && path.indexOf(`${NodeDebugSession.NODE_INTERNALS}/`) === 0) {
-				path = source.path.substr(NodeDebugSession.NODE_INTERNALS.length+1);
-			}
-
-			this._loadScriptByPath(path).then(script => {
+			this._loadScriptByPath(this._pathToScript(args.source.path)).then(script => {
 				response.body = {
 					content: script.contents,
 					mimeType: 'text/javascript'
@@ -3241,7 +3243,6 @@ export class NodeDebugSession extends DebugSession {
 			}).catch(err => {
 				this.sendErrorResponse(response, 2026, localize('source.not.found', "Could not retrieve content."));
 			});
-
 			return;
 		}
 
