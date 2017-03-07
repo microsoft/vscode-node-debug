@@ -3224,6 +3224,27 @@ export class NodeDebugSession extends DebugSession {
 
 	protected sourceRequest(response: DebugProtocol.SourceResponse, args: DebugProtocol.SourceArguments): void {
 
+		if ((<any>args).source) {
+			const source = <Source> (<any>args).source;
+
+			let path = source.path;
+			if (path && path.indexOf(`${NodeDebugSession.NODE_INTERNALS}/`) === 0) {
+				path = source.path.substr(NodeDebugSession.NODE_INTERNALS.length+1);
+			}
+
+			this._loadScriptByPath(path).then(script => {
+				response.body = {
+					content: script.contents,
+					mimeType: 'text/javascript'
+				};
+				this.sendResponse(response);
+			}).catch(err => {
+				this.sendErrorResponse(response, 2026, localize('source.not.found', "Could not retrieve content."));
+			});
+
+			return;
+		}
+
 		const sourceHandle = args.sourceReference;
 		const srcSource = this._sourceHandles.get(sourceHandle);
 
@@ -3277,6 +3298,24 @@ export class NodeDebugSession extends DebugSession {
 
 			this._scripts.set(scriptId, script);
 		}
+
+		return script;
+	}
+
+	private _loadScriptByPath(name: string) : Promise<Script>  {
+
+		this.log('ls', `_loadScriptByPath: ${name}`);
+
+		// not found
+		const args = {
+			types: 1+2+4,
+			includeSource: true,
+			filter: name
+		};
+
+		let script = this._node.scripts(args).then(nodeResponse => {
+			return new Script(nodeResponse.body[0]);
+		});
 
 		return script;
 	}
