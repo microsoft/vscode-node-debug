@@ -50,7 +50,7 @@ function pickLoadedScript() {
 
 		vscode.window.showQuickPick(items, options).then(item => {
 			if (item && item.source) {
-				let uri = vscode.Uri.parse(`debug://internal/${item.source.path}?ref=${item.source.sourceReference}`);
+				let uri = vscode.Uri.parse(`debug:${item.source.path}?ref=${item.source.sourceReference}`);
 				vscode.workspace.openTextDocument(uri).then(doc => vscode.window.showTextDocument(doc));
 			}
 		});

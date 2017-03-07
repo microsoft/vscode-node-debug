@@ -1529,9 +1529,9 @@ export class NodeDebugSession extends DebugSession {
 			}
 		}
 
-		if (source.path && source.path.indexOf(`/${NodeDebugSession.NODE_INTERNALS}/`) === 0) {
+		if (source.path && source.path.indexOf(`${NodeDebugSession.NODE_INTERNALS}/`) === 0) {
 			// a core module
-			const path = source.path.substr(NodeDebugSession.NODE_INTERNALS.length+2);
+			const path = source.path.substr(NodeDebugSession.NODE_INTERNALS.length+1);
 			this._findModule(path).then(scriptId => {
 				if (scriptId >= 0) {
 					this._updateBreakpoints(response, null, scriptId, sbs);
