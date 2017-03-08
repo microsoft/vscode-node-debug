@@ -238,7 +238,7 @@ const initialConfigurations = [
 	{
 		type: 'node',
 		request: 'attach',
-		name: localize('node.attach.config.name', "Attach to Process"),
+		name: localize('node.attach.config.name', "Attach to Port"),
 		address: 'localhost',
 		port: 5858
 	}
