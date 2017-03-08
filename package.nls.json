@@ -77,6 +77,7 @@
 	"extensionHost.launch.runtimeExecutable.description": "Absolute path to VS Code.",
 	"extensionHost.launch.stopOnEntry.description": "Automatically stop the extension host after launch.",
 	"extensionHost.launch.sourceMaps.description": "Use JavaScript source maps.",
+	"extensionHost.launch.env.description": "Environment variables passed to the extension host.",
 
 	"extensionHost.snippet.launch.label": "VS Code Extension Development",
 	"extensionHost.snippet.launch.description": "Launch a VS Code extension in debug mode",

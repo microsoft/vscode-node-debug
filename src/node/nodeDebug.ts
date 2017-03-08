@@ -795,7 +795,15 @@ export class NodeDebugSession extends DebugSession {
 			this.log('eh', `launchRequest: launching extensionhost`);
 			this._sendLaunchCommandToConsole(launchArgs);
 
-			const cmd = CP.spawn(runtimeExecutable, launchArgs.slice(1));
+			let options;
+			if (args.env) {
+				options = {
+					// merge environment variables into a copy of the process.env
+					env: PathUtils.extendObject(PathUtils.extendObject( {}, process.env), args.env)
+				};
+			}
+
+			const cmd = CP.spawn(runtimeExecutable, launchArgs.slice(1), options);
 			cmd.on('error', (err) => {
 				this._terminated(`failed to launch extensionHost (${err})`);
 				this.log('eh', `launchRequest: failed to launch extensionHost: ${err}`);

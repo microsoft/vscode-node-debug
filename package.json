@@ -521,6 +521,12 @@
 								"items": { "type": "string" },
 								"default": [ "--extensionDevelopmentPath=${workspaceRoot}" ]
 							},
+							"env": {
+								"type": "object",
+								"additionalProperties": { "type": "string" },
+								"description": "%extensionHost.launch.env.description%",
+								"default": {}
+							},
 							"stopOnEntry": {
 								"type": "boolean",
 								"description": "%extensionHost.launch.stopOnEntry.description%",
