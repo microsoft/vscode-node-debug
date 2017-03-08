@@ -384,6 +384,11 @@
 								"type": "boolean",
 								"description": "%node.showAsyncStacks.description%",
 								"default": true
+							},
+							"trace": {
+								"type": "string",
+								"description": "%trace.description%",
+								"default": "all"
 							}
 						}
 					},
@@ -471,6 +476,11 @@
 								"type": "boolean",
 								"description": "%node.showAsyncStacks.description%",
 								"default": true
+							},
+							"trace": {
+								"type": "string",
+								"description": "%trace.description%",
+								"default": "all"
 							}
 						}
 					}
@@ -542,6 +552,11 @@
 								"description": "%skipFiles.description%",
 								"items": { "type": "string" },
 								"default": []
+							},
+							"trace": {
+								"type": "string",
+								"description": "%trace.description%",
+								"default": "all"
 							}
 						}
 					}
