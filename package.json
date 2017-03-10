@@ -408,7 +408,7 @@
 							"processId": {
 								"type": "string",
 								"description": "%node.attach.processId.description%",
-								"default": "${command.PickProcess}"
+								"default": "${command:PickProcess}"
 							},
 							"port": {
 								"type": "number",
