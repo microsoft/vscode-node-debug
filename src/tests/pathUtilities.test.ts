@@ -237,7 +237,7 @@ suite('pathUtilities', () => {
 
 	});
 
-	suite.only('extendObject', () => {
+	suite('extendObject', () => {
 
 		test('extend', () => {
 			assert.deepEqual(PathUtils.extendObject<any>({ foo: "bar" }, { abc: 123 }), { foo: "bar", abc: 123 });
