@@ -51,7 +51,7 @@
 	"node.snippet.launch.label": "Node.js: 启动计划",
 	"node.snippet.mocha.description": "调试 mocha 测试",
 	"node.snippet.mocha.label": "Node.js: Mocha 测试",
-	"node.snippet.nodemon.description": "使用 nodemon 以在源更改上重新启动调试会话",
+	"node.snippet.nodemon.description": "使用 nodemon 以在源更改时重新启动调试会话",
 	"node.snippet.nodemon.label": "Node.js: Nodemon 安装程序",
 	"node.snippet.npm.description": "通过 npm“调试”脚本启动节点计划",
 	"node.snippet.npm.label": "Node.js: 通过 NPM 启动",
