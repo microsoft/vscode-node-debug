@@ -2048,7 +2048,7 @@ export class NodeDebugSession extends DebugSession {
 			fromFrame: startFrame,
 			toFrame: startFrame+maxLevels
 		};
-		const cmd = this._nodeInjectionAvailable ? 'vscode_backtrace' : 'backtrace';
+		const cmd = 'backtrace'; // this._nodeInjectionAvailable ? 'vscode_backtrace' : 'backtrace';
 
 		this.log('va', `stackTraceRequest: ${cmd} ${startFrame} ${maxLevels}`);
 		this._node.command2(cmd, backtraceArgs).then((response: V8BacktraceResponse) => {
