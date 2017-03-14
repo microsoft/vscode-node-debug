@@ -386,9 +386,9 @@
 								"default": true
 							},
 							"trace": {
-								"type": "string",
+								"type": ["boolean", "string"],
 								"description": "%trace.description%",
-								"default": "all"
+								"default": true
 							}
 						}
 					},
@@ -478,9 +478,9 @@
 								"default": true
 							},
 							"trace": {
-								"type": "string",
+								"type": ["boolean", "string"],
 								"description": "%trace.description%",
-								"default": "all"
+								"default": true
 							}
 						}
 					}
@@ -560,9 +560,9 @@
 								"default": []
 							},
 							"trace": {
-								"type": "string",
+								"type": ["boolean", "string"],
 								"description": "%trace.description%",
-								"default": "all"
+								"default": true
 							}
 						}
 					}

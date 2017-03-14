@@ -258,7 +258,7 @@ interface CommonArguments {
 	 * 'rc': ref caching
 	 * 'eh': extensionhost flow
 	 * */
-	trace?: string;
+	trace?: boolean | string;
 	/** The debug port to attach to. */
 	port: number;
 	/** The TCP/IP address of the port (remote addresses only supported for node >= 5.0). */
@@ -354,7 +354,7 @@ export class NodeDebugSession extends DebugSession {
 	private static PROPERTY_NAME_MATCHER = /^[$_\w][$_\w0-9]*$/;
 
 	// tracing
-	private _trace: string[];
+	private _trace: string[] | undefined;
 	private _traceAll = false;
 
 	// options
@@ -1045,7 +1045,10 @@ export class NodeDebugSession extends DebugSession {
 	 */
 	private _processCommonArgs(response: DebugProtocol.Response, args: CommonArguments): boolean {
 
-		if (typeof args.trace === 'string') {
+		if (typeof args.trace === 'boolean') {
+			this._trace = args.trace ? [ 'all' ] : undefined;
+			this._traceAll = args.trace;
+		} else if (typeof args.trace === 'string') {
 			this._trace = args.trace.split(',');
 			this._traceAll = this._trace.indexOf('all') >= 0;
 		}
