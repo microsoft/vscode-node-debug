@@ -3354,9 +3354,12 @@ export class NodeDebugSession extends DebugSession {
 		const prefix = line.substring(0, column);
 
 		let expression: string | undefined;
-		const dot = prefix.lastIndexOf('.');
+		let dot = prefix.lastIndexOf('.');
 		if (dot >= 0) {
-			expression = prefix.substr(0, dot);
+			const rest = prefix.substr(dot+1);	// everything between the '.' and the cursor
+			if (rest.length === 0 || NodeDebugSession.PROPERTY_NAME_MATCHER.test(rest)) { // empty or proper attribute name
+				expression = prefix.substr(0, dot);
+			}
 		}
 
 		if (expression) {
@@ -3427,6 +3430,14 @@ export class NodeDebugSession extends DebugSession {
 			});
 
 		} else {
+
+			if (prefix[prefix.length-1] === ')') {
+				response.body = {
+					targets: []
+				};
+				this.sendResponse(response);
+				return;
+			}
 
 			let frame: V8Frame | undefined;
 			if (typeof args.frameId === 'number' && args.frameId > 0) {
