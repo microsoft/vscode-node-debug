@@ -12,8 +12,8 @@ import {DebugProtocol} from 'vscode-debugprotocol';
 
 import {
 	NodeV8Protocol, NodeV8Event, NodeV8Response,
-	V8SetBreakpointArgs, V8SetExceptionBreakArgs, V8SetVariableValueArgs, V8RestartFrameArgs,
-	V8BacktraceResponse, V8ScopeResponse, V8EvaluateResponse, V8FrameResponse,
+	V8SetBreakpointArgs, V8SetExceptionBreakArgs, V8SetVariableValueArgs, V8RestartFrameArgs, V8BacktraceArgs,
+	V8ScopeResponse, V8EvaluateResponse, V8FrameResponse,
 	V8EventBody, V8BreakEventBody, V8ExceptionEventBody,
 	V8Ref, V8Handle, V8Property, V8Object, V8Simple, V8Function, V8Frame, V8Scope, V8Script
 } from './nodeV8Protocol';
@@ -2054,14 +2054,13 @@ export class NodeDebugSession extends DebugSession {
 			return;
 		}
 
-		const backtraceArgs : any = {
+		const backtraceArgs : V8BacktraceArgs = {
 			fromFrame: startFrame,
 			toFrame: startFrame+maxLevels
 		};
-		const cmd = 'backtrace'; // this._nodeInjectionAvailable ? 'vscode_backtrace' : 'backtrace';
 
-		this.log('va', `stackTraceRequest: ${cmd} ${startFrame} ${maxLevels}`);
-		this._node.command2(cmd, backtraceArgs).then((response: V8BacktraceResponse) => {
+		this.log('va', `stackTraceRequest: backtrace ${startFrame} ${maxLevels}`);
+		this._node.backtrace(backtraceArgs).then(response => {
 
 			if (response.body.totalFrames > 0 || response.body.frames) {
 				const frames = response.body.frames;

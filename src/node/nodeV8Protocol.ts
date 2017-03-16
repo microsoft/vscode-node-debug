@@ -223,6 +223,11 @@ export interface V8ExceptionEventBody extends V8EventBody {
 
 // arguments
 
+export interface V8BacktraceArgs {
+	fromFrame: number;
+	toFrame: number;
+}
+
 export interface V8RestartFrameArgs {
 	frame: number | undefined;
 }
@@ -346,6 +351,10 @@ export class NodeV8Protocol extends EE.EventEmitter {
 				}
 			});
 		});
+	}
+
+	public backtrace(args: V8BacktraceArgs, timeout: number = NodeV8Protocol.TIMEOUT) : Promise<V8BacktraceResponse> {
+		return this.command2('backtrace', args);
 	}
 
 	public restartFrame(args: V8RestartFrameArgs, timeout: number = NodeV8Protocol.TIMEOUT) : Promise<V8RestartFrameResponse> {

@@ -6,8 +6,6 @@
 !function() {
 
 	var CHUNK_SIZE = 100;			// break large objects into chunks of this size
-	var ARGUMENT_COUNT_INDEX = 3;	// index of Argument count field in FrameDetails
-	var LOCAL_COUNT_INDEX = 4;		// index of Local count field in FrameDetails
 	var INDEX_PATTERN = /^[0-9]+$/;
 
 	// try to load 'vm' even if 'require' isn't available in the current context
@@ -120,28 +118,6 @@
 		};
 	} catch (error) {
 		// since overriding 'serializeReferencedObjects' is optional, we can silently ignore the error.
-	}
-
-	/**
-	 * The original backtrace request returns unsolicited arguments and local variables for all stack frames.
-	 * If these arguments or local variables are large, they blow up the backtrace response which slows down
-	 * stepping speed.
-	 * This override clears the argument and local variable count in the FrameDetails structure
-	 * which prevents arguments and local variables from being included in the backtrace response.
-	 */
-	DebugCommandProcessor.prototype.dispatch_['vscode_backtrace'] = function(request, response) {
-		var result = this.backtraceRequest_(request, response);
-		if (!result && response.body.frames) {
-			var frames = response.body.frames;
-			for (var i = 0; i < frames.length; i++) {
-				const d = frames[i].details_.details_;
-				if (d) {
-					d[ARGUMENT_COUNT_INDEX]= 0;		// don't include any Arguments in stack frame
-					d[LOCAL_COUNT_INDEX]= 0;		// don't include any Locals in stack frame
-				}
-			}
-		}
-		return result;
 	}
 
 	/**
