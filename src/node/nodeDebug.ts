@@ -4,7 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import {
-	DebugSession, Thread, Source, StackFrame, Scope, Variable, Breakpoint,
+	LoggingDebugSession, DebugSession, Logger,
+	Thread, Source, StackFrame, Scope, Variable, Breakpoint,
 	TerminatedEvent, InitializedEvent, StoppedEvent, OutputEvent,
 	Handles, ErrorDestination
 } from 'vscode-debugadapter';
@@ -327,7 +328,7 @@ interface AttachRequestArguments extends DebugProtocol.AttachRequestArguments, C
 }
 
 
-export class NodeDebugSession extends DebugSession {
+export class NodeDebugSession extends LoggingDebugSession {
 
 	private static MAX_STRING_LENGTH = 10000;	// max string size to return in 'evaluate' request
 	private static MAX_JSON_LENGTH = 500000;	// max size of stringified object to return in 'evaluate' request
@@ -418,7 +419,7 @@ export class NodeDebugSession extends DebugSession {
 	private _disableSkipFiles = false;
 
 	public constructor() {
-		super();
+		super('node-debug.txt');
 
 		// this debugger uses zero-based lines and columns which is the default
 		// so the following two calls are not really necessary.
@@ -1058,6 +1059,10 @@ export class NodeDebugSession extends DebugSession {
 		} else if (typeof args.trace === 'string') {
 			this._trace = args.trace.split(',');
 			this._traceAll = this._trace.indexOf('all') >= 0;
+
+			if (this._trace.indexOf('dap') >= 0) {
+				Logger.setup(Logger.LogLevel.Verbose, /*logToFile=*/false);
+			}
 		}
 
 		if (typeof args.stepBack === 'boolean') {
