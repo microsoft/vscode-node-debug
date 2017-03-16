@@ -207,11 +207,18 @@ export interface V8RestartFrameResponse extends NodeV8Response {
 
 export interface V8EventBody {
 	script: V8Script;
-	exception: V8Object;
-	breakpoints: any[];
 	sourceLine: number;
 	sourceColumn: number;
 	sourceLineText: string;
+}
+
+export interface V8BreakEventBody extends V8EventBody {
+	breakpoints: any[];
+}
+
+export interface V8ExceptionEventBody extends V8EventBody {
+	exception: V8Object;
+	uncaught: boolean;
 }
 
 // arguments

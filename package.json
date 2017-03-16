@@ -1,7 +1,7 @@
 {
 	"name": "node-debug",
 	"displayName": "Node Debug",
-	"version": "1.11.6",
+	"version": "1.11.7",
 	"publisher": "ms-vscode",
 	"description": "%extension.description%",
 	"icon": "images/node-debug-icon.svg",
@@ -62,7 +62,7 @@
 		"run-sequence": "^1.2.2",
 		"mocha": "^3.1.2",
 		"tslint": "^3.15.1",
-		"typescript": "^2.0.10",
+		"typescript": "^2.2.1",
 		"vscode": "^1.0.3",
 		"vscode-nls-dev": "^2.0.1",
 		"vscode-debugadapter-testsupport": "^1.17.0",

@@ -14,7 +14,7 @@ import {
 	NodeV8Protocol, NodeV8Event, NodeV8Response,
 	V8SetBreakpointArgs, V8SetExceptionBreakArgs, V8SetVariableValueArgs, V8RestartFrameArgs,
 	V8BacktraceResponse, V8ScopeResponse, V8EvaluateResponse, V8FrameResponse,
-	V8EventBody,
+	V8EventBody, V8BreakEventBody, V8ExceptionEventBody,
 	V8Ref, V8Handle, V8Property, V8Object, V8Simple, V8Function, V8Frame, V8Scope, V8Script
 } from './nodeV8Protocol';
 import {ISourceMaps, SourceMaps, SourceMap} from './sourceMaps';
@@ -400,7 +400,7 @@ export class NodeDebugSession extends DebugSession {
 	private _isTerminated: boolean;
 	private _inShutdown: boolean;
 	private _pollForNodeProcess = false;
-	private _exception: V8Object | undefined;
+	private _exception: V8ExceptionEventBody | undefined;
 	private _lastStoppedEvent: DebugProtocol.StoppedEvent;
 	private _restartFramePending: boolean;
 	private _stoppedReason: string;
@@ -440,12 +440,12 @@ export class NodeDebugSession extends DebugSession {
 
 		this._node.on('break', (event: NodeV8Event) => {
 			this._stopped('break');
-			this._handleNodeBreakEvent(event.body);
+			this._handleNodeBreakEvent(<V8BreakEventBody>event.body);
 		});
 
 		this._node.on('exception', (event: NodeV8Event) => {
 			this._stopped('exception');
-			this._handleNodeBreakEvent(event.body);
+			this._handleNodeExceptionEvent(<V8ExceptionEventBody>event.body);
 		});
 
 		/*
@@ -476,7 +476,39 @@ export class NodeDebugSession extends DebugSession {
 	/**
 	 * Analyse why node has stopped and sends StoppedEvent if necessary.
 	 */
-	private _handleNodeBreakEvent(eventBody: V8EventBody) : void {
+	private _handleNodeExceptionEvent(eventBody: V8ExceptionEventBody) : void {
+
+		// in order to identify reject calls and debugger statements extract source at current location
+		let source: string | null = null;
+		if (eventBody.sourceLineText && typeof eventBody.sourceColumn === 'number') {
+			source = eventBody.sourceLineText.substr(eventBody.sourceColumn);
+		}
+
+		if (this._skip(eventBody)) {
+			this._node.command('continue');
+			return;
+		}
+
+		// if this exception originates from a 'reject', skip it if 'All Exception' is not set.
+		if (this._skipRejects && source && source.indexOf('reject') === 0) {
+			if (!this._catchRejects) {
+				this._node.command('continue');
+				return;
+			}
+			if (eventBody.exception.text === 'undefined') {
+				eventBody.exception.text = 'reject';
+			}
+		}
+
+		// remember exception
+		this._exception = eventBody;
+		this._handleNodeBreakEvent2('exception', false, eventBody.exception.text);
+	}
+
+	/**
+	 * Analyse why node has stopped and sends StoppedEvent if necessary.
+	 */
+	private _handleNodeBreakEvent(eventBody: V8BreakEventBody) : void {
 
 		let isEntry = false;
 		let reason: ReasonType | undefined;
@@ -487,57 +519,29 @@ export class NodeDebugSession extends DebugSession {
 			source = eventBody.sourceLineText.substr(eventBody.sourceColumn);
 		}
 
-		// is exception?
-		if (eventBody.exception) {
+		const breakpoints = eventBody.breakpoints;
 
-			if (this._skip(eventBody)) {
-				this._node.command('continue');
-				return;
-			}
+		if (Array.isArray(breakpoints) && breakpoints.length > 0) {
 
-			// if this exception originates from a 'reject', skip it if 'All Exception' is not set.
-			if (this._skipRejects && source && source.indexOf('reject') === 0) {
-				if (!this._catchRejects) {
-					this._node.command('continue');
-					return;
-				}
-				if (eventBody.exception.text === 'undefined') {
-					eventBody.exception.text = 'reject';
-				}
-			}
+			this._disableSkipFiles = this._skip(eventBody);
 
-			// remember exception
-			this._exception = eventBody.exception;
-			this._handleNodeBreakEvent2('exception', isEntry, eventBody.exception.text);
-
-			return;
-		}
-
-		// is breakpoint?
-		if (!reason) {
-			const breakpoints = eventBody.breakpoints;
-			if (Array.isArray(breakpoints) && breakpoints.length > 0) {
-
-				this._disableSkipFiles = this._skip(eventBody);
-
-				const id = breakpoints[0];
-				if (!this._gotEntryEvent && id === 1) {	// 'stop on entry point' is implemented as a breakpoint with id 1
-					isEntry = true;
-					this.log('la', '_analyzeBreak: suppressed stop-on-entry event');
-					reason = 'entry';
-					this._rememberEntryLocation(eventBody.script.name, eventBody.sourceLine, eventBody.sourceColumn);
-				} else {
-					let ibp = this._hitCounts.get(id);
-					if (ibp) {
-						ibp.hitCount++;
-						if (ibp.hitter && !ibp.hitter(ibp.hitCount)) {
-							this._node.command('continue');
-							return;
-						}
+			const id = breakpoints[0];
+			if (!this._gotEntryEvent && id === 1) {	// 'stop on entry point' is implemented as a breakpoint with id 1
+				isEntry = true;
+				this.log('la', '_analyzeBreak: suppressed stop-on-entry event');
+				reason = 'entry';
+				this._rememberEntryLocation(eventBody.script.name, eventBody.sourceLine, eventBody.sourceColumn);
+			} else {
+				let ibp = this._hitCounts.get(id);
+				if (ibp) {
+					ibp.hitCount++;
+					if (ibp.hitter && !ibp.hitter(ibp.hitCount)) {
+						this._node.command('continue');
+						return;
 					}
-
-					reason = 'breakpoint';
 				}
+
+				reason = 'breakpoint';
 			}
 		}
 
@@ -737,6 +741,9 @@ export class NodeDebugSession extends DebugSession {
 
 		// This debug adapter supports the completions request
 		response.body.supportsCompletionsRequest = true;
+
+		// This debug adapter supports the exception info request
+		response.body.supportsExceptionInfoRequest = true;
 
 		this.sendResponse(response);
 	}
@@ -2449,7 +2456,7 @@ export class NodeDebugSession extends DebugSession {
 
 			// exception scope
 			if (frameIx === 0 && this._exception) {
-				scopes.unshift(new Scope(localize({ key: 'scope.exception', comment: ['https://github.com/Microsoft/vscode/issues/4569'] }, "Exception"), this._variableHandles.create(new PropertyContainer(this._exception))));
+				scopes.unshift(new Scope(localize({ key: 'scope.exception', comment: ['https://github.com/Microsoft/vscode/issues/4569'] }, "Exception"), this._variableHandles.create(new PropertyContainer(this._exception.exception))));
 			}
 
 			response.body = {
@@ -3501,6 +3508,60 @@ export class NodeDebugSession extends DebugSession {
 			// in case of error return empty array
 			return [];
 		});
+	}
+
+	//--- exception info request ----------------------------------------------------------------------------------------------
+
+	protected exceptionInfoRequest(response: DebugProtocol.ExceptionInfoResponse, args: DebugProtocol.ExceptionInfoArguments): void {
+
+		if (args.threadId !== NodeDebugSession.DUMMY_THREAD_ID) {
+			this.sendErrorResponse(response, 2030, 'exceptionInfoRequest error: invalid thread {_thread}.', { _thread: args.threadId }, ErrorDestination.Telemetry);
+			return;
+		}
+
+		if (this._exception) {
+
+			response.body = {
+				exceptionId: <string> this._exception.exception.className,
+				description: <string> this._exception.exception.text,
+				breakMode: this._exception.uncaught ? 'unhandled' : 'never',
+			}
+
+			Promise.resolve(this._exception.exception).then(exception => {
+
+				if (exception) {
+
+					// try to retrieve the stack trace
+					return this._createProperties(exception, 'named').then(values => {
+						if (values.length > 0 && values[0].name === 'stack') {
+							return values[0].value;
+						}
+						return undefined;
+					}).catch(_ => {
+						return undefined;
+					});
+
+				} else {
+					return undefined;
+				}
+
+			}).then(stack => {
+
+				if (stack) {
+					response.body.details = {
+						stackTrace: stack
+					}
+				}
+
+				this.sendResponse(response);
+
+			}).catch(resp => {
+				this.sendErrorResponse(response, 2031, 'exceptionInfoRequest error', undefined, ErrorDestination.Telemetry);
+			});
+
+		} else {
+			this.sendErrorResponse(response, 2032, 'exceptionInfoRequest error: no stored exception', undefined, ErrorDestination.Telemetry);
+		}
 	}
 
 	//--- custom request ------------------------------------------------------------------------------------------------------
