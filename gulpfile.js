@@ -16,6 +16,7 @@ var runSequence = require('run-sequence');
 var es = require('event-stream');
 var typescript = require('typescript');
 var cp = require('child_process');
+var vsce = require('vsce');
 
 var tsProject = ts.createProject('./src/tsconfig.json', { typescript });
 var nls = require('vscode-nls-dev');
@@ -125,20 +126,12 @@ gulp.task('add-i18n', function() {
 		.pipe(gulp.dest('.'));
 });
 
-gulp.task('vsce-publish', function(cb) {
-	var cmd = cp.spawn('./node_modules/.bin/vsce', [ 'publish' ], { stdio: 'inherit' });
-	cmd.on('close', code => {
-		log(`vsce exited with ${code}`);
-		cb(code);
-	});
+gulp.task('vsce-publish', function() {
+	return vsce.publish();
 });
 
-gulp.task('vsce-package', function(cb) {
-	var cmd = cp.spawn('./node_modules/.bin/vsce', [ 'package' ], { stdio: 'inherit' });
-	cmd.on('close', code => {
-		log(`vsce exited with ${code}`);
-		cb(code);
-	});
+gulp.task('vsce-package', function() {
+	return vsce.createVSIX();
 });
 
 var allTypeScript = [
