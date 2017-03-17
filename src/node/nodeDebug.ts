@@ -1791,6 +1791,9 @@ export class NodeDebugSession extends LoggingDebugSession {
 				actualColumn = this._adjustColumn(actualLine, al[0].column);
 			}
 
+			let actualSrcLine = actualLine;
+			let actualSrcColumn = actualColumn;
+
 			if (path && sourcemap) {
 
 				if (actualLine !== args.line || actualColumn !== args.column) {
@@ -1804,30 +1807,30 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 						if (mapresult) {
 							this.log('sm', `_setBreakpoint: bp verification gen: '${localpath}' ${actualLine}:${actualColumn} -> src: '${mapresult.path}' ${mapresult.line}:${mapresult.column}`);
-							actualLine = mapresult.line;
-							actualColumn = mapresult.column;
+							actualSrcLine = mapresult.line;
+							actualSrcColumn = mapresult.column;
 						} else {
-							actualLine = lb.orgLine;
-							actualColumn = lb.orgColumn;
+							actualSrcLine = lb.orgLine;
+							actualSrcColumn = lb.orgColumn;
 						}
 
-						return this._setBreakpoint2(lb, path, actualLine, actualColumn);
+						return this._setBreakpoint2(lb, path, actualSrcLine, actualSrcColumn, actualLine, actualColumn);
 					});
 
 				} else {
-					actualLine = lb.orgLine;
-					actualColumn = lb.orgColumn;
+					actualSrcLine = lb.orgLine;
+					actualSrcColumn = lb.orgColumn;
 				}
 			}
 
-			return this._setBreakpoint2(lb, path, actualLine, actualColumn);
+			return this._setBreakpoint2(lb, path, actualSrcLine, actualSrcColumn, actualLine, actualColumn);
 
 		}).catch(error => {
 			return new Breakpoint(false);
 		});
 	}
 
-	private _setBreakpoint2(ibp: InternalSourceBreakpoint, path: string | null, actualLine: number, actualColumn: number) : Breakpoint {
+	private _setBreakpoint2(ibp: InternalSourceBreakpoint, path: string | null, actualSrcLine: number, actualSrcColumn: number, actualLine: number, actualColumn: number) : Breakpoint {
 
 		// nasty corner case: since we ignore the break-on-entry event we have to make sure that we
 		// stop in the entry point line if the user has an explicit breakpoint there (or if there is a 'debugger' statement).
@@ -1844,11 +1847,11 @@ export class NodeDebugSession extends LoggingDebugSession {
 		}
 
 		if (ibp.verificationMessage) {
-			const bp: DebugProtocol.Breakpoint = new Breakpoint(false, this.convertDebuggerLineToClient(actualLine), this.convertDebuggerColumnToClient(actualColumn));
+			const bp: DebugProtocol.Breakpoint = new Breakpoint(false, this.convertDebuggerLineToClient(actualSrcLine), this.convertDebuggerColumnToClient(actualSrcColumn));
 			bp.message = ibp.verificationMessage;
 			return bp;
 		} else {
-			return new Breakpoint(true, this.convertDebuggerLineToClient(actualLine), this.convertDebuggerColumnToClient(actualColumn));
+			return new Breakpoint(true, this.convertDebuggerLineToClient(actualSrcLine), this.convertDebuggerColumnToClient(actualSrcColumn));
 		}
 	}
 
