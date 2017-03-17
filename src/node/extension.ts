@@ -371,11 +371,15 @@ function startSession(config: any): StartSessionResult {
 	let fixConfig = Promise.resolve<any>();
 
 	switch (config.protocol) {
+		case 'legacy':
+			config.type = 'node';
+			break;
 		case 'inspector':
 			config.type = 'node2';
 			break;
 		case 'auto':
-			config.type = 'node'; // default
+		default:
+			config.type = 'node';
 
 			switch (config.request) {
 
@@ -411,10 +415,6 @@ function startSession(config: any): StartSessionResult {
 					// should not happen
 					break;
 			}
-			break;
-		case 'legacy':
-		default:
-			config.type = 'node';
 			break;
 	}
 
