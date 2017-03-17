@@ -335,6 +335,20 @@ suite('Node Debug Adapter', () => {
 				runtimeArgs: [ '--nolazy' ]
 			}, { path: TS_SOURCE, line: TS_LINE } );
 		});
+
+		test('should stop on an explicit breakpoint at entry point', () => {
+
+			const PROGRAM = Path.join(DATA_ROOT, 'sourcemaps-entrypoint/index.ts');
+			const TS_LINE = 3;
+
+			return dc.hitBreakpoint({
+				program: PROGRAM,
+				sourceMaps: true,
+				outFiles: [],
+				runtimeArgs: [ '--nolazy' ]
+			}, { path: PROGRAM, line: TS_LINE } );
+		});
+
 	});
 
 	suite('function setBreakpoints', () => {
