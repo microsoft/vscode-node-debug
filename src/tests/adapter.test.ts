@@ -170,6 +170,18 @@ suite('Node Debug Adapter', () => {
 
 	suite('setBreakpoints in TypeScript', () => {
 
+		test('should stop at entry point', () => {
+
+			const PROGRAM = Path.join(DATA_ROOT, 'sourcemaps-entrypoint/index.ts');
+			const TS_LINE = 3;
+
+			return Promise.all([
+				dc.configurationSequence(),
+				dc.launch({ program: PROGRAM, stopOnEntry: true }),
+				dc.assertStoppedLocation('entry', { path: PROGRAM, line: TS_LINE } )
+			]);
+		});
+
 		test('should stop on a breakpoint in source (all files top level)', () => {
 
 			const PROGRAM = Path.join(DATA_ROOT, 'sourcemaps-simple/classes.js');
