@@ -7,6 +7,7 @@
 	"extension.description": "用于 Node.js 的 Visual Studio 代码调试器扩展",
 	"extensionHost.label": "VS 代码扩展开发",
 	"extensionHost.launch.config.name": "启动扩展",
+	"extensionHost.launch.env.description": "传递到扩展主机的环境变量。",
 	"extensionHost.launch.runtimeExecutable.description": "VS Code 的绝对路径。",
 	"extensionHost.launch.sourceMaps.description": "使用 JavaScript 源映射。",
 	"extensionHost.launch.stopOnEntry.description": "启动后自动停止扩展主机。",
@@ -37,6 +38,7 @@
 	"node.protocol.inspector.description": "Node.js 版本 6.3 及更高版本支持的新协议",
 	"node.protocol.legacy.description": "Node.js 版本 8.0 及更高版本支持的旧协议",
 	"node.restart.description": "在终止 Node.js 后重启会话。",
+	"node.showAsyncStacks.description": "显示导致当前调用堆栈的异步调用。仅限“检查器”协议。",
 	"node.snippet.attachInspector.description": "通过检查器协议附加到正在运行的节点计划",
 	"node.snippet.attachInspector.label": "Node.js: 通过检查器协议附加",
 	"node.snippet.attachLegacy.description": "通过旧版协议附加到正在运行的节点计划",
@@ -62,8 +64,10 @@
 	"node.sourceMaps.description": "使用 JavaScript 源映射(如果存在)。",
 	"node.stopOnEntry.description": "启动后自动停止程序。",
 	"node.timeout.description": "重试连接到 Node.js 的此毫秒数。默认值为 10000 ms。",
+	"open.loaded.script": "打开加载脚本",
 	"outDir.deprecationMessage": "属性 \"outDir\" 已弃用，请改用 \"outFiles\"。",
 	"outFiles.description": "如果启用源映射，则这些 glob 模式将指定生成的 JavaScript 文件。如果模式以 \"!\" 开始，则排除这些文件。如果未指定，则生成的代码应与其源位于同一目录中。",
 	"skipFiles.description": "在调试时文件要跳过的一组 glob 模式。",
-	"smartStep.description": "自动单步执行无法映射回原始源的生成代码。"
+	"smartStep.description": "自动单步执行无法映射回原始源的生成代码。",
+	"trace.description": "通过列出一个或多个以逗号分隔的选择器启用诊断输出。选择器 \"all\" 启用所有输出、\"la\" 启用启动/附加、\"ls\" 启用脚本加载、\"bp\" 启用断点处理、\"sm\" 启用源映射、\"va\" 启用数据结构访问，\"eh\" 启用扩展主机流。"
 }

@@ -37,13 +37,13 @@
 	"origin.from.remote.node": "contenido de solo lectura de Node.js remoto",
 	"origin.inlined.source.map": "contenido insertado de solo lectura del mapa de origen",
 	"program.path.case.mismatch.warning": "El uso de mayúsculas y minúsculas en la ruta de acceso del programa no es igual al del archivo en disco. Esto puede hacer que no se llegue a los puntos de interrupción.",
-	"reason.breakpoint": "punto de interrupción",
-	"reason.debugger_statement": "instrucción de depurador",
-	"reason.entry": "entrada",
-	"reason.exception": "excepción",
-	"reason.restart": "entrada de marco",
-	"reason.step": "paso",
-	"reason.user_request": "solicitud de usuario",
+	"reason.description.breakpoint": "En pausa por un punto de interrupción",
+	"reason.description.debugger_statement": "En pausa por una instrucción del depurador",
+	"reason.description.entry": "En pausa por una entrada",
+	"reason.description.exception": "En pausa por una excepción",
+	"reason.description.restart": "En pausa por una entrada de marco",
+	"reason.description.step": "En pausa por un paso",
+	"reason.description.user_request": "En pausa por una solicitud de usuario",
 	"scope.block": "Bloquear",
 	"scope.catch": "Catch",
 	"scope.closure": "Clausura",
@@ -58,5 +58,6 @@
 	"source.not.found": "No se pudo recuperar el contenido.",
 	"source.skipFiles": "omitido debido a \"skipFiles\"",
 	"source.smartstep": "omitido debido a \"smartStep\"",
-	"sourcemapping.fail.message": "Se ignoró el punto de interrupción porque el código generado no se encontró (puede que sea un problema del mapa de origen)."
+	"sourcemapping.fail.message": "Se ignoró el punto de interrupción porque el código generado no se encontró (puede que sea un problema del mapa de origen).",
+	"toggleSkipFileStatus.not.implemented": "\"Toggle skipping this file\" (Cambiar y omitir este archivo) no está implementada para el depurador de protocolos heredados."
 }

@@ -7,6 +7,7 @@
 	"extension.description": "Node.js 用の Visual Studio Code デバッガー拡張機能",
 	"extensionHost.label": "VS Code 拡張機能の開発",
 	"extensionHost.launch.config.name": "拡張機能の起動",
+	"extensionHost.launch.env.description": "拡張機能ホストに渡された環境変数。",
 	"extensionHost.launch.runtimeExecutable.description": "VS Code への絶対パス。",
 	"extensionHost.launch.sourceMaps.description": "JavaScript ソース マップを使用します。",
 	"extensionHost.launch.stopOnEntry.description": "起動後に拡張機能ホストを自動的に停止します。",
@@ -37,6 +38,7 @@
 	"node.protocol.inspector.description": "バージョン 6.3 以上の Node.js でサポートされる新しいプロトコルです",
 	"node.protocol.legacy.description": "バージョン 8.0 より前の Node.js でサポートされる、以前のプロトコルです",
 	"node.restart.description": "Node.js が終了した後、セッションを再開します。",
+	"node.showAsyncStacks.description": "現在の呼び出し履歴の原因となった非同期呼び出しを表示します。'inspector' プロトコルのみ。",
 	"node.snippet.attachInspector.description": "実行中のノード プログラムにインスペクター プロトコルを介してアタッチします",
 	"node.snippet.attachInspector.label": "Node.js: インスペクター プロトコルを介してする",
 	"node.snippet.attachLegacy.description": "実行中のノード プログラムにレガシ プロトコルを介してアタッチします",
@@ -62,8 +64,10 @@
 	"node.sourceMaps.description": "JavaScript ソース マップを使用します (存在する場合)。",
 	"node.stopOnEntry.description": "起動後、プログラムを自動的に停止します。",
 	"node.timeout.description": "このミリ秒の間、Node.js への接続を再試行します。既定値は 10000 ミリ秒です。",
+	"open.loaded.script": "読み込み済みのスクリプトを開く",
 	"outDir.deprecationMessage": "属性 'outDir' は非推奨です。代わりに 'outFiles' を使用してください。",
 	"outFiles.description": "ソース マップを有効にすると、これらの glob パターンは生成した JavaScript ファイルを指定します。パターンが '!' で始まる場合は、ファイルは除外されます。指定しない場合は、生成されたコードはそのソースと同じディレクトリ内にあると想定されます。",
 	"skipFiles.description": "デバッグ時にスキップするファイルの glob パターンの配列。",
-	"smartStep.description": "元のソースにマップし直すことができない、生成されたコードを自動的にステップ スルーします。"
+	"smartStep.description": "元のソースにマップし直すことができない、生成されたコードを自動的にステップ スルーします。",
+	"trace.description": "コンマで区切られた 1 つ以上のセレクターの一覧による診断出力を有効にします。セレクター 'all' はすべての出力、'la' は起動/アタッチ、'ls' はスクリプトの読み込み、'bp' はブレークポイントの処理、'sm' はソース マップ、'va' はデータ構造のアクセス、'eh' は拡張機能ホストのフローを、それぞれ有効にします。"
 }

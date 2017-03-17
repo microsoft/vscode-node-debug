@@ -7,6 +7,7 @@
 	"extension.description": "Extension de débogueur Visual Studio Code pour Node.js",
 	"extensionHost.label": "Développement d'extension VS Code",
 	"extensionHost.launch.config.name": "Lancer l'extension",
+	"extensionHost.launch.env.description": "Variables d'environnement passées à l'hôte d'extension.",
 	"extensionHost.launch.runtimeExecutable.description": "Chemin absolu de VS Code.",
 	"extensionHost.launch.sourceMaps.description": "Utilisez des mappages de sources JavaScript.",
 	"extensionHost.launch.stopOnEntry.description": "Arrêtez automatiquement l'hôte d'extension après le lancement.",
@@ -37,6 +38,7 @@
 	"node.protocol.inspector.description": "nouveau protocole pris en charge par Node.js versions >= 6.3",
 	"node.protocol.legacy.description": "ancien protocole pris en charge par Node.js versions < 8.0",
 	"node.restart.description": "Redémarrez la session une fois l'exécution de Node.js achevée.",
+	"node.showAsyncStacks.description": "Affiche les appels asynchrones ayant conduit à la pile des appels actuelle. Protocole 'inspector' uniquement.",
 	"node.snippet.attachInspector.description": "Attacher via le protocole inspector à un programme node en cours d'exécution",
 	"node.snippet.attachInspector.label": "Node.js : attacher via le protocole Inspector",
 	"node.snippet.attachLegacy.description": "Attacher via le protocole hérité à un programme node en cours d'exécution",
@@ -62,8 +64,10 @@
 	"node.sourceMaps.description": "Utilisez des mappages de sources JavaScript (s'ils existent)",
 	"node.stopOnEntry.description": "Arrêtez automatiquement le programme après le lancement.",
 	"node.timeout.description": "Réessayez de vous connecter à Node.js pendant le nombre de millisecondes spécifié. La valeur par défaut est 10 000 ms.",
+	"open.loaded.script": "Ouvrir le script chargé",
 	"outDir.deprecationMessage": "Attribut 'outDir' déconseillé, utilisez 'outFiles' à la place.",
 	"outFiles.description": "Si les mappages de sources sont activés, ces modèles Glob spécifient les fichiers JavaScript générés. Si un modèle commence par '!', les fichiers sont exclus. En l'absence de spécification, le code généré est censé se trouver dans le même répertoire que sa source.",
 	"skipFiles.description": "Ensemble de modèles Glob de fichiers à ignorer durant le débogage.",
-	"smartStep.description": "Exécutez pas à pas de façon automatique le code généré qui ne peut être mappé à la source d'origine."
+	"smartStep.description": "Exécutez pas à pas de façon automatique le code généré qui ne peut être mappé à la source d'origine.",
+	"trace.description": "Activez la sortie de diagnostic en listant un ou plusieurs sélecteurs séparés par des virgules. Le sélecteur 'all' active toutes les sorties, 'la' active le lancement/l'attachement, 'ls' active le chargement de script, 'bp' active la gestion des points d'arrêt, 'sm' active les mappages de sources, 'va' active l'accès aux structures de données, 'eh' active le flux de l'hôte d'extension."
 }

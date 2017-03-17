@@ -7,6 +7,7 @@
 	"extension.description": "Estensione del debugger di Visual Studio Code per Node.js",
 	"extensionHost.label": "Sviluppo di estensioni per Visual Studio Code",
 	"extensionHost.launch.config.name": "Avvia estensione",
+	"extensionHost.launch.env.description": "Variabili di ambiente passate all'host dell'estensione.",
 	"extensionHost.launch.runtimeExecutable.description": "Percorso assoluto di Visual Studio Code.",
 	"extensionHost.launch.sourceMaps.description": "Usa i mapping di origine JavaScript.",
 	"extensionHost.launch.stopOnEntry.description": "Arresta automaticamente l'host dell'estensione dopo l'avvio.",
@@ -37,6 +38,7 @@
 	"node.protocol.inspector.description": "nuovo protocollo supportato da Node.js a partire dalla versione 6.3",
 	"node.protocol.legacy.description": "vecchio protocollo supportato da Node.js per le versioni precedenti alla 8.0",
 	"node.restart.description": "Riavvia la sessione dopo la chiusura di Node.js.",
+	"node.showAsyncStacks.description": "Mostra le chiamate asincrone che hanno causato lo stack di chiamate corrente. Solo protocollo 'inspector'.",
 	"node.snippet.attachInspector.description": "Collega tramite il protocollo inspector a un programma Node in esecuzione",
 	"node.snippet.attachInspector.label": "Node.js: collega tramite protocollo inspector",
 	"node.snippet.attachLegacy.description": "Collega tramite il protocollo legacy a un programma Node in esecuzione",
@@ -62,8 +64,10 @@
 	"node.sourceMaps.description": "Usa i mapping di origine JavaScript (se esistenti).",
 	"node.stopOnEntry.description": "Arresta automaticamente il programma dopo l'avvio.",
 	"node.timeout.description": "Numero di millisecondi in cui vengono effettuati i tentativi di connessione a Node.js. Il valore predefinito è 10000 ms.",
+	"open.loaded.script": "Apri script caricato",
 	"outDir.deprecationMessage": "L'attributo 'outDir' è deprecato. Usare 'outFiles'.",
 	"outFiles.description": "Se sono abilitati i mapping di origine, questi criteri GLOB specificano i file JavaScript generati. Se un criterio inizia con '!', i file sono esclusi. Se non è specificato, il codice generato dovrebbe trovarsi nella stessa directory dell'origine.",
 	"skipFiles.description": "Matrice di criteri GLOB per i file da ignorare durante il debug.",
-	"smartStep.description": "Esegue automaticamente un'istruzione alla volta del codice generato che non può essere mappato all'origine."
+	"smartStep.description": "Esegue automaticamente un'istruzione alla volta del codice generato che non può essere mappato all'origine.",
+	"trace.description": "Consente di abilitare l'output di diagnostica elencando uno o più selettori delimitati da virgole. Usare il selettore 'all' per abilitare tutto l'output, 'la' per abilitare l'avvio o il collegamento, 'ls' per abilitare il caricamento di script, 'bp' per abilitare la gestione dei punti di interruzione, 'sm' per abilitare i mapping di origini, 'va' per abilitare l'accesso alla struttura dei dati di mapping di origine, 'eh' per abilitare il flusso del'host dell'estensione."
 }
