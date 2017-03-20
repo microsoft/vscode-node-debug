@@ -133,6 +133,8 @@ export function mkdirs(path: string) {
 export function isOnPath(program: string): boolean {
 
 	if (process.platform === 'win32') {
+		return true;
+		/*
 		const WHERE = 'C:\\Windows\\System32\\where.exe';
 		try {
 			if (FS.existsSync(WHERE)) {
@@ -145,6 +147,7 @@ export function isOnPath(program: string): boolean {
 		catch (Exception) {
 			// ignore
 		}
+		*/
 	} else {
 		const WHICH = '/usr/bin/which';
 		try {
