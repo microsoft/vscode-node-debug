@@ -3552,9 +3552,15 @@ export class NodeDebugSession extends LoggingDebugSession {
 					return undefined;
 				}
 
-			}).then(stack => {
+			}).then((stack: string | undefined) => {
 
 				if (stack) {
+
+					// remove quotes
+					if (stack.length > 1 && stack[0] === '"' && stack[stack.length-1] === '"') {
+						stack = stack.substr(1, stack.length-2);
+					}
+
 					response.body.details = {
 						stackTrace: stack
 					}
