@@ -33,11 +33,12 @@
 	"node.launch.runtimeExecutable.description": "Die zu verwendende Laufzeit. Ein absoluter Pfad oder der Name einer in PATH verfügbaren Laufzeit. Wenn keine Angabe erfolgt, wird \"node\" angenommen.",
 	"node.port.description": "Der Debugport zum Anfügen. Der Standardwert ist 5858.",
 	"node.processattach.config.name": "An den Prozess anhängen",
-	"node.protocol.auto.description": "\"auto\" versucht, automatisch das beste Protokoll zu ermitteln.",
+	"node.protocol.auto.description": "versucht, automatisch das beste Protokoll zu ermitteln",
 	"node.protocol.description": "Zu verwendendes Debugging-Protokoll für Node.js",
 	"node.protocol.inspector.description": "Das neue Protokoll, das von den Node.js-Versionen >= 6.3 unterstützt wird",
 	"node.protocol.legacy.description": "Das alte Protokoll, das von den Node.js-Versionen < 8.0 unterstützt wird",
 	"node.restart.description": "Startet die Sitzung neu, nachdem Node.js beendet wurde.",
+	"node.showAsyncStacks.description": "Zeigt die asynchronen Aufrufe an, die zur aktuellen Aufrufliste geführt haben. Nur Protokoll \"inspector\".",
 	"node.snippet.attachInspector.description": "Über das Inspektor-Protokoll an ein ausgeführtes Node-Programm anfügen",
 	"node.snippet.attachInspector.label": "Node.js: Über Inspector Protocol anfügen",
 	"node.snippet.attachLegacy.description": "Über das Legacy-Protokoll an ein ausgeführtes Node-Programm anfügen",
@@ -68,5 +69,5 @@
 	"outFiles.description": "Wenn Quellzuordnungen aktiviert sind, geben diese Globmuster die generierten JavaScript-Dateien an. Wenn ein Muster mit \"!\" beginnt, werden die Dateien ausgeschlossen. Wenn keine Angabe erfolgt, wird der generierte Code im gleichen Verzeichnis wie seine Quelle erwartet.",
 	"skipFiles.description": "Ein Array für Globmuster für Dateien, die beim Debuggen übersprungen werden.",
 	"smartStep.description": "Durchläuft automatisch den generierten Code, der nicht der ursprünglichen Quelle erneut zugeordnet werden kann.",
-	"trace.description": "Aktivieren Sie die Diagnoseausgabe, indem Sie mindestens einen Selektor auflisten (durch Kommas getrennt). Der Selektor \"all\" aktiviert alle Ausgaben; \"la\": Starten/Anfügen, \"ls\": Skript laden, \"bp\": Haltepunktverarbeitung, \"sm\": Quellzuordnungen, \"va\": Datenstrukturzugriff, \"eh\": Erweiterungshostfluss."
+	"trace.description": "Erzeugen Sie Diagnoseausgabe. Anstatt diese Einstellung auf \"true\" zu setzen, können Sie einen oder mehrere Selektoren durch Kommas getrennt auflisten. Der Selektor \"verbose\" aktiviert eine sehr detaillierte Ausgabe."
 }

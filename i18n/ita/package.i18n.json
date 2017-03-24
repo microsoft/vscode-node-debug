@@ -69,5 +69,5 @@
 	"outFiles.description": "Se sono abilitati i mapping di origine, questi criteri GLOB specificano i file JavaScript generati. Se un criterio inizia con '!', i file sono esclusi. Se non è specificato, il codice generato dovrebbe trovarsi nella stessa directory dell'origine.",
 	"skipFiles.description": "Matrice di criteri GLOB per i file da ignorare durante il debug.",
 	"smartStep.description": "Esegue automaticamente un'istruzione alla volta del codice generato che non può essere mappato all'origine.",
-	"trace.description": "Consente di abilitare l'output di diagnostica elencando uno o più selettori delimitati da virgole. Usare il selettore 'all' per abilitare tutto l'output, 'la' per abilitare l'avvio o il collegamento, 'ls' per abilitare il caricamento di script, 'bp' per abilitare la gestione dei punti di interruzione, 'sm' per abilitare i mapping di origini, 'va' per abilitare l'accesso alla struttura dei dati di mapping di origine, 'eh' per abilitare il flusso del'host dell'estensione."
+	"trace.description": "Produce l'output di diagnostica. Invece di impostare questa opzione su true, è possibile elencare uno o più selettori delimitati da virgole. Usare il selettore 'verbose' per abilitare output molto dettagliato."
 }

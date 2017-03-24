@@ -8,7 +8,7 @@
 	"VSND2002": "No se puede iniciar el programa '{0}'. Configurar mapas de origen puede ser útil.",
 	"VSND2003": "No se puede iniciar el programa '{0}'. Establecer el atributo '{1}' puede ayudar.",
 	"VSND2006": "Asociar al proceso: '{0}' no parece un id de proceso.",
-	"VSND2009": "No se puede conectar con el proceso en tiempo de ejecución (el tiempo de espera se agota transcurridos {0} ms).",
+	"VSND2009": "No se puede conectar con el entorno de tiempo de ejecución mediante el protocolo \"legacy\"; considere el uso del protocolo \"inspector\" (tiempo de espera agotado después de {0} ms).",
 	"VSND2010": "No se puede conectar con el proceso en tiempo de ejecución (motivo: {0}).",
 	"VSND2011": "No se puede iniciar el destino de depuración en el terminal ({0}).",
 	"VSND2015": "La solicitud '{_request}' se canceló porque Node.js no responde.",

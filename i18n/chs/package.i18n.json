@@ -69,5 +69,5 @@
 	"outFiles.description": "如果启用源映射，则这些 glob 模式将指定生成的 JavaScript 文件。如果模式以 \"!\" 开始，则排除这些文件。如果未指定，则生成的代码应与其源位于同一目录中。",
 	"skipFiles.description": "在调试时文件要跳过的一组 glob 模式。",
 	"smartStep.description": "自动单步执行无法映射回原始源的生成代码。",
-	"trace.description": "通过列出一个或多个以逗号分隔的选择器启用诊断输出。选择器 \"all\" 启用所有输出、\"la\" 启用启动/附加、\"ls\" 启用脚本加载、\"bp\" 启用断点处理、\"sm\" 启用源映射、\"va\" 启用数据结构访问，\"eh\" 启用扩展主机流。"
+	"trace.description": "生成诊断输出。可以列出一个或多个以逗号分隔的选择器，而不是将此设置为 true。\"verbose\" 选择器支持非常详细的输出。"
 }
