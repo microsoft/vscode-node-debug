@@ -316,8 +316,8 @@ function guessProgramFromPackage(folderPath: string): string | undefined {
 
 //---- extension.node-debug.startSession
 
-// For launch, use inspector protocol starting with v6.9 because it's stable after that version.
-const InspectorMinNodeVersionLaunch = 60900;
+// For launch, use inspector protocol starting with v8 because it's stable after that version.
+const InspectorMinNodeVersionLaunch = 80000;
 
 
 /**
