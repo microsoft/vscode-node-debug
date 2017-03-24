@@ -1237,6 +1237,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 			if (resp.success && resp.body.value !== undefined) {
 				this._nodeProcessId = +resp.body.value;
 				this.log('la', `_initialize: got process id ${this._nodeProcessId} from node`);
+				this.logNodeVersion();
 			} else {
 				if (resp.message.indexOf('process is not defined') >= 0) {
 					this.log('la', '_initialize: process not defined error; got no pid');
@@ -1284,6 +1285,16 @@ export class NodeDebugSession extends LoggingDebugSession {
 				} else {
 					this._sendNodeResponse(response, resp);
 				}
+			}
+		});
+	}
+
+	private logNodeVersion(): void {
+		this._node.command('evaluate', { expression: 'process.version', global: true }, (resp: V8EvaluateResponse) => {
+			if (resp.success && resp.body.value !== undefined) {
+				const version = resp.body.value;
+				this.sendEvent(new OutputEvent('nodeVersion', 'telemetry', version));
+				this.log('la', `_initialize: target node version: ${version}`);
 			}
 		});
 	}
@@ -1384,6 +1395,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 					if (resp.success && resp.body.value !== undefined) {
 						this._nodeProcessId = +resp.body.value;
 						this.log('la', `_initialize: got process id ${this._nodeProcessId} from node (2nd try)`);
+						this.logNodeVersion();
 					}
 					this._startInitialize2(stopped);
 				});
