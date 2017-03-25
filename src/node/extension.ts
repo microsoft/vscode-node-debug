@@ -58,7 +58,7 @@ function pickLoadedScript() {
 }
 
 function listLoadedScripts() : Thenable<ScriptItem[] | undefined> {
-	return vscode.commands.executeCommand<string[]>('workbench.customDebugRequest', 'getLoadScripts', {} ).then((reply: any) => {
+	return vscode.commands.executeCommand<string[]>('workbench.customDebugRequest', 'getLoadedScripts', {} ).then((reply: any) => {
 		if (reply && reply.success) {
 			return reply.body.loadedScripts;
 		} else {

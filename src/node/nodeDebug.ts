@@ -3597,7 +3597,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 	protected customRequest(command: string, response: DebugProtocol.Response, args: any): void {
 
 		switch (command) {
-			case 'getLoadScripts':
+			case 'getLoadedScripts':
 				this.allLoadedScriptsRequest(response, args);
 				break;
 			case 'toggleSkipFileStatus':
