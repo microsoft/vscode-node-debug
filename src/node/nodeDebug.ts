@@ -3543,8 +3543,8 @@ export class NodeDebugSession extends LoggingDebugSession {
 			response.body = {
 				exceptionId: <string> this._exception.exception.className,
 				description: <string> this._exception.exception.text,
-				breakMode: this._exception.uncaught ? 'unhandled' : 'never',
-			}
+				breakMode: this._exception.uncaught ? 'unhandled' : 'never'
+			};
 
 			Promise.resolve(this._exception.exception).then(exception => {
 
@@ -3575,7 +3575,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 					response.body.details = {
 						stackTrace: stack
-					}
+					};
 				}
 
 				this.sendResponse(response);
@@ -3673,10 +3673,10 @@ export class NodeDebugSession extends LoggingDebugSession {
 	}
 
 	/**
-	 * send a line of text to an output channel.
+	 * send a line of text to the 'console' channel.
 	 */
-	private outLine(message: string, category?: string) {
-		this.sendEvent(new OutputEvent(message + '\n', category ? category : 'console'));
+	private outLine(message: string) {
+		this.sendEvent(new OutputEvent(message + '\n', 'console'));
 	}
 
 	/**
