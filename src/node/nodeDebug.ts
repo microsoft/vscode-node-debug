@@ -1293,7 +1293,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 		this._node.command('evaluate', { expression: 'process.version', global: true }, (resp: V8EvaluateResponse) => {
 			if (resp.success && resp.body.value !== undefined) {
 				const version = resp.body.value;
-				this.sendEvent(new OutputEvent('nodeVersion', 'telemetry', version));
+				this.sendEvent(new OutputEvent('nodeVersion', 'telemetry', { version }));
 				this.log('la', `_initialize: target node version: ${version}`);
 			}
 		});
