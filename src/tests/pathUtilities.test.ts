@@ -240,20 +240,20 @@ suite('pathUtilities', () => {
 	suite('extendObject', () => {
 
 		test('extend', () => {
-			assert.deepEqual(PathUtils.extendObject<any>({ foo: "bar" }, { abc: 123 }), { foo: "bar", abc: 123 });
+			assert.deepEqual(PathUtils.extendObject<any>({ foo: 'bar' }, { abc: 123 }), { foo: 'bar', abc: 123 });
 		});
 
 		test('override', () => {
-			assert.deepEqual(PathUtils.extendObject<any>({ foo: "bar" }, { foo: 123 }), { foo: 123 });
+			assert.deepEqual(PathUtils.extendObject<any>({ foo: 'bar' }, { foo: 123 }), { foo: 123 });
 		});
 
 		test('extend by same', () => {
-			const o = { foo: "bar" };
+			const o = { foo: 'bar' };
 			assert.deepEqual(PathUtils.extendObject(o, o), o);
 		});
 
 		test('extend by undefined', () => {
-			const o = { foo: "bar" };
+			const o = { foo: 'bar' };
 			assert.deepEqual(PathUtils.extendObject(o, undefined), o);
 		});
 

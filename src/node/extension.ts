@@ -45,7 +45,7 @@ function pickLoadedScript() {
 		};
 
 		if (items === undefined) {
-			items = [ { label: localize('no.loaded.scripts', "No loaded scripts available"), description: "" } ];
+			items = [ { label: localize('no.loaded.scripts', "No loaded scripts available"), description: '' } ];
 		}
 
 		vscode.window.showQuickPick(items, options).then(item => {
@@ -428,7 +428,7 @@ function startSession(config: any): StartSessionResult {
 }
 
 function log(message: string) {
-	vscode.commands.executeCommand('debug.logToDebugConsole', message);
+	vscode.commands.executeCommand('debug.logToDebugConsole', message + '\n');
 }
 
 function getProtocolForAttach(config: any): Promise<string|undefined> {
