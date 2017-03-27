@@ -430,6 +430,9 @@ function log(message: string) {
 	vscode.commands.executeCommand('debug.logToDebugConsole', message + '\n');
 }
 
+/**
+ * Detect which debug protocol is being used for a running node process.
+ */
 function getProtocolForAttach(config: any): Promise<string|undefined> {
 	const address = config.address || '127.0.0.1';
 	const port = config.port;
@@ -439,9 +442,6 @@ function getProtocolForAttach(config: any): Promise<string|undefined> {
 		log(localize('protocol.switch.attach.process', "Debugging with legacy protocol because attaching to a process by ID is only supported for legacy protocol."));
 		return Promise.resolve('legacy');
 	}
-
-	const unknownProtocolMessage = localize('protocol.switch.unknown.version', "Debugging with legacy protocol because Node version could not be determined.");
-	const defaultResult = { reason: unknownProtocolMessage, protocol: 'legacy' };
 
 	const socket = new net.Socket();
 	const cleanup = () => {
@@ -453,7 +453,7 @@ function getProtocolForAttach(config: any): Promise<string|undefined> {
 		}
 	};
 
-	return new Promise<{reason: string, protocol: string}>(resolve => {
+	return new Promise<{reason: string, protocol: string}>((resolve, reject) => {
 		socket.once('data', data => {
 			let reason: string;
 			let protocol: string;
@@ -470,19 +470,24 @@ function getProtocolForAttach(config: any): Promise<string|undefined> {
 		});
 
 		socket.once('error', err => {
-			resolve(defaultResult);
+			reject(err);
 		});
 
 		socket.connect(port, address);
-		socket.write(`Content-Length: 102\r\n\r\n{"command":"evaluate","arguments":{"expression":"process.pid","global":true},"type":"request","seq":1}`);
+		socket.on('connect', () => {
+			// Send a safe request to trigger a response from the inspector protocol
+			socket.write(`Content-Length: 102\r\n\r\n{"command":"evaluate","arguments":{"expression":"process.pid","global":true},"type":"request","seq":1}`);
+		});
 
 		setTimeout(() => {
 			// No data or error received? Bail and let the debug adapter handle it.
-			resolve(defaultResult);
-		}, 1000);
+			reject(new Error('timeout'));
+		}, 2000);
 	}).catch(err => {
-		cleanup();
-		return defaultResult;
+		return {
+			reason: localize('protocol.switch.unknown.version', "Debugging with legacy protocol because Node version could not be determined: {0}", err.toString()),
+			protocol: 'legacy'
+		};
 	}).then(result => {
 		cleanup();
 		log(result.reason);
