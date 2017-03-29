@@ -3581,6 +3581,11 @@ export class NodeDebugSession extends LoggingDebugSession {
 						stack = stack.substr(1, stack.length-2);
 					}
 
+					// don't return description if it is already part of the stack trace.
+					if (response.body.description && stack.indexOf(response.body.description) === 0) {
+						delete response.body.description;
+					}
+
 					response.body.details = {
 						stackTrace: stack
 					};
