@@ -3541,14 +3541,22 @@ export class NodeDebugSession extends LoggingDebugSession {
 		if (this._exception) {
 
 			response.body = {
-				exceptionId: <string> this._exception.exception.className,
-				description: <string> this._exception.exception.text,
+				exceptionId: 'undefined',
 				breakMode: this._exception.uncaught ? 'unhandled' : 'never'
 			};
 
 			Promise.resolve(this._exception.exception).then(exception => {
 
 				if (exception) {
+
+					if (exception.className) {
+						response.body.exceptionId = exception.className;
+					} else if (exception.type) {
+						response.body.exceptionId = exception.type;
+					}
+					if (exception.text) {
+						response.body.description = exception.text;
+					}
 
 					// try to retrieve the stack trace
 					return this._createProperties(exception, 'named').then(values => {
