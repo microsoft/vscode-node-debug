@@ -459,10 +459,10 @@ function getProtocolForAttach(config: any): Promise<string|undefined> {
 			let protocol: string;
 			const dataStr = data.toString();
 			if (dataStr.indexOf('WebSockets request was expected') >= 0) {
-				reason = localize('protocol.switch.inspector.version', "Debugging with inspector protocol because it was detected");
+				reason = localize('protocol.switch.inspector.detected', "Debugging with inspector protocol because it was detected.");
 				protocol = 'inspector';
 			} else {
-				reason = localize('protocol.switch.legacy.version', "Debugging with legacy protocol because it was detected");
+				reason = localize('protocol.switch.legacy.detected', "Debugging with legacy protocol because it was detected.");
 				protocol = 'legacy';
 			}
 
@@ -485,7 +485,7 @@ function getProtocolForAttach(config: any): Promise<string|undefined> {
 		}, 2000);
 	}).catch(err => {
 		return {
-			reason: localize('protocol.switch.unknown.version', "Debugging with legacy protocol because Node version could not be determined: {0}", err.toString()),
+			reason: localize('protocol.switch.unknown.error', "Debugging with legacy protocol because Node version could not be determined: {0}", err.toString()),
 			protocol: 'legacy'
 		};
 	}).then(result => {
