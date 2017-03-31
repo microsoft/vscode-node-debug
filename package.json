@@ -68,7 +68,7 @@
 		"vscode-debugadapter-testsupport": "^1.18.0",
 		"event-stream": "^3.3.4",
 		"nodemon": "^1.11.0",
-		"vsce": "^1.18.0"
+		"vsce": "^1.20.0"
 	},
 	"main": "./out/node/extension",
 	"activationEvents": [
