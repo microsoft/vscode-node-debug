@@ -38,7 +38,7 @@
 	"node.protocol.inspector.description": "Node.js 版本 6.3 及更高版本支持的新协议",
 	"node.protocol.legacy.description": "Node.js 版本 8.0 及更高版本支持的旧协议",
 	"node.restart.description": "在终止 Node.js 后重启会话。",
-	"node.showAsyncStacks.description": "显示导致当前调用堆栈的异步调用。仅限“检查器”协议。",
+	"node.showAsyncStacks.description": "显示导致当前调用堆栈的异步调用。仅限 \"inspector\" 协议。",
 	"node.snippet.attachInspector.description": "通过检查器协议附加到正在运行的节点计划",
 	"node.snippet.attachInspector.label": "Node.js: 通过检查器协议附加",
 	"node.snippet.attachLegacy.description": "通过旧版协议附加到正在运行的节点计划",

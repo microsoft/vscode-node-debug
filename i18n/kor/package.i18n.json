@@ -38,7 +38,7 @@
 	"node.protocol.inspector.description": "Node.js 6.3 이상 버전에서 지원되는 새 프로토콜입니다.",
 	"node.protocol.legacy.description": "Node.js 8.0 미만 버전에서 지원되는 이전 프로토콜입니다.",
 	"node.restart.description": "Node.js가 종료된 후 세션을 다시 시작합니다.",
-	"node.showAsyncStacks.description": "현재 호출 스택을 발생시킨 비동기 호출을 표시합니다. '검사기' 프로토콜에만 해당됩니다.",
+	"node.showAsyncStacks.description": "현재 호출 스택을 발생시킨 비동기 호출을 표시합니다. 'inspector' 프로토콜에만 해당됩니다.",
 	"node.snippet.attachInspector.description": "검사 프로토콜을 통해 실행 중인 노드 프로그램에 연결합니다.",
 	"node.snippet.attachInspector.label": "Node.js: 검사 프로토콜을 통한 연결",
 	"node.snippet.attachLegacy.description": "레거시 프로토콜을 통해 실행 중인 노드 프로그램에 연결합니다.",
