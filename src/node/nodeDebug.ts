@@ -2663,6 +2663,10 @@ export class NodeDebugSession extends LoggingDebugSession {
 			return Promise.resolve(null);
 		}
 
+		if (!name) {
+			name = '""';
+		}
+
 		const simple = <V8Simple> val;
 
 		switch (val.type) {
