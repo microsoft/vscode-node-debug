@@ -225,48 +225,56 @@ function listProcesses() : Promise<ProcessItem[]> {
 
 //---- extension.node-debug.provideInitialConfigurations
 
-/*
- * default configuration for node.js
- */
-const initialConfigurations = [
-	{
-		type: 'node',
-		request: 'launch',
-		name: localize('node.launch.config.name', "Launch Program"),
-		program: '${file}'
-	},
-	{
-		type: 'node',
-		request: 'attach',
-		name: localize('node.attach.config.name', "Attach to Port"),
-		address: 'localhost',
-		port: 5858
+function loadPackage(folderPath: string): any {
+	try {
+		const packageJsonPath = join(folderPath, 'package.json');
+		const jsonContent = fs.readFileSync(packageJsonPath, 'utf8');
+		return JSON.parse(jsonContent);
+	} catch (error) {
+		// silently ignore
 	}
-];
+	return undefined;
+}
 
 /**
  * returns an initial configuration json as a string
  */
 function createInitialConfigurations(): string {
 
-	let program = vscode.workspace.textDocuments.some(document => document.languageId === 'typescript') ? '${workspaceRoot}/app.ts' : undefined;
+	const pkg = vscode.workspace.rootPath ? loadPackage(vscode.workspace.rootPath) : undefined;
 
-	if (vscode.workspace.rootPath) {
-		program = guessProgramFromPackage(vscode.workspace.rootPath);
-	}
+	const config = {
+		type: 'node',
+		request: 'launch',
+		name: localize('node.launch.config.name', "Launch Program")
+	};
 
-	if (program) {
-		initialConfigurations.forEach(config => {
-			if (config['program']) {
-				config['program'] = program;
-			}
-		});
-	}
-	if (vscode.workspace.textDocuments.some(document => document.languageId === 'typescript' || document.languageId === 'coffeescript')) {
-		initialConfigurations.forEach(config => {
+	const initialConfigurations = [ config ];
+
+	if (pkg && pkg.name === 'mern-starter') {
+
+		configureMern(config);
+
+	} else {
+		let program = '${file}';
+
+		// try to find a better value for 'program' by analysing package.json
+		if (pkg) {
+			program = guessProgramFromPackage(pkg) || program;
+		}
+
+		if (!program) {
+			//program = vscode.workspace.textDocuments.some(document => document.languageId === 'typescript') ? '${workspaceRoot}/app.ts' : undefined;
+		}
+
+		config['program'] = program;
+
+		// prepare for source maps by adding 'outFiles' if typescript or coffeescript is detected
+		if (vscode.workspace.textDocuments.some(document => document.languageId === 'typescript' || document.languageId === 'coffeescript')) {
 			config['outFiles'] = [];
-		});
+		}
 	}
+
 	// Massage the configuration string, add an aditional tab and comment out processId.
 	// Add an aditional empty line between attributes which the user should not edit.
 	const configurationsMassaged = JSON.stringify(initialConfigurations, null, '\t').replace(',\n\t\t"processId', '\n\t\t//"processId')
@@ -283,18 +291,29 @@ function createInitialConfigurations(): string {
 	].join('\n');
 }
 
+function configureMern(config: any) {
+	config.protocol = 'inspector';
+	config.runtimeExecutable = 'nodemon';
+	config.program = '${workspaceRoot}/index.js',
+	config.port = 5858;
+	config.timeout = 20000;
+	config.restart = true;
+	config.env = {
+		BABEL_DISABLE_CACHE: 1,
+		NODE_ENV: 'development'
+	};
+	config.console = 'integratedTerminal';
+	config.internalConsoleOptions = "neverOpen";
+}
+
 /*
  * try to find the entry point ('main') from the package.json
  */
-function guessProgramFromPackage(folderPath: string): string | undefined {
+function guessProgramFromPackage(jsonObject: any): string | undefined {
 
 	let program: string | undefined;
 
 	try {
-		const packageJsonPath = join(folderPath, 'package.json');
-		const jsonContent = fs.readFileSync(packageJsonPath, 'utf8');
-		const jsonObject = JSON.parse(jsonContent);
-
 		if (jsonObject.main) {
 			program = jsonObject.main;
 		} else if (jsonObject.scripts && typeof jsonObject.scripts.start === 'string') {
@@ -312,7 +331,6 @@ function guessProgramFromPackage(folderPath: string): string | undefined {
 
 	return program;
 }
-
 
 //---- extension.node-debug.startSession
 
@@ -336,14 +354,21 @@ function startSession(config: any): StartSessionResult {
 		config.request = 'launch';
 
 		if (vscode.workspace.rootPath) {
-			// folder case: try to find entry point in package.json
 
-			config.program = guessProgramFromPackage(vscode.workspace.rootPath);
+			// folder case: try to find more launch info in package.json
+			const pkg = loadPackage(vscode.workspace.rootPath);
+			if (pkg) {
+				if (pkg.name === 'mern-starter') {
+					configureMern(config);
+				} else {
+					config.program = guessProgramFromPackage(pkg);
+				}
+			}
 		}
 
 		if (!config.program) {
-			// 'no folder' case (or no program found)
 
+			// 'no folder' case (or no program found)
 			const editor = vscode.window.activeTextEditor;
 			if (editor && editor.document.languageId === 'javascript') {
 				config.program = editor.document.fileName;
