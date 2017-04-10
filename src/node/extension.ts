@@ -322,7 +322,16 @@ function guessProgramFromPackage(jsonObject: any): string | undefined {
 		}
 
 		if (program) {
-			program = isAbsolute(program) ? program : join('${workspaceRoot}', program);
+			let path;
+			if (isAbsolute(program)) {
+				path = program;
+			} else {
+				path = join(<string>vscode.workspace.rootPath, program);
+				program = join('${workspaceRoot}', program);
+			}
+			if (!fs.existsSync(path) && !fs.existsSync(path + '.js')) {
+				return undefined;
+			}
 		}
 
 	} catch (error) {
