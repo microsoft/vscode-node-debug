@@ -299,7 +299,7 @@ function configureMern(config: any) {
 	config.timeout = 20000;
 	config.restart = true;
 	config.env = {
-		BABEL_DISABLE_CACHE: 1,
+		BABEL_DISABLE_CACHE: '1',
 		NODE_ENV: 'development'
 	};
 	config.console = 'integratedTerminal';
