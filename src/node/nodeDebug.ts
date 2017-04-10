@@ -843,11 +843,11 @@ export class NodeDebugSession extends LoggingDebugSession {
 				return;
 			}
 			if (!FS.existsSync(programPath)) {
-				programPath += '.js';
-				if (!FS.existsSync(programPath)) {
+				if (!FS.existsSync(programPath + '.js')) {
 					this.sendNotExistErrorResponse(response, 'program', programPath);
 					return;
 				}
+				programPath += '.js';
 			}
 			programPath = Path.normalize(programPath);
 			if (PathUtils.normalizeDriveLetter(programPath) !== PathUtils.realPath(programPath)) {
