@@ -253,7 +253,7 @@ function createInitialConfigurations(): string {
 
 	if (pkg && pkg.name === 'mern-starter') {
 
-		log(localize('mern.starter.explanation', "launch configuration for 'mern starter' project created."));
+		log(localize({ key: 'mern.starter.explanation', comment: [ 'argument contains product name without translation' ]}, "Launch configuration for '{0}' project created.", 'Mern Starter'));
 		configureMern(config);
 
 	} else {
@@ -263,19 +263,19 @@ function createInitialConfigurations(): string {
 		if (pkg) {
 			program = guessProgramFromPackage(pkg);
 			if (program) {
-				log(localize('program.guessed.from.package.json.explanation', "launch configuration created uses 'program' attribute guessed from package.json."));
+				log(localize('program.guessed.from.package.json.explanation', "Launch configuration created based on 'package.json'."));
 			}
 		}
 
 		if (!program) {
-			log(localize('program.fall.back.explanation', "launch configuration created will debug the file in the active editor."));
+			log(localize('program.fall.back.explanation', "Launch configuration created will debug file in the active editor."));
 			program = '${file}';
 		}
 		config['program'] = program;
 
 		// prepare for source maps by adding 'outFiles' if typescript or coffeescript is detected
 		if (vscode.workspace.textDocuments.some(document => document.languageId === 'typescript' || document.languageId === 'coffeescript')) {
-			log(localize('outFiles.explanation', "adjust the glob pattern in the 'outFiles' attribute so that it covers the generated JavaScript."));
+			log(localize('outFiles.explanation', "Adjust glob pattern(s) in the 'outFiles' attribute so that they cover the generated JavaScript."));
 			config['outFiles'] = [ '${workspaceRoot}/out/**/*.js' ];
 		}
 	}
@@ -301,7 +301,7 @@ function createInitialConfigurations(): string {
 function configureMern(config: any) {
 	config.protocol = 'inspector';
 	config.runtimeExecutable = 'nodemon';
-	config.program = '${workspaceRoot}/index.js',
+	config.program = '${workspaceRoot}/index.js';
 	config.port = 5858;
 	config.timeout = 20000;
 	config.restart = true;
@@ -310,7 +310,7 @@ function configureMern(config: any) {
 		NODE_ENV: 'development'
 	};
 	config.console = 'integratedTerminal';
-	config.internalConsoleOptions = "neverOpen";
+	config.internalConsoleOptions = 'neverOpen';
 }
 
 /*
