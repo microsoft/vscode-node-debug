@@ -284,11 +284,14 @@ function createInitialConfigurations(): string {
 	// Add an aditional empty line between attributes which the user should not edit.
 	const configurationsMassaged = JSON.stringify(initialConfigurations, null, '\t').split('\n').map(line => '\t' + line).join('\n').trim();
 
+	const comment1 = localize('launch.config.comment1', "Use IntelliSense to learn about possible Node.js debug attributes.");
+	const comment2 = localize('launch.config.comment2', "Hover to view descriptions of existing attributes.");
+	const comment3 = localize('launch.config.comment3', "For more information, visit: {0}", 'https://go.microsoft.com/fwlink/?linkid=830387');
 	return [
 		'{',
-		'\t// Use IntelliSense to learn about possible Node.js debug attributes.',
-		'\t// Hover to view descriptions of existing attributes.',
-		'\t// For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387',
+		`\t// ${comment1}`,
+		`\t// ${comment2}`,
+		`\t// ${comment3}`,
 		'\t"version": "0.2.0",',
 		'\t"configurations": ' + configurationsMassaged,
 		'}'
