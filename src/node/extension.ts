@@ -253,25 +253,30 @@ function createInitialConfigurations(): string {
 
 	if (pkg && pkg.name === 'mern-starter') {
 
+		log(localize('mern.starter.explanation', "launch configuration for 'mern starter' project created."));
 		configureMern(config);
 
 	} else {
-		let program = '${file}';
+		let program: string | undefined = undefined;
 
 		// try to find a better value for 'program' by analysing package.json
 		if (pkg) {
-			program = guessProgramFromPackage(pkg) || program;
+			program = guessProgramFromPackage(pkg);
+			if (program) {
+				log(localize('program.guessed.from.package.json.explanation', "launch configuration created uses 'program' attribute guessed from package.json."));
+			}
 		}
 
 		if (!program) {
-			//program = vscode.workspace.textDocuments.some(document => document.languageId === 'typescript') ? '${workspaceRoot}/app.ts' : undefined;
+			log(localize('program.fall.back.explanation', "launch configuration created will debug the file in the active editor."));
+			program = '${file}';
 		}
-
 		config['program'] = program;
 
 		// prepare for source maps by adding 'outFiles' if typescript or coffeescript is detected
 		if (vscode.workspace.textDocuments.some(document => document.languageId === 'typescript' || document.languageId === 'coffeescript')) {
-			config['outFiles'] = [];
+			log(localize('outFiles.explanation', "adjust the glob pattern in the 'outFiles' attribute so that it covers the generated JavaScript."));
+			config['outFiles'] = [ '${workspaceRoot}/out/**/*.js' ];
 		}
 	}
 
