@@ -14,7 +14,7 @@
 	"launch.args.description": "Command line arguments passed to the program.",
 
 	"node.protocol.description": "Node.js debug protocol to use.",
-		"node.protocol.auto.description": "try to detect the best protocol automatically",
+		"node.protocol.auto.description": "try to detect the best protocol automatically, selecting 'inspector' for launching Node 8.0+",
 		"node.protocol.inspector.description": "new protocol supported by Node.js versions >= 6.3",
 		"node.protocol.legacy.description": "old protocol supported by Node.js versions < 8.0",
 
