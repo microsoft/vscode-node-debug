@@ -491,7 +491,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 		}
 
 		// if this exception originates from a 'reject', skip it if 'All Exception' is not set.
-		if (this._skipRejects && source && source.indexOf('reject') === 0) {
+		if (this._skipRejects && source && source.indexOf('reject(') === 0) {
 			if (!this._catchRejects) {
 				this._node.command('continue');
 				return;
@@ -800,6 +800,9 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 		// special code for 'extensionHost' debugging
 		if (this._adapterID === 'extensionHost') {
+
+			// in VS Code 1.12 Electron's node.js starts to break on every Promise.reject
+			this._skipRejects = true;
 
 			// we always launch in 'debug-brk' mode, but we only show the break event if 'stopOnEntry' attribute is true.
 			let launchArgs = [ runtimeExecutable ];
