@@ -9,9 +9,12 @@
 	"node.launch.config.name": "Iniciar programa",
 	"pickNodeProcess": "Elija el proceso de node.js o Gulp para la asociación",
 	"protocol.switch.attach.process": "Depurando con protocolos heredados porque la asociación a un proceso por el id. solo se admite para protocolos heredados.",
+	"protocol.switch.inspector.detected": "Depurando con el protocolo inspector porque se ha detectado.",
 	"protocol.switch.inspector.version": "Depuración con el protocolo de inspector porque se detectó el nodo {0}.",
+	"protocol.switch.legacy.detected": "Depurando con el protocolo heredado porque se ha detectado.",
 	"protocol.switch.legacy.version": "Depuración con el protocolo heredado porque se detectó el nodo {0}.",
 	"protocol.switch.runtime.set": "Depuración con el protocolo heredado porque hay un ejecutable en tiempo de ejecución configurado.",
+	"protocol.switch.unknown.error": "Depurando con el protocoo heredado porque no se ha podido determinar la versión del nodo: {0}",
 	"protocol.switch.unknown.version": "Depuración con el protocolo heredado porque no se pudo determinar la versión del nodo.",
 	"select.script": "Seleccione un script"
 }

@@ -9,9 +9,12 @@
 	"node.launch.config.name": "啟動程式",
 	"pickNodeProcess": "挑選附加目標 node.js 或 Gulp 處理序",
 	"protocol.switch.attach.process": "因為只有傳統通訊協定才可依識別碼附加到處理序，所以請使用傳統通訊協定偵錯。",
+	"protocol.switch.inspector.detected": "因為偵測到了檢查通訊協定，所以使用該通訊協定進行偵錯。",
 	"protocol.switch.inspector.version": "因為偵測到節點 {0}，所以使用檢查通訊協定進行偵錯。",
+	"protocol.switch.legacy.detected": "因為偵測到了舊版通訊協定，所以使用該通訊協定進行偵錯。",
 	"protocol.switch.legacy.version": "因為偵測到節點 {0}，所以使用傳統通訊協定進行偵錯。",
 	"protocol.switch.runtime.set": "因為已設定執行階段可執行檔，所以使用傳統通訊協定進行偵錯。",
+	"protocol.switch.unknown.error": "因為無法判斷 Node 版本，所以使用該通訊協定進行偵錯: {0}",
 	"protocol.switch.unknown.version": "因為無法判斷節點版本，所以使用傳統通訊協定進行偵錯。",
 	"select.script": "選取指令碼"
 }
