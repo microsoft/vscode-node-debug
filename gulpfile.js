@@ -39,6 +39,22 @@ var scripts2 = [
 
 var outDest = 'out';
 
+const transifexApiHostname = 'www.transifex.com'
+const transifexApiName = 'api';
+const transifexApiToken = process.env.TRANSIFEX_API_TOKEN;
+const transifexProjectName = 'vscode-extensions';
+const transifexExtensionName = 'vscode-node-debug';
+const vscodeLanguages = [
+	'zh-hans',
+	'zh-hant',
+	'ja',
+	'ko',
+	'de',
+	'fr',
+	'es',
+	'ru',
+	'it'
+];
 
 gulp.task('default', function(callback) {
 	runSequence('build', callback);
@@ -124,6 +140,14 @@ gulp.task('add-i18n', function() {
 	return gulp.src(['package.nls.json'])
 		.pipe(nls.createAdditionalLanguageFiles(nls.coreLanguages, 'i18n'))
 		.pipe(gulp.dest('.'));
+});
+
+gulp.task('transifex-push', function() {
+	return gulp.src('**/*.nls.json').pipe(nls.prepareXlfFiles(transifexProjectName, transifexExtensionName)).pipe(nls.pushXlfFiles(transifexApiHostname, transifexApiName, transifexApiToken));
+});
+
+gulp.task('transifex-pull', function() {
+	return nls.pullXlfFiles(transifexApiHostname, transifexApiName, transifexApiToken, vscodeLanguages, [{ name: transifexExtensionName, project: transifexProjectName }]).pipe(nls.prepareJsonFiles()).pipe(gulp.dest('./i18n'));
 });
 
 gulp.task('vsce-publish', function() {
