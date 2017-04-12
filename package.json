@@ -63,7 +63,7 @@
 		"tslint": "^3.15.1",
 		"typescript": "^2.2.1",
 		"vscode": "^1.0.3",
-		"vscode-nls-dev": "^2.0.1",
+		"vscode-nls-dev": "^2.1.1",
 		"vscode-debugadapter-testsupport": "^1.18.0",
 		"vscode-debugprotocol": "^1.18.0",
 		"event-stream": "^3.3.4",
