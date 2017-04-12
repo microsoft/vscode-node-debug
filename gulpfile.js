@@ -143,11 +143,15 @@ gulp.task('add-i18n', function() {
 });
 
 gulp.task('transifex-push', function() {
-	return gulp.src('**/*.nls.json').pipe(nls.prepareXlfFiles(transifexProjectName, transifexExtensionName)).pipe(nls.pushXlfFiles(transifexApiHostname, transifexApiName, transifexApiToken));
+	return gulp.src('**/*.nls.json')
+		.pipe(nls.prepareXlfFiles(transifexProjectName, transifexExtensionName))
+		.pipe(nls.pushXlfFiles(transifexApiHostname, transifexApiName, transifexApiToken));
 });
 
 gulp.task('transifex-pull', function() {
-	return nls.pullXlfFiles(transifexApiHostname, transifexApiName, transifexApiToken, vscodeLanguages, [{ name: transifexExtensionName, project: transifexProjectName }]).pipe(nls.prepareJsonFiles()).pipe(gulp.dest('./i18n'));
+	return nls.pullXlfFiles(transifexApiHostname, transifexApiName, transifexApiToken, vscodeLanguages, [{ name: transifexExtensionName, project: transifexProjectName }])
+		.pipe(nls.prepareJsonFiles())
+		.pipe(gulp.dest('./i18n'));
 });
 
 gulp.task('vsce-publish', function() {
