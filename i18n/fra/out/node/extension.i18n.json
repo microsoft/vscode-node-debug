@@ -9,9 +9,12 @@
 	"node.launch.config.name": "Lancer le programme",
 	"pickNodeProcess": "Sélectionnez le processus node.js ou gulp à attacher",
 	"protocol.switch.attach.process": "Débogage à l'aide du protocole hérité, car l'attachement à un processus par ID n'est pris en charge que pour le protocole hérité.",
+	"protocol.switch.inspector.detected": "Débogage avec le protocole Inspector car il a été détecté.",
 	"protocol.switch.inspector.version": "Débogage à l'aide du protocole inspector, car Node {0} a été détecté.",
+	"protocol.switch.legacy.detected": "Débogage avec un protocole hérité car il a été détecté.",
 	"protocol.switch.legacy.version": "Débogage à l'aide du protocole hérité, car Node {0} a été détecté.",
 	"protocol.switch.runtime.set": "Débogage à l'aide du protocole hérité, car un exécutable (runtime) est défini.",
+	"protocol.switch.unknown.error": "Débogage avec un protocole hérité en raison de l'impossibilité de déterminer la version de Node : {0}",
 	"protocol.switch.unknown.version": "Débogage à l'aide du protocole hérité, car la version de Node n'a pas pu être déterminée.",
 	"select.script": "Sélectionner un script"
 }

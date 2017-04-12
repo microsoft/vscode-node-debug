@@ -9,9 +9,12 @@
 	"node.launch.config.name": "启动程序",
 	"pickNodeProcess": "选取要附加到的 node.js 或 gulp 进程",
 	"protocol.switch.attach.process": "正在采用旧协议进行调试，因为仅旧协议支持按 ID 附加到进程。",
+	"protocol.switch.inspector.detected": "由于检测到检查器协议，因此用其进行调试。",
 	"protocol.switch.inspector.version": "正在使用检查器协议调试，因为检测到节点 {0}。",
+	"protocol.switch.legacy.detected": "由于检测到旧版协议，因此用其进行调试。",
 	"protocol.switch.legacy.version": "正在使用旧版协议调试，因为检测到节点 {0}。",
 	"protocol.switch.runtime.set": "正在使用旧版协议调试，因为设置了运行时可执行文件。",
+	"protocol.switch.unknown.error": "由于无法确定节点版本，因此使用旧协议进行调试: {0}",
 	"protocol.switch.unknown.version": "正在使用旧版协议调试，因为无法确定节点版本。",
 	"select.script": "选择脚本"
 }
