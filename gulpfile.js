@@ -150,6 +150,11 @@ gulp.task('transifex-push', function() {
 
 gulp.task('transifex-pull', function() {
 	return nls.pullXlfFiles(transifexApiHostname, transifexApiName, transifexApiToken, vscodeLanguages, [{ name: transifexExtensionName, project: transifexProjectName }])
+		.pipe(gulp.dest(`../${transifexExtensionName}-localization`));
+});
+
+gulp.task('i18n-import', function() {
+	return gulp.src(`../${transifexExtensionName}-localization/**/*.xlf`)
 		.pipe(nls.prepareJsonFiles())
 		.pipe(gulp.dest('./i18n'));
 });
