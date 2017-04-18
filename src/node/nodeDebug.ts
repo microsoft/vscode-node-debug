@@ -348,6 +348,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 	private static DEBUG_INJECTION = 'debugInjection.js';
 	private static NODE_INTERNALS = '<node_internals>';
 	private static NODE_INTERNALS_PREFIX = /^<node_internals>[/\\]/;
+	private static NODE_INTERNALS_VM = /^<node_internals>[/\\]VM([0-9]+)/;
 
 	private static NODE_SHEBANG_MATCHER = new RegExp('#! */usr/bin/env +node');
 	private static LONG_STRING_MATCHER = /\.\.\. \(length: [0-9]+\)$/;
@@ -657,10 +658,17 @@ export class NodeDebugSession extends LoggingDebugSession {
 	}
 
 	/**
-	 * Special treatment for internal modules: we remove '<internal>/' or '<internal>\'
+	 * Special treatment for internal modules:
+	 * we remove the '<internal>/' or '<internal>\' prefix and return either the name of the module or its ID
 	 */
-	private _pathToScript(path: string): string {
-		return path.replace(NodeDebugSession.NODE_INTERNALS_PREFIX, '');
+	private _pathToScript(path: string): number | string {
+
+		const result = NodeDebugSession.NODE_INTERNALS_VM.exec(path);
+		if (result && result.length >= 2) {
+			return + result[1];
+		} else {
+			return path.replace(NodeDebugSession.NODE_INTERNALS_PREFIX, '');
+		}
 	}
 
 	/**
@@ -1591,15 +1599,14 @@ export class NodeDebugSession extends LoggingDebugSession {
 		}
 
 		if (source.path && NodeDebugSession.NODE_INTERNALS_PREFIX.test(source.path)) {
-			// a core module
-			const path = this._pathToScript(source.path);
-			this._findModule(path).then(scriptId => {
+
+			// an internal module
+			this._findScript(this._pathToScript(source.path)).then(scriptId => {
 				if (scriptId >= 0) {
 					this._updateBreakpoints(response, null, scriptId, sbs);
 				} else {
-					this.sendErrorResponse(response, 2019, localize('VSND2019', "Internal module {0} not found.", '{_module}'), { _module: path });
+					this.sendErrorResponse(response, 2019, localize('VSND2019', "Internal module {0} not found.", '{_module}'), { _module: source.path });
 				}
-				return;
 			});
 			return;
 		}
@@ -1615,19 +1622,6 @@ export class NodeDebugSession extends LoggingDebugSession {
 		if (source.path) {
 			let path = this.convertClientPathToDebugger(source.path);
 			this._mapSourceAndUpdateBreakpoints(response, path, sbs);
-			return;
-		}
-
-		if (source.name) {
-			// a core module
-			this._findModule(source.name).then(scriptId => {
-				if (scriptId >= 0) {
-					this._updateBreakpoints(response, null, scriptId, sbs);
-				} else {
-					this.sendErrorResponse(response, 2019, localize('VSND2019', "Internal module {0} not found.", '{_module}'), { _module: source.name });
-				}
-				return;
-			});
 			return;
 		}
 
@@ -2190,6 +2184,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 				if (!name) {
 					// if a function is dynamically created from a string, its script has no name.
 					name = `VM${script_val.id}`;
+					path = `${NodeDebugSession.NODE_INTERNALS}/${name}`;
 				}
 
 				// source not found locally -> prepare to stream source content from node backend.
@@ -3291,9 +3286,10 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 	protected sourceRequest(response: DebugProtocol.SourceResponse, args: DebugProtocol.SourceArguments): void {
 
+		// first try to use 'source'
 		if (args.source && args.source.path) {
 
-			this._loadScriptByPath(this._pathToScript(args.source.path)).then(script => {
+			this._loadScript(this._pathToScript(args.source.path)).then(script => {
 				response.body = {
 					content: script.contents,
 					mimeType: 'text/javascript'
@@ -3302,26 +3298,26 @@ export class NodeDebugSession extends LoggingDebugSession {
 			}).catch(err => {
 				this.sendErrorResponse(response, 2026, localize('source.not.found', "Could not retrieve content."));
 			});
+
 			return;
 		}
 
-		const sourceHandle = args.sourceReference;
-		const srcSource = this._sourceHandles.get(sourceHandle);
-
+		// try to use 'sourceReference'
+		const srcSource = this._sourceHandles.get(args.sourceReference);
 		if (srcSource) {
 
-			if (srcSource.source) {
+			if (srcSource.source) {		// script content already cached
 				response.body = {
-					content: srcSource.source
+					content: srcSource.source,
+					mimeType: 'text/javascript'
 				};
 				this.sendResponse(response);
 				return;
 			}
 
-			if (srcSource.scriptId) {
-
+			if (srcSource.scriptId) {	// load script content
 				this._loadScript(srcSource.scriptId).then(script => {
-					srcSource.source = script.contents;
+					srcSource.source = script.contents;	// store in cache
 					response.body = {
 						content: srcSource.source,
 						mimeType: 'text/javascript'
@@ -3334,50 +3330,55 @@ export class NodeDebugSession extends LoggingDebugSession {
 			}
 		}
 
+		// give up
 		this.sendErrorResponse(response, 2027, 'sourceRequest error: illegal handle', null, ErrorDestination.Telemetry);
 	}
 
-	private _loadScript(scriptId: number) : Promise<Script>  {
+	private _loadScript(scriptIdOrPath: number | string) : Promise<Script> {
 
-		let script = this._scripts.get(scriptId);
+		if (typeof scriptIdOrPath === 'number') {
 
-		if (!script) {
+			let script = this._scripts.get(scriptIdOrPath);
 
-			this.log('ls', `_loadScript: ${scriptId}`);
+			if (!script) {
+
+				this.log('ls', `_loadScript: ${scriptIdOrPath}`);
+
+				// not found
+				const args = {
+					types: 4,
+					includeSource: true,
+					ids: [ scriptIdOrPath ]
+				};
+
+				script = this._node.scripts(args).then(nodeResponse => {
+					return new Script(nodeResponse.body[0]);
+				});
+
+				this._scripts.set(scriptIdOrPath, script);
+			}
+
+			return script;
+
+		} else {
+
+			this.log('ls', `_loadScript: ${scriptIdOrPath}`);
 
 			// not found
 			const args = {
-				types: 1+2+4,
+				types: 4,
 				includeSource: true,
-				ids: [ scriptId ]
+				filter: scriptIdOrPath
 			};
 
-			script = this._node.scripts(args).then(nodeResponse => {
-				return new Script(nodeResponse.body[0]);
+			return this._node.scripts(args).then(nodeResponse => {
+				for (let result of nodeResponse.body) {
+					if (result.name === scriptIdOrPath) {	// return the first exact match
+						return new Script(result);
+					}
+				}
 			});
-
-			this._scripts.set(scriptId, script);
 		}
-
-		return script;
-	}
-
-	private _loadScriptByPath(name: string) : Promise<Script>  {
-
-		this.log('ls', `_loadScriptByPath: ${name}`);
-
-		// not found
-		const args = {
-			types: 1+2+4,
-			includeSource: true,
-			filter: name
-		};
-
-		let script = this._node.scripts(args).then(nodeResponse => {
-			return new Script(nodeResponse.body[0]);
-		});
-
-		return script;
 	}
 
 	//--- completions request -------------------------------------------------------------------------------------------------
@@ -3638,15 +3639,13 @@ export class NodeDebugSession extends LoggingDebugSession {
 		this._node.scripts( { types: 4 } ).then(resp => {
 			let result = Array<any>();
 			for (let script of resp.body) {
-				if (script.name) {
-					script.name = this._scriptNameToPath(script.name);
-					const name = Path.basename(script.name);
-					result.push({
-						label: name,
-						description: script.name === name ? '' : script.name,
-						source: new Source(name, script.name, this._getScriptIdHandle(script.id))
-					});
-				}
+				const path = this._scriptNameToPath(script.name || `VM${script.id}`);
+				const name = Path.basename(path);
+				result.push({
+					label: name,
+					description: path,
+					source: new Source(name, path)
+				});
 			}
 			result = result.sort((a, b) => a.label.localeCompare(b.label));
 			response.body = { loadedScripts: result };
@@ -3881,18 +3880,22 @@ export class NodeDebugSession extends LoggingDebugSession {
 	}
 
 	/**
-	 * Returns script id for the given script name or -1 if not found.
+	 * Returns script ID for the given script name or ID (or -1 if not found).
 	 */
-	private _findModule(name: string) : Promise<number> {
+	private _findScript(scriptIdOrPath: number | string) : Promise<number> {
+
+		if (typeof scriptIdOrPath === 'number') {
+			return Promise.resolve(scriptIdOrPath);
+		}
 
 		const args = {
-			types: 1 + 2 + 4,
-			filter: name
+			types: 4,
+			filter: scriptIdOrPath
 		};
 
 		return this._node.scripts(args).then(resp => {
 			for (let result of resp.body) {
-				if (result.name === name) {	// return the first exact match
+				if (result.name === scriptIdOrPath) {	// return the first exact match
 					return result.id;
 				}
 			}
