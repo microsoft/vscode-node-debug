@@ -420,11 +420,11 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 		/*
 		this._node.on('beforeCompile', (event: NodeV8Event) => {
-			this.outLine(`beforeCompile ${event.body.name}`);
+			this.outLine(`beforeCompile ${this._scriptToPath(event.body.script)}`);
 		});
 
 		this._node.on('afterCompile', (event: NodeV8Event) => {
-			this.outLine(`afterCompile ${event.body.name}`);
+			this.outLine(`afterCompile ${this._scriptToPath(event.body.script)}`);
 		});
 		*/
 
@@ -592,14 +592,12 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 		if (this._skipFiles) {
 
-			let path = this._scriptNameToPath(event.script.name);
-			if (path) {
+			let path = this._scriptToPath(event.script);
 
-				// if launch.json defines localRoot and remoteRoot try to convert remote path back to a local path
-				let localPath = this._remoteToLocal(path);
+			// if launch.json defines localRoot and remoteRoot try to convert remote path back to a local path
+			let localPath = this._remoteToLocal(path);
 
-				return PathUtils.multiGlobMatches(this._skipFiles, localPath);
-			}
+			return PathUtils.multiGlobMatches(this._skipFiles, localPath);
 		}
 		return false;
 	}
@@ -609,55 +607,56 @@ export class NodeDebugSession extends LoggingDebugSession {
 	 */
 	private _skipGenerated(event: V8EventBody) : Promise<boolean> {
 
-		let path = this._scriptNameToPath(event.script.name);
-		if (path) {
+		let path = this._scriptToPath(event.script);
 
-			// if launch.json defines localRoot and remoteRoot try to convert remote path back to a local path
-			let localPath = this._remoteToLocal(path);
+		// if launch.json defines localRoot and remoteRoot try to convert remote path back to a local path
+		let localPath = this._remoteToLocal(path);
 
-			if (this._skipFiles) {
-				if (PathUtils.multiGlobMatches(this._skipFiles, localPath)) {
-					return Promise.resolve(true);
-				}
-				return Promise.resolve(false);
+		if (this._skipFiles) {
+			if (PathUtils.multiGlobMatches(this._skipFiles, localPath)) {
+				return Promise.resolve(true);
 			}
-
-			// try to map
-			let line = event.sourceLine;
-			let column = this._adjustColumn(line, event.sourceColumn);
-
-			return this._sourceMaps.MapToSource(localPath, null, line, column).then(mapresult => {
-				return ! mapresult;
-			});
+			return Promise.resolve(false);
 		}
 
-		// skip everything
-		return Promise.resolve(true);
+		// try to map
+		let line = event.sourceLine;
+		let column = this._adjustColumn(line, event.sourceColumn);
+
+		return this._sourceMaps.MapToSource(localPath, null, line, column).then(mapresult => {
+			return ! mapresult;
+		});
 	}
 
 	/**
-	 * Special treatment for internal modules: we prepend '<internal>/'
+	 * create a path for a script following these rules:
+	 * - script name is an absolute path: return name as is
+	 * - script name is an internal module: return "<node_internals/name"
+	 * - script has no name: return "<node_internals/VMnnn" where nnn is the script ID
 	 */
-	private _scriptNameToPath(scriptName: string): string {
-		if (scriptName && !PathUtils.isAbsolutePath(scriptName)) {
-			// scriptname is relative -> internal node module
-			return `${NodeDebugSession.NODE_INTERNALS}/${scriptName}`;
+	private _scriptToPath(script: V8Script): string {
+		let name = script.name;
+		if (name) {
+			if (PathUtils.isAbsolutePath(name)) {
+				return name;
+			}
+		} else {
+			name = `VM${script.id}`;
 		}
-		return scriptName;
+		return `${NodeDebugSession.NODE_INTERNALS}/${name}`;
 	}
 
 	/**
 	 * Special treatment for internal modules:
-	 * we remove the '<internal>/' or '<internal>\' prefix and return either the name of the module or its ID
+	 * we remove the '<node_internals>/' or '<node_internals>\' prefix and return either the name of the module or its ID
 	 */
 	private _pathToScript(path: string): number | string {
 
 		const result = NodeDebugSession.NODE_INTERNALS_VM.exec(path);
 		if (result && result.length >= 2) {
 			return + result[1];
-		} else {
-			return path.replace(NodeDebugSession.NODE_INTERNALS_PREFIX, '');
 		}
+		return path.replace(NodeDebugSession.NODE_INTERNALS_PREFIX, '');
 	}
 
 	/**
@@ -1549,18 +1548,19 @@ export class NodeDebugSession extends LoggingDebugSession {
 		}
 
 		const source = args.source;
+		const sourcePath = source.path ? this.convertClientPathToDebugger(source.path) : undefined;
 
-		if (source.path) {
+		if (sourcePath) {
 			// as long as node debug doesn't implement 'hot code replacement' we have to mark all breakpoints as unverified.
 
 			let keepUnverified = false;
 
-			if (this._modifiedSources.has(source.path)) {
+			if (this._modifiedSources.has(sourcePath)) {
 				keepUnverified = true;
 			} else {
 				if (typeof args.sourceModified === 'boolean' && args.sourceModified) {
 					keepUnverified = true;
-					this._modifiedSources.add(source.path);
+					this._modifiedSources.add(sourcePath);
 				}
 			}
 
@@ -1587,14 +1587,14 @@ export class NodeDebugSession extends LoggingDebugSession {
 			}
 		}
 
-		if (source.path && NodeDebugSession.NODE_INTERNALS_PREFIX.test(source.path)) {
+		if (sourcePath && NodeDebugSession.NODE_INTERNALS_PREFIX.test(sourcePath)) {
 
 			// an internal module
-			this._findScript(this._pathToScript(source.path)).then(scriptId => {
+			this._findScript(this._pathToScript(sourcePath)).then(scriptId => {
 				if (scriptId >= 0) {
 					this._updateBreakpoints(response, null, scriptId, sbs);
 				} else {
-					this.sendErrorResponse(response, 2019, localize('VSND2019', "Internal module {0} not found.", '{_module}'), { _module: source.path });
+					this.sendErrorResponse(response, 2019, localize('VSND2019', "Internal module {0} not found.", '{_module}'), { _module: sourcePath });
 				}
 			});
 			return;
@@ -1608,9 +1608,8 @@ export class NodeDebugSession extends LoggingDebugSession {
 			}
 		}
 
-		if (source.path) {
-			let path = this.convertClientPathToDebugger(source.path);
-			this._mapSourceAndUpdateBreakpoints(response, path, sbs);
+		if (sourcePath) {
+			this._mapSourceAndUpdateBreakpoints(response, sourcePath, sbs);
 			return;
 		}
 
@@ -2161,7 +2160,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 						}
 
 						// if we end up here, 'name' is not a path and is an internal module
-						path = this._scriptNameToPath(name);
+						path = this._scriptToPath(script_val);
 						origin = localize('origin.core.module', "read-only core module");
 
 					} else {
@@ -2172,8 +2171,8 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 				if (!name) {
 					// if a function is dynamically created from a string, its script has no name.
-					name = `VM${script_val.id}`;
-					path = `${NodeDebugSession.NODE_INTERNALS}/${name}`;
+					path = this._scriptToPath(script_val);
+					name = Path.basename(path);
 				}
 
 				// source not found locally -> prepare to stream source content from node backend.
@@ -3627,7 +3626,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 		this._node.scripts( { types: 4 } ).then(resp => {
 			let result = Array<any>();
 			for (let script of resp.body) {
-				const path = this._scriptNameToPath(script.name || `VM${script.id}`);
+				const path = this._scriptToPath(script);
 				const name = Path.basename(path);
 				result.push({
 					label: name,
