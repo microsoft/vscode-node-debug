@@ -194,7 +194,7 @@ suite('Node Debug Adapter', () => {
 			return Promise.all([
 				dc.configurationSequence(),
 				dc.launch({ program: PROGRAM }),
-				dc.assertStoppedLocation('debugger_statement', { path: '<node_internals>/VM66', line: DEBUGGER_LINE } )
+				dc.assertStoppedLocation('debugger_statement', { /* path: '<node_internals>/VM66',*/ line: DEBUGGER_LINE } )
 			]);
 		});
 	});
