@@ -189,7 +189,7 @@ suite('Node Debug Adapter', () => {
 				case 'darwin':
 					return dc.hitBreakpoint({ program: PROGRAM }, { path: '<node_internals>/path.js', line: 1221} );
 				case 'linux':
-					return dc.hitBreakpoint({ program: PROGRAM }, { path: '<node_internals>/path.js', line: 492} );
+					return dc.hitBreakpoint({ program: PROGRAM }, { path: '<node_internals>/path.js', line: 1209} );
 			}
 		});
 
