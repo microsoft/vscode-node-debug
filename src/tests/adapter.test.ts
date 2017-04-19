@@ -166,6 +166,25 @@ suite('Node Debug Adapter', () => {
 				})
 			]);
 		});
+
+		test('should stop on <node_internals> module', () => {
+
+			const PROGRAM = Path.join(DATA_ROOT, 'programWithInternal.js');
+
+			return dc.hitBreakpoint({ program: PROGRAM }, { path: '<node_internals>/path.js', line: 1209} );
+		});
+
+		test('should stop on debugger statement in eval', () => {
+
+			const PROGRAM = Path.join(DATA_ROOT, 'programWithDebuggerEval.js');
+			const DEBUGGER_LINE = 2;
+
+			return Promise.all([
+				dc.configurationSequence(),
+				dc.launch({ program: PROGRAM }),
+				dc.assertStoppedLocation('debugger_statement', { path: '<node_internals>/VM66', line: DEBUGGER_LINE } )
+			]);
+		});
 	});
 
 	suite('setBreakpoints in TypeScript', () => {
