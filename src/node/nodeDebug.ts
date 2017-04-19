@@ -448,31 +448,30 @@ export class NodeDebugSession extends LoggingDebugSession {
 	 */
 	private _handleNodeExceptionEvent(eventBody: V8ExceptionEventBody) : void {
 
-		// in order to identify reject calls and debugger statements extract source at current location
-		let source: string | null = null;
-		if (eventBody.sourceLineText && typeof eventBody.sourceColumn === 'number') {
-			source = eventBody.sourceLineText.substr(eventBody.sourceColumn);
-		}
-
+		// should we skip this location?
 		if (this._skip(eventBody)) {
 			this._node.command('continue');
 			return;
 		}
 
-		// if this exception originates from a 'reject', skip it if 'All Exception' is not set.
-		if (this._skipRejects && source && source.indexOf('reject(') === 0) {
-			if (!this._catchRejects) {
-				this._node.command('continue');
-				return;
-			}
-			if (eventBody.exception.text === 'undefined') {
-				eventBody.exception.text = 'reject';
+		// in order to identify rejects extract source at current location
+		if (this._skipRejects && eventBody.sourceLineText && typeof eventBody.sourceColumn === 'number') {
+			let source = eventBody.sourceLineText.substr(eventBody.sourceColumn);
+			// if this exception originates from a 'reject', skip it if 'All Exception' is not set.
+			if (source.indexOf('reject(') === 0) {
+				if (!this._catchRejects) {
+					this._node.command('continue');
+					return;
+				}
+				if (eventBody.exception.text === 'undefined') {
+					eventBody.exception.text = 'reject';
+				}
 			}
 		}
 
-		// remember exception
+		// send event
 		this._exception = eventBody;
-		this._handleNodeBreakEvent2('exception', eventBody.exception.text);
+		this._sendStoppedEvent('exception', eventBody.exception.text);
 	}
 
 	/**
@@ -480,55 +479,41 @@ export class NodeDebugSession extends LoggingDebugSession {
 	 */
 	private _handleNodeBreakEvent(eventBody: V8BreakEventBody) : void {
 
-		// in order to identify reject calls and debugger statements extract source at current location
-		let source: string | null = null;
-		if (eventBody.sourceLineText && typeof eventBody.sourceColumn === 'number') {
-			source = eventBody.sourceLineText.substr(eventBody.sourceColumn);
-		}
-
 		const breakpoints = eventBody.breakpoints;
 
+		// check for breakpoints
 		if (Array.isArray(breakpoints) && breakpoints.length > 0) {
 
 			this._disableSkipFiles = this._skip(eventBody);
 
 			const id = breakpoints[0];
-			if (!this._gotEntryEvent && id === 1) {	// 'stop on entry point' is implemented as a breakpoint with id 1
+			if (!this._gotEntryEvent && id === 1) {	// 'stop on entry point' is implemented as a breakpoint with ID 1
 
 				this.log('la', '_handleNodeBreakEvent: suppressed stop-on-entry event');
+				// do not send event now
 				this._rememberEntryLocation(eventBody.script.name, eventBody.sourceLine, eventBody.sourceColumn);
-				return;	// do not send event now
+				return;
 			}
 
-			// evaluate hit counts
-			let ibp = this._hitCounts.get(id);
-			if (ibp) {
-				ibp.hitCount++;
-				if (ibp.hitter && !ibp.hitter(ibp.hitCount)) {
-					this._node.command('continue');
-					return;
-				}
-			}
-
-			this._handleNodeBreakEvent2('breakpoint');
+			this._sendBreakpointStoppedEvent(id);
 			return;
 		}
 
-		// is debugger statement?
-		if (source && source.indexOf('debugger') === 0) {
-			this._gotDebuggerEvent = true;
-			this._handleNodeBreakEvent2('debugger_statement');
-			return;
+		// in order to identify debugger statements extract source at current location
+		if (eventBody.sourceLineText && typeof eventBody.sourceColumn === 'number') {
+			let source = eventBody.sourceLineText.substr(eventBody.sourceColumn);
+			if (source.indexOf('debugger') === 0) {
+				this._gotDebuggerEvent = true;
+				this._sendStoppedEvent('debugger_statement');
+				return;
+			}
 		}
 
 		// must be the result of a 'step'
-
-		let reason: ReasonType | undefined;
+		let reason: ReasonType = 'step';
 		if (this._restartFramePending) {
 			this._restartFramePending = false;
 			reason = 'frame_entry';
-		} else {
-			reason = 'step';
 		}
 
 		if (!this._disableSkipFiles) {
@@ -539,25 +524,37 @@ export class NodeDebugSession extends LoggingDebugSession {
 						this._node.command('continue', { stepaction: 'in' });
 						this._smartStepCount++;
 					} else {
-						this._handleNodeBreakEvent2(<ReasonType>reason);
+						this._sendStoppedEvent(<ReasonType>reason);
 					}
 				});
 				return;
 			}
 		}
 
-		this._handleNodeBreakEvent2(reason);
+		this._sendStoppedEvent(reason);
 	}
 
-	private _handleNodeBreakEvent2(reason: ReasonType, exception_text?: string) {
+	private _sendBreakpointStoppedEvent(breakpointId: number): void {
+
+		// evaluate hit counts
+		let ibp = this._hitCounts.get(breakpointId);
+		if (ibp) {
+			ibp.hitCount++;
+			if (ibp.hitter && !ibp.hitter(ibp.hitCount)) {
+				this._node.command('continue');
+				return;
+			}
+		}
+
+		this._sendStoppedEvent('breakpoint');
+	}
+
+	private _sendStoppedEvent(reason: ReasonType, exception_text?: string): void {
+
 		if (this._smartStepCount > 0) {
 			this.log('ss', `_handleNodeBreakEvent: ${this._smartStepCount} steps skipped`);
 			this._smartStepCount = 0;
 		}
-		this._sendStoppedEvent(reason, exception_text);
-	}
-
-	private _sendStoppedEvent(reason: ReasonType, exception_text?: string): void {
 
 		var e = new StoppedEvent(reason, NodeDebugSession.DUMMY_THREAD_ID, exception_text);
 
@@ -2003,7 +2000,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 		if (this._needBreakpointEvent) {	// we have to break on entry
 			this._needBreakpointEvent = false;
 			info = 'fire breakpoint event';
-			this._sendStoppedEvent('breakpoint');
+			this._sendBreakpointStoppedEvent(1); 	// we know the ID of the entry point breakpoint
 		}
 
 		if (this._needDebuggerEvent) {	// we have to break on entry
