@@ -183,7 +183,7 @@ suite('Node Debug Adapter', () => {
 
 			const PROGRAM = Path.join(DATA_ROOT, 'programWithInternal.js');
 
-			return dc.hitBreakpoint({ program: PROGRAM }, { path: '<node_internals>/path.js', line: 1209} );
+			return dc.hitBreakpoint({ program: PROGRAM }, { path: '<node_internals>/path.js', line: 488} );
 		});
 
 		test('should stop on debugger statement in eval', () => {
