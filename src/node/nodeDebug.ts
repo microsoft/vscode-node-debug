@@ -169,37 +169,6 @@ export class ScopeContainer implements VariableContainer {
 
 type ReasonType = 'step' | 'breakpoint' | 'exception' | 'pause' | 'entry' | 'debugger_statement' | 'frame_entry';
 
-class StoppedEvent2 extends StoppedEvent {
-
-	constructor(reason: ReasonType, threadId: number, exception_text?: string) {
-		super(reason, threadId, exception_text);
-
-		switch (reason) {
-			case 'step':
-				(<DebugProtocol.StoppedEvent>this).body.description = localize('reason.description.step', "Paused on step");
-				break;
-			case 'breakpoint':
-				(<DebugProtocol.StoppedEvent>this).body.description = localize('reason.description.breakpoint', "Paused on breakpoint");
-				break;
-			case 'exception':
-				(<DebugProtocol.StoppedEvent>this).body.description = localize('reason.description.exception', "Paused on exception");
-				break;
-			case 'pause':
-				(<DebugProtocol.StoppedEvent>this).body.description = localize('reason.description.user_request', "Paused on user request");
-				break;
-			case 'entry':
-				(<DebugProtocol.StoppedEvent>this).body.description = localize('reason.description.entry', "Paused on entry");
-				break;
-			case 'debugger_statement':
-				(<DebugProtocol.StoppedEvent>this).body.description = localize('reason.description.debugger_statement', "Paused on debugger statement");
-				break;
-			case 'frame_entry':
-				(<DebugProtocol.StoppedEvent>this).body.description = localize('reason.description.restart', "Paused on frame entry");
-				break;
-		}
-	}
-}
-
 class Script {
 	contents: string;
 	sourceMap: SourceMap;
@@ -403,7 +372,6 @@ export class NodeDebugSession extends LoggingDebugSession {
 	private _inShutdown: boolean;
 	private _pollForNodeProcess = false;
 	private _exception: V8ExceptionEventBody | undefined;
-	private _lastStoppedEvent: DebugProtocol.StoppedEvent;
 	private _restartFramePending: boolean;
 	private _stoppedReason: string;
 	private _nodeInjectionAvailable = false;
@@ -504,16 +472,13 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 		// remember exception
 		this._exception = eventBody;
-		this._handleNodeBreakEvent2('exception', false, eventBody.exception.text);
+		this._handleNodeBreakEvent2('exception', eventBody.exception.text);
 	}
 
 	/**
 	 * Analyse why node has stopped and sends StoppedEvent if necessary.
 	 */
 	private _handleNodeBreakEvent(eventBody: V8BreakEventBody) : void {
-
-		let isEntry = false;
-		let reason: ReasonType | undefined;
 
 		// in order to identify reject calls and debugger statements extract source at current location
 		let source: string | null = null;
@@ -529,71 +494,98 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 			const id = breakpoints[0];
 			if (!this._gotEntryEvent && id === 1) {	// 'stop on entry point' is implemented as a breakpoint with id 1
-				isEntry = true;
-				this.log('la', '_analyzeBreak: suppressed stop-on-entry event');
-				reason = 'entry';
+
+				this.log('la', '_handleNodeBreakEvent: suppressed stop-on-entry event');
 				this._rememberEntryLocation(eventBody.script.name, eventBody.sourceLine, eventBody.sourceColumn);
-			} else {
-				let ibp = this._hitCounts.get(id);
-				if (ibp) {
-					ibp.hitCount++;
-					if (ibp.hitter && !ibp.hitter(ibp.hitCount)) {
-						this._node.command('continue');
-						return;
-					}
-				}
-
-				reason = 'breakpoint';
-			}
-		}
-
-		// is debugger statement?
-		if (!reason) {
-			if (source && source.indexOf('debugger') === 0) {
-				reason = 'debugger_statement';
-				this._gotDebuggerEvent = true;
-			}
-		}
-
-		// no reason yet: must be the result of a 'step'
-		if (!reason) {
-
-			if (this._restartFramePending) {
-				this._restartFramePending = false;
-				reason = 'frame_entry';
-			} else {
-				reason = 'step';
+				return;	// do not send event now
 			}
 
-			if (!this._disableSkipFiles) {
-				// should we continue until we find a better place to stop?
-				if ((this._smartStep && this._sourceMaps) || this._skipFiles) {
-					this._skipGenerated(eventBody).then(r => {
-						if (r) {
-							this._node.command('continue', { stepaction: 'in' });
-							this._smartStepCount++;
-						} else {
-							this._handleNodeBreakEvent2(<ReasonType>reason, isEntry);
-						}
-					});
+			// evaluate hit counts
+			let ibp = this._hitCounts.get(id);
+			if (ibp) {
+				ibp.hitCount++;
+				if (ibp.hitter && !ibp.hitter(ibp.hitCount)) {
+					this._node.command('continue');
 					return;
 				}
 			}
+
+			this._handleNodeBreakEvent2('breakpoint');
+			return;
 		}
 
-		this._handleNodeBreakEvent2(reason, isEntry);
+		// is debugger statement?
+		if (source && source.indexOf('debugger') === 0) {
+			this._gotDebuggerEvent = true;
+			this._handleNodeBreakEvent2('debugger_statement');
+			return;
+		}
+
+		// must be the result of a 'step'
+
+		let reason: ReasonType | undefined;
+		if (this._restartFramePending) {
+			this._restartFramePending = false;
+			reason = 'frame_entry';
+		} else {
+			reason = 'step';
+		}
+
+		if (!this._disableSkipFiles) {
+			// should we continue until we find a better place to stop?
+			if ((this._smartStep && this._sourceMaps) || this._skipFiles) {
+				this._skipGenerated(eventBody).then(r => {
+					if (r) {
+						this._node.command('continue', { stepaction: 'in' });
+						this._smartStepCount++;
+					} else {
+						this._handleNodeBreakEvent2(<ReasonType>reason);
+					}
+				});
+				return;
+			}
+		}
+
+		this._handleNodeBreakEvent2(reason);
 	}
 
-	private _handleNodeBreakEvent2(reason: ReasonType, isEntry: boolean, exception_text?: string) {
-		this._lastStoppedEvent = new StoppedEvent2(reason, NodeDebugSession.DUMMY_THREAD_ID, exception_text);
-
-		if (!isEntry) {
-			if (this._smartStepCount > 0) {
-				this.log('ss', `_handleNodeBreakEvent: ${this._smartStepCount} steps skipped`);
-				this._smartStepCount = 0;
-			}
-			this.sendEvent(this._lastStoppedEvent);
+	private _handleNodeBreakEvent2(reason: ReasonType, exception_text?: string) {
+		if (this._smartStepCount > 0) {
+			this.log('ss', `_handleNodeBreakEvent: ${this._smartStepCount} steps skipped`);
+			this._smartStepCount = 0;
 		}
+		this._sendStoppedEvent(reason, exception_text);
+	}
+
+	private _sendStoppedEvent(reason: ReasonType, exception_text?: string): void {
+
+		var e = new StoppedEvent(reason, NodeDebugSession.DUMMY_THREAD_ID, exception_text);
+
+		switch (reason) {
+			case 'step':
+				(<DebugProtocol.StoppedEvent>e).body.description = localize('reason.description.step', "Paused on step");
+				break;
+			case 'breakpoint':
+				(<DebugProtocol.StoppedEvent>e).body.description = localize('reason.description.breakpoint', "Paused on breakpoint");
+				break;
+			case 'exception':
+				(<DebugProtocol.StoppedEvent>e).body.description = localize('reason.description.exception', "Paused on exception");
+				break;
+			case 'pause':
+				(<DebugProtocol.StoppedEvent>e).body.description = localize('reason.description.user_request', "Paused on user request");
+				break;
+			case 'entry':
+				(<DebugProtocol.StoppedEvent>e).body.description = localize('reason.description.entry', "Paused on entry");
+				break;
+			case 'debugger_statement':
+				(<DebugProtocol.StoppedEvent>e).body.description = localize('reason.description.debugger_statement', "Paused on debugger statement");
+				break;
+			case 'frame_entry':
+				(<DebugProtocol.StoppedEvent>e).body.description = localize('reason.description.restart', "Paused on frame entry");
+				break;
+		}
+
+		this.sendEvent(e);
 	}
 
 	/**
@@ -1447,7 +1439,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 		if (this._stopOnEntry) {
 			// user has requested 'stop on entry' so send out a stop-on-entry event
 			this.log('la', '_startInitialize2: fire stop-on-entry event');
-			this.sendEvent(new StoppedEvent2('entry', NodeDebugSession.DUMMY_THREAD_ID));
+			this._sendStoppedEvent('entry');
 		}
 		else {
 			// since we are stopped but UI doesn't know about this, remember that we later do the right thing in configurationDoneRequest()
@@ -2011,13 +2003,13 @@ export class NodeDebugSession extends LoggingDebugSession {
 		if (this._needBreakpointEvent) {	// we have to break on entry
 			this._needBreakpointEvent = false;
 			info = 'fire breakpoint event';
-			this.sendEvent(new StoppedEvent2('breakpoint', NodeDebugSession.DUMMY_THREAD_ID));
+			this._sendStoppedEvent('breakpoint');
 		}
 
 		if (this._needDebuggerEvent) {	// we have to break on entry
 			this._needDebuggerEvent = false;
 			info = 'fire debugger statement event';
-			this.sendEvent(new StoppedEvent2('debugger_statement', NodeDebugSession.DUMMY_THREAD_ID));
+			this._sendStoppedEvent('debugger_statement');
 		}
 
 		this.log('la', `configurationDoneRequest: ${info}`);
@@ -3153,9 +3145,8 @@ export class NodeDebugSession extends LoggingDebugSession {
 		this._node.command('suspend', null, (nodeResponse) => {
 			if (nodeResponse.success) {
 				this._stopped('pause');
-				this._lastStoppedEvent = new StoppedEvent2('pause', NodeDebugSession.DUMMY_THREAD_ID);
 				this.sendResponse(response);
-				this.sendEvent(this._lastStoppedEvent);
+				this._sendStoppedEvent('pause');
 			} else {
 				this._sendNodeResponse(response, nodeResponse);
 			}

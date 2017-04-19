@@ -97,6 +97,18 @@ suite('Node Debug Adapter', () => {
 			]);
 		});
 
+		test('should stop on debugger statement in first line', () => {
+
+			const PROGRAM = Path.join(DATA_ROOT, 'programWithDebugger1.js');
+			const DEBUGGER_LINE = 1;
+
+			return Promise.all([
+				dc.configurationSequence(),
+				dc.launch({ program: PROGRAM }),
+				dc.assertStoppedLocation('debugger_statement', { path: PROGRAM, line: DEBUGGER_LINE } )
+			]);
+		});
+
 	});
 
 	suite('setBreakpoints', () => {
