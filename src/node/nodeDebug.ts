@@ -1970,25 +1970,21 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 		this.log('bp', `setExceptionBreakPointsRequest: ${JSON.stringify(args.filters)}`);
 
-		let nodeArgs: V8SetExceptionBreakArgs = {
-			type: 'all',
-			enabled: false
-		};
+		let all = false;
+		let uncaught = false;
 		this._catchRejects = false;
+
 		const filters = args.filters;
 		if (filters) {
-			if (filters.indexOf('all') >= 0) {
-				nodeArgs.enabled = true;
-			} else if (filters.indexOf('uncaught') >= 0) {
-				nodeArgs.type = 'uncaught';
-				nodeArgs.enabled = true;
-			}
-			if (filters.indexOf('rejects') >= 0) {
-				this._catchRejects = true;
-			}
+			all = filters.indexOf('all') >= 0;
+			uncaught = filters.indexOf('uncaught') >= 0;
+			this._catchRejects = filters.indexOf('rejects') >= 0;
 		}
 
-		this._node.setExceptionBreak(nodeArgs).then(nodeResponse => {
+		Promise.all([
+			this._node.setExceptionBreak({ type: 'all', enabled: all }),
+			this._node.setExceptionBreak({ type: 'uncaught', enabled: uncaught })
+		]).then(r => {
 			this.sendResponse(response);
 		}).catch(err => {
 			this.sendErrorResponse(response, 2024, 'Configuring exception break options failed ({_nodeError}).', { _nodeError: err.message }, ErrorDestination.Telemetry);
