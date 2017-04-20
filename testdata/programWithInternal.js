@@ -1,3 +1,3 @@
-var path = require('path');
+var assert = require('assert');
 
-var r = path.join('a', 'b');
+assert(true);	// bp in 105

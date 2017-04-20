@@ -185,11 +185,11 @@ suite('Node Debug Adapter', () => {
 
 			switch (process.platform) {
 				case 'win32':
-					return dc.hitBreakpoint({ program: PROGRAM }, { path: '<node_internals>/path.js', line: 492} );
+					return dc.hitBreakpoint({ program: PROGRAM }, { path: '<node_internals>/assert.js', line: 105} );
 				case 'darwin':
-					return dc.hitBreakpoint({ program: PROGRAM }, { path: '<node_internals>/path.js', line: 1221} );
+					return dc.hitBreakpoint({ program: PROGRAM }, { path: '<node_internals>/assert.js', line: 105} );
 				case 'linux':
-					return dc.hitBreakpoint({ program: PROGRAM }, { path: '<node_internals>/path.js', line: 1209} );
+					return dc.hitBreakpoint({ program: PROGRAM }, { path: '<node_internals>/assert.js', line: 105} );
 			}
 		});
 
