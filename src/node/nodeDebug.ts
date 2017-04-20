@@ -13,7 +13,7 @@ import {DebugProtocol} from 'vscode-debugprotocol';
 
 import {
 	NodeV8Protocol, NodeV8Event, NodeV8Response,
-	V8SetBreakpointArgs, V8SetExceptionBreakArgs, V8SetVariableValueArgs, V8RestartFrameArgs, V8BacktraceArgs,
+	V8SetBreakpointArgs, V8SetVariableValueArgs, V8RestartFrameArgs, V8BacktraceArgs,
 	V8ScopeResponse, V8EvaluateResponse, V8FrameResponse,
 	V8EventBody, V8BreakEventBody, V8ExceptionEventBody,
 	V8Ref, V8Handle, V8Property, V8Object, V8Simple, V8Function, V8Frame, V8Scope, V8Script
@@ -2349,7 +2349,11 @@ export class NodeDebugSession extends LoggingDebugSession {
 							: this._loadScript(script_id).then(script => script.contents)
 					]).then(results => {
 						let fileContents = results[0];
-						const contents = results[1];
+						let contents = results[1];
+
+						// normalize EOL sequences
+						contents = contents.replace(/\r\n/g, '\n');
+						fileContents = fileContents.replace(/\r\n/g, '\n');
 
 						// remove an optional shebang
 						fileContents = fileContents.replace(/^#!.*\n/, '');
