@@ -463,9 +463,11 @@ export class NodeDebugSession extends LoggingDebugSession {
 					this._node.command('continue');
 					return;
 				}
+				/*
 				if (eventBody.exception.text === 'undefined') {
 					eventBody.exception.text = 'reject';
 				}
+				*/
 			}
 		}
 
@@ -696,6 +698,11 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 		this._adapterID = args.adapterID;
 
+		if (this._adapterID === 'extensionHost') {
+			// in VS Code 1.12 Electron's node.js starts to break on every Promise.reject
+			this._skipRejects = true;
+		}
+
 		if (typeof args.supportsRunInTerminalRequest === 'boolean') {
 			this._supportsRunInTerminalRequest = args.supportsRunInTerminalRequest;
 		}
@@ -729,6 +736,13 @@ export class NodeDebugSession extends LoggingDebugSession {
 				default: true
 			}
 		];
+		if (this._skipRejects) {
+			response.body.exceptionBreakpointFilters.push({
+				label: localize('exceptions.rejects', "Promise Rejects"),
+				filter: 'rejects',
+				default: false
+			});
+		}
 
 		// This debug adapter supports setting variables
 		response.body.supportsSetVariable = true;
@@ -796,9 +810,6 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 		// special code for 'extensionHost' debugging
 		if (this._adapterID === 'extensionHost') {
-
-			// in VS Code 1.12 Electron's node.js starts to break on every Promise.reject
-			this._skipRejects = true;
 
 			// we always launch in 'debug-brk' mode, but we only show the break event if 'stopOnEntry' attribute is true.
 			let launchArgs = [ runtimeExecutable ];
@@ -1968,10 +1979,12 @@ export class NodeDebugSession extends LoggingDebugSession {
 		if (filters) {
 			if (filters.indexOf('all') >= 0) {
 				nodeArgs.enabled = true;
-				this._catchRejects = true;
 			} else if (filters.indexOf('uncaught') >= 0) {
 				nodeArgs.type = 'uncaught';
 				nodeArgs.enabled = true;
+			}
+			if (filters.indexOf('rejects') >= 0) {
+				this._catchRejects = true;
 			}
 		}
 
