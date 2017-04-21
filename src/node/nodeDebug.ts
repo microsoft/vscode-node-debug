@@ -959,11 +959,14 @@ export class NodeDebugSession extends LoggingDebugSession {
 				buffer.split('\n').forEach( line => {
 					const r = line.match(/^\s*([\w\.\-]+)\s*=\s*(.*)?\s*$/);
 					if (r !== null) {
-						let value = r[2] || '';
-						if (value.length > 0 && value.charAt(0) === '"' && value.charAt(value.length-1) === '"') {
-							value = value.replace(/\\n/gm, '\n');
+						const key = r[1];
+						if (!process.env[key]) {	// .env variables never overwrite existing variables (see #21169)
+							let value = r[2] || '';
+							if (value.length > 0 && value.charAt(0) === '"' && value.charAt(value.length-1) === '"') {
+								value = value.replace(/\\n/gm, '\n');
+							}
+							env[key] = value.replace(/(^['"]|['"]$)/g, '');
 						}
-						env[r[1]] = value.replace(/(^['"]|['"]$)/g, '');
 					}
 				});
 				envVars = PathUtils.extendObject(env, args.env); // launch config env vars overwrite .env vars
