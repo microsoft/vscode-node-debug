@@ -59,10 +59,12 @@ export class Expander implements VariableContainer {
 
 export class PropertyContainer implements VariableContainer {
 
+	private _evalName: string | undefined;
 	private _object: V8Object;
 	private _this: V8Object | undefined;
 
-	public constructor(obj: V8Object, ths?: V8Object) {
+	public constructor(evalName: string | undefined, obj: V8Object, ths?: V8Object) {
+		this._evalName = evalName;
 		this._object = obj;
 		this._this = ths;
 	}
@@ -70,9 +72,9 @@ export class PropertyContainer implements VariableContainer {
 	public Expand(session: NodeDebugSession, filter: FilterType, start: number, count: number) : Promise<Variable[]> {
 
 		if (filter === 'named') {
-			return session._createProperties(this._object, 'named').then(variables => {
+			return session._createProperties(this._evalName, this._object, 'named').then(variables => {
 				if (this._this) {
-					return session._createVariable('this', this._this).then(variable => {
+					return session._createVariable(this._evalName, 'this', this._this).then(variable => {
 						if (variable) {
 							variables.push(variable);
 						}
@@ -85,11 +87,11 @@ export class PropertyContainer implements VariableContainer {
 		}
 
 		if (typeof start === 'number' && typeof count === 'number') {
-			return session._createProperties(this._object, 'indexed', start, count);
+			return session._createProperties(this._evalName, this._object, 'indexed', start, count);
 		} else {
-			return session._createProperties(this._object, 'all').then(variables => {
+			return session._createProperties(this._evalName, this._object, 'all').then(variables => {
 				if (this._this) {
-					return session._createVariable('this', this._this).then(variable => {
+					return session._createVariable(this._evalName, 'this', this._this).then(variable => {
 						if (variable) {
 							variables.push(variable);
 						}
@@ -109,16 +111,18 @@ export class PropertyContainer implements VariableContainer {
 
 export class SetMapContainer implements VariableContainer {
 
+	private _evalName: string | undefined;
 	private _object: V8Object;
 
-	public constructor(obj: V8Object) {
+	public constructor(evalName: string | undefined, obj: V8Object) {
+		this._evalName = evalName;
 		this._object = obj;
 	}
 
 	public Expand(session: NodeDebugSession, filter: FilterType, start: number, count: number) : Promise<Variable[]> {
 
 		if (filter === 'named') {
-			return session._createSetMapProperties(this._object);
+			return session._createSetMapProperties(this._evalName, this._object);
 		}
 
 		if (this._object.type === 'set') {
@@ -148,9 +152,9 @@ export class ScopeContainer implements VariableContainer {
 	}
 
 	public Expand(session: NodeDebugSession, filter: FilterType, start: number, count: number) : Promise<Variable[]> {
-		return session._createProperties(this._object, filter).then(variables => {
+		return session._createProperties('', this._object, filter).then(variables => {
 			if (this._this) {
-				return session._createVariable('this', this._this).then(variable => {
+				return session._createVariable('', 'this', this._this).then(variable => {
 					if (variable) {
 						variables.push(variable);
 					}
@@ -2480,7 +2484,8 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 			// exception scope
 			if (frameIx === 0 && this._exception) {
-				scopes.unshift(new Scope(localize({ key: 'scope.exception', comment: ['https://github.com/Microsoft/vscode/issues/4569'] }, "Exception"), this._variableHandles.create(new PropertyContainer(this._exception.exception))));
+				const scopeName = localize({ key: 'scope.exception', comment: ['https://github.com/Microsoft/vscode/issues/4569'] }, "Exception");
+				scopes.unshift(new Scope(scopeName, this._variableHandles.create(new PropertyContainer(undefined, this._exception.exception))));
 			}
 
 			response.body = {
@@ -2533,7 +2538,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 	 * 'indexed': add 'count' indexed properties starting at 'start'
 	 * 'named': add only the named properties.
 	 */
-	public _createProperties(obj: V8Object, mode: FilterType, start = 0, count?: number) : Promise<Variable[]> {
+	public _createProperties(evalName: string | undefined, obj: V8Object, mode: FilterType, start = 0, count?: number) : Promise<Variable[]> {
 
 		if (obj && !obj.properties) {
 
@@ -2553,7 +2558,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 					return this._node.command2('vscode_slice', args).then(resp => {
 						const items = resp.body.result;
 						return Promise.all<Variable>(items.map(item => {
-							return this._createVariable(item.name, item.value);
+							return this._createVariable(evalName, item.name, item.value);
 						}));
 					});
 				}
@@ -2609,7 +2614,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 			}
 		}
 
-		return this._createPropertyVariables(obj, selectedProperties);
+		return this._createPropertyVariables(evalName, obj, selectedProperties);
 	}
 
 	/**
@@ -2617,7 +2622,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 	 * If the properties are indexed (opposed to named), a value 'start' is added to the index number.
 	 * If a value is undefined it probes for a getter.
 	 */
-	private _createPropertyVariables(obj: V8Object | null, properties: V8Property[], doPreview = true, start = 0) : Promise<Variable[]> {
+	private _createPropertyVariables(evalName: string | undefined, obj: V8Object | null, properties: V8Property[], doPreview = true, start = 0) : Promise<Variable[]> {
 
 		return this._resolveValues(properties).then(() => {
 			return Promise.all<Variable>(properties.map(property => {
@@ -2646,13 +2651,13 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 					this.log('va', `_createPropertyVariables: trigger getter`);
 					return this._node.evaluate(args).then(response => {
-						return this._createVariable(name, response.body, doPreview);
+						return this._createVariable(evalName, name, response.body, doPreview);
 					}).catch(err => {
-						return new Variable(name, 'undefined');
+						return this._createVar(this._getEvaluateName(evalName, name), name, 'undefined');
 					});
 
 				} else {
-					return this._createVariable(name, val, doPreview);
+					return this._createVariable(evalName, name, val, doPreview);
 				}
 			}));
 		});
@@ -2662,7 +2667,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 	 * Create a Variable with the given name and value.
 	 * For structured values the variable object will have a corresponding expander.
 	 */
-	public _createVariable(name: string, val: V8Handle, doPreview: boolean = true) : Promise<DebugProtocol.Variable | null> {
+	public _createVariable(evalName: string | undefined, name: string, val: V8Handle, doPreview: boolean = true) : Promise<DebugProtocol.Variable | null> {
 
 		if (!val) {
 			return Promise.resolve(null);
@@ -2674,29 +2679,31 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 		const simple = <V8Simple> val;
 
+		const en = this._getEvaluateName(evalName, name);
+
 		switch (val.type) {
 
 			case 'undefined':
 			case 'null':
-				return Promise.resolve(new Variable(name, val.type));
+				return Promise.resolve(this._createVar(en, name, val.type));
 
 			case 'string':
-				return this._createStringVariable(name, val, doPreview ? undefined : NodeDebugSession.PREVIEW_MAX_STRING_LENGTH);
+				return this._createStringVariable(evalName, name, val, doPreview ? undefined : NodeDebugSession.PREVIEW_MAX_STRING_LENGTH);
 			case 'number':
 				if (typeof simple.value === 'number') {
-					return Promise.resolve(new Variable(name, simple.value.toString()));
+					return Promise.resolve(this._createVar(en, name, simple.value.toString()));
 				}
 				break;
 			case 'boolean':
 				if (typeof simple.value === 'boolean') {
-					return Promise.resolve(new Variable(name, simple.value.toString().toLowerCase()));	// node returns these boolean values capitalized
+					return Promise.resolve(this._createVar(en, name, simple.value.toString().toLowerCase()));	// node returns these boolean values capitalized
 				}
 				break;
 
 			case 'set':
 			case 'map':
 				if (this._node.v8Version) {
-					return this._createSetMapVariable(name, val);
+					return this._createSetMapVariable(evalName, name, val);
 				}
 				// fall through and treat sets and maps as objects
 
@@ -2718,11 +2725,11 @@ export class NodeDebugSession extends LoggingDebugSession {
 					case 'Int16Array': case 'Uint16Array':
 					case 'Int32Array': case 'Uint32Array':
 					case 'Float32Array': case 'Float64Array':
-						return this._createArrayVariable(name, val, doPreview);
+						return this._createArrayVariable(evalName, name, val, doPreview);
 
 					case 'RegExp':
 						if (typeof object.text === 'string') {
-							return Promise.resolve(new Variable(name, object.text, this._variableHandles.create(new PropertyContainer(val))));
+							return Promise.resolve(this._createVar(en, name, object.text, this._variableHandles.create(new PropertyContainer(en, val))));
 						}
 						break;
 
@@ -2748,12 +2755,12 @@ export class NodeDebugSession extends LoggingDebugSession {
 										if (preview) {
 											value = `${value} ${preview}`;
 										}
-										return new Variable(name, value, this._variableHandles.create(new PropertyContainer(val)));
+										return this._createVar(en, name, value, this._variableHandles.create(new PropertyContainer(en, val)));
 									});
 								}
 							}
 
-							return new Variable(name, value, this._variableHandles.create(new PropertyContainer(val)));
+							return this._createVar(en, name, value, this._variableHandles.create(new PropertyContainer(en, val)));
 						});
 						//break;
 
@@ -2773,13 +2780,43 @@ export class NodeDebugSession extends LoggingDebugSession {
 						}
 						break;
 				}
-				return Promise.resolve(new Variable(name, value, this._variableHandles.create(new PropertyContainer(val))));
+				return Promise.resolve(this._createVar(en, name, value, this._variableHandles.create(new PropertyContainer(en, val))));
 
 			case 'frame':
 			default:
 				break;
 		}
-		return Promise.resolve(new Variable(name, simple.value ? simple.value.toString() : 'undefined'));
+		return Promise.resolve(this._createVar(en, name, simple.value ? simple.value.toString() : 'undefined'));
+	}
+
+	private _createVar(evalName: string | undefined, name: string, value: string, ref?: number, indexedVariables?: number, namedVariables?: number) {
+		const v: DebugProtocol.Variable = new Variable(name, value, ref, indexedVariables, namedVariables);
+		if (evalName) {
+			v.evaluateName = evalName;
+		}
+		return v;
+	}
+
+	private _getEvaluateName(parentEvaluateName: string | undefined, name: string): string | undefined {
+
+		if (parentEvaluateName === undefined) {
+			return undefined;
+		}
+
+		if (!parentEvaluateName) {
+			return name;
+		}
+
+		let nameAccessor: string;
+		if (/^[a-zA-Z_$][a-zA-Z_$0-9]*$/.test(name)) {
+			nameAccessor = '.' + name;
+		} else if (/^\d+$/.test(name)) {
+			nameAccessor = `[${name}]`;
+		} else {
+			nameAccessor = `[${JSON.stringify(name)}]`;
+		}
+
+		return parentEvaluateName + nameAccessor;
 	}
 
 	/**
@@ -2791,7 +2828,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 			const propcnt = object.properties.length;
 
-			return this._createPropertyVariables(object, object.properties.slice(0, NodeDebugSession.PREVIEW_PROPERTIES), false).then(props => {
+			return this._createPropertyVariables(undefined, object, object.properties.slice(0, NodeDebugSession.PREVIEW_PROPERTIES), false).then(props => {
 
 				let preview = '{';
 				for (let i = 0; i < props.length; i++) {
@@ -2836,7 +2873,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 				}
 			}
 
-			return this._createPropertyVariables(array, previewProps, false).then(props => {
+			return this._createPropertyVariables(undefined, array, previewProps, false).then(props => {
 
 				let preview = '[';
 				for (let i = 0; i < props.length; i++) {
@@ -2862,7 +2899,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 	//--- long array support
 
-	private _createArrayVariable(name: string, array: V8Object, doPreview: boolean) : Promise<Variable> {
+	private _createArrayVariable(evalName: string | undefined, name: string, array: V8Object, doPreview: boolean) : Promise<Variable> {
 
 		return this._getArraySize(array).then(pair => {
 
@@ -2881,7 +2918,8 @@ export class NodeDebugSession extends LoggingDebugSession {
 				if (preview) {
 					v = `${v} ${preview}`;
 				}
-				return new Variable(name, v, this._variableHandles.create(new PropertyContainer(array)), indexedSize, namedSize);
+				const en = this._getEvaluateName(evalName, name);
+				return this._createVar(en, name, v, this._variableHandles.create(new PropertyContainer(en, array)), indexedSize, namedSize);
 			});
 		});
 	}
@@ -2913,7 +2951,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 	//--- ES6 Set/Map support
 
-	private _createSetMapVariable(name: string, obj: V8Handle) : Promise<Variable> {
+	private _createSetMapVariable(evalName: string | undefined, name: string, obj: V8Handle) : Promise<Variable> {
 
 		const args = {
 			// initially we need only the size
@@ -2931,11 +2969,12 @@ export class NodeDebugSession extends LoggingDebugSession {
 			const indexedSize = pair[0];
 			const namedSize = pair[1];
 			const typename = (obj.type === 'set') ? 'Set' : 'Map';
-			return new Variable(name, `${typename}[${indexedSize}]`, this._variableHandles.create(new SetMapContainer(obj)), indexedSize, namedSize);
+			const en = this._getEvaluateName(evalName, name);
+			return this._createVar(en, name, `${typename}[${indexedSize}]`, this._variableHandles.create(new SetMapContainer(en, obj)), indexedSize, namedSize);
 		});
 	}
 
-	public _createSetMapProperties(obj: V8Handle) : Promise<Variable[]> {
+	public _createSetMapProperties(evalName: string | undefined, obj: V8Handle) : Promise<Variable[]> {
 
 		const args = {
 			expression: `var r = {}; Object.keys(obj).forEach(k => { r[k] = obj[k] }); r`,
@@ -2946,7 +2985,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 		};
 
 		return this._node.evaluate(args).then(response => {
-			return this._createProperties(response.body, 'named');
+			return this._createProperties(evalName, response.body, 'named');
 		});
 	}
 
@@ -2972,7 +3011,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 				}
 			}
 
-			return this._createPropertyVariables(null, selectedProperties, true, start);
+			return this._createPropertyVariables(undefined, null, selectedProperties, true, start);
 		});
 	}
 
@@ -3008,13 +3047,13 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 					const expander = new Expander((start: number, count: number) => {
 						return Promise.all<Variable>([
-							this._createVariable('key', key),
-							this._createVariable('value', val)
+							this._createVariable(undefined, 'key', key),
+							this._createVariable(undefined, 'value', val)
 						]);
 					});
 
 					const x = <V8Object> this._getValueFromCache(selectedProperties[i]);
-					variables.push(new Variable((start + (i/3)).toString(), <string> x.value, this._variableHandles.create(expander)));
+					variables.push(this._createVar(undefined, (start + (i/3)).toString(), <string> x.value, this._variableHandles.create(expander)));
 				}
 				return variables;
 			});
@@ -3023,15 +3062,17 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 	//--- long string support
 
-	private _createStringVariable(name: string, val: V8Simple, maxLength: number | undefined) : Promise<Variable> {
+	private _createStringVariable(evalName: string | undefined, name: string, val: V8Simple, maxLength: number | undefined) : Promise<Variable> {
 
 		let str_val = <string>val.value;
+
+		const en = this._getEvaluateName(evalName, name);
 
 		if (typeof maxLength === 'number') {
 			if (str_val.length > maxLength) {
 				str_val = str_val.substr(0, maxLength) + '…';
 			}
-			return Promise.resolve(new Variable(name, this._escapeStringValue(str_val)));
+			return Promise.resolve(this._createVar(en, name, this._escapeStringValue(str_val)));
 		}
 
 		if (this._node.v8Version && NodeDebugSession.LONG_STRING_MATCHER.exec(str_val)) {
@@ -3048,11 +3089,11 @@ export class NodeDebugSession extends LoggingDebugSession {
 			this.log('va', `_createStringVariable: get full string`);
 			return this._node.evaluate(args).then(response => {
 				str_val = <string> response.body.value;
-				return new Variable(name, this._escapeStringValue(str_val));
+				return this._createVar(en, name, this._escapeStringValue(str_val));
 			});
 
 		} else {
-			return Promise.resolve(new Variable(name, this._escapeStringValue(str_val)));
+			return Promise.resolve(this._createVar(en, name, this._escapeStringValue(str_val)));
 		}
 	}
 
@@ -3122,7 +3163,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 			};
 
 			return this._node.setVariableValue(args).then(response => {
-				return this._createVariable('_setVariableValue', response.body.newValue);
+				return this._createVariable(undefined, '_setVariableValue', response.body.newValue);
 			});
 		});
 	}
@@ -3144,7 +3185,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 			};
 
 			return this._node.evaluate(args).then(response => {
-				return this._createVariable('_setpropertyvalue', response.body);
+				return this._createVariable(undefined, '_setpropertyvalue', response.body);
 			});
 		}
 
@@ -3256,7 +3297,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 		this._node.command(this._nodeInjectionAvailable ? 'vscode_evaluate' : 'evaluate', evalArgs, (resp: V8EvaluateResponse) => {
 			if (resp.success) {
-				this._createVariable('evaluate', resp.body).then(v => {
+				this._createVariable(undefined, 'evaluate', resp.body).then(v => {
 					if (v) {
 						response.body = {
 							result: v.value,
@@ -3573,7 +3614,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 					}
 
 					// try to retrieve the stack trace
-					return this._createProperties(exception, 'named').then(values => {
+					return this._createProperties(undefined, exception, 'named').then(values => {
 						if (values.length > 0 && values[0].name === 'stack') {
 							return values[0].value;
 						}
