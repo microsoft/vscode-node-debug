@@ -1221,7 +1221,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 		socket.on('error', err => {
 			if (connected) {
 				// since we are connected this error is fatal
-				this._terminated('socket error');
+				this.sendErrorResponse(response, 2010, localize('VSND2010', "Cannot connect to runtime process (reason: {0}).", '{_error}'), { _error: err.message });
 			} else {
 				// we are not yet connected so retry a few times
 				if ((<any>err).code === 'ECONNREFUSED' || (<any>err).code === 'ECONNRESET') {
