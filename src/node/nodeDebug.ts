@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import {
-	LoggingDebugSession, DebugSession, Logger,
+	LoggingDebugSession, DebugSession, Logger, logger,
 	Thread, Source, StackFrame, Scope, Variable, Breakpoint,
 	TerminatedEvent, InitializedEvent, StoppedEvent, OutputEvent,
 	Handles, ErrorDestination
@@ -1110,6 +1110,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 	 */
 	private _processCommonArgs(response: DebugProtocol.Response, args: CommonArguments): boolean {
 
+		let stopLogging = true;
 		if (typeof args.trace === 'boolean') {
 			this._trace = args.trace ? [ 'all' ] : undefined;
 			this._traceAll = args.trace;
@@ -1118,8 +1119,12 @@ export class NodeDebugSession extends LoggingDebugSession {
 			this._traceAll = this._trace.indexOf('all') >= 0;
 
 			if (this._trace.indexOf('dap') >= 0) {
-				Logger.setup(Logger.LogLevel.Verbose, /*logToFile=*/false);
+				logger.setup(Logger.LogLevel.Verbose, /*logToFile=*/false);
+				stopLogging = false;
 			}
+		}
+		if (stopLogging) {
+			logger.setup(Logger.LogLevel.Stop, false);
 		}
 
 		if (typeof args.stepBack === 'boolean') {
