@@ -16,16 +16,31 @@ const localize = nls.config(process.env.VSCODE_NLS_CONFIG)();
 
 export function activate(context: vscode.ExtensionContext) {
 
+	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.toggleSkippingFile', toggleSkippingFile));
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.pickLoadedScript', () => pickLoadedScript()));
-
-	context.subscriptions.push(vscode.commands.registerCommand('extension.pickNodeProcess', () => pickProcess()));
-
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.provideInitialConfigurations', () => createInitialConfigurations()));
-
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.startSession', config => startSession(config)));
+	context.subscriptions.push(vscode.commands.registerCommand('extension.pickNodeProcess', () => pickProcess()));
 }
 
 export function deactivate() {
+}
+
+//---- toggle skipped files
+
+function toggleSkippingFile(res: string | number): void {
+
+	var resource: string | number | undefined = res;
+
+	if (!resource) {
+		const activeEditor = vscode.window.activeTextEditor;
+		resource = activeEditor && activeEditor.document.fileName;
+	}
+
+	if (resource) {
+		const args = typeof resource === 'string' ? { resource } : { sourceReference: resource };
+		vscode.commands.executeCommand('workbench.customDebugRequest', 'toggleSkipFileStatus', args);
+	}
 }
 
 //---- loaded script picker

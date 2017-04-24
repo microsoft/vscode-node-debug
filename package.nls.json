@@ -4,6 +4,7 @@
 	"node.label": "Node.js",
 
 	"open.loaded.script": "Open Loaded Script",
+	"toggle.skipping.this.file": "Toggle Skipping this File",
 
 	"smartStep.description": "Automatically step through generated code that cannot be mapped back to the original source.",
 	"skipFiles.description": "An array of glob patterns for files to skip when debugging.",

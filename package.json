@@ -72,17 +72,31 @@
 	},
 	"main": "./out/node/extension",
 	"activationEvents": [
+		"onCommand:extension.node-debug.toggleSkippingFile",
 		"onCommand:extension.node-debug.pickLoadedScript",
-		"onCommand:extension.pickNodeProcess",
 		"onCommand:extension.node-debug.provideInitialConfigurations",
-		"onCommand:extension.node-debug.startSession"
+		"onCommand:extension.node-debug.startSession",
+		"onCommand:extension.pickNodeProcess"
 	],
 	"contributes": {
+		"menus": {
+			"debug/callstack/context": [
+				{
+				"command": "extension.node-debug.toggleSkippingFile",
+				"group": "navigation",
+				"when": "inDebugMode && debugType == 'node'"
+				}
+			]
+		},
 		"commands": [
 			{
 				"command": "extension.node-debug.pickLoadedScript",
 				"title": "%open.loaded.script%",
 				"category": "Debug"
+			},
+			{
+				"command": "extension.node-debug.toggleSkippingFile",
+				"title": "%toggle.skipping.this.file%"
 			}
 		],
 		"keybindings": [

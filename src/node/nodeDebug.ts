@@ -338,6 +338,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 	private _maxVariablesPerScope = 100;	// only load this many variables for a scope
 	private _smartStep = false;				// try to automatically step over uninteresting source
 	private _skipFiles: string[] | undefined;	// skip glob patterns
+	private _moreSkipFiles = new Set<string>();	// manually added skip files
 	private _mapToFilesOnDisk = true; 		// by default try to map node.js scripts to files on disk
 	private _compareContents = true;		// by default verify that script contents is same as file contents
 	private _supportsRunInTerminalRequest = false;
@@ -524,7 +525,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 		if (!this._disableSkipFiles) {
 			// should we continue until we find a better place to stop?
-			if ((this._smartStep && this._sourceMaps) || this._skipFiles) {
+			if ((this._smartStep && this._sourceMaps) || this._skipFiles || this._moreSkipFiles.size > 0) {
 				this._skipGenerated(eventBody).then(r => {
 					if (r) {
 						this._node.command('continue', { stepaction: 'in' });
@@ -591,20 +592,38 @@ export class NodeDebugSession extends LoggingDebugSession {
 		this.sendEvent(e);
 	}
 
+	private isSkipped(path: string): boolean {
+
+		if (this._moreSkipFiles.has(path)) {
+			return true;
+		}
+
+		if (this._skipFiles) {
+			return PathUtils.multiGlobMatches(this._skipFiles, path);
+		}
+
+		return false;
+	}
+
 	/**
 	 * Returns true if a source location of the given event should be skipped.
 	 */
 	private _skip(event: V8EventBody) : boolean {
 
-		if (this._skipFiles) {
+		let path = this._scriptToPath(event.script);
 
-			let path = this._scriptToPath(event.script);
+		if (this._moreSkipFiles.has(path)) {
+			return true;
+		}
+
+		if (this._skipFiles) {
 
 			// if launch.json defines localRoot and remoteRoot try to convert remote path back to a local path
 			let localPath = this._remoteToLocal(path);
 
 			return PathUtils.multiGlobMatches(this._skipFiles, localPath);
 		}
+
 		return false;
 	}
 
@@ -618,6 +637,10 @@ export class NodeDebugSession extends LoggingDebugSession {
 		// if launch.json defines localRoot and remoteRoot try to convert remote path back to a local path
 		let localPath = this._remoteToLocal(path);
 
+		if (this._moreSkipFiles.has(localPath)) {
+			return Promise.resolve(true);
+		}
+
 		if (this._skipFiles) {
 			if (PathUtils.multiGlobMatches(this._skipFiles, localPath)) {
 				return Promise.resolve(true);
@@ -625,13 +648,27 @@ export class NodeDebugSession extends LoggingDebugSession {
 			return Promise.resolve(false);
 		}
 
-		// try to map
-		let line = event.sourceLine;
-		let column = this._adjustColumn(line, event.sourceColumn);
+		if (this._smartStep) {
+			// try to map
+			let line = event.sourceLine;
+			let column = this._adjustColumn(line, event.sourceColumn);
 
-		return this._sourceMaps.MapToSource(localPath, null, line, column).then(mapresult => {
-			return ! mapresult;
-		});
+			return this._sourceMaps.MapToSource(localPath, null, line, column).then(mapresult => {
+				return ! mapresult;
+			});
+		}
+
+		return Promise.resolve(false);
+	}
+
+	private toggleSkippingResource(response: DebugProtocol.Response, resource: string) {
+
+		if (this._moreSkipFiles.has(resource)) {
+			this._moreSkipFiles.delete(resource);
+		} else {
+			this._moreSkipFiles.add(resource);
+		}
+		this.sendResponse(response);
 	}
 
 	/**
@@ -2209,7 +2246,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 	private _createSource(hasSource: boolean, name: string, path: string | undefined, sourceHandle: number = 0, origin?: string, data?: any): Source {
 
 		let deemphasize = false;
-		if (path && this._skipFiles && PathUtils.multiGlobMatches(this._skipFiles, path)) {
+		if (path && this.isSkipped(path)) {
 			const skipFiles = localize('source.skipFiles', "skipped due to 'skipFiles'");
 			deemphasize = true;
 			origin = origin ? `${origin} (${skipFiles})` : skipFiles;
@@ -3669,8 +3706,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 				this.allLoadedScriptsRequest(response, args);
 				break;
 			case 'toggleSkipFileStatus':
-				this.outLine(localize('toggleSkipFileStatus.not.implemented', "\"Toggle skipping this file\" is not yet implemented for the legacy protocol debugger."));
-				this.sendResponse(response);
+				this.toggleSkippingResource(response, args.resource);
 				break;
 			default:
 				super.customRequest(command, response, args);
