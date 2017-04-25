@@ -286,6 +286,9 @@ interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArguments, C
 	externalConsole?: boolean;
 	/** Where to launch the debug target. */
 	console?: ConsoleType;
+
+	/** internal */
+	__restart?; boolean;
 }
 
 /**
@@ -805,6 +808,11 @@ export class NodeDebugSession extends LoggingDebugSession {
 	protected launchRequest(response: DebugProtocol.LaunchResponse, args: LaunchRequestArguments): void {
 
 		if (this._processCommonArgs(response, args)) {
+			return;
+		}
+
+		if (typeof args.__restart === 'boolean' && args.__restart && typeof args.port === 'number') {
+			this._attach(response, args.port, undefined, args.timeout);
 			return;
 		}
 
