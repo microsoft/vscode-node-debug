@@ -56,7 +56,8 @@ function pickLoadedScript() {
 		let options : vscode.QuickPickOptions = {
 			placeHolder: localize('select.script', "Select a script"),
 			matchOnDescription: true,
-			matchOnDetail: true
+			matchOnDetail: true,
+			ignoreFocusOut: true
 		};
 
 		if (items === undefined) {
@@ -95,7 +96,8 @@ function pickProcess() {
 		let options : vscode.QuickPickOptions = {
 			placeHolder: localize('pickNodeProcess', "Pick the node.js or gulp process to attach to"),
 			matchOnDescription: true,
-			matchOnDetail: true
+			matchOnDetail: true,
+			ignoreFocusOut: true
 		};
 
 		return vscode.window.showQuickPick(items, options).then(item => {
