@@ -1132,7 +1132,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 			}
 		}
 		if (stopLogging) {
-			//logger.setup(Logger.LogLevel.Stop, false);
+			logger.setup(Logger.LogLevel.Stop, false);
 		}
 
 		if (typeof args.stepBack === 'boolean') {
