@@ -666,6 +666,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 	private toggleSkippingResource(response: DebugProtocol.Response, resource: string) {
 
+		resource = decodeURI(URL.parse(resource).pathname);
 		if (this._moreSkipFiles.has(resource)) {
 			this._moreSkipFiles.delete(resource);
 		} else {
