@@ -566,7 +566,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 			this._smartStepCount = 0;
 		}
 
-		var e = new StoppedEvent(reason, NodeDebugSession.DUMMY_THREAD_ID, exception_text);
+		const e = new StoppedEvent(reason, NodeDebugSession.DUMMY_THREAD_ID, exception_text);
 
 		switch (reason) {
 			case 'step':
@@ -666,7 +666,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 	private toggleSkippingResource(response: DebugProtocol.Response, resource: string) {
 
-		resource = decodeURI(URL.parse(resource).pathname);
+		resource = decodeURI(<string>URL.parse(resource).pathname);
 		if (this._moreSkipFiles.has(resource)) {
 			this._moreSkipFiles.delete(resource);
 		} else {

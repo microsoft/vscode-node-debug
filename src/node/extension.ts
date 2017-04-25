@@ -30,7 +30,7 @@ export function deactivate() {
 
 function toggleSkippingFile(res: string | number): void {
 
-	var resource: string | number | undefined = res;
+	let resource: string | number | undefined = res;
 
 	if (!resource) {
 		const activeEditor = vscode.window.activeTextEditor;
