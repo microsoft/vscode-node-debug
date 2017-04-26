@@ -157,25 +157,13 @@
 						}
 					},
 					{
-						"label": "%node.snippet.attachLegacy.label%",
-						"description": "%node.snippet.attachLegacy.description%",
+						"label": "%node.snippet.attach.label%",
+						"description": "%node.snippet.attach.description%",
 						"body": {
 							"type": "node",
 							"request": "attach",
-							"name": "${1:Attach (Legacy Protocol)}",
-							"port": 5858,
-							"protocol": "legacy"
-						}
-					},
-					{
-						"label": "%node.snippet.attachInspector.label%",
-						"description": "%node.snippet.attachInspector.description%",
-						"body": {
-							"type": "node",
-							"request": "attach",
-							"name": "${1:Attach (Inspector Protocol)}",
-							"port": 9229,
-							"protocol": "inspector"
+							"name": "${1:Attach}",
+							"port": 5858
 						}
 					},
 					{
