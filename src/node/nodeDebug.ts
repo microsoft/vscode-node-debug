@@ -472,11 +472,11 @@ export class NodeDebugSession extends LoggingDebugSession {
 					this._node.command('continue');
 					return;
 				}
-				description = localize('exception.rejected.promise', "Rejected Promise");
+				description = localize('exception.paused.promise.rejection', "Paused on Promise Rejection");
 				if (eventBody.exception.text) {
-					eventBody.exception.text = localize('exception.rejected.promise.text', "Rejected Promise ({0})", eventBody.exception.text);
+					eventBody.exception.text = localize('exception.promise.rejection.text', "Promise Rejection ({0})", eventBody.exception.text);
 				} else {
-					eventBody.exception.text = localize('exception.rejected.promise.text', "Rejected Promise");
+					eventBody.exception.text = localize('exception.promise.rejection', "Promise Rejection");
 				}
 			}
 		}
