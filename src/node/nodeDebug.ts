@@ -2689,7 +2689,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 				}
 
 				// if value 'undefined' trigger a getter
-				if (this._node.v8Version && val.type === 'undefined' && !val.value && obj && obj.handle > 0) {
+				if (this._node.v8Version && val.type === 'undefined' && !val.value && obj && obj.handle >= 0) {
 
 					const args = {
 						expression: `obj['${name}']`,	// trigger call to getter
