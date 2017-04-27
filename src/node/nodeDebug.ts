@@ -462,26 +462,28 @@ export class NodeDebugSession extends LoggingDebugSession {
 			return;
 		}
 
+		let description: string | undefined;
+
 		// in order to identify rejects extract source at current location
-		if (this._skipRejects && eventBody.sourceLineText && typeof eventBody.sourceColumn === 'number') {
+		if (eventBody.sourceLineText && typeof eventBody.sourceColumn === 'number') {
 			let source = eventBody.sourceLineText.substr(eventBody.sourceColumn);
-			// if this exception originates from a 'reject', skip it if 'All Exception' is not set.
 			if (source.indexOf('reject(') === 0) {
-				if (!this._catchRejects) {
+				if (this._skipRejects && !this._catchRejects) {
 					this._node.command('continue');
 					return;
 				}
-				/*
-				if (eventBody.exception.text === 'undefined') {
-					eventBody.exception.text = 'reject';
+				description = localize('exception.rejected.promise', "Rejected Promise");
+				if (eventBody.exception.text) {
+					eventBody.exception.text = localize('exception.rejected.promise.text', "Rejected Promise ({0})", eventBody.exception.text);
+				} else {
+					eventBody.exception.text = localize('exception.rejected.promise.text', "Rejected Promise");
 				}
-				*/
 			}
 		}
 
 		// send event
 		this._exception = eventBody;
-		this._sendStoppedEvent('exception', eventBody.exception.text);
+		this._sendStoppedEvent('exception', description, eventBody.exception.text);
 	}
 
 	/**
@@ -559,7 +561,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 		this._sendStoppedEvent('breakpoint');
 	}
 
-	private _sendStoppedEvent(reason: ReasonType, exception_text?: string): void {
+	private _sendStoppedEvent(reason: ReasonType, description?: string, exception_text?: string): void {
 
 		if (this._smartStepCount > 0) {
 			this.log('ss', `_handleNodeBreakEvent: ${this._smartStepCount} steps skipped`);
@@ -568,29 +570,32 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 		const e = new StoppedEvent(reason, NodeDebugSession.DUMMY_THREAD_ID, exception_text);
 
-		switch (reason) {
-			case 'step':
-				(<DebugProtocol.StoppedEvent>e).body.description = localize('reason.description.step', "Paused on step");
-				break;
-			case 'breakpoint':
-				(<DebugProtocol.StoppedEvent>e).body.description = localize('reason.description.breakpoint', "Paused on breakpoint");
-				break;
-			case 'exception':
-				(<DebugProtocol.StoppedEvent>e).body.description = localize('reason.description.exception', "Paused on exception");
-				break;
-			case 'pause':
-				(<DebugProtocol.StoppedEvent>e).body.description = localize('reason.description.user_request', "Paused on user request");
-				break;
-			case 'entry':
-				(<DebugProtocol.StoppedEvent>e).body.description = localize('reason.description.entry', "Paused on entry");
-				break;
-			case 'debugger_statement':
-				(<DebugProtocol.StoppedEvent>e).body.description = localize('reason.description.debugger_statement', "Paused on debugger statement");
-				break;
-			case 'frame_entry':
-				(<DebugProtocol.StoppedEvent>e).body.description = localize('reason.description.restart', "Paused on frame entry");
-				break;
+		if (!description) {
+			switch (reason) {
+				case 'step':
+					description = localize('reason.description.step', "Paused on step");
+					break;
+				case 'breakpoint':
+					description = localize('reason.description.breakpoint', "Paused on breakpoint");
+					break;
+				case 'exception':
+					description = localize('reason.description.exception', "Paused on exception");
+					break;
+				case 'pause':
+					description = localize('reason.description.user_request', "Paused on user request");
+					break;
+				case 'entry':
+					description = localize('reason.description.entry', "Paused on entry");
+					break;
+				case 'debugger_statement':
+					description = localize('reason.description.debugger_statement', "Paused on debugger statement");
+					break;
+				case 'frame_entry':
+					description = localize('reason.description.restart', "Paused on frame entry");
+					break;
+			}
 		}
+		(<DebugProtocol.StoppedEvent>e).body.description = description;
 
 		this.sendEvent(e);
 	}
@@ -3667,7 +3672,8 @@ export class NodeDebugSession extends LoggingDebugSession {
 					// try to retrieve the stack trace
 					return this._createProperties(undefined, exception, 'named').then(values => {
 						if (values.length > 0 && values[0].name === 'stack') {
-							return values[0].value;
+							const stack = values[0].value;
+							return stack === 'undefined' ? undefined : stack;
 						}
 						return undefined;
 					}).catch(_ => {
