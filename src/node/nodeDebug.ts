@@ -341,7 +341,6 @@ export class NodeDebugSession extends LoggingDebugSession {
 	private _maxVariablesPerScope = 100;	// only load this many variables for a scope
 	private _smartStep = false;				// try to automatically step over uninteresting source
 	private _skipFiles: string[] | undefined;	// skip glob patterns
-	private _moreSkipFiles = new Set<string>();	// manually added skip files
 	private _mapToFilesOnDisk = true; 		// by default try to map node.js scripts to files on disk
 	private _compareContents = true;		// by default verify that script contents is same as file contents
 	private _supportsRunInTerminalRequest = false;
@@ -530,7 +529,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 		if (!this._disableSkipFiles) {
 			// should we continue until we find a better place to stop?
-			if ((this._smartStep && this._sourceMaps) || this._skipFiles || this._moreSkipFiles.size > 0) {
+			if ((this._smartStep && this._sourceMaps) || this._skipFiles) {
 				this._skipGenerated(eventBody).then(r => {
 					if (r) {
 						this._node.command('continue', { stepaction: 'in' });
@@ -601,16 +600,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 	}
 
 	private isSkipped(path: string): boolean {
-
-		if (this._moreSkipFiles.has(path)) {
-			return true;
-		}
-
-		if (this._skipFiles) {
-			return PathUtils.multiGlobMatches(this._skipFiles, path);
-		}
-
-		return false;
+		return this._skipFiles ? PathUtils.multiGlobMatches(this._skipFiles, path) : false;
 	}
 
 	/**
@@ -618,13 +608,8 @@ export class NodeDebugSession extends LoggingDebugSession {
 	 */
 	private _skip(event: V8EventBody) : boolean {
 
-		let path = this._scriptToPath(event.script);
-
-		if (this._moreSkipFiles.has(path)) {
-			return true;
-		}
-
 		if (this._skipFiles) {
+			let path = this._scriptToPath(event.script);
 
 			// if launch.json defines localRoot and remoteRoot try to convert remote path back to a local path
 			let localPath = this._remoteToLocal(path);
@@ -644,10 +629,6 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 		// if launch.json defines localRoot and remoteRoot try to convert remote path back to a local path
 		let localPath = this._remoteToLocal(path);
-
-		if (this._moreSkipFiles.has(localPath)) {
-			return Promise.resolve(true);
-		}
 
 		if (this._skipFiles) {
 			if (PathUtils.multiGlobMatches(this._skipFiles, localPath)) {
@@ -672,10 +653,16 @@ export class NodeDebugSession extends LoggingDebugSession {
 	private toggleSkippingResource(response: DebugProtocol.Response, resource: string) {
 
 		resource = decodeURI(<string>URL.parse(resource).pathname);
-		if (this._moreSkipFiles.has(resource)) {
-			this._moreSkipFiles.delete(resource);
+		if (this.isSkipped(resource)) {
+			if (!this._skipFiles) {
+				this._skipFiles = new Array<string>();
+			}
+			this._skipFiles.push('!' + resource);
 		} else {
-			this._moreSkipFiles.add(resource);
+			if (!this._skipFiles) {
+				this._skipFiles = new Array<string>();
+			}
+			this._skipFiles.push(resource);
 		}
 		this.sendResponse(response);
 	}
