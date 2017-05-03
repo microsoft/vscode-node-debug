@@ -253,6 +253,10 @@ interface CommonArguments {
 	skipFiles?: string[];
 	/** Request frontend to restart session on termination. */
 	restart?: boolean;
+	/** Node's root directory. */
+	remoteRoot?: string;
+	/** VS Code's root directory. */
+	localRoot?: string;
 
 	// unofficial flags
 
@@ -295,10 +299,6 @@ interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArguments, C
  * This interface should always match the schema found in the node-debug extension manifest.
  */
 interface AttachRequestArguments extends DebugProtocol.AttachRequestArguments, CommonArguments {
-	/** Node's root directory. */
-	remoteRoot?: string;
-	/** VS Code's root directory. */
-	localRoot?: string;
 	/** Send a USR1 signal to this process. */
 	processId?: string;
 }
@@ -1151,6 +1151,20 @@ export class NodeDebugSession extends LoggingDebugSession {
 			this._restartMode = args.restart;
 		}
 
+		if (args.localRoot) {
+			const localRoot = args.localRoot;
+			if (!Path.isAbsolute(localRoot)) {
+				this.sendRelativePathErrorResponse(response, 'localRoot', localRoot);
+				return true;
+			}
+			if (!FS.existsSync(localRoot)) {
+				this.sendNotExistErrorResponse(response, 'localRoot', localRoot);
+				return true;
+			}
+			this._localRoot = localRoot;
+		}
+		this._remoteRoot = args.remoteRoot;
+
 		if (!this._sourceMaps) {
 			if (args.sourceMaps === undefined) {
 				args.sourceMaps = true;
@@ -1189,20 +1203,6 @@ export class NodeDebugSession extends LoggingDebugSession {
 		} else {
 			this._attachMode = true;
 		}
-
-		if (args.localRoot) {
-			const localRoot = args.localRoot;
-			if (!Path.isAbsolute(localRoot)) {
-				this.sendRelativePathErrorResponse(response, 'localRoot', localRoot);
-				return;
-			}
-			if (!FS.existsSync(localRoot)) {
-				this.sendNotExistErrorResponse(response, 'localRoot', localRoot);
-				return;
-			}
-			this._localRoot = localRoot;
-		}
-		this._remoteRoot = args.remoteRoot;
 
 		// if a processId is specified, try to bring the process into debug mode.
 		if (typeof args.processId === 'string') {

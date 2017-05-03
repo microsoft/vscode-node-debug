@@ -25,6 +25,8 @@
 	"node.address.description": "TCP/IP address of process to be debugged (for Node.js >= 5.0 only). Default is 'localhost'.",
 	"node.timeout.description": "Retry for this number of milliseconds to connect to Node.js. Default is 10000 ms.",
 	"node.restart.description": "Restart session after Node.js has terminated.",
+	"node.localRoot.description": "Path to the local directory containing the program.",
+	"node.remoteRoot.description": "Absolute path to the remote directory containing the program.",
 	"node.showAsyncStacks.description": "Show the async calls that led to the current call stack. 'inspector' protocol only.",
 
 	"node.launch.program.description": "Absolute path to the program. Generated value is guessed by looking at package.json and opened files. Edit this attribute.",
@@ -43,8 +45,6 @@
 	"node.launch.config.name": "Launch",
 
 	"node.attach.processId.description": "Id of process to attach to.",
-	"node.attach.localRoot.description": "Path to the local directory containing the program.",
-	"node.attach.remoteRoot.description": "Absolute path to the remote directory containing the program.",
 
 	"node.attach.config.name": "Attach",
 

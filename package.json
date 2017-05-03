@@ -371,6 +371,16 @@
 								"description": "%node.restart.description%",
 								"default": true
 							},
+							"localRoot": {
+								"type": ["string", "null"],
+								"description": "%node.localRoot.description%",
+								"default": null
+							},
+							"remoteRoot": {
+								"type": ["string", "null"],
+								"description": "%node.remoteRoot.description%",
+								"default": null
+							},
 							"smartStep": {
 								"type": "boolean",
 								"description": "%smartStep.description%",
@@ -455,12 +465,12 @@
 							},
 							"localRoot": {
 								"type": ["string", "null"],
-								"description": "%node.attach.localRoot.description%",
+								"description": "%node.localRoot.description%",
 								"default": null
 							},
 							"remoteRoot": {
 								"type": ["string", "null"],
-								"description": "%node.attach.remoteRoot.description%",
+								"description": "%node.remoteRoot.description%",
 								"default": null
 							},
 							"smartStep": {
