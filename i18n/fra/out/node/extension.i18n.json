@@ -8,8 +8,19 @@
 	"no.loaded.scripts": "Aucun script chargé n'est disponible",
 	"pickNodeProcess": "Sélectionnez le processus node.js ou gulp à attacher",
 	"node.launch.config.name": "Lancer le programme",
+	"mern.starter.explanation": "Configuration de lancement du projet '{0}' créée.",
+	"program.guessed.from.package.json.explanation": "Configuration de lancement créée en fonction de 'package.json'.",
+	"program.fall.back.explanation": "La configuration de lancement créée débogue le fichier dans l'éditeur actif.",
+	"outFiles.explanation": "Ajustez le ou les modèles glob dans l'attribut 'outFiles' pour qu'ils couvrent le fichier JavaScript généré.",
+	"launch.config.comment1": "Utilisez IntelliSense pour découvrir les attributs de débogage Node.js possibles.",
+	"launch.config.comment2": "Pointez pour afficher la description des attributs existants.",
+	"launch.config.comment3": "Pour plus d'informations, visitez : {0}",
 	"protocol.switch.runtime.set": "Débogage à l'aide du protocole hérité, car un exécutable (runtime) est défini.",
+	"protocol.switch.inspector.version": "Débogage à l'aide du protocole inspector, car Node.js {0} a été détecté.",
+	"protocol.switch.legacy.version": "Débogage à l'aide du protocole hérité, car Node.js {0} a été détecté.",
+	"protocol.switch.unknown.version": "Débogage à l'aide du protocole hérité, car la version de Node.js n'a pas pu être déterminée.",
 	"protocol.switch.attach.process": "Débogage à l'aide du protocole hérité, car l'attachement à un processus par ID n'est pris en charge que pour le protocole hérité.",
 	"protocol.switch.inspector.detected": "Débogage avec le protocole Inspector car il a été détecté.",
-	"protocol.switch.legacy.detected": "Débogage avec un protocole hérité car il a été détecté."
+	"protocol.switch.legacy.detected": "Débogage avec un protocole hérité car il a été détecté.",
+	"protocol.switch.unknown.error": "Débogage avec un protocole hérité en raison de l'impossibilité de déterminer la version de Node.js : {0}"
 }

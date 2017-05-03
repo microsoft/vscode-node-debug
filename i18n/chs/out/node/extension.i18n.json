@@ -8,8 +8,19 @@
 	"no.loaded.scripts": "无可用加载脚本",
 	"pickNodeProcess": "选取要附加到的 node.js 或 gulp 进程",
 	"node.launch.config.name": "启动程序",
+	"mern.starter.explanation": "已创建“{0}”项目的启动配置。",
+	"program.guessed.from.package.json.explanation": "已根据 \"package.json\" 生成启动配置。",
+	"program.fall.back.explanation": "已创建的启动配置将会调试位于活动编辑器中的文件。",
+	"outFiles.explanation": "在“outFiles”属性中调整glob模式，以包含生成的JavaScript。",
+	"launch.config.comment1": "使用 IntelliSense 以学习相关的 Node.js 调试属性。",
+	"launch.config.comment2": "悬停以查看现有属性的描述。",
+	"launch.config.comment3": "欲了解更多信息，请访问: {0}",
 	"protocol.switch.runtime.set": "正在使用旧版协议调试，因为设置了运行时可执行文件。",
+	"protocol.switch.inspector.version": "检测到 Node.js {0}，因此使用检查器协议调试。",
+	"protocol.switch.legacy.version": "检测到 Node.js {0}，因此使用旧版协议调试。",
+	"protocol.switch.unknown.version": "无法确定 Node.js 版本，因此使用旧版协议进行调试。",
 	"protocol.switch.attach.process": "正在采用旧协议进行调试，因为仅旧协议支持按 ID 附加到进程。",
 	"protocol.switch.inspector.detected": "由于检测到检查器协议，因此用其进行调试。",
-	"protocol.switch.legacy.detected": "由于检测到旧版协议，因此用其进行调试。"
+	"protocol.switch.legacy.detected": "由于检测到旧版协议，因此用其进行调试。",
+	"protocol.switch.unknown.error": "无法确定 Node.js 版本，因此使用旧版协议进行调试: {0}"
 }

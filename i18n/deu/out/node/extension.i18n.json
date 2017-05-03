@@ -8,8 +8,19 @@
 	"no.loaded.scripts": "Keine geladenen Skripts verfügbar",
 	"pickNodeProcess": "\"Node.js\" oder Gulp-Prozess zum Anfügen auswählen",
 	"node.launch.config.name": "Programm starten",
+	"mern.starter.explanation": "Startet die Konfiguration für das erstellte Projekt \"{0}\".",
+	"program.guessed.from.package.json.explanation": "Startet die auf Basis von \"package.json\" erstellte Konfiguration.",
+	"program.fall.back.explanation": "Durch das Starten der erstellten Konfiguration wird die Datei im aktiven Editor debuggt.",
+	"outFiles.explanation": "Stellt das oder die Globmuster im \"outFiles\"- Attribut so ein, dass sie den generierten JavaScript-Code abdecken.",
+	"launch.config.comment1": "Verwendet IntelliSense zum Ermitteln möglicher Node.js-Debugattribute.",
+	"launch.config.comment2": "Zeigen Sie auf vorhandene Attribute, um die zugehörigen Beschreibungen anzuzeigen.",
+	"launch.config.comment3": "Weitere Informationen finden Sie unter {0}",
 	"protocol.switch.runtime.set": "Mit Legacy-Protokoll debuggen, da eine ausführbaren Laufzeit festgelegt ist.",
+	"protocol.switch.inspector.version": "Node.js {0} wurde erkannt. Deswegen erfolgt das Debuggen mit dem Inspector-Protokoll.",
+	"protocol.switch.legacy.version": "Node.js {0} wurde erkannt. Deswegen erfolgt das Debuggen mit dem Legacyprotokoll.",
+	"protocol.switch.unknown.version": "Die Node.js-Version wurde nicht erkannt. Deswegen erfolgt das Debuggen mit dem Legacyprotokoll.",
 	"protocol.switch.attach.process": "Debugging mit Legacy-Protokoll, da das Anfügen an einen Prozess nach ID nur für Legacy-Protokolle unterstützt wird.",
 	"protocol.switch.inspector.detected": "Debugging mit Inspektorprotokoll, da es erkannt wurde.",
-	"protocol.switch.legacy.detected": "Debugging mit Legacy-Protokoll, da es erkannt wurde."
+	"protocol.switch.legacy.detected": "Debugging mit Legacy-Protokoll, da es erkannt wurde.",
+	"protocol.switch.unknown.error": "Die Node.js-Version wurde nicht erkannt: {0}. Deswegen erfolgt das Debuggen mit dem Legacyprotokoll."
 }

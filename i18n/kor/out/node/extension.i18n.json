@@ -8,8 +8,19 @@
 	"no.loaded.scripts": "사용 가능한 로드된 스크립트가 없습니다.",
 	"pickNodeProcess": "연결할 Node.js 또는 Gulp 프로세스 선택",
 	"node.launch.config.name": "프로그램 시작",
+	"mern.starter.explanation": "'{0}' 프로젝트에 대한 구성 시작이\n 생성되었습니다.",
+	"program.guessed.from.package.json.explanation": "'package.json'을 기반으로 구성 시작이 생성되었습니다.",
+	"program.fall.back.explanation": "생성된 구성 시작에서 활성 편집기의 파일을 디버그합니다.",
+	"outFiles.explanation": "생성된 JavaScript를 포함하도록 'outFiles' 특성의 GLOB 패턴을 조정합니다. ",
+	"launch.config.comment1": "IntelliSense를 사용하여 가능한 Node.js 디버그 특성에\n 대해 알아보세요.",
+	"launch.config.comment2": "기존 특성에 대한 설명을 보려면 가리킵니다.",
+	"launch.config.comment3": "자세한 내용을 보려면 {0}을(를) 방문하세요.",
 	"protocol.switch.runtime.set": "런타임 실행 파일이 설정되었으므로 레거시 프로토콜로 디버그합니다.",
+	"protocol.switch.inspector.version": "노드 {0}이(가) 감지되었으므로 검사 프로토콜로 디버그합니다.",
+	"protocol.switch.legacy.version": "노드 {0}이(가) 감지되었으므로 레거시 프로토콜로 디버그합니다.",
+	"protocol.switch.unknown.version": "노드 버전을 확인할 수 없으므로 레거시 프로토콜로 디버그합니다.",
 	"protocol.switch.attach.process": "ID로 프로세스에 연결하는 기능은 레거시 프로토콜에만 지원되므로 레거시 프로토콜로 디버그합니다.",
 	"protocol.switch.inspector.detected": "검사 프로토콜이 검색되었기 때문에 검사 프로토콜로 디버그합니다.",
-	"protocol.switch.legacy.detected": "레거시 프로토콜이 검색되었기 때문에 레거시 프로토콜로 디버그합니다."
+	"protocol.switch.legacy.detected": "레거시 프로토콜이 검색되었기 때문에 레거시 프로토콜로 디버그합니다.",
+	"protocol.switch.unknown.error": "Node.js 버전을\n 확인할 수 없어서 레거시 프로토콜로 디버그합니다. {0}"
 }

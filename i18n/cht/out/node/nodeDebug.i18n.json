@@ -36,6 +36,7 @@
 	"origin.from.node": "Node.js 中的唯讀內容",
 	"origin.from.remote.node": "遠端 Node.js 中的唯讀內容",
 	"origin.core.module": "唯讀核心模組",
+	"frame.error": "{0} <錯誤: {1}>",
 	"source.skipFiles": "因為 'skipFiles' 而跳過",
 	"source.smartstep": "因為 'smartStep' 而跳過",
 	"origin.inlined.source.map": "來源地圖中的唯讀內嵌內容",

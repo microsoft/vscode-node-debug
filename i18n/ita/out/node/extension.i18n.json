@@ -11,6 +11,7 @@
 	"mern.starter.explanation": "Configurazione di lancio creata per '{0}' progetto/i.",
 	"program.guessed.from.package.json.explanation": "Configurazione di lancio creata sulla base di 'package.json'.",
 	"program.fall.back.explanation": "La configurazione di lancio creata eseguirà il debug del file nell'editor attivo.",
+	"outFiles.explanation": "Regolare il/i pattern glob nell'attributo 'outFiles' in modo che includa/no il codice JavaScript generato.",
 	"launch.config.comment1": "Utilizzare IntelliSense per esplorare possibili attributi di debug di Node.js .",
 	"launch.config.comment2": "Al passaggio del mouse vengono visualizzate le descrizioni degli attributi esistenti.",
 	"launch.config.comment3": "Per ulteriori informazioni, visitare: {0}",
