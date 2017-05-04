@@ -47,6 +47,7 @@
 	"eval.not.available": "無法使用",
 	"eval.invalid.expression": "運算式無效: {0}",
 	"source.not.found": "無法擷取內容。",
+	"toggleSkipFileStatus.not.implemented": "傳統通訊協定偵錯程式尚未實作「切換略過此檔案」。",
 	"attribute.path.not.exist": "屬性 '{0}' 不存在 ('{1}')。",
 	"attribute.path.not.absolute": "屬性 '{0}' 非絕對值 ('{1}')，請考慮加入 '{2}' 作為前置詞，使其成為絕對值。",
 	"more.information": "詳細資訊",

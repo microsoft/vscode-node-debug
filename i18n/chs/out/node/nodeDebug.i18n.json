@@ -32,7 +32,7 @@
 	"sourcemapping.fail.message": "由于未找到生成的代码，已忽略断点(是否是源映射问题?)。",
 	"VSND2022": "没有调用堆栈，因为计划已在 JavaScript 外暂停。",
 	"VSND2023": "没有可用的调用堆栈。",
-	"VSND2018": "没有可用的调用堆栈({_command}: {_error})。",
+	"VSND2018": "没有可用的调用堆栈 ({_command}: {_error})。",
 	"origin.from.node": "Node.js 的只读内容",
 	"origin.from.remote.node": "远程 Node.js 的只读内容",
 	"origin.core.module": "只读核心模块",
