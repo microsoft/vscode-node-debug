@@ -183,14 +183,7 @@ suite('Node Debug Adapter', () => {
 
 			const PROGRAM = Path.join(DATA_ROOT, 'programWithInternal.js');
 
-			switch (process.platform) {
-				case 'win32':
-					return dc.hitBreakpoint({ program: PROGRAM }, { path: '<node_internals>/assert.js', line: 105} );
-				case 'darwin':
-					return dc.hitBreakpoint({ program: PROGRAM }, { path: '<node_internals>/assert.js', line: 105} );
-				case 'linux':
-					return dc.hitBreakpoint({ program: PROGRAM }, { path: '<node_internals>/assert.js', line: 105} );
-			}
+			return dc.hitBreakpoint({ program: PROGRAM }, { path: '<node_internals>/assert.js', line: 105} );
 		});
 
 		test('should stop on debugger statement in eval', () => {
