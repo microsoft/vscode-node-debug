@@ -363,6 +363,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 	private _localRoot: string;
 	private _remoteRoot: string | undefined;
 	private _restartMode = false;
+	private _port: number | undefined;
 	private _sourceMaps: ISourceMaps;
 	private _console: ConsoleType = 'internalConsole';
 	private _stopOnEntry: boolean;
@@ -720,7 +721,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 		if (!this._isTerminated) {
 			this._isTerminated = true;
 			if (this._restartMode && !this._inShutdown) {
-				this.sendEvent(new TerminatedEvent(true));
+				this.sendEvent(new TerminatedEvent({ port: this._port }));
 			} else {
 				this.sendEvent(new TerminatedEvent());
 			}
@@ -804,8 +805,8 @@ export class NodeDebugSession extends LoggingDebugSession {
 			return;
 		}
 
-		if (typeof args.__restart === 'boolean' && args.__restart && typeof args.port === 'number') {
-			this._attach(response, args.port, undefined, args.timeout);
+		if (args.__restart && typeof args.__restart.port === 'number') {
+			this._attach(response, args.__restart.port, undefined, args.timeout);
 			return;
 		}
 
@@ -1242,6 +1243,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 		if (!port) {
 			port = 5858;
 		}
+		this._port = port;
 
 		if (!address || address === 'localhost') {
 			address = '127.0.0.1';
