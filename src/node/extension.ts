@@ -318,7 +318,9 @@ function createInitialConfigurations(): string {
 function configureMern(config: any) {
 	config.protocol = 'inspector';
 	config.runtimeExecutable = 'nodemon';
+	config.runtimeArgs = [ '--inspect=9222' ];
 	config.program = '${workspaceRoot}/index.js';
+	config.port = 9222;
 	config.timeout = 20000;
 	config.restart = true;
 	config.env = {
