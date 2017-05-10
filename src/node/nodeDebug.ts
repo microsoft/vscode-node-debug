@@ -348,6 +348,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 	// session state
 	private _adapterID: string;
 	private _node: NodeV8Protocol;
+	private _attachSuccessful: boolean;
 	private _nodeProcessId: number = -1; 					// pid of the node runtime
 	private _functionBreakpoints = new Array<number>();		// node function breakpoint ids
 	private _scripts = new Map<number, Promise<Script>>();	// script cache
@@ -720,7 +721,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 		if (!this._isTerminated) {
 			this._isTerminated = true;
-			if (this._restartMode && !this._inShutdown) {
+			if (this._restartMode && this._attachSuccessful && !this._inShutdown) {
 				this.sendEvent(new TerminatedEvent({ port: this._port }));
 			} else {
 				this.sendEvent(new TerminatedEvent());
@@ -1473,6 +1474,8 @@ export class NodeDebugSession extends LoggingDebugSession {
 		// request UI to send breakpoints
 		this.log('la', '_startInitialize2: fire initialized event');
 		this.sendEvent(new InitializedEvent());
+
+		this._attachSuccessful = true;
 
 		// in attach-mode we don't know whether the debuggee has been launched in 'stop on entry' mode
 		// so we use the stopped state of the VM
