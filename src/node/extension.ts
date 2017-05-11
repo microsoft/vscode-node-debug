@@ -543,7 +543,7 @@ function getProtocolForAttach(config: any): Promise<string|undefined> {
 		}, 2000);
 	}).catch(err => {
 		return {
-			reason: localize('protocol.switch.unknown.error', "Debugging with legacy protocol because Node.js version could not be determined: {0}", err.toString()),
+			reason: localize('protocol.switch.unknown.error', "Debugging with legacy protocol because Node.js version could not be determined ({0})", err.toString()),
 			protocol: 'legacy'
 		};
 	}).then(result => {
