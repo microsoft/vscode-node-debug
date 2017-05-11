@@ -1237,7 +1237,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 	}
 
 	/*
-	 * shared code used in launchRequest and attachRequest
+	 * shared 'attach' code used in launchRequest and attachRequest.
 	 */
 	private _attach(response: DebugProtocol.Response, port: number, address: string | undefined, timeout: number | undefined): void {
 
@@ -1264,7 +1264,38 @@ export class NodeDebugSession extends LoggingDebugSession {
 			this.log('la', '_attach: connected');
 			connected = true;
 			this._node.startDispatch(<NodeJS.ReadableStream>socket, socket);
-			this._initialize(response);
+
+			this._isRunning().then(running => {
+
+				if (this._pollForNodeProcess) {
+					this._pollForNodeTermination();
+				}
+
+				setTimeout(() => {
+					this._injectDebuggerExtensions().then(_ => {
+
+						if (!this._stepBack) {
+							// does runtime support 'step back'?
+							const v = this._node.embeddedHostVersion;	// x.y.z version represented as (x*100+y)*100+z
+							if (!this._node.v8Version && v >= 70000) {
+								this._stepBack = true;
+							}
+						}
+
+						if (this._stepBack) {
+							response.body = {
+								supportsStepBack: true
+							};
+						}
+
+						this.sendResponse(response);
+						this._startInitialize(!running);
+					});
+				}, 10);
+
+			}).catch(resp => {
+				this._sendNodeResponse(response, resp);
+			});
 		});
 
 		const endTime = new Date().getTime() + timeout;
@@ -1295,61 +1326,45 @@ export class NodeDebugSession extends LoggingDebugSession {
 		});
 	}
 
-	private _initialize(response: DebugProtocol.Response, retryCount: number = 0) : void {
+	/**
+	 * Determine whether the runtime is running or stopped.
+	 * We do this by running an 'evaluate' request
+	 * (a benevolent side effect of the evaluate is to find the process id and runtime version).
+	 */
+	private _isRunning() : Promise<boolean> {
+		return new Promise((completeDispatch, errorDispatch) => {
+			this._isRunningWithRetry(0, completeDispatch, errorDispatch);
+		});
+	}
+
+	private _isRunningWithRetry(retryCount: number, completeDispatch: (value: boolean) => void, errorDispatch: (error: V8EvaluateResponse) => void) : void {
 
 		this._node.command('evaluate', { expression: 'process.pid', global: true }, (resp: V8EvaluateResponse) => {
 
-			let ok = resp.success;
 			if (resp.success && resp.body.value !== undefined) {
 				this._nodeProcessId = +resp.body.value;
-				this.log('la', `_initialize: got process id ${this._nodeProcessId} from node`);
+				this.log('la', `__initialize: got process id ${this._nodeProcessId} from node`);
 				this.logNodeVersion();
 			} else {
 				if (resp.message.indexOf('process is not defined') >= 0) {
-					this.log('la', '_initialize: process not defined error; got no pid');
-					ok = true; // continue and try to get process.pid later
+					this.log('la', '__initialize: process not defined error; got no pid');
+					resp.success = true; // continue and try to get process.pid later
 				}
 			}
 
-			if (ok) {
-
-				if (this._pollForNodeProcess) {
-					this._pollForNodeTermination();
-				}
-
-				setTimeout(() => {
-					this._injectDebuggerExtensions().then(_ => {
-
-						if (!this._stepBack) {
-							// does runtime support 'step back'?
-							const v = this._node.embeddedHostVersion;	// x.y.z version represented as (x*100+y)*100+z
-							if (!this._node.v8Version && v >= 70000) {
-								this._stepBack = true;
-							}
-						}
-
-						if (this._stepBack) {
-							response.body = {
-								supportsStepBack: true
-							};
-						}
-
-						this.sendResponse(response);
-						this._startInitialize(!resp.running);
-					});
-				}, 10);
-
+			if (resp.success) {
+				completeDispatch(resp.running);
 			} else {
-				this.log('la', '_initialize: retrieving process id from node failed');
+				this.log('la', '__initialize: retrieving process id from node failed');
 
-				if (retryCount < 10) {
+				if (retryCount < 4) {
 					setTimeout(() => {
 						// recurse
-						this._initialize(response, retryCount+1);
-					}, 50);
+						this._isRunningWithRetry(retryCount+1, completeDispatch, errorDispatch);
+					}, 100);
 					return;
 				} else {
-					this._sendNodeResponse(response, resp);
+					errorDispatch(resp);
 				}
 			}
 		});
