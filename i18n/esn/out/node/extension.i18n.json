@@ -21,6 +21,5 @@
 	"protocol.switch.unknown.version": "Depurando con el protocolo heredado ya que no se pudo determinar la versión de Node.js.",
 	"protocol.switch.attach.process": "Depurando con protocolos heredados porque la asociación a un proceso por el id. solo se admite para protocolos heredados.",
 	"protocol.switch.inspector.detected": "Depurando con el protocolo inspector porque se ha detectado.",
-	"protocol.switch.legacy.detected": "Depurando con el protocolo heredado porque se ha detectado.",
-	"protocol.switch.unknown.error": "Depurando con el protocolo heredado porque no se pudo determinar la versión de Node.js: {0}"
+	"protocol.switch.legacy.detected": "Depurando con el protocolo heredado porque se ha detectado."
 }
