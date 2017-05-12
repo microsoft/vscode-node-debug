@@ -8,25 +8,30 @@
 	"tasks": [
 		{
 			"taskName": "ts-watch",
-			"args": [],
+			"args": [
+				"--no-color"
+			],
 			"isBuildCommand": true,
-			"isWatching": true,
+			"isBackground": true,
 			"problemMatcher": {
 				"owner": "typescript",
-				"fileLocation": ["absolute"],
+				"applyTo": "closedDocuments",
+				"fileLocation": [ "absolute" ],
 				"pattern": {
-					"regexp": "^\\*\\*\\* Error: ([^(]+)\\((\\d+|\\d+,\\d+|\\d+,\\d+,\\d+,\\d+)\\): (.*)$",
+					"regexp": "Error: ([^(]+)\\((\\d+|\\d+,\\d+|\\d+,\\d+,\\d+,\\d+)\\): (.*)$",
 					"file": 1,
 					"location": 2,
 					"message": 3
 				},
-				"watchedTaskBeginsRegExp": "^\\*\\*\\* Starting\\.\\.\\.$",
-				"watchedTaskEndsRegExp": "^\\*\\*\\* Finished with \\d+ errors\\.$"
+				"watching": {
+					"beginsPattern": "Starting compilation",
+					"endsPattern": "Finished compilation"
+				}
 			}
 		},
 		{
 			"taskName": "tslint",
-            "problemMatcher": "$tslint5"
-        }
+			"problemMatcher": "$tslint5"
+		}
 	]
 }
