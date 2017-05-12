@@ -318,7 +318,7 @@ export function multiGlob(patterns: string[], opts?): Promise<string[]> {
 		set.forEach(v => array.push(Path.posix.normalize(v)));
 		return array;
 	});
-};
+}
 
 export function multiGlobMatches(patterns: string[], path: string): boolean {
 

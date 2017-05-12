@@ -178,7 +178,7 @@ function listProcesses() : Promise<ProcessItem[]> {
 								});
 							}
 						}
-					};
+					}
 
 					resolve(items);
 				}
@@ -376,7 +376,7 @@ const InspectorMinNodeVersionLaunch = 80000;
 class StartSessionResult {
 	status: 'ok' | 'initialConfiguration' | 'saveConfiguration';
 	content?: string;	// launch.json content for 'save'
-};
+}
 
 function startSession(config: any): StartSessionResult {
 
