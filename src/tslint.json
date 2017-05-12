@@ -16,5 +16,6 @@
 				"messageIndex": 1
 			}
 		]
-	}
+	},
+    "defaultSeverity": "warning"
 }
