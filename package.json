@@ -402,6 +402,16 @@
 								"type": ["boolean", "string"],
 								"description": "%trace.description%",
 								"default": true
+							},
+							"localRoot": {
+								"type": ["string", "null"],
+								"description": "%node.attach.localRoot.description%",
+								"default": null
+							},
+							"remoteRoot": {
+								"type": ["string", "null"],
+								"description": "%node.attach.remoteRoot.description%",
+								"default": null
 							}
 						}
 					},
