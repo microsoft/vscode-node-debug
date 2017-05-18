@@ -21,5 +21,6 @@
 	"protocol.switch.unknown.version": "Node.js のバージョンを判別できなかったため、以前のプロトコルでデバッグしています。",
 	"protocol.switch.attach.process": "以前のプロトコルでデバッグしています。ID によるプロセスへのアタッチは、以前のプロトコルに対してのみサポートされています。",
 	"protocol.switch.inspector.detected": "検出されたため、インスペクター プロトコルでデバッグしています。",
-	"protocol.switch.legacy.detected": "検出されたため、レガシ プロトコルでデバッグしています。"
+	"protocol.switch.legacy.detected": "検出されたため、レガシ プロトコルでデバッグしています。",
+	"protocol.switch.unknown.error": "Node.js のバージョンを判別できなかったため、以前のプロトコルでデバッグしています ({0})"
 }
