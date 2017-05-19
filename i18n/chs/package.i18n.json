@@ -13,7 +13,7 @@
 	"outFiles.description": "如果启用源映射，则这些 glob 模式将指定生成的 JavaScript 文件。如果模式以 \"!\" 开始，则排除这些文件。如果未指定，则生成的代码应与其源位于同一目录中。",
 	"outDir.deprecationMessage": "属性 \"outDir\" 已弃用，请改用 \"outFiles\"。",
 	"trace.description": "生成诊断输出。可以列出一个或多个以逗号分隔的选择器，而不是将此设置为 true。\"verbose\" 选择器支持非常详细的输出。",
-	"launch.args.description": "传递给计划的命令行参数。",
+	"launch.args.description": "传递给程序的命令行参数。",
 	"node.protocol.description": "要使用的 Node.js 调试协议。",
 	"node.protocol.auto.description": "尝试自动检测最佳协议, 选择 'inspector' 以启动 Node 8.0+",
 	"node.protocol.inspector.description": "Node.js 6.3 及更高版本支持的新协议",
