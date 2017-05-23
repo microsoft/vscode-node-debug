@@ -9,5 +9,9 @@
 		"strictNullChecks": true,
 		"noUnusedParameters": false,
 		"noUnusedLocals": true
-	}
+	},
+	"exclude": [
+		"node_modules",
+		".vscode-test"
+	]
 }

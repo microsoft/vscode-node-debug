@@ -6,6 +6,7 @@
 
 import * as net from 'net';
 import * as vscode from 'vscode';
+import { TreeDataProvider, Disposable, Command } from 'vscode';
 import { spawn, spawnSync, exec } from 'child_process';
 import { basename, join, isAbsolute, dirname } from 'path';
 import * as nls from 'vscode-nls';
@@ -17,13 +18,75 @@ const localize = nls.config(process.env.VSCODE_NLS_CONFIG)();
 export function activate(context: vscode.ExtensionContext) {
 
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.toggleSkippingFile', toggleSkippingFile));
-	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.pickLoadedScript', () => pickLoadedScript()));
+	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.pickLoadedScript', () => pickLoadedScript(context)));
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.provideInitialConfigurations', () => createInitialConfigurations()));
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.startSession', config => startSession(config)));
 	context.subscriptions.push(vscode.commands.registerCommand('extension.pickNodeProcess', () => pickProcess()));
+	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.openScript', () => openScript()));
 }
 
 export function deactivate() {
+}
+
+//---- ScriptsExplorer
+
+interface ScriptTreeItem {
+	label: string;
+	children?: { [key: string]: ScriptTreeItem; };
+	path?: ScriptItem;
+}
+
+export class ScriptsExplorer implements TreeDataProvider<ScriptTreeItem> {
+
+	provideRootNode(): ScriptTreeItem {
+		return { label: 'Root' };
+	}
+
+	resolveChildren(node: ScriptTreeItem): Thenable<ScriptTreeItem[]> {
+		if (node.label === 'Root') {
+			return listLoadedScripts().then(scripts => {
+				if (scripts) {
+					scripts.reduce((hier, path) => {
+						let x = hier;
+						path.description.split('/').forEach(item => {
+							if (x.children === undefined) {
+								x.children = {};
+							}
+							if (!x.children[item]) {
+								x.children[item] = <ScriptTreeItem>{ label: item };
+							}
+							x = x.children[item];
+						});
+						x.path = path;
+						return hier;
+					}, node);
+				}
+				const cc = node.children || {};
+				return Object.keys(cc).map( key => cc[key] );
+			});
+		}
+		const cc = node.children || {};
+		return Promise.resolve(Object.keys(cc).map( key => cc[key] ));
+	}
+
+	getLabel(node: ScriptTreeItem): string {
+		return node.label || '/';
+	}
+
+	getHasChildren(node: ScriptTreeItem): boolean {
+		return true;
+	}
+
+	getClickCommand(node: ScriptTreeItem): Command {
+		if (node.path) {
+			return { title: 'open', command: 'extension.node-debug.openScript', arguments: [ node.path.source ] };
+		}
+		return { title: 'expand', command: 'expand' };
+	}
+
+	onChange(f: (node: ScriptTreeItem) => void): vscode.Disposable {
+		return new Disposable(f);
+	}
 }
 
 //---- toggle skipped files
@@ -49,8 +112,16 @@ interface ScriptItem extends vscode.QuickPickItem {
 	source?: any;	// Source
 }
 
-function pickLoadedScript() {
+function pickLoadedScript(context: vscode.ExtensionContext) {
 
+	const treeDataProvider = new ScriptsExplorer();
+	const view = vscode.window.createExplorerView('nodeScriptsExplorer', 'Scripts', treeDataProvider);
+	context.subscriptions.push(view);
+
+	const disposable = treeDataProvider.onChange(node => view.refresh(node));
+	context.subscriptions.push(new vscode.Disposable(() => disposable.dispose()));
+
+	/*
 	return listLoadedScripts().then(items => {
 
 		let options : vscode.QuickPickOptions = {
@@ -71,6 +142,7 @@ function pickLoadedScript() {
 			}
 		});
 	});
+	*/
 }
 
 function listLoadedScripts() : Thenable<ScriptItem[] | undefined> {
@@ -81,6 +153,11 @@ function listLoadedScripts() : Thenable<ScriptItem[] | undefined> {
 			return undefined;
 		}
 	});
+}
+
+function openScript(args: string[]) {
+	let uri = vscode.Uri.parse(`debug:${args[0]}`);
+	vscode.workspace.openTextDocument(uri).then(doc => vscode.window.showTextDocument(doc));
 }
 
 //---- extension.pickNodeProcess
