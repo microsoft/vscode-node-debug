@@ -4003,7 +4003,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 	private static isJavaScript(path: string): boolean {
 
 		const name = Path.basename(path).toLowerCase();
-		if (endsWith(name, '.js')) {
+		if (endsWith(name, '.js') || endsWith(name, '.ts')) {
 			return true;
 		}
 
