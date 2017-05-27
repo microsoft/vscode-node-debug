@@ -17,6 +17,7 @@
 	"reason.description.restart": "フレーム エントリで一時停止",
 	"exceptions.all": "すべての例外",
 	"exceptions.uncaught": "キャッチされない例外",
+	"exceptions.rejects": "Promise が失敗",
 	"VSND2028": "不明なコンソールの種類 '{0}'.",
 	"VSND2001": "PATH 上でランタイム '{0}' が見つかりません。",
 	"program.path.case.mismatch.warning": "プログラム パスで使用されている文字と、ディスク上のファイルの文字の間で大文字と小文字が異なっています。ブレークポイントがヒットしない可能性があります。",
