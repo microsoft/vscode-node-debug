@@ -290,6 +290,10 @@ interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArguments, C
 	externalConsole?: boolean;
 	/** Where to launch the debug target. */
 	console?: ConsoleType;
+	/** Optional: Node's root directory. */
+	remoteRoot?: string;
+	/** Optional: VS Code's root directory. */
+	localRoot?: string;
 
 	/** internal */
 	__restart?; boolean;
@@ -829,6 +833,11 @@ export class NodeDebugSession extends LoggingDebugSession {
 		}
 
 		const port = args.port || random(3000, 50000);
+
+		if (args.localRoot && args.remoteRoot) {
+			this._localRoot = args.localRoot;
+			this._remoteRoot = args.remoteRoot;
+		}
 
 		let runtimeExecutable = args.runtimeExecutable;
 		if (runtimeExecutable) {
