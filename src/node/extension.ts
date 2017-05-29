@@ -6,7 +6,7 @@
 
 import * as net from 'net';
 import * as vscode from 'vscode';
-import { TreeDataProvider, Disposable, Command } from 'vscode';
+import { TreeDataProvider, Disposable, Command, TreeItem, EventEmitter, Event } from 'vscode';
 import { spawn, spawnSync, exec } from 'child_process';
 import { basename, join, isAbsolute, dirname } from 'path';
 import * as nls from 'vscode-nls';
@@ -22,7 +22,7 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.provideInitialConfigurations', () => createInitialConfigurations()));
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.startSession', config => startSession(config)));
 	context.subscriptions.push(vscode.commands.registerCommand('extension.pickNodeProcess', () => pickProcess()));
-	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.openScript', () => openScript()));
+	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.openScript', args => openScript(args)));
 }
 
 export function deactivate() {
@@ -30,20 +30,29 @@ export function deactivate() {
 
 //---- ScriptsExplorer
 
-interface ScriptTreeItem {
-	label: string;
+interface ScriptTreeItem extends vscode.TreeItem {
 	children?: { [key: string]: ScriptTreeItem; };
 	path?: ScriptItem;
 }
 
 export class ScriptsExplorer implements TreeDataProvider<ScriptTreeItem> {
 
-	provideRootNode(): ScriptTreeItem {
-		return { label: 'Root' };
+	//private _disposables: Map<ScriptTreeItem, Disposable[]> = new Map<ScriptTreeItem, Disposable[]>();
+
+	private _onDidChangeTreeData: EventEmitter<ScriptTreeItem> = new EventEmitter<ScriptTreeItem>();
+	readonly onDidChangeTreeData: Event<ScriptTreeItem> = this._onDidChangeTreeData.event;
+
+	constructor() {
+		//this.model.onChange(() => this._onDidChangeTreeData.fire());
 	}
 
-	resolveChildren(node: ScriptTreeItem): Thenable<ScriptTreeItem[]> {
-		if (node.label === 'Root') {
+	getTreeItem(node: ScriptTreeItem): TreeItem {
+		return node;
+	}
+
+	getChildren(node: ScriptTreeItem): Thenable<ScriptTreeItem[]> {
+		if (!node) {
+			node = <ScriptTreeItem>{ label: 'Root' };
 			return listLoadedScripts().then(scripts => {
 				if (scripts) {
 					scripts.reduce((hier, path) => {
@@ -69,12 +78,8 @@ export class ScriptsExplorer implements TreeDataProvider<ScriptTreeItem> {
 		return Promise.resolve(Object.keys(cc).map( key => cc[key] ));
 	}
 
-	getLabel(node: ScriptTreeItem): string {
-		return node.label || '/';
-	}
-
-	getHasChildren(node: ScriptTreeItem): boolean {
-		return true;
+	refresh(): void {
+		this._onDidChangeTreeData.fire();
 	}
 
 	getClickCommand(node: ScriptTreeItem): Command {
@@ -115,11 +120,14 @@ interface ScriptItem extends vscode.QuickPickItem {
 function pickLoadedScript(context: vscode.ExtensionContext) {
 
 	const treeDataProvider = new ScriptsExplorer();
-	const view = vscode.window.createExplorerView('nodeScriptsExplorer', 'Scripts', treeDataProvider);
-	context.subscriptions.push(view);
+	vscode.window.registerTreeDataProviderForView('extension.node-debug.loadedScriptsExplorer', treeDataProvider);
+	//context.subscriptions.push(view);
+	treeDataProvider.refresh();
 
+	/*
 	const disposable = treeDataProvider.onChange(node => view.refresh(node));
 	context.subscriptions.push(new vscode.Disposable(() => disposable.dispose()));
+	*/
 
 	/*
 	return listLoadedScripts().then(items => {

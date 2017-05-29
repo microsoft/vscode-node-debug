@@ -81,6 +81,14 @@
 		"onCommand:extension.pickNodeProcess"
 	],
 	"contributes": {
+		"views": {
+			"explorer": [
+				{
+					"id": "extension.node-debug.loadedScriptsExplorer",
+					"name": "Loaded Scripts"
+				}
+			]
+		},
 		"menus": {
 			"debug/callstack/context": [
 				{
