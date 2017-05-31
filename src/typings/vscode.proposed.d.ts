@@ -14,11 +14,11 @@ declare module 'vscode' {
 
 	export namespace window {
 		/**
-		 * Register a [TreeDataProvider](#TreeDataProvider) for the registered view `id`.
-		 * @param viewId View id.
+		 * Register a [TreeDataProvider](#TreeDataProvider) for the view contributed using the extension point `views`.
+		 * @param viewId Id of the view contributed using the extension point `views`.
 		 * @param treeDataProvider A [TreeDataProvider](#TreeDataProvider) that provides tree data for the view
 		 */
-		export function registerTreeDataProviderForView<T>(viewId: string, treeDataProvider: TreeDataProvider<T>): Disposable;
+		export function registerTreeDataProvider<T>(viewId: string, treeDataProvider: TreeDataProvider<T>): Disposable;
 	}
 
 	/**
@@ -31,55 +31,78 @@ declare module 'vscode' {
 		onDidChangeTreeData?: Event<T | undefined | null>;
 
 		/**
-		 * get [TreeItem](#TreeItem) representation of the `element`
+		 * Get [TreeItem](#TreeItem) representation of the `element`
 		 *
 		 * @param element The element for which [TreeItem](#TreeItem) representation is asked for.
 		 * @return [TreeItem](#TreeItem) representation of the element
 		 */
-		getTreeItem(element: T): TreeItem;
+		getTreeItem(element: T): TreeItem | Thenable<TreeItem>;
 
 		/**
-		 * get the children of `element` or root.
+		 * Get the children of `element` or root.
 		 *
 		 * @param element The element from which the provider gets children for.
 		 * @return Children of `element` or root.
 		 */
-		getChildren(element?: T): T[] | Thenable<T[]>;
+		getChildren(element?: T): ProviderResult<T[]>;
 	}
 
-	export interface TreeItem {
+	export class TreeItem {
 		/**
-		 * Label of the tree item
+		 * A human-readable string describing this item
 		 */
-		readonly label: string;
+		label: string;
 
 		/**
 		 * The icon path for the tree item
 		 */
-		readonly iconPath?: string | Uri | { light: string | Uri; dark: string | Uri };
+		iconPath?: string | Uri | { light: string | Uri; dark: string | Uri };
 
 		/**
-		 * The [command](#Command) which should be run when the tree item
-		 * is open in the Source Control viewlet.
+		 * The [command](#Command) which should be run when the tree item is selected.
 		 */
-		readonly command?: Command;
+		command?: Command;
 
 		/**
-		 * Context value of the tree node
+		 * [TreeItemCollapsibleState](#TreeItemCollapsibleState) of the tree item.
 		 */
-		readonly contextValue?: string;
+		collapsibleState?: TreeItemCollapsibleState;
 
 		/**
-		 * Collapsible state of the tree item.
-		 * Required only when item has children.
+		 * Context value of the tree item. This can be used to contribute item specific actions in the tree.
+		 * For example, a tree item is given a context value as `folder`. When contributing actions to `view/item/context`
+		 * using `menus` extension point, you can specify context value for key `viewItem` in `when` expression like `viewItem == folder`.
+		 * ```
+		 *	"contributes": {
+		 *		"menus": {
+		 *			"view/item/context": [
+		 *				{
+		 *					"command": "extension.deleteFolder",
+		 *					"when": "viewItem == folder"
+		 *				}
+		 *			]
+		 *		}
+		 *	}
+		 * ```
+		 * This will show action `extension.deleteFolder` only for items with `contextValue` is `folder`.
 		 */
-		readonly collapsibleState?: TreeItemCollapsibleState;
+		contextValue?: string;
+
+		/**
+		 * @param label A human-readable string describing this item
+		 * @param collapsibleState [TreeItemCollapsibleState](#TreeItemCollapsibleState) of the tree item. Default is [TreeItemCollapsibleState.None](#TreeItemCollapsibleState.None)
+		 */
+		constructor(label: string, collapsibleState?: TreeItemCollapsibleState);
 	}
 
 	/**
 	 * Collapsible state of the tree item
 	 */
 	export enum TreeItemCollapsibleState {
+		/**
+		 * Determines an item can be neither collapsed nor expanded. Implies it has no children.
+		 */
+		None = 0,
 		/**
 		 * Determines an item is collapsed
 		 */

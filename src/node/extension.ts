@@ -6,7 +6,7 @@
 
 import * as net from 'net';
 import * as vscode from 'vscode';
-import { TreeDataProvider, Disposable, Command, TreeItem, EventEmitter, Event } from 'vscode';
+import { TreeDataProvider, Disposable, TreeItem, EventEmitter, Event } from 'vscode';
 import { spawn, spawnSync, exec } from 'child_process';
 import { basename, join, isAbsolute, dirname } from 'path';
 import * as nls from 'vscode-nls';
@@ -17,8 +17,11 @@ const localize = nls.config(process.env.VSCODE_NLS_CONFIG)();
 
 export function activate(context: vscode.ExtensionContext) {
 
+	const se = new ScriptsExplorer();
+	vscode.window.registerTreeDataProviderForView('extension.node-debug.loadedScriptsExplorer', se);
+
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.toggleSkippingFile', toggleSkippingFile));
-	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.pickLoadedScript', () => pickLoadedScript(context)));
+	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.pickLoadedScript', () => pickLoadedScript(se)));
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.provideInitialConfigurations', () => createInitialConfigurations()));
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.startSession', config => startSession(config)));
 	context.subscriptions.push(vscode.commands.registerCommand('extension.pickNodeProcess', () => pickProcess()));
@@ -30,7 +33,8 @@ export function deactivate() {
 
 //---- ScriptsExplorer
 
-interface ScriptTreeItem extends vscode.TreeItem {
+interface ScriptTreeItem {
+	label: string;
 	children?: { [key: string]: ScriptTreeItem; };
 	path?: ScriptItem;
 }
@@ -47,13 +51,24 @@ export class ScriptsExplorer implements TreeDataProvider<ScriptTreeItem> {
 	}
 
 	getTreeItem(node: ScriptTreeItem): TreeItem {
-		return node;
+		const x: TreeItem = {
+			label: node.label || '/',
+			collapsibleState: node.children ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None,
+		};
+		if (node.path) {
+			x.command = {
+				command: 'extension.node-debug.openScript',
+				arguments: [node.path],
+				title: ''
+			};
+		}
+		return x;
 	}
 
-	getChildren(node: ScriptTreeItem): Thenable<ScriptTreeItem[]> {
-		if (!node) {
-			node = <ScriptTreeItem>{ label: 'Root' };
+	getChildren(node?: ScriptTreeItem): Thenable<ScriptTreeItem[]> {
+		if (node === undefined) {
 			return listLoadedScripts().then(scripts => {
+				node = <ScriptTreeItem>{ label: 'Root' };
 				if (scripts) {
 					scripts.reduce((hier, path) => {
 						let x = hier;
@@ -81,17 +96,6 @@ export class ScriptsExplorer implements TreeDataProvider<ScriptTreeItem> {
 	refresh(): void {
 		this._onDidChangeTreeData.fire();
 	}
-
-	getClickCommand(node: ScriptTreeItem): Command {
-		if (node.path) {
-			return { title: 'open', command: 'extension.node-debug.openScript', arguments: [ node.path.source ] };
-		}
-		return { title: 'expand', command: 'expand' };
-	}
-
-	onChange(f: (node: ScriptTreeItem) => void): vscode.Disposable {
-		return new Disposable(f);
-	}
 }
 
 //---- toggle skipped files
@@ -117,17 +121,9 @@ interface ScriptItem extends vscode.QuickPickItem {
 	source?: any;	// Source
 }
 
-function pickLoadedScript(context: vscode.ExtensionContext) {
+function pickLoadedScript(se: ScriptsExplorer) {
 
-	const treeDataProvider = new ScriptsExplorer();
-	vscode.window.registerTreeDataProviderForView('extension.node-debug.loadedScriptsExplorer', treeDataProvider);
-	//context.subscriptions.push(view);
-	treeDataProvider.refresh();
-
-	/*
-	const disposable = treeDataProvider.onChange(node => view.refresh(node));
-	context.subscriptions.push(new vscode.Disposable(() => disposable.dispose()));
-	*/
+	se.refresh();
 
 	/*
 	return listLoadedScripts().then(items => {
@@ -163,8 +159,8 @@ function listLoadedScripts() : Thenable<ScriptItem[] | undefined> {
 	});
 }
 
-function openScript(args: string[]) {
-	let uri = vscode.Uri.parse(`debug:${args[0]}`);
+function openScript(args: any) {
+	let uri = vscode.Uri.parse(`debug:${args.path.source.path}`);
 	vscode.workspace.openTextDocument(uri).then(doc => vscode.window.showTextDocument(doc));
 }
 
