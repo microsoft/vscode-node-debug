@@ -21,5 +21,6 @@
 	"protocol.switch.unknown.version": "Die Node.js-Version wurde nicht erkannt. Deswegen erfolgt das Debuggen mit dem Legacyprotokoll.",
 	"protocol.switch.attach.process": "Debugging mit Legacy-Protokoll, da das Anfügen an einen Prozess nach ID nur für Legacy-Protokolle unterstützt wird.",
 	"protocol.switch.inspector.detected": "Debugging mit Inspektorprotokoll, da es erkannt wurde.",
-	"protocol.switch.legacy.detected": "Debugging mit Legacy-Protokoll, da es erkannt wurde."
+	"protocol.switch.legacy.detected": "Debugging mit Legacy-Protokoll, da es erkannt wurde.",
+	"protocol.switch.unknown.error": "Debugging mit Legacy-Protokoll, da die Node.js-Version nicht ermittelt werden konnte ({0})"
 }

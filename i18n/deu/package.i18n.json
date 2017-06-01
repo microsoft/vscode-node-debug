@@ -45,6 +45,7 @@
 	"node.snippet.launch.description": "Node-Programm im Debugmodus starten",
 	"node.snippet.npm.label": "Node.js: Über NPM starten",
 	"node.snippet.npm.description": "Node-Programm über ein npm-Debugskript starten",
+	"node.snippet.attach.description": "An ein ausgeführtes Node-Programm anfügen",
 	"node.snippet.remoteattach.label": "Node.js: An Remote-Programm anfügen",
 	"node.snippet.remoteattach.description": "An den Debugport eines Remote-Node-Programms anfügen",
 	"node.snippet.attachProcess.label": "Node.js: An Prozess anfügen",

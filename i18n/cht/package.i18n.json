@@ -45,6 +45,7 @@
 	"node.snippet.launch.description": "在偵錯模式中啟動節點程式",
 	"node.snippet.npm.label": "Node.js: 透過 NPM 啟動",
 	"node.snippet.npm.description": "透過 npm 'debug' 指令碼啟動節點程式",
+	"node.snippet.attach.description": "附加至Node處理程序",
 	"node.snippet.remoteattach.label": "Node.js: 附加到遠端程式",
 	"node.snippet.remoteattach.description": "附加到遠端節點程式的偵錯連接埠",
 	"node.snippet.attachProcess.label": "Node.js: 連結到處理序",
