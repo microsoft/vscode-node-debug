@@ -6,7 +6,7 @@
 
 import * as net from 'net';
 import * as vscode from 'vscode';
-import { TreeDataProvider, Disposable, TreeItem, EventEmitter, Event } from 'vscode';
+import { TreeDataProvider, TreeItem, EventEmitter, Event } from 'vscode';
 import { spawn, spawnSync, exec } from 'child_process';
 import { basename, join, isAbsolute, dirname } from 'path';
 import * as nls from 'vscode-nls';
@@ -18,14 +18,14 @@ const localize = nls.config(process.env.VSCODE_NLS_CONFIG)();
 export function activate(context: vscode.ExtensionContext) {
 
 	const se = new ScriptsExplorer();
-	vscode.window.registerTreeDataProviderForView('extension.node-debug.loadedScriptsExplorer', se);
+	vscode.window.registerTreeDataProvider('extension.node-debug.loadedScriptsExplorer', se);
 
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.toggleSkippingFile', toggleSkippingFile));
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.pickLoadedScript', () => pickLoadedScript(se)));
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.provideInitialConfigurations', () => createInitialConfigurations()));
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.startSession', config => startSession(config)));
 	context.subscriptions.push(vscode.commands.registerCommand('extension.pickNodeProcess', () => pickProcess()));
-	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.openScript', args => openScript(args)));
+	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.openScript', (path: string) => openScript(path)));
 }
 
 export function deactivate() {
@@ -58,7 +58,7 @@ export class ScriptsExplorer implements TreeDataProvider<ScriptTreeItem> {
 		if (node.path) {
 			x.command = {
 				command: 'extension.node-debug.openScript',
-				arguments: [node.path],
+				arguments: [ node.path.source.path ],
 				title: ''
 			};
 		}
@@ -159,8 +159,8 @@ function listLoadedScripts() : Thenable<ScriptItem[] | undefined> {
 	});
 }
 
-function openScript(args: any) {
-	let uri = vscode.Uri.parse(`debug:${args.path.source.path}`);
+function openScript(path: string) {
+	let uri = vscode.Uri.parse(`debug:${path}`);
 	vscode.workspace.openTextDocument(uri).then(doc => vscode.window.showTextDocument(doc));
 }
 
