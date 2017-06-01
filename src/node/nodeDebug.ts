@@ -2235,6 +2235,12 @@ export class NodeDebugSession extends LoggingDebugSession {
 				}
 
 				if (!name) {
+
+					if (typeof script_val.id !== 'number') {
+						// if the script has not ID something is seriously wrong: give up.
+						throw new Error('no script id');
+					}
+
 					// if a function is dynamically created from a string, its script has no name.
 					path = this._scriptToPath(script_val);
 					name = Path.basename(path);
@@ -2247,11 +2253,6 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 			return this._createStackFrameFromSource(frame, src, line, column);
 
-		}).catch(err => {
-
-			const func_name = this._getFrameName(frame);
-			const name = localize('frame.error', "{0} <error: {1}>", func_name, err.message);
-			return new StackFrame(this._frameHandles.create(frame), name);
 		});
 	}
 
