@@ -40,7 +40,6 @@
 	"origin.from.node": "contenido de solo lectura de Node.js",
 	"origin.from.remote.node": "contenido de solo lectura de Node.js remoto",
 	"origin.core.module": "módulo principal de solo lectura",
-	"frame.error": "{0} <error: {1}>",
 	"source.skipFiles": "omitido debido a \"skipFiles\"",
 	"source.smartstep": "omitido debido a \"smartStep\"",
 	"origin.inlined.source.map": "contenido insertado de solo lectura del mapa de origen",

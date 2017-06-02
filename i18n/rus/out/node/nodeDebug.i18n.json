@@ -36,7 +36,6 @@
 	"origin.from.node": "содержимое только для чтения из Node.js",
 	"origin.from.remote.node": "содержимое только для чтения из удаленного Node.js",
 	"origin.core.module": "основной модуль только для чтения",
-	"frame.error": "{0} <ошибка: {1}>",
 	"source.skipFiles": "пропущено из-за skipFiles",
 	"source.smartstep": "пропущено из-за smartStep",
 	"origin.inlined.source.map": "встроенное содержимое только для чтения из карты исходного кода",

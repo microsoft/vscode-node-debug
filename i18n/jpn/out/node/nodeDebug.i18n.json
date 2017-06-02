@@ -40,7 +40,6 @@
 	"origin.from.node": "Node.js からの読み取り専用コンテンツ",
 	"origin.from.remote.node": "リモート Node.js からの読み取り専用コンテンツ",
 	"origin.core.module": "読み取り専用のコア モジュール",
-	"frame.error": "{0} <エラー: {1}>",
 	"source.skipFiles": "'skipFiles' のためにスキップされました",
 	"source.smartstep": "'smartStep' のためにスキップされました",
 	"origin.inlined.source.map": "ソース マップからの読み取り専用のインライン化されたコンテンツ",

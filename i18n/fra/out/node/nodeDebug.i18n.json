@@ -36,7 +36,6 @@
 	"origin.from.node": "contenu en lecture seule à partir du code Node.js",
 	"origin.from.remote.node": "contenu en lecture seule à partir du code Node.js distant",
 	"origin.core.module": "module de base en lecture seule",
-	"frame.error": "{0} <erreur : {1}>",
 	"source.skipFiles": "ignoré en raison de 'skipFiles'",
 	"source.smartstep": "ignoré en raison de 'smartStep'",
 	"origin.inlined.source.map": "contenu Inline en lecture seule du mappage de source",

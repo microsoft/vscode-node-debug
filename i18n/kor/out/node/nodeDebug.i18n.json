@@ -36,7 +36,6 @@
 	"origin.from.node": "Node.js의 읽기 전용 콘텐츠",
 	"origin.from.remote.node": "원격 Node.js의 읽기 전용 콘텐츠",
 	"origin.core.module": "읽기 전용 코어 모듈",
-	"frame.error": "{0} <오류: {1}>",
 	"source.skipFiles": "'skipFiles'로 인해 건너뜀",
 	"source.smartstep": "'smartStep'으로 인해 건너뜀",
 	"origin.inlined.source.map": "소스 맵의 읽기 전용 인라인 콘텐츠",

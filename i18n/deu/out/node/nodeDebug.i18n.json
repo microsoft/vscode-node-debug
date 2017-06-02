@@ -38,7 +38,6 @@
 	"origin.from.node": "Schreibgeschützter Inhalt aus Node.js.",
 	"origin.from.remote.node": "Schreibgeschützter Inhalt aus Remote-Node.js.",
 	"origin.core.module": "Schreibgeschütztes Kernmodul",
-	"frame.error": "{0} <Fehler: {1}>",
 	"source.skipFiles": "Aufgrund von \"skipFiles\" übersprungen",
 	"source.smartstep": "Aufgrund von \"smartStep\" übersprungen",
 	"origin.inlined.source.map": "Schreibgeschützter Inlineinhalt aus der Quellzuordnung.",
