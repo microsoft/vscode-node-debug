@@ -134,23 +134,39 @@ export function findOnPath(program: string, lookInNodeModules: boolean): string 
 
 	let env = extendObject({}, process.env);
 	if (lookInNodeModules) {
-		let path = env['PATH'];
-		if (path) {
-			if (process.platform === 'win32') {
+		if (process.platform === 'win32') {
+			let path = env['Path'];
+			if (path) {
 				path = '.\\node_modules\\.bin;' + path;
-			} else {
-				path = './node_modules/.bin:' + path;
+				env['Path'] = path;
 			}
-			env['PATH'] = path;
+		} else {
+			let path = env['PATH'];
+			if (path) {
+				path = './node_modules/.bin:' + path;
+				env['PATH'] = path;
+			}
 		}
 	}
 
 	let finder = process.platform === 'win32' ? 'C:\\Windows\\System32\\where.exe' : '/usr/bin/which';
 	try {
 		if (FS.existsSync(finder)) {
-			const stdout = CP.execSync(`${finder} ${program}`, { env } ).toString().split(/\r?\n/, 1);
-			if (stdout.length > 0 && stdout[0]) {
-				return stdout[0];
+			const lines = CP.execSync(`${finder} ${program}`, { env } ).toString().split(/\r?\n/);
+			if (process.platform === 'win32') {
+				// return the first path that has a executable extension
+				const executableExtensions = env['PATHEXT'].toUpperCase();
+				for (const path of lines) {
+					const ext = Path.extname(path).toUpperCase();
+					if (ext && executableExtensions.indexOf(ext + ';') > 0) {
+						return path;
+					}
+				}
+			} else {
+				// return the first path
+				if (lines.length > 0) {
+					return lines[0];
+				}
 			}
 		} else {
 			// do not report error if finder doesn't exist
