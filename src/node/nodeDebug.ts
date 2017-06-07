@@ -833,20 +833,23 @@ export class NodeDebugSession extends LoggingDebugSession {
 		let runtimeExecutable = args.runtimeExecutable;
 		if (runtimeExecutable) {
 			if (!Path.isAbsolute(runtimeExecutable)) {
-				if (!PathUtils.isOnPath(runtimeExecutable)) {
+				const re = PathUtils.findOnPath(runtimeExecutable, true);
+				if (!re) {
 					this.sendErrorResponse(response, 2001, localize('VSND2001', "Cannot find runtime '{0}' on PATH.", '{_runtime}'), { _runtime: runtimeExecutable });
 					return;
 				}
+				runtimeExecutable = re;
 			} else if (!FS.existsSync(runtimeExecutable)) {
 				this.sendNotExistErrorResponse(response, 'runtimeExecutable', runtimeExecutable);
 				return;
 			}
 		} else {
-			if (!PathUtils.isOnPath(NodeDebugSession.NODE)) {
+			const re = PathUtils.findOnPath(NodeDebugSession.NODE, false);
+			if (!re) {
 				this.sendErrorResponse(response, 2001, localize('VSND2001', "Cannot find runtime '{0}' on PATH.", '{_runtime}'), { _runtime: NodeDebugSession.NODE });
 				return;
 			}
-			runtimeExecutable = NodeDebugSession.NODE;     // use node from PATH
+			runtimeExecutable = re;
 		}
 
 		let runtimeArgs = args.runtimeArgs || [];

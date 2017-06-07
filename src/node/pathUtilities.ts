@@ -128,40 +128,40 @@ export function mkdirs(path: string) {
 }
 
 /*
- * Is the given runtime executable on the PATH.
+ * Lookup the given program on the PATH and return its absolute path on success and undefined otherwise.
  */
-export function isOnPath(program: string): boolean {
+export function findOnPath(program: string, lookInNodeModules: boolean): string | undefined {
 
-	if (process.platform === 'win32') {
-		return true;
-		/*
-		const WHERE = 'C:\\Windows\\System32\\where.exe';
-		try {
-			if (FS.existsSync(WHERE)) {
-				CP.execSync(`${WHERE} ${program}`);
+	let env = extendObject({}, process.env);
+	if (lookInNodeModules) {
+		let path = env['PATH'];
+		if (path) {
+			if (process.platform === 'win32') {
+				path = '.\\node_modules\\.bin;' + path;
 			} else {
-				// do not report error if 'where' doesn't exist
+				path = './node_modules/.bin:' + path;
 			}
-			return true;
-		}
-		catch (Exception) {
-			// ignore
-		}
-		*/
-	} else {
-		const WHICH = '/usr/bin/which';
-		try {
-			if (FS.existsSync(WHICH)) {
-				CP.execSync(`${WHICH} '${program}'`);
-			} else {
-				// do not report error if 'which' doesn't exist
-			}
-			return true;
-		}
-		catch (Exception) {
+			env['PATH'] = path;
 		}
 	}
-	return false;
+
+	let finder = process.platform === 'win32' ? 'C:\\Windows\\System32\\where.exe' : '/usr/bin/which';
+	try {
+		if (FS.existsSync(finder)) {
+			const stdout = CP.execSync(`${finder} ${program}`, { env } ).toString().split(/\r?\n/, 1);
+			if (stdout.length > 0 && stdout[0]) {
+				return stdout[0];
+			}
+		} else {
+			// do not report error if finder doesn't exist
+		}
+		return program;
+	}
+	catch (Exception) {
+		// fall through
+	}
+
+	return undefined;
 }
 
 //---- the following functions work with Windows and Unix-style paths independent from the underlying OS.
