@@ -450,7 +450,8 @@ function startSession(config: any): StartSessionResult {
 
 				case 'launch':
 					if (config.runtimeExecutable) {
-						log(localize('protocol.switch.runtime.set', "Debugging with legacy protocol because a runtime executable is set."));
+						config.type = 'node2';
+						log(localize('protocol.switch.runtime.set', "Debugging with inspector protocol because a runtime executable is set."));
 					} else {
 						// only determine version if no runtimeExecutable is set (and 'node' on PATH is used)
 						const result = spawnSync('node', [ '--version' ]);
