@@ -130,32 +130,15 @@ export function mkdirs(path: string) {
 /*
  * Lookup the given program on the PATH and return its absolute path on success and undefined otherwise.
  */
-export function findOnPath(program: string, lookInNodeModules: boolean): string | undefined {
+export function findOnPath(program: string): string | undefined {
 
-	let env = extendObject({}, process.env);
-	if (lookInNodeModules) {
-		if (process.platform === 'win32') {
-			let path = env['Path'];
-			if (path) {
-				path = '.\\node_modules\\.bin;' + path;
-				env['Path'] = path;
-			}
-		} else {
-			let path = env['PATH'];
-			if (path) {
-				path = './node_modules/.bin:' + path;
-				env['PATH'] = path;
-			}
-		}
-	}
-
-	let finder = process.platform === 'win32' ? 'C:\\Windows\\System32\\where.exe' : '/usr/bin/which';
+	let locator = process.platform === 'win32' ? 'C:\\Windows\\System32\\where.exe' : '/usr/bin/which';
 	try {
-		if (FS.existsSync(finder)) {
-			const lines = CP.execSync(`${finder} ${program}`, { env } ).toString().split(/\r?\n/);
+		if (FS.existsSync(locator)) {
+			const lines = CP.execSync(`${locator} ${program}`).toString().split(/\r?\n/);
 			if (process.platform === 'win32') {
 				// return the first path that has a executable extension
-				const executableExtensions = env['PATHEXT'].toUpperCase();
+				const executableExtensions = process.env['PATHEXT'].toUpperCase();
 				for (const path of lines) {
 					const ext = Path.extname(path).toUpperCase();
 					if (ext && executableExtensions.indexOf(ext + ';') > 0) {
@@ -168,15 +151,17 @@ export function findOnPath(program: string, lookInNodeModules: boolean): string 
 					return lines[0];
 				}
 			}
+			return undefined;
 		} else {
-			// do not report error if finder doesn't exist
+			// do not report failure if 'locator' app doesn't exist
 		}
 		return program;
 	}
-	catch (Exception) {
+	catch (err) {
 		// fall through
 	}
 
+	// fail
 	return undefined;
 }
 
