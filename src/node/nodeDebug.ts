@@ -839,9 +839,13 @@ export class NodeDebugSession extends LoggingDebugSession {
 					return;
 				}
 				runtimeExecutable = re;
-			} else if (!FS.existsSync(runtimeExecutable)) {
-				this.sendNotExistErrorResponse(response, 'runtimeExecutable', runtimeExecutable);
-				return;
+			} else {
+				const re = PathUtils.findExecutable(runtimeExecutable);
+				if (!re) {
+					this.sendNotExistErrorResponse(response, 'runtimeExecutable', runtimeExecutable);
+					return;
+				}
+				runtimeExecutable = re;
 			}
 		} else {
 			const re = PathUtils.findOnPath(NodeDebugSession.NODE);

@@ -165,6 +165,31 @@ export function findOnPath(program: string): string | undefined {
 	return undefined;
 }
 
+/*
+ *
+ */
+export function findExecutable(program: string): string | undefined {
+
+	if (process.platform === 'win32' && !Path.extname(program)) {
+		const PATHEXT = process.env['PATHEXT'];
+		if (PATHEXT) {
+			const executableExtensions = PATHEXT.split(';');
+			for (const extension of executableExtensions) {
+				const path = program + extension;
+				if (FS.existsSync(path)) {
+					return path;
+				}
+			}
+		}
+	}
+
+	if (FS.existsSync(program)) {
+		return program;
+	}
+	return undefined;
+}
+
+
 //---- the following functions work with Windows and Unix-style paths independent from the underlying OS.
 
 /**
