@@ -71,7 +71,7 @@
 		"nodemon": "^1.11.0",
 		"vsce": "^1.20.0"
 	},
-	"main": "./out/node/extension",
+	"main": "./out/node/extension/extension.js",
 	"activationEvents": [
 		"onCommand:extension.node-debug.toggleSkippingFile",
 		"onCommand:extension.node-debug.pickLoadedScript",
