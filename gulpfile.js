@@ -148,8 +148,7 @@ gulp.task('add-i18n', function() {
 gulp.task('transifex-push', function() {
 	return gulp.src('**/*.nls.json')
 		.pipe(nls.prepareXlfFiles(transifexProjectName, transifexExtensionName))
-		.pipe(gulp.dest('./transifex-push'));
-		// .pipe(nls.pushXlfFiles(transifexApiHostname, transifexApiName, transifexApiToken));
+		.pipe(nls.pushXlfFiles(transifexApiHostname, transifexApiName, transifexApiToken));
 });
 
 gulp.task('transifex-pull', function() {
