@@ -53,7 +53,10 @@ const vscodeLanguages = [
 	'fr',
 	'es',
 	'ru',
-	'it'
+	'it',
+	'pt-br',
+	'hu',
+	'tr'
 ];
 
 gulp.task('default', function(callback) {
@@ -145,7 +148,8 @@ gulp.task('add-i18n', function() {
 gulp.task('transifex-push', function() {
 	return gulp.src('**/*.nls.json')
 		.pipe(nls.prepareXlfFiles(transifexProjectName, transifexExtensionName))
-		.pipe(nls.pushXlfFiles(transifexApiHostname, transifexApiName, transifexApiToken));
+		.pipe(gulp.dest('./transifex-push'));
+		// .pipe(nls.pushXlfFiles(transifexApiHostname, transifexApiName, transifexApiToken));
 });
 
 gulp.task('transifex-pull', function() {
