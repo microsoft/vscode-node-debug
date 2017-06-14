@@ -292,7 +292,7 @@ interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArguments, C
 	console?: ConsoleType;
 
 	/** internal */
-	__restart?; boolean;
+	__restart?: { port: number };
 }
 
 /**
