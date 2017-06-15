@@ -4,7 +4,7 @@
 	"version": "1.14.2",
 	"publisher": "ms-vscode",
 	"description": "%extension.description%",
-	"icon": "images/node-debug-icon.svg",
+	"icon": "images/node-debug-icon.png",
 	"categories": [
 		"Debuggers"
 	],
