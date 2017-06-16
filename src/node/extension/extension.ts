@@ -160,7 +160,8 @@ function listProcesses() : Promise<ProcessItem[]> {
 
 							if (executable_path) {
 
-								const executable_name = basename(executable_path);
+								let executable_name = basename(executable_path);
+								executable_name = executable_name.split('.')[0];
 								if (!NODE.test(executable_name)) {
 									continue;
 								}
