@@ -152,6 +152,11 @@ function detectProtocolForPidWin(pid: number): Promise<string|null> {
 	});
 }
 
+/**
+ * Netstat output is like:
+Proto  Local Address          Foreign Address        State           PID
+  TCP    0.0.0.0:135            0.0.0.0:0              LISTENING       812
+ */
 function getOpenPortsForPidWin(pid: number): Promise<number[]> {
 	return new Promise(resolve => {
 		cp.exec('netstat -a -n -o -p TCP', (err, stdout) => {
@@ -159,18 +164,20 @@ function getOpenPortsForPidWin(pid: number): Promise<number[]> {
 				resolve([]);
 			}
 
-			return stdout
+			const ports = stdout
 				.split(/\r?\n/)
-				.map(line => line.split(/\s+/))
+				.map(line => line.trim().split(/\s+/))
 				.filter(lineParts => {
 					// Filter to just `pid` rows
 					return lineParts[4] && lineParts[4] === String(pid);
 				})
 				.map(lineParts => {
 					const address = lineParts[1];
-					return address.split(':')[1];
+					return parseInt(address.split(':')[1]);
 				});
-		})
+
+				resolve(ports);
+		});
 	})
 }
 
