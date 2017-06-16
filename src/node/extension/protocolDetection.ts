@@ -8,10 +8,13 @@ import * as cp from 'child_process';
 import { log, localize } from './utilities';
 import * as net from 'net';
 
+export const INSPECTOR_PORT_DEFAULT = 9229;
+export const LEGACY_PORT_DEFAULT = 5858;
+
 // For launch, use inspector protocol starting with v8 because it's stable after that version.
 const InspectorMinNodeVersionLaunch = 80000;
 
-export function determineDebugType(config: any): Promise<string> {
+export function determineDebugType(config: any): Promise<string|null> {
 	switch (config.protocol) {
 		case 'legacy':
 			return Promise.resolve('node');
@@ -31,7 +34,7 @@ export function determineDebugType(config: any): Promise<string> {
 					// should not happen
 					break;
 			}
-			return Promise.resolve('undefined');
+			return Promise.resolve(null);
 	}
 }
 
@@ -136,23 +139,53 @@ function semVerStringToInt(vString: string): number {
 	return -1;
 }
 
-export function detectProtocolForPid(pid: number): Promise<string> {
-	if (process.platform === 'win32') {
-		// TODO
-		return Promise.resolve('legacy');
-	} else {
-		return getPidListeningOnPort(9229).then<string | undefined>(inspectorProtocolPid => {
-			if (inspectorProtocolPid === pid) {
-				return 'inspector';
-			} else {
-				return getPidListeningOnPort(5858)
-					.then(legacyProtocolPid => legacyProtocolPid === pid ? 'legacy' : undefined);
-			}
-		});
-	}
+export function detectProtocolForPid(pid: number): Promise<string|null> {
+	return process.platform === 'win32' ?
+		detectProtocolForPidWin(pid) :
+		detectProtocolForPidUnix(pid);
 }
 
-function getPidListeningOnPort(port: number): Promise<number> {
+function detectProtocolForPidWin(pid: number): Promise<string|null> {
+	return getOpenPortsForPidWin(pid).then(ports => {
+		return ports.indexOf(INSPECTOR_PORT_DEFAULT) >= 0 ? 'inspector' :
+			ports.indexOf(LEGACY_PORT_DEFAULT) >= 0 ? 'legacy' : null;
+	});
+}
+
+function getOpenPortsForPidWin(pid: number): Promise<number[]> {
+	return new Promise(resolve => {
+		cp.exec('netstat -a -n -o -p TCP', (err, stdout) => {
+			if (err || !stdout) {
+				resolve([]);
+			}
+
+			return stdout
+				.split(/\r?\n/)
+				.map(line => line.split(/\s+/))
+				.filter(lineParts => {
+					// Filter to just `pid` rows
+					return lineParts[4] && lineParts[4] === String(pid);
+				})
+				.map(lineParts => {
+					const address = lineParts[1];
+					return address.split(':')[1];
+				});
+		})
+	})
+}
+
+function detectProtocolForPidUnix(pid: number): Promise<string|null> {
+	return getPidListeningOnPortUnix(INSPECTOR_PORT_DEFAULT).then<string|null>(inspectorProtocolPid => {
+		if (inspectorProtocolPid === pid) {
+			return 'inspector';
+		} else {
+			return getPidListeningOnPortUnix(LEGACY_PORT_DEFAULT)
+				.then(legacyProtocolPid => legacyProtocolPid === pid ? 'legacy' : null);
+		}
+	});
+}
+
+function getPidListeningOnPortUnix(port: number): Promise<number> {
 	return new Promise(resolve => {
 		cp.exec(`lsof -i:${port} -F p`, (err, stdout) => {
 			if (err || !stdout) {

@@ -385,7 +385,7 @@ function startSession(config: any): Promise<StartSessionResult> {
 		}
 	}
 
-	let determineDebugTypeP: Promise<string>;
+	let determineDebugTypeP: Promise<string|null>;
 	if (config.request === 'attach' && typeof config.processId === 'string' && config.processId.trim() === '${command:PickProcess}') {
 		determineDebugTypeP = pickProcessAndDetermineDebugType().then(debugType => {
 			if (debugType) {
@@ -406,7 +406,7 @@ function startSession(config: any): Promise<StartSessionResult> {
 			vscode.commands.executeCommand('vscode.startDebug', config);
 		}
 
-		return {
+		return <StartSessionResult>{
 			status: 'ok'
 		};
 	});
