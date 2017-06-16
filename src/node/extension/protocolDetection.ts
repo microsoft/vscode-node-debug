@@ -4,7 +4,7 @@
 
 'use strict';
 
-import { spawnSync } from 'child_process';
+import * as cp from 'child_process';
 import { log, localize } from './utilities';
 import * as net from 'net';
 
@@ -21,12 +21,12 @@ export function determineDebugType(config: any): Promise<string> {
 		default:
 			switch (config.request) {
 				case 'attach':
-					return autodetectProtocolForAttach(config).then(protocol => {
+					return detectProtocolForAttach(config).then(protocol => {
 						return protocol === 'inspector' ? 'node2' : 'node';
 					});
 
 				case 'launch':
-					return Promise.resolve(autodetectProtocolForLaunch(config) === 'inspector' ? 'node2' : 'node');
+					return Promise.resolve(detectProtocolForLaunch(config) === 'inspector' ? 'node2' : 'node');
 				default:
 					// should not happen
 					break;
@@ -38,7 +38,7 @@ export function determineDebugType(config: any): Promise<string> {
 /**
  * Detect which debug protocol is being used for a running node process.
  */
-function autodetectProtocolForAttach(config: any): Promise<string | undefined> {
+function detectProtocolForAttach(config: any): Promise<string | undefined> {
 	const address = config.address || '127.0.0.1';
 	const port = config.port;
 
@@ -101,13 +101,13 @@ function autodetectProtocolForAttach(config: any): Promise<string | undefined> {
 	});
 }
 
-function autodetectProtocolForLaunch(config: any): string | undefined {
+function detectProtocolForLaunch(config: any): string | undefined {
 	if (config.runtimeExecutable) {
 		log(localize('protocol.switch.runtime.set', "Debugging with inspector protocol because a runtime executable is set."));
 		return 'inspector';
 	} else {
 		// only determine version if no runtimeExecutable is set (and 'node' on PATH is used)
-		const result = spawnSync('node', ['--version']);
+		const result = cp.spawnSync('node', ['--version']);
 		const semVerString = result.stdout.toString();
 		if (semVerString) {
 			if (semVerStringToInt(semVerString) >= InspectorMinNodeVersionLaunch) {
@@ -134,4 +134,38 @@ function semVerStringToInt(vString: string): number {
 		return (parseInt(match[1]) * 100 + parseInt(match[2])) * 100 + parseInt(match[3]);
 	}
 	return -1;
+}
+
+export function detectProtocolForPid(pid: number): Promise<string> {
+	if (process.platform === 'win32') {
+		// TODO
+		return Promise.resolve('legacy');
+	} else {
+		return getPidListeningOnPort(9229).then<string | undefined>(inspectorProtocolPid => {
+			if (inspectorProtocolPid === pid) {
+				return 'inspector';
+			} else {
+				return getPidListeningOnPort(5858)
+					.then(legacyProtocolPid => legacyProtocolPid === pid ? 'legacy' : undefined);
+			}
+		});
+	}
+}
+
+function getPidListeningOnPort(port: number): Promise<number> {
+	return new Promise(resolve => {
+		cp.exec(`lsof -i:${port} -F p`, (err, stdout) => {
+			if (err || !stdout) {
+				resolve(-1);
+				return;
+			}
+
+			const pidMatch = stdout.match(/p(\d+)/);
+			if (pidMatch && pidMatch[1]) {
+				resolve(Number(pidMatch[1]));
+			} else {
+				resolve(-1);
+			}
+		});
+	});
 }
