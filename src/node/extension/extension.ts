@@ -9,7 +9,7 @@ import { spawn, exec, execSync } from 'child_process';
 import { basename, join, isAbsolute, dirname } from 'path';
 import * as fs from 'fs';
 import { log, localize } from './utilities';
-import { determineDebugType, detectProtocolForPid } from './protocolDetection';
+import { determineDebugType, detectProtocolForPid, INSPECTOR_PORT_DEFAULT, LEGACY_PORT_DEFAULT } from './protocolDetection';
 
 export function activate(context: vscode.ExtensionContext) {
 
@@ -388,10 +388,10 @@ function startSession(config: any): Promise<StartSessionResult> {
 
 	let determineDebugTypeP: Promise<string|null>;
 	if (config.request === 'attach' && typeof config.processId === 'string' && config.processId.trim() === '${command:PickProcess}') {
-		determineDebugTypeP = pickProcessAndDetermineDebugType().then(debugType => {
+		determineDebugTypeP = pickProcessAndDetermineDebugType(config).then(debugType => {
 			if (debugType) {
 				config.processId = undefined;
-				config.port = debugType === 'node2' ? 9229 : 5858;
+				config.port = debugType === 'node2' ? INSPECTOR_PORT_DEFAULT : LEGACY_PORT_DEFAULT;
 			}
 
 			return debugType;
@@ -449,20 +449,22 @@ function getFreshLaunchConfig(): any {
 	return config;
 }
 
-function pickProcessAndDetermineDebugType(): Promise<string|null> {
+function pickProcessAndDetermineDebugType(config: any): Promise<string|null> {
 	return pickProcess().then<string|null>(pid => {
 		if (pid && pid.match(/[0-9]+/)) { // null check
 			const pidNum = Number(pid);
 			putPidInDebugMode(pidNum);
-			return detectProtocolForPid(pidNum);
+
+			return config.port === INSPECTOR_PORT_DEFAULT ? 'inspector' :
+				config.port === LEGACY_PORT_DEFAULT ? 'legacy' :
+				config.protocol ? config.protocol :
+				detectProtocolForPid(pidNum);
 		} else {
 			return null;
 		}
 	}).then(protocolType => {
-		return protocolType === 'inspector' ?
-			'node2' :
-			protocolType === 'legacy' ?
-				'node' : null;
+		return protocolType === 'inspector' ? 'node2' :
+			protocolType === 'legacy' ? 'node' : null;
 	}).catch(e => {
 		// TODO log
 		return null;
