@@ -795,6 +795,9 @@ export class NodeDebugSession extends LoggingDebugSession {
 		// This debug adapter supports the exception info request
 		response.body.supportsExceptionInfoRequest = true;
 
+		// This debug adapter supports delayed loading of stackframes
+		response.body.supportsDelayedStackTraceLoading = true;
+
 		this.sendResponse(response);
 	}
 
