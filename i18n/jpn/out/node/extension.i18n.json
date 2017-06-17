@@ -15,7 +15,6 @@
 	"launch.config.comment1": "使用できる Node.js デバッグ属性を学ぶために、インテリセンスを使用してください。",
 	"launch.config.comment2": "既存の属性の説明をホバーして表示します。",
 	"launch.config.comment3": "詳細情報は次を確認してください: {0}",
-	"protocol.switch.runtime.set": "ランタイム実行可能ファイルが設定されているため、レガシ プロトコルでデバッグしています。",
 	"protocol.switch.inspector.version": "Node.js {0} が検出されたため、インスペクター プロトコルでデバッグしています。",
 	"protocol.switch.legacy.version": "Node.js {0} が検出されたため、以前のプロトコルでデバッグしています。",
 	"protocol.switch.unknown.version": "Node.js のバージョンを判別できなかったため、以前のプロトコルでデバッグしています。",

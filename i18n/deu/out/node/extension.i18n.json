@@ -15,7 +15,6 @@
 	"launch.config.comment1": "Verwendet IntelliSense zum Ermitteln möglicher Node.js-Debugattribute.",
 	"launch.config.comment2": "Zeigen Sie auf vorhandene Attribute, um die zugehörigen Beschreibungen anzuzeigen.",
 	"launch.config.comment3": "Weitere Informationen finden Sie unter {0}",
-	"protocol.switch.runtime.set": "Mit Legacy-Protokoll debuggen, da eine ausführbaren Laufzeit festgelegt ist.",
 	"protocol.switch.inspector.version": "Node.js {0} wurde erkannt. Deswegen erfolgt das Debuggen mit dem Inspector-Protokoll.",
 	"protocol.switch.legacy.version": "Node.js {0} wurde erkannt. Deswegen erfolgt das Debuggen mit dem Legacyprotokoll.",
 	"protocol.switch.unknown.version": "Die Node.js-Version wurde nicht erkannt. Deswegen erfolgt das Debuggen mit dem Legacyprotokoll.",
