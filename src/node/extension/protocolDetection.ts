@@ -14,28 +14,21 @@ export const LEGACY_PORT_DEFAULT = 5858;
 // For launch, use inspector protocol starting with v8 because it's stable after that version.
 const InspectorMinNodeVersionLaunch = 80000;
 
-export function determineDebugType(config: any): Promise<string|null> {
-	switch (config.protocol) {
-		case 'legacy':
-			return Promise.resolve('node');
-		case 'inspector':
-			return Promise.resolve('node2');
-		case 'auto':
-		default:
-			switch (config.request) {
-				case 'attach':
-					return detectProtocolForAttach(config).then(protocol => {
-						return protocol === 'inspector' ? 'node2' : 'node';
-					});
+export function detectDebugType(config: any): Promise<string|null> {
+	switch (config.request) {
+		case 'attach':
+			return detectProtocolForAttach(config).then(protocol => {
+				return protocol === 'inspector' ? 'node2' : 'node';
+			});
 
-				case 'launch':
-					return Promise.resolve(detectProtocolForLaunch(config) === 'inspector' ? 'node2' : 'node');
-				default:
-					// should not happen
-					break;
-			}
-			return Promise.resolve(null);
-	}
+		case 'launch':
+			return Promise.resolve(detectProtocolForLaunch(config) === 'inspector' ? 'node2' : 'node');
+		default:
+			// should not happen
+			break;
+		}
+
+	return Promise.resolve(null);
 }
 
 /**

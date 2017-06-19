@@ -9,7 +9,7 @@ import { spawn, exec, execSync } from 'child_process';
 import { basename, join, isAbsolute, dirname } from 'path';
 import * as fs from 'fs';
 import { log, localize } from './utilities';
-import { determineDebugType, detectProtocolForPid, INSPECTOR_PORT_DEFAULT, LEGACY_PORT_DEFAULT } from './protocolDetection';
+import { detectDebugType, detectProtocolForPid, INSPECTOR_PORT_DEFAULT, LEGACY_PORT_DEFAULT } from './protocolDetection';
 
 export function activate(context: vscode.ExtensionContext) {
 
@@ -386,22 +386,8 @@ function startSession(config: any): Promise<StartSessionResult> {
 		}
 	}
 
-	let determineDebugTypeP: Promise<string|null>;
-	if (config.request === 'attach' && typeof config.processId === 'string' && config.processId.trim() === '${command:PickProcess}') {
-		determineDebugTypeP = pickProcessAndDetermineDebugType(config).then(debugType => {
-			if (debugType) {
-				config.processId = undefined;
-				config.port = debugType === 'node2' ? INSPECTOR_PORT_DEFAULT : LEGACY_PORT_DEFAULT;
-			}
-
-			return debugType;
-		});
-	} else {
-		determineDebugTypeP = determineDebugType(config);
-	}
-
 	// determine which protocol to use
-	return determineDebugTypeP.then(debugType => {
+	return determineDebugType(config).then(debugType => {
 		if (debugType) {
 			config.type = debugType;
 			vscode.commands.executeCommand('vscode.startDebug', config);
@@ -449,25 +435,41 @@ function getFreshLaunchConfig(): any {
 	return config;
 }
 
-function pickProcessAndDetermineDebugType(config: any): Promise<string|null> {
-	return pickProcess().then<string|null>(pid => {
-		if (pid && pid.match(/[0-9]+/)) { // null check
-			const pidNum = Number(pid);
-			putPidInDebugMode(pidNum);
+function determineDebugType(config: any): Promise<string|null> {
+	if (config.request === 'attach' && typeof config.processId === 'string') {
+		return determineDebugTypeForPidConfig(config);
+	} else if (config.protocol === 'legacy') {
+		return Promise.resolve('node');
+	} else if (config.protocol === 'inspector') {
+		return Promise.resolve('node2');
+	} else {
+		// 'auto', or unspecified
+		return detectDebugType(config);
+	}
+}
 
-			return config.port === INSPECTOR_PORT_DEFAULT ? 'inspector' :
-				config.port === LEGACY_PORT_DEFAULT ? 'legacy' :
-				config.protocol ? config.protocol :
-				detectProtocolForPid(pidNum);
-		} else {
-			return null;
+function determineDebugTypeForPidConfig(config: any): Promise<string|null> {
+	const getPidP = config.processId.trim() === '${command:PickProcess}' ?
+		pickProcess() :
+		Promise.resolve(config.processId);
+
+	return getPidP.then(pid => {
+		if (pid && pid.match(/[0-9]+/)) {
+			const pidNum = Number(pid);
+			putPidInDebugMode(pidNum); // TODO catch and save error for later
+
+			return determineDebugTypeForPidInDebugMode(config, pidNum);
 		}
-	}).then(protocolType => {
-		return protocolType === 'inspector' ? 'node2' :
-			protocolType === 'legacy' ? 'node' : null;
-	}).catch(e => {
-		// TODO log
+
 		return null;
+	}).then(debugType => {
+		if (debugType) {
+			// processID is handled, so turn this config into a normal port attach config
+			config.processId = undefined;
+			config.port = debugType === 'node2' ? INSPECTOR_PORT_DEFAULT : LEGACY_PORT_DEFAULT;
+		}
+
+		return debugType;
 	});
 }
 
@@ -486,4 +488,23 @@ function putPidInDebugMode(pid: number): void {
 	} catch (e) {
 		throw new Error(localize('VSND2021', "Attach to process: cannot enable debug mode for process '{0}' ({1}).", pid, e));
 	}
+}
+
+function determineDebugTypeForPidInDebugMode(config: any, pid: number): Promise<string|null> {
+	let debugProtocolP: Promise<string|null>;
+	if (config.port === INSPECTOR_PORT_DEFAULT) {
+		debugProtocolP = Promise.resolve('inspector');
+	} else if (config.port === LEGACY_PORT_DEFAULT) {
+		debugProtocolP = Promise.resolve('legacy');
+	} else if (config.protocol) {
+		debugProtocolP = Promise.resolve(config.protocol);
+	} else {
+		debugProtocolP = detectProtocolForPid(pid);
+	}
+
+	return debugProtocolP.then(debugProtocol => {
+		return debugProtocol === 'inspector' ? 'node2' :
+			debugProtocol === 'legacy' ? 'node' :
+			null;
+	});
 }
