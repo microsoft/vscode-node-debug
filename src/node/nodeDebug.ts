@@ -299,8 +299,6 @@ interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArguments, C
  * This interface should always match the schema found in the node-debug extension manifest.
  */
 interface AttachRequestArguments extends DebugProtocol.AttachRequestArguments, CommonArguments {
-	/** Send a USR1 signal to this process. */
-	processId?: string;
 }
 
 
@@ -1214,33 +1212,6 @@ export class NodeDebugSession extends LoggingDebugSession {
 			this.log('eh', `attachRequest: args: ${JSON.stringify(args)}`);
 		} else {
 			this._attachMode = true;
-		}
-
-		// if a processId is specified, try to bring the process into debug mode.
-		if (typeof args.processId === 'string') {
-			const pid_string = args.processId.trim();
-			if (/^([0-9]+)$/.test(pid_string)) {
-				const pid = Number(pid_string);
-				try {
-					if (process.platform === 'win32') {
-						// regular node has an undocumented API function for forcing another node process into debug mode.
-						// 		(<any>process)._debugProcess(pid);
-						// But since we are running on Electron's node, process._debugProcess doesn't work (for unknown reasons).
-						// So we use a regular node instead:
-						const command = `node -e process._debugProcess(${pid})`;
-						CP.execSync(command);
-
-					} else {
-						process.kill(pid, 'SIGUSR1');
-					}
-				} catch (e) {
-					this.sendErrorResponse(response, 2021, localize('VSND2021', "Attach to process: cannot enable debug mode for process '{0}' ({1}).", pid, e));
-					return;
-				}
-			} else {
-				this.sendErrorResponse(response, 2006, localize('VSND2006', "Attach to process: '{0}' doesn't look like a process id.", pid_string));
-				return;
-			}
 		}
 
 		this._attach(response, args.port, args.address, args.timeout);
