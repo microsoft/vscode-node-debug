@@ -5,11 +5,11 @@
 'use strict';
 
 import * as vscode from 'vscode';
-import { spawn, exec } from 'child_process';
+import { spawn, exec, execSync } from 'child_process';
 import { basename, join, isAbsolute, dirname } from 'path';
 import * as fs from 'fs';
 import { log, localize } from './utilities';
-import { determineDebugType } from './protocolDetection';
+import { detectDebugType, detectProtocolForPid, INSPECTOR_PORT_DEFAULT, LEGACY_PORT_DEFAULT } from './protocolDetection';
 
 export function activate(context: vscode.ExtensionContext) {
 
@@ -86,10 +86,8 @@ interface ProcessItem extends vscode.QuickPickItem {
 	pid: string;	// payload for the QuickPick UI
 }
 
-function pickProcess() {
-
+function pickProcess(): Promise<string|null> {
 	return listProcesses().then(items => {
-
 		let options : vscode.QuickPickOptions = {
 			placeHolder: localize('pickNodeProcess', "Pick the node.js or gulp process to attach to"),
 			matchOnDescription: true,
@@ -162,7 +160,8 @@ function listProcesses() : Promise<ProcessItem[]> {
 
 							if (executable_path) {
 
-								const executable_name = basename(executable_path);
+								let executable_name = basename(executable_path);
+								executable_name = executable_name.split('.')[0];
 								if (!NODE.test(executable_name)) {
 									continue;
 								}
@@ -372,8 +371,7 @@ class StartSessionResult {
 	content?: string;	// launch.json content for 'save'
 }
 
-function startSession(config: any): StartSessionResult {
-
+function startSession(config: any): Promise<StartSessionResult> {
 	if (Object.keys(config).length === 0) { // an empty config represents a missing launch.json
 		config = getFreshLaunchConfig();
 	}
@@ -389,14 +387,16 @@ function startSession(config: any): StartSessionResult {
 	}
 
 	// determine which protocol to use
-	determineDebugType(config).then(debugType => {
-		config.type = debugType;
-		vscode.commands.executeCommand('vscode.startDebug', config);
-	});
+	return determineDebugType(config).then(debugType => {
+		if (debugType) {
+			config.type = debugType;
+			vscode.commands.executeCommand('vscode.startDebug', config);
+		}
 
-	return {
-		status: 'ok'
-	};
+		return <StartSessionResult>{
+			status: 'ok'
+		};
+	});
 }
 
 function getFreshLaunchConfig(): any {
@@ -435,4 +435,81 @@ function getFreshLaunchConfig(): any {
 	return config;
 }
 
+function determineDebugType(config: any): Promise<string|null> {
+	if (config.request === 'attach' && typeof config.processId === 'string') {
+		return determineDebugTypeForPidConfig(config);
+	} else if (config.protocol === 'legacy') {
+		return Promise.resolve('node');
+	} else if (config.protocol === 'inspector') {
+		return Promise.resolve('node2');
+	} else {
+		// 'auto', or unspecified
+		return detectDebugType(config);
+	}
+}
 
+function determineDebugTypeForPidConfig(config: any): Promise<string|null> {
+	const getPidP = isPickProcessCommand(config.processId) ?
+		pickProcess() :
+		Promise.resolve(config.processId);
+
+	return getPidP.then(pid => {
+		if (pid && pid.match(/^[0-9]+$/)) {
+			const pidNum = Number(pid);
+			putPidInDebugMode(pidNum);
+
+			return determineDebugTypeForPidInDebugMode(config, pidNum);
+		} else {
+			throw new Error(localize('VSND2006', "Attach to process: '{0}' doesn't look like a process id.", pid));
+		}
+	}).then(debugType => {
+		if (debugType) {
+			// processID is handled, so turn this config into a normal port attach config
+			config.processId = undefined;
+			config.port = debugType === 'node2' ? INSPECTOR_PORT_DEFAULT : LEGACY_PORT_DEFAULT;
+		}
+
+		return debugType;
+	});
+}
+
+function isPickProcessCommand(configProcessId: string): boolean {
+	configProcessId = configProcessId.trim();
+	return configProcessId === '${command:PickProcess}' || configProcessId === '${command:extension.pickNodeProcess}';
+}
+
+function putPidInDebugMode(pid: number): void {
+	try {
+		if (process.platform === 'win32') {
+			// regular node has an undocumented API function for forcing another node process into debug mode.
+			// 		(<any>process)._debugProcess(pid);
+			// But since we are running on Electron's node, process._debugProcess doesn't work (for unknown reasons).
+			// So we use a regular node instead:
+			const command = `node -e process._debugProcess(${pid})`;
+			execSync(command);
+		} else {
+			process.kill(pid, 'SIGUSR1');
+		}
+	} catch (e) {
+		throw new Error(localize('VSND2021', "Attach to process: cannot enable debug mode for process '{0}' ({1}).", pid, e));
+	}
+}
+
+function determineDebugTypeForPidInDebugMode(config: any, pid: number): Promise<string|null> {
+	let debugProtocolP: Promise<string|null>;
+	if (config.port === INSPECTOR_PORT_DEFAULT) {
+		debugProtocolP = Promise.resolve('inspector');
+	} else if (config.port === LEGACY_PORT_DEFAULT) {
+		debugProtocolP = Promise.resolve('legacy');
+	} else if (config.protocol) {
+		debugProtocolP = Promise.resolve(config.protocol);
+	} else {
+		debugProtocolP = detectProtocolForPid(pid);
+	}
+
+	return debugProtocolP.then(debugProtocol => {
+		return debugProtocol === 'inspector' ? 'node2' :
+			debugProtocol === 'legacy' ? 'node' :
+			null;
+	});
+}

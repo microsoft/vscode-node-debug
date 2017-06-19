@@ -4,41 +4,37 @@
 
 'use strict';
 
-import { spawnSync } from 'child_process';
+import * as cp from 'child_process';
 import { log, localize } from './utilities';
 import * as net from 'net';
+
+export const INSPECTOR_PORT_DEFAULT = 9229;
+export const LEGACY_PORT_DEFAULT = 5858;
 
 // For launch, use inspector protocol starting with v8 because it's stable after that version.
 const InspectorMinNodeVersionLaunch = 80000;
 
-export function determineDebugType(config: any): Promise<string> {
-	switch (config.protocol) {
-		case 'legacy':
-			return Promise.resolve('node');
-		case 'inspector':
-			return Promise.resolve('node2');
-		case 'auto':
-		default:
-			switch (config.request) {
-				case 'attach':
-					return autodetectProtocolForAttach(config).then(protocol => {
-						return protocol === 'inspector' ? 'node2' : 'node';
-					});
+export function detectDebugType(config: any): Promise<string|null> {
+	switch (config.request) {
+		case 'attach':
+			return detectProtocolForAttach(config).then(protocol => {
+				return protocol === 'inspector' ? 'node2' : 'node';
+			});
 
-				case 'launch':
-					return Promise.resolve(autodetectProtocolForLaunch(config) === 'inspector' ? 'node2' : 'node');
-				default:
-					// should not happen
-					break;
-			}
-			return Promise.resolve('undefined');
-	}
+		case 'launch':
+			return Promise.resolve(detectProtocolForLaunch(config) === 'inspector' ? 'node2' : 'node');
+		default:
+			// should not happen
+			break;
+		}
+
+	return Promise.resolve(null);
 }
 
 /**
  * Detect which debug protocol is being used for a running node process.
  */
-function autodetectProtocolForAttach(config: any): Promise<string | undefined> {
+function detectProtocolForAttach(config: any): Promise<string | undefined> {
 	const address = config.address || '127.0.0.1';
 	const port = config.port;
 
@@ -101,13 +97,13 @@ function autodetectProtocolForAttach(config: any): Promise<string | undefined> {
 	});
 }
 
-function autodetectProtocolForLaunch(config: any): string | undefined {
+function detectProtocolForLaunch(config: any): string | undefined {
 	if (config.runtimeExecutable) {
 		log(localize('protocol.switch.runtime.set', "Debugging with inspector protocol because a runtime executable is set."));
 		return 'inspector';
 	} else {
 		// only determine version if no runtimeExecutable is set (and 'node' on PATH is used)
-		const result = spawnSync('node', ['--version']);
+		const result = cp.spawnSync('node', ['--version']);
 		const semVerString = result.stdout.toString();
 		if (semVerString) {
 			if (semVerStringToInt(semVerString) >= InspectorMinNodeVersionLaunch) {
@@ -134,4 +130,75 @@ function semVerStringToInt(vString: string): number {
 		return (parseInt(match[1]) * 100 + parseInt(match[2])) * 100 + parseInt(match[3]);
 	}
 	return -1;
+}
+
+export function detectProtocolForPid(pid: number): Promise<string|null> {
+	return process.platform === 'win32' ?
+		detectProtocolForPidWin(pid) :
+		detectProtocolForPidUnix(pid);
+}
+
+function detectProtocolForPidWin(pid: number): Promise<string|null> {
+	return getOpenPortsForPidWin(pid).then(ports => {
+		return ports.indexOf(INSPECTOR_PORT_DEFAULT) >= 0 ? 'inspector' :
+			ports.indexOf(LEGACY_PORT_DEFAULT) >= 0 ? 'legacy' : null;
+	});
+}
+
+/**
+ * Netstat output is like:
+Proto  Local Address          Foreign Address        State           PID
+  TCP    0.0.0.0:135            0.0.0.0:0              LISTENING       812
+ */
+function getOpenPortsForPidWin(pid: number): Promise<number[]> {
+	return new Promise(resolve => {
+		cp.exec('netstat -a -n -o -p TCP', (err, stdout) => {
+			if (err || !stdout) {
+				resolve([]);
+			}
+
+			const ports = stdout
+				.split(/\r?\n/)
+				.map(line => line.trim().split(/\s+/))
+				.filter(lineParts => {
+					// Filter to just `pid` rows
+					return lineParts[4] && lineParts[4] === String(pid);
+				})
+				.map(lineParts => {
+					const address = lineParts[1];
+					return parseInt(address.split(':')[1]);
+				});
+
+				resolve(ports);
+		});
+	})
+}
+
+function detectProtocolForPidUnix(pid: number): Promise<string|null> {
+	return getPidListeningOnPortUnix(INSPECTOR_PORT_DEFAULT).then<string|null>(inspectorProtocolPid => {
+		if (inspectorProtocolPid === pid) {
+			return 'inspector';
+		} else {
+			return getPidListeningOnPortUnix(LEGACY_PORT_DEFAULT)
+				.then(legacyProtocolPid => legacyProtocolPid === pid ? 'legacy' : null);
+		}
+	});
+}
+
+function getPidListeningOnPortUnix(port: number): Promise<number> {
+	return new Promise(resolve => {
+		cp.exec(`lsof -i:${port} -F p`, (err, stdout) => {
+			if (err || !stdout) {
+				resolve(-1);
+				return;
+			}
+
+			const pidMatch = stdout.match(/p(\d+)/);
+			if (pidMatch && pidMatch[1]) {
+				resolve(Number(pidMatch[1]));
+			} else {
+				resolve(-1);
+			}
+		});
+	});
 }
