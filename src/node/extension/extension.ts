@@ -454,14 +454,14 @@ function determineDebugTypeForPidConfig(config: any): Promise<string|null> {
 		Promise.resolve(config.processId);
 
 	return getPidP.then(pid => {
-		if (pid && pid.match(/[0-9]+/)) {
+		if (pid && pid.match(/^[0-9]+$/)) {
 			const pidNum = Number(pid);
 			putPidInDebugMode(pidNum);
 
 			return determineDebugTypeForPidInDebugMode(config, pidNum);
+		} else {
+			throw new Error(localize('VSND2006', "Attach to process: '{0}' doesn't look like a process id.", pid));
 		}
-
-		return null;
 	}).then(debugType => {
 		if (debugType) {
 			// processID is handled, so turn this config into a normal port attach config
