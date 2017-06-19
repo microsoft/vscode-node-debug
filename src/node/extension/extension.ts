@@ -449,7 +449,7 @@ function determineDebugType(config: any): Promise<string|null> {
 }
 
 function determineDebugTypeForPidConfig(config: any): Promise<string|null> {
-	const getPidP = config.processId.trim() === '${command:PickProcess}' ?
+	const getPidP = isPickProcessCommand(config.processId) ?
 		pickProcess() :
 		Promise.resolve(config.processId);
 
@@ -471,6 +471,11 @@ function determineDebugTypeForPidConfig(config: any): Promise<string|null> {
 
 		return debugType;
 	});
+}
+
+function isPickProcessCommand(configProcessId: string): boolean {
+	configProcessId = configProcessId.trim();
+	return configProcessId === '${command:PickProcess}' || configProcessId === '${command:extension.pickNodeProcess}';
 }
 
 function putPidInDebugMode(pid: number): void {
