@@ -456,7 +456,7 @@ function determineDebugTypeForPidConfig(config: any): Promise<string|null> {
 	return getPidP.then(pid => {
 		if (pid && pid.match(/[0-9]+/)) {
 			const pidNum = Number(pid);
-			putPidInDebugMode(pidNum); // TODO catch and save error for later
+			putPidInDebugMode(pidNum);
 
 			return determineDebugTypeForPidInDebugMode(config, pidNum);
 		}
