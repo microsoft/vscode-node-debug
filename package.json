@@ -148,9 +148,6 @@
 							"request": "launch",
 							"name": "${1:Launch via NPM}",
 							"runtimeExecutable": "npm",
-							"windows": {
-								"runtimeExecutable": "npm.cmd"
-							},
 							"runtimeArgs": [
 								"run-script", "debug"
 							],
@@ -198,10 +195,8 @@
 							"request": "launch",
 							"name": "nodemon",
 							"runtimeExecutable": "nodemon",
-							"runtimeArgs": [ "--debug=5858" ],
 							"program": "^\"\\${workspaceRoot}/${1:app.js}\"",
 							"restart": true,
-							"port": 5858,
 							"console": "integratedTerminal",
 							"internalConsoleOptions": "neverOpen"
 						}
@@ -255,9 +250,6 @@
 							"request": "launch",
 							"name": "Electron Main",
 							"runtimeExecutable": "^\"\\${workspaceRoot}/node_modules/.bin/electron\"",
-							"windows": {
-								"runtimeExecutable": "^\"\\${workspaceRoot}/node_modules/.bin/electron.cmd\""
-							},
 							"program": "^\"\\${workspaceRoot}/main.js\"",
 							"protocol": "legacy"
 						}
