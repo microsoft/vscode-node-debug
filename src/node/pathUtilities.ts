@@ -128,41 +128,67 @@ export function mkdirs(path: string) {
 }
 
 /*
- * Is the given runtime executable on the PATH.
+ * Lookup the given program on the PATH and return its absolute path on success and undefined otherwise.
  */
-export function isOnPath(program: string): boolean {
+export function findOnPath(program: string): string | undefined {
 
-	if (process.platform === 'win32') {
-		return true;
-		/*
-		const WHERE = 'C:\\Windows\\System32\\where.exe';
-		try {
-			if (FS.existsSync(WHERE)) {
-				CP.execSync(`${WHERE} ${program}`);
+	let locator = process.platform === 'win32' ? 'C:\\Windows\\System32\\where.exe' : '/usr/bin/which';
+	try {
+		if (FS.existsSync(locator)) {
+			const lines = CP.execSync(`${locator} ${program}`).toString().split(/\r?\n/);
+			if (process.platform === 'win32') {
+				// return the first path that has a executable extension
+				const executableExtensions = process.env['PATHEXT'].toUpperCase();
+				for (const path of lines) {
+					const ext = Path.extname(path).toUpperCase();
+					if (ext && executableExtensions.indexOf(ext + ';') > 0) {
+						return path;
+					}
+				}
 			} else {
-				// do not report error if 'where' doesn't exist
+				// return the first path
+				if (lines.length > 0) {
+					return lines[0];
+				}
 			}
-			return true;
+			return undefined;
+		} else {
+			// do not report failure if 'locator' app doesn't exist
 		}
-		catch (Exception) {
-			// ignore
-		}
-		*/
-	} else {
-		const WHICH = '/usr/bin/which';
-		try {
-			if (FS.existsSync(WHICH)) {
-				CP.execSync(`${WHICH} '${program}'`);
-			} else {
-				// do not report error if 'which' doesn't exist
+		return program;
+	}
+	catch (err) {
+		// fall through
+	}
+
+	// fail
+	return undefined;
+}
+
+/*
+ *
+ */
+export function findExecutable(program: string): string | undefined {
+
+	if (process.platform === 'win32' && !Path.extname(program)) {
+		const PATHEXT = process.env['PATHEXT'];
+		if (PATHEXT) {
+			const executableExtensions = PATHEXT.split(';');
+			for (const extension of executableExtensions) {
+				const path = program + extension;
+				if (FS.existsSync(path)) {
+					return path;
+				}
 			}
-			return true;
-		}
-		catch (Exception) {
 		}
 	}
-	return false;
+
+	if (FS.existsSync(program)) {
+		return program;
+	}
+	return undefined;
 }
+
 
 //---- the following functions work with Windows and Unix-style paths independent from the underlying OS.
 

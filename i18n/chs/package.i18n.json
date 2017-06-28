@@ -42,8 +42,8 @@
 	"node.attach.processId.description": "要附加到的进程 ID。",
 	"node.attach.config.name": "附加",
 	"node.processattach.config.name": "附加到进程",
-	"node.snippet.launch.label": "Node.js: 启动计划",
-	"node.snippet.launch.description": "在调试模式下启动节点计划",
+	"node.snippet.launch.label": "Node.js: 启动程序",
+	"node.snippet.launch.description": "在调试模式下启动 Node 程序",
 	"node.snippet.npm.label": "Node.js: 通过 NPM 启动",
 	"node.snippet.npm.description": "通过 npm“调试”脚本启动节点计划",
 	"node.snippet.attach.label": "Node.js：附加",
@@ -67,7 +67,7 @@
 	"extensionHost.launch.stopOnEntry.description": "启动后自动停止扩展主机。",
 	"extensionHost.launch.sourceMaps.description": "使用 JavaScript 源映射。",
 	"extensionHost.launch.env.description": "传递到扩展主机的环境变量。",
-	"extensionHost.snippet.launch.label": "VS 代码扩展开发",
+	"extensionHost.snippet.launch.label": "VS Code 扩展开发",
 	"extensionHost.snippet.launch.description": "在调试模式下启动 VS Code 扩展",
 	"extensionHost.launch.config.name": "启动扩展"
 }

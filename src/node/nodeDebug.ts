@@ -292,15 +292,13 @@ interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArguments, C
 	console?: ConsoleType;
 
 	/** internal */
-	__restart?; boolean;
+	__restart?: { port: number };
 }
 
 /**
  * This interface should always match the schema found in the node-debug extension manifest.
  */
 interface AttachRequestArguments extends DebugProtocol.AttachRequestArguments, CommonArguments {
-	/** Send a USR1 signal to this process. */
-	processId?: string;
 }
 
 
@@ -795,6 +793,9 @@ export class NodeDebugSession extends LoggingDebugSession {
 		// This debug adapter supports the exception info request
 		response.body.supportsExceptionInfoRequest = true;
 
+		// This debug adapter supports delayed loading of stackframes
+		response.body.supportsDelayedStackTraceLoading = true;
+
 		this.sendResponse(response);
 	}
 
@@ -833,20 +834,27 @@ export class NodeDebugSession extends LoggingDebugSession {
 		let runtimeExecutable = args.runtimeExecutable;
 		if (runtimeExecutable) {
 			if (!Path.isAbsolute(runtimeExecutable)) {
-				if (!PathUtils.isOnPath(runtimeExecutable)) {
+				const re = PathUtils.findOnPath(runtimeExecutable);
+				if (!re) {
 					this.sendErrorResponse(response, 2001, localize('VSND2001', "Cannot find runtime '{0}' on PATH.", '{_runtime}'), { _runtime: runtimeExecutable });
 					return;
 				}
-			} else if (!FS.existsSync(runtimeExecutable)) {
-				this.sendNotExistErrorResponse(response, 'runtimeExecutable', runtimeExecutable);
-				return;
+				runtimeExecutable = re;
+			} else {
+				const re = PathUtils.findExecutable(runtimeExecutable);
+				if (!re) {
+					this.sendNotExistErrorResponse(response, 'runtimeExecutable', runtimeExecutable);
+					return;
+				}
+				runtimeExecutable = re;
 			}
 		} else {
-			if (!PathUtils.isOnPath(NodeDebugSession.NODE)) {
+			const re = PathUtils.findOnPath(NodeDebugSession.NODE);
+			if (!re) {
 				this.sendErrorResponse(response, 2001, localize('VSND2001', "Cannot find runtime '{0}' on PATH.", '{_runtime}'), { _runtime: NodeDebugSession.NODE });
 				return;
 			}
-			runtimeExecutable = NodeDebugSession.NODE;     // use node from PATH
+			runtimeExecutable = re;
 		}
 
 		let runtimeArgs = args.runtimeArgs || [];
@@ -1204,33 +1212,6 @@ export class NodeDebugSession extends LoggingDebugSession {
 			this.log('eh', `attachRequest: args: ${JSON.stringify(args)}`);
 		} else {
 			this._attachMode = true;
-		}
-
-		// if a processId is specified, try to bring the process into debug mode.
-		if (typeof args.processId === 'string') {
-			const pid_string = args.processId.trim();
-			if (/^([0-9]+)$/.test(pid_string)) {
-				const pid = Number(pid_string);
-				try {
-					if (process.platform === 'win32') {
-						// regular node has an undocumented API function for forcing another node process into debug mode.
-						// 		(<any>process)._debugProcess(pid);
-						// But since we are running on Electron's node, process._debugProcess doesn't work (for unknown reasons).
-						// So we use a regular node instead:
-						const command = `node -e process._debugProcess(${pid})`;
-						CP.execSync(command);
-
-					} else {
-						process.kill(pid, 'SIGUSR1');
-					}
-				} catch (e) {
-					this.sendErrorResponse(response, 2021, localize('VSND2021', "Attach to process: cannot enable debug mode for process '{0}' ({1}).", pid, e));
-					return;
-				}
-			} else {
-				this.sendErrorResponse(response, 2006, localize('VSND2006', "Attach to process: '{0}' doesn't look like a process id.", pid_string));
-				return;
-			}
 		}
 
 		this._attach(response, args.port, args.address, args.timeout);
@@ -2235,6 +2216,12 @@ export class NodeDebugSession extends LoggingDebugSession {
 				}
 
 				if (!name) {
+
+					if (typeof script_val.id !== 'number') {
+						// if the script has not ID something is seriously wrong: give up.
+						throw new Error('no script id');
+					}
+
 					// if a function is dynamically created from a string, its script has no name.
 					path = this._scriptToPath(script_val);
 					name = Path.basename(path);
@@ -2247,11 +2234,6 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 			return this._createStackFrameFromSource(frame, src, line, column);
 
-		}).catch(err => {
-
-			const func_name = this._getFrameName(frame);
-			const name = localize('frame.error', "{0} <error: {1}>", func_name, err.message);
-			return new StackFrame(this._frameHandles.create(frame), name);
 		});
 	}
 

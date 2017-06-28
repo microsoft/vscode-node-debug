@@ -4,16 +4,13 @@
 
 'use strict';
 
-import * as net from 'net';
 import * as vscode from 'vscode';
 import { TreeDataProvider, TreeItem, EventEmitter, Event } from 'vscode';
-import { spawn, spawnSync, exec } from 'child_process';
+import { spawn, exec, execSync } from 'child_process';
 import { basename, join, isAbsolute, dirname } from 'path';
-import * as nls from 'vscode-nls';
 import * as fs from 'fs';
-
-const localize = nls.config(process.env.VSCODE_NLS_CONFIG)();
-
+import { log, localize } from './utilities';
+import { detectDebugType, detectProtocolForPid, INSPECTOR_PORT_DEFAULT, LEGACY_PORT_DEFAULT } from './protocolDetection';
 
 export function activate(context: vscode.ExtensionContext) {
 
@@ -170,10 +167,8 @@ interface ProcessItem extends vscode.QuickPickItem {
 	pid: string;	// payload for the QuickPick UI
 }
 
-function pickProcess() {
-
+function pickProcess(): Promise<string|null> {
 	return listProcesses().then(items => {
-
 		let options : vscode.QuickPickOptions = {
 			placeHolder: localize('pickNodeProcess', "Pick the node.js or gulp process to attach to"),
 			matchOnDescription: true,
@@ -246,7 +241,8 @@ function listProcesses() : Promise<ProcessItem[]> {
 
 							if (executable_path) {
 
-								const executable_name = basename(executable_path);
+								let executable_name = basename(executable_path);
+								executable_name = executable_name.split('.')[0];
 								if (!NODE.test(executable_name)) {
 									continue;
 								}
@@ -448,9 +444,6 @@ function guessProgramFromPackage(jsonObject: any): string | undefined {
 
 //---- extension.node-debug.startSession
 
-// For launch, use inspector protocol starting with v8 because it's stable after that version.
-const InspectorMinNodeVersionLaunch = 80000;
-
 /**
  * The result type of the startSession command.
  */
@@ -459,39 +452,9 @@ class StartSessionResult {
 	content?: string;	// launch.json content for 'save'
 }
 
-function startSession(config: any): StartSessionResult {
-
+function startSession(config: any): Promise<StartSessionResult> {
 	if (Object.keys(config).length === 0) { // an empty config represents a missing launch.json
-
-		config.type = 'node';
-		config.name = 'Launch';
-		config.request = 'launch';
-
-		if (vscode.workspace.rootPath) {
-
-			// folder case: try to find more launch info in package.json
-			const pkg = loadPackage(vscode.workspace.rootPath);
-			if (pkg) {
-				if (pkg.name === 'mern-starter') {
-					configureMern(config);
-				} else {
-					config.program = guessProgramFromPackage(pkg);
-				}
-			}
-		}
-
-		if (!config.program) {
-
-			// 'no folder' case (or no program found)
-			const editor = vscode.window.activeTextEditor;
-			if (editor && editor.document.languageId === 'javascript') {
-				config.program = editor.document.fileName;
-			} else {
-				return {
-					status: 'initialConfiguration'	// let VS Code create an initial configuration
-				};
-			}
-		}
+		config = getFreshLaunchConfig();
 	}
 
 	// make sure that 'launch' configs have a 'cwd' attribute set
@@ -504,144 +467,130 @@ function startSession(config: any): StartSessionResult {
 		}
 	}
 
-	// determine what protocol to use
-
-	let fixConfig = Promise.resolve<any>();
-
-	switch (config.protocol) {
-		case 'legacy':
-			config.type = 'node';
-			break;
-		case 'inspector':
-			config.type = 'node2';
-			break;
-		case 'auto':
-		default:
-			config.type = 'node';
-
-			switch (config.request) {
-
-				case 'attach':
-					fixConfig = getProtocolForAttach(config).then(protocol => {
-						if (protocol === 'inspector') {
-							config.type = 'node2';
-						}
-					});
-					break;
-
-				case 'launch':
-					if (config.runtimeExecutable) {
-						log(localize('protocol.switch.runtime.set', "Debugging with legacy protocol because a runtime executable is set."));
-					} else {
-						// only determine version if no runtimeExecutable is set (and 'node' on PATH is used)
-						const result = spawnSync('node', [ '--version' ]);
-						const semVerString = result.stdout.toString();
-						if (semVerString) {
-							if (semVerStringToInt(semVerString) >= InspectorMinNodeVersionLaunch) {
-								config.type = 'node2';
-								log(localize('protocol.switch.inspector.version', "Debugging with inspector protocol because Node.js {0} was detected.", semVerString.trim()));
-							} else {
-								log(localize('protocol.switch.legacy.version', "Debugging with legacy protocol because Node.js {0} was detected.", semVerString.trim()));
-							}
-						} else {
-							log(localize('protocol.switch.unknown.version', "Debugging with legacy protocol because Node.js version could not be determined."));
-						}
-					}
-					break;
-
-				default:
-					// should not happen
-					break;
-			}
-			break;
-	}
-
-	fixConfig.then(() => {
-		vscode.commands.executeCommand('vscode.startDebug', config);
-	});
-
-	return {
-		status: 'ok'
-	};
-}
-
-function log(message: string) {
-	vscode.commands.executeCommand('debug.logToDebugConsole', message + '\n');
-}
-
-/**
- * Detect which debug protocol is being used for a running node process.
- */
-function getProtocolForAttach(config: any): Promise<string|undefined> {
-	const address = config.address || '127.0.0.1';
-	const port = config.port;
-
-	if (config.processId) {
-		// this is only supported for legacy protocol
-		log(localize('protocol.switch.attach.process', "Debugging with legacy protocol because attaching to a process by ID is only supported for legacy protocol."));
-		return Promise.resolve('legacy');
-	}
-
-	const socket = new net.Socket();
-	const cleanup = () => {
-		try {
-			socket.write(`"Content-Length: 50\r\n\r\n{"command":"disconnect","type":"request","seq":2}"`);
-			socket.end();
-		} catch (e) {
-			// ignore failure
+	// determine which protocol to use
+	return determineDebugType(config).then(debugType => {
+		if (debugType) {
+			config.type = debugType;
+			vscode.commands.executeCommand('vscode.startDebug', config);
 		}
-	};
 
-	return new Promise<{reason: string, protocol: string}>((resolve, reject) => {
-		socket.once('data', data => {
-			let reason: string;
-			let protocol: string;
-			const dataStr = data.toString();
-			if (dataStr.indexOf('WebSockets request was expected') >= 0) {
-				reason = localize('protocol.switch.inspector.detected', "Debugging with inspector protocol because it was detected.");
-				protocol = 'inspector';
-			} else {
-				reason = localize('protocol.switch.legacy.detected', "Debugging with legacy protocol because it was detected.");
-				protocol = 'legacy';
-			}
-
-			resolve({ reason, protocol });
-		});
-
-		socket.once('error', err => {
-			reject(err);
-		});
-
-		socket.connect(port, address);
-		socket.on('connect', () => {
-			// Send a safe request to trigger a response from the inspector protocol
-			socket.write(`Content-Length: 102\r\n\r\n{"command":"evaluate","arguments":{"expression":"process.pid","global":true},"type":"request","seq":1}`);
-		});
-
-		setTimeout(() => {
-			// No data or error received? Bail and let the debug adapter handle it.
-			reject(new Error('timeout'));
-		}, 2000);
-	}).catch(err => {
-		return {
-			reason: localize('protocol.switch.unknown.error', "Debugging with legacy protocol because Node.js version could not be determined ({0})", err.toString()),
-			protocol: 'legacy'
+		return <StartSessionResult>{
+			status: 'ok'
 		};
-	}).then(result => {
-		cleanup();
-		log(result.reason);
-
-		return result.protocol;
 	});
 }
 
-/**
- * convert the 3 parts of a semVer string into a single number
- */
-function semVerStringToInt(vString: string): number {
-	const match = vString.match(/v(\d+)\.(\d+)\.(\d+)/);
-	if (match && match.length === 4) {
-		return (parseInt(match[1])*100 + parseInt(match[2]))*100 + parseInt(match[3]);
+function getFreshLaunchConfig(): any {
+	const config: any = {
+		type: 'node',
+		name: 'Launch',
+		request: 'launch'
+	};
+
+	if (vscode.workspace.rootPath) {
+
+		// folder case: try to find more launch info in package.json
+		const pkg = loadPackage(vscode.workspace.rootPath);
+		if (pkg) {
+			if (pkg.name === 'mern-starter') {
+				configureMern(config);
+			} else {
+				config.program = guessProgramFromPackage(pkg);
+			}
+		}
 	}
-	return -1;
+
+	if (!config.program) {
+
+		// 'no folder' case (or no program found)
+		const editor = vscode.window.activeTextEditor;
+		if (editor && editor.document.languageId === 'javascript') {
+			config.program = editor.document.fileName;
+		} else {
+			return {
+				status: 'initialConfiguration'	// let VS Code create an initial configuration
+			};
+		}
+	}
+
+	return config;
+}
+
+function determineDebugType(config: any): Promise<string|null> {
+	if (config.request === 'attach' && typeof config.processId === 'string') {
+		return determineDebugTypeForPidConfig(config);
+	} else if (config.protocol === 'legacy') {
+		return Promise.resolve('node');
+	} else if (config.protocol === 'inspector') {
+		return Promise.resolve('node2');
+	} else {
+		// 'auto', or unspecified
+		return detectDebugType(config);
+	}
+}
+
+function determineDebugTypeForPidConfig(config: any): Promise<string|null> {
+	const getPidP = isPickProcessCommand(config.processId) ?
+		pickProcess() :
+		Promise.resolve(config.processId);
+
+	return getPidP.then(pid => {
+		if (pid && pid.match(/^[0-9]+$/)) {
+			const pidNum = Number(pid);
+			putPidInDebugMode(pidNum);
+
+			return determineDebugTypeForPidInDebugMode(config, pidNum);
+		} else {
+			throw new Error(localize('VSND2006', "Attach to process: '{0}' doesn't look like a process id.", pid));
+		}
+	}).then(debugType => {
+		if (debugType) {
+			// processID is handled, so turn this config into a normal port attach config
+			config.processId = undefined;
+			config.port = debugType === 'node2' ? INSPECTOR_PORT_DEFAULT : LEGACY_PORT_DEFAULT;
+		}
+
+		return debugType;
+	});
+}
+
+function isPickProcessCommand(configProcessId: string): boolean {
+	configProcessId = configProcessId.trim();
+	return configProcessId === '${command:PickProcess}' || configProcessId === '${command:extension.pickNodeProcess}';
+}
+
+function putPidInDebugMode(pid: number): void {
+	try {
+		if (process.platform === 'win32') {
+			// regular node has an undocumented API function for forcing another node process into debug mode.
+			// 		(<any>process)._debugProcess(pid);
+			// But since we are running on Electron's node, process._debugProcess doesn't work (for unknown reasons).
+			// So we use a regular node instead:
+			const command = `node -e process._debugProcess(${pid})`;
+			execSync(command);
+		} else {
+			process.kill(pid, 'SIGUSR1');
+		}
+	} catch (e) {
+		throw new Error(localize('VSND2021', "Attach to process: cannot enable debug mode for process '{0}' ({1}).", pid, e));
+	}
+}
+
+function determineDebugTypeForPidInDebugMode(config: any, pid: number): Promise<string|null> {
+	let debugProtocolP: Promise<string|null>;
+	if (config.port === INSPECTOR_PORT_DEFAULT) {
+		debugProtocolP = Promise.resolve('inspector');
+	} else if (config.port === LEGACY_PORT_DEFAULT) {
+		debugProtocolP = Promise.resolve('legacy');
+	} else if (config.protocol) {
+		debugProtocolP = Promise.resolve(config.protocol);
+	} else {
+		debugProtocolP = detectProtocolForPid(pid);
+	}
+
+	return debugProtocolP.then(debugProtocol => {
+		return debugProtocol === 'inspector' ? 'node2' :
+			debugProtocol === 'legacy' ? 'node' :
+			null;
+	});
 }

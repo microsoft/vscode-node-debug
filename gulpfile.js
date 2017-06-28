@@ -53,7 +53,10 @@ const vscodeLanguages = [
 	'fr',
 	'es',
 	'ru',
-	'it'
+	'it',
+	'pt-br',
+	'hu',
+	'tr'
 ];
 
 gulp.task('default', function(callback) {

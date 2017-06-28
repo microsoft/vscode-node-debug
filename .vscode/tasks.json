@@ -4,14 +4,14 @@
 	"windows": {
 		"command": ".\\node_modules\\.bin\\gulp"
 	},
-	"isShellCommand": true,
+	"type": "shell",
 	"tasks": [
 		{
 			"taskName": "ts-watch",
 			"args": [
 				"--no-color"
 			],
-			"isBuildCommand": true,
+			"group": "build",
 			"isBackground": true,
 			"problemMatcher": {
 				"owner": "typescript",
@@ -23,7 +23,7 @@
 					"location": 2,
 					"message": 3
 				},
-				"watching": {
+				"background": {
 					"beginsPattern": "Starting compilation",
 					"endsPattern": "Finished compilation"
 				}

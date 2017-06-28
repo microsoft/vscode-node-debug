@@ -15,7 +15,6 @@
 	"launch.config.comment1": "Utilice IntelliSense para aprender sobre los atributos de depuración de Node.js. ",
 	"launch.config.comment2": "Mantenga el puntero para ver las descripciones de los existentes atributos ",
 	"launch.config.comment3": "Para más información, visite: {0}",
-	"protocol.switch.runtime.set": "Depuración con el protocolo heredado porque hay un ejecutable en tiempo de ejecución configurado.",
 	"protocol.switch.inspector.version": "Depurando con el protocolo de inspector ya que se detectó Node.js {0}.",
 	"protocol.switch.legacy.version": "Depurando con el protocolo heredado ya que se detectó Node.js {0}.",
 	"protocol.switch.unknown.version": "Depurando con el protocolo heredado ya que no se pudo determinar la versión de Node.js.",

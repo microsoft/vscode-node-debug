@@ -40,7 +40,6 @@
 	"origin.from.node": "Node.js 的只读内容",
 	"origin.from.remote.node": "远程 Node.js 的只读内容",
 	"origin.core.module": "只读核心模块",
-	"frame.error": "{0} <错误: {1}>",
 	"source.skipFiles": "因 \"skipFiles\" 而跳过",
 	"source.smartstep": "因 \"smartStep\" 而跳过",
 	"origin.inlined.source.map": "源映射的只读内联内容",

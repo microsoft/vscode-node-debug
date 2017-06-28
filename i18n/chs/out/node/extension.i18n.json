@@ -15,7 +15,6 @@
 	"launch.config.comment1": "使用 IntelliSense 以学习相关的 Node.js 调试属性。",
 	"launch.config.comment2": "悬停以查看现有属性的描述。",
 	"launch.config.comment3": "欲了解更多信息，请访问: {0}",
-	"protocol.switch.runtime.set": "正在使用旧版协议调试，因为设置了运行时可执行文件。",
 	"protocol.switch.inspector.version": "检测到 Node.js {0}，因此使用检查器协议调试。",
 	"protocol.switch.legacy.version": "检测到 Node.js {0}，因此使用旧版协议调试。",
 	"protocol.switch.unknown.version": "无法确定 Node.js 版本，因此使用旧版协议进行调试。",
