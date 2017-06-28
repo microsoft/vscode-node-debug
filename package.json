@@ -24,7 +24,6 @@
 		"vscode": "^1.13.0",
 		"node": "^7.4.0"
 	},
-	"enableProposedApi": true,
 	"extensionDependencies": [
 		"ms-vscode.node-debug2"
 	],
@@ -85,7 +84,8 @@
 			"explorer": [
 				{
 					"id": "extension.node-debug.loadedScriptsExplorer",
-					"name": "Loaded Scripts"
+					"name": "Loaded Scripts",
+					"when": "inDebugMode && debugType == 'node'"
 				}
 			]
 		},
