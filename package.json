@@ -1,7 +1,7 @@
 {
 	"name": "node-debug",
 	"displayName": "Node Debug",
-	"version": "1.14.8",
+	"version": "1.15.1",
 	"publisher": "ms-vscode",
 	"description": "%extension.description%",
 	"icon": "images/node-debug-icon.png",
@@ -21,7 +21,7 @@
 		"postinstall": "node ./node_modules/vscode/bin/install"
 	},
 	"engines": {
-		"vscode": "^1.13.0",
+		"vscode": "^1.15.0",
 		"node": "^7.4.0"
 	},
 	"extensionDependencies": [

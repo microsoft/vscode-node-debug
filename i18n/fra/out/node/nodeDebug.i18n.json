@@ -27,8 +27,6 @@
 	"node.console.title": "Console de débogage de nœud",
 	"VSND2011": "Impossible de lancer la cible de débogage dans le terminal ({0}).",
 	"VSND2017": "Impossible de lancer la cible de débogage ({0}).",
-	"VSND2021": "Attacher au processus : impossible d'activer le mode de débogage pour le processus '{0}' ({1}).",
-	"VSND2006": "Attacher au processus : '{0}' ne ressemble pas à un ID de processus.",
 	"VSND2010": "Impossible de se connecter au processus de runtime (raison : {0}).",
 	"VSND2009": "Connexion impossible au runtime via le protocole 'legacy'. Utilisez plutôt le protocole 'inspector' (délai d'expiration dépassé après {0} ms).",
 	"file.on.disk.changed": "Non vérifié, car le fichier sur disque a changé. Redémarrez la session de débogage.",

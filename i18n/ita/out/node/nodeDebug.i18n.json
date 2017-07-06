@@ -27,8 +27,6 @@
 	"node.console.title": "Console di debug nodo",
 	"VSND2011": "Non è possibile avviare la destinazione di debug nel terminale ({0}).",
 	"VSND2017": "Non è possibile avviare la destinazione di debug ({0}).",
-	"VSND2021": "Collegamento a processo: non è possibile abilitare la modalità di debug per il processo '{0}' ({1}).",
-	"VSND2006": "Collegamento a processo: '{0}' non sembra essere un ID processo.",
 	"VSND2010": "Non è possibile connettersi al processo di runtime (motivo: {0}).",
 	"VSND2009": "Non è possibile connettersi al runtime tramite il protocollo 'legacy'. Provare a usare il protocollo 'inspector' (timeout dopo {0} ms).",
 	"file.on.disk.changed": "La verifica non è riuscita perché il file nel disco è stato modificato. Riavviare la sessione di debug.",

@@ -452,9 +452,26 @@ class StartSessionResult {
 	content?: string;	// launch.json content for 'save'
 }
 
-function startSession(config: any): Promise<StartSessionResult> {
+function startSession(config: any): Thenable<StartSessionResult> {
+
 	if (Object.keys(config).length === 0) { // an empty config represents a missing launch.json
 		config = getFreshLaunchConfig();
+		if (!config.program) {
+			const message = localize('program.not.found.message', "Cannot find a program to debug");
+			const action = localize('create.launch.json.action', "Create {0}", 'launch.json');
+			return vscode.window.showInformationMessage(message, action).then(a => {
+				if (a === action) {
+					// let VS Code create an initial configuration
+					return <StartSessionResult>{
+						status: 'initialConfiguration'
+					};
+				} else {
+					return <StartSessionResult>{
+						status: 'ok'
+					};
+				}
+			});
+		}
 	}
 
 	// make sure that 'launch' configs have a 'cwd' attribute set
@@ -469,6 +486,7 @@ function startSession(config: any): Promise<StartSessionResult> {
 
 	// determine which protocol to use
 	return determineDebugType(config).then(debugType => {
+
 		if (debugType) {
 			config.type = debugType;
 			vscode.commands.executeCommand('vscode.startDebug', config);
@@ -481,6 +499,7 @@ function startSession(config: any): Promise<StartSessionResult> {
 }
 
 function getFreshLaunchConfig(): any {
+
 	const config: any = {
 		type: 'node',
 		name: 'Launch',
@@ -506,10 +525,6 @@ function getFreshLaunchConfig(): any {
 		const editor = vscode.window.activeTextEditor;
 		if (editor && editor.document.languageId === 'javascript') {
 			config.program = editor.document.fileName;
-		} else {
-			return {
-				status: 'initialConfiguration'	// let VS Code create an initial configuration
-			};
 		}
 	}
 
