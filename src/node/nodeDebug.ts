@@ -6,7 +6,7 @@
 import {
 	LoggingDebugSession, DebugSession, Logger, logger,
 	Thread, Source, StackFrame, Scope, Variable, Breakpoint,
-	TerminatedEvent, InitializedEvent, StoppedEvent, OutputEvent,
+	Event, TerminatedEvent, InitializedEvent, StoppedEvent, OutputEvent,
 	Handles, ErrorDestination
 } from 'vscode-debugadapter';
 import {DebugProtocol} from 'vscode-debugprotocol';
@@ -427,13 +427,15 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 		/*
 		this._node.on('beforeCompile', (event: NodeV8Event) => {
-			this.outLine(`beforeCompile ${this._scriptToPath(event.body.script)}`);
-		});
-
-		this._node.on('afterCompile', (event: NodeV8Event) => {
-			this.outLine(`afterCompile ${this._scriptToPath(event.body.script)}`);
+			//this.outLine(`beforeCompile ${this._scriptToPath(event.body.script)}`);
+			this.sendEvent(new Event('customScriptLoad', { script: this._scriptToPath(event.body.script) }));
 		});
 		*/
+
+		this._node.on('afterCompile', (event: NodeV8Event) => {
+			//this.outLine(`afterCompile ${this._scriptToPath(event.body.script)}`);
+			this.sendEvent(new Event('scriptLoaded', { path: this._scriptToPath(event.body.script) }));
+		});
 
 		this._node.on('close', (event: NodeV8Event) => {
 			this._terminated('node v8protocol close');
