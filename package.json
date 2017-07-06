@@ -24,6 +24,7 @@
 		"vscode": "^1.15.0",
 		"node": "^7.4.0"
 	},
+	"enableProposedApi": true,
 	"extensionDependencies": [
 		"ms-vscode.node-debug2"
 	],
