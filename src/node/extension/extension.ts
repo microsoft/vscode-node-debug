@@ -5,95 +5,37 @@
 'use strict';
 
 import * as vscode from 'vscode';
-import { TreeDataProvider, TreeItem, EventEmitter, Event } from 'vscode';
-import { spawn, exec, execSync } from 'child_process';
-import { basename, join, isAbsolute, dirname } from 'path';
+import { execSync } from 'child_process';
+import { join, isAbsolute, dirname } from 'path';
 import * as fs from 'fs';
+
 import { log, localize } from './utilities';
 import { detectDebugType, detectProtocolForPid, INSPECTOR_PORT_DEFAULT, LEGACY_PORT_DEFAULT } from './protocolDetection';
+import { LoadedScriptsProvider, pickLoadedScript, openScript } from './loadedScripts';
+import { pickProcess } from './processPicker';
+
 
 export function activate(context: vscode.ExtensionContext) {
 
-	const se = new ScriptsExplorer();
-	vscode.window.registerTreeDataProvider('extension.node-debug.loadedScriptsExplorer', se);
-
-	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.toggleSkippingFile', toggleSkippingFile));
-	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.pickLoadedScript', () => pickLoadedScript(se)));
+	// launch config magic
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.provideInitialConfigurations', () => createInitialConfigurations()));
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.startSession', config => startSession(config)));
+
+	// toggle skipping file action
+	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.toggleSkippingFile', toggleSkippingFile));
+
+	// process quickpicker
 	context.subscriptions.push(vscode.commands.registerCommand('extension.pickNodeProcess', () => pickProcess()));
+
+	// loaded scripts
+	vscode.window.registerTreeDataProvider('extension.node-debug.loadedScriptsExplorer', new LoadedScriptsProvider(context));
+	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.pickLoadedScript', () => pickLoadedScript()));
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.openScript', (path: string) => openScript(path)));
 }
 
 export function deactivate() {
 }
 
-//---- ScriptsExplorer
-
-interface ScriptTreeItem {
-	label: string;
-	children?: { [key: string]: ScriptTreeItem; };
-	path?: ScriptItem;
-}
-
-export class ScriptsExplorer implements TreeDataProvider<ScriptTreeItem> {
-
-	//private _disposables: Map<ScriptTreeItem, Disposable[]> = new Map<ScriptTreeItem, Disposable[]>();
-
-	private _onDidChangeTreeData: EventEmitter<ScriptTreeItem> = new EventEmitter<ScriptTreeItem>();
-	readonly onDidChangeTreeData: Event<ScriptTreeItem> = this._onDidChangeTreeData.event;
-
-	constructor() {
-		//this.model.onChange(() => this._onDidChangeTreeData.fire());
-	}
-
-	getTreeItem(node: ScriptTreeItem): TreeItem {
-		const x: TreeItem = {
-			label: node.label || '/',
-			collapsibleState: node.children ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None,
-		};
-		if (node.path) {
-			x.command = {
-				command: 'extension.node-debug.openScript',
-				arguments: [ node.path.source.path ],
-				title: ''
-			};
-		}
-		return x;
-	}
-
-	getChildren(node?: ScriptTreeItem): Thenable<ScriptTreeItem[]> {
-		if (node === undefined) {
-			return listLoadedScripts().then(scripts => {
-				node = <ScriptTreeItem>{ label: 'Root' };
-				if (scripts) {
-					scripts.reduce((hier, path) => {
-						let x = hier;
-						path.description.split('/').forEach(item => {
-							if (x.children === undefined) {
-								x.children = {};
-							}
-							if (!x.children[item]) {
-								x.children[item] = <ScriptTreeItem>{ label: item };
-							}
-							x = x.children[item];
-						});
-						x.path = path;
-						return hier;
-					}, node);
-				}
-				const cc = node.children || {};
-				return Object.keys(cc).map( key => cc[key] );
-			});
-		}
-		const cc = node.children || {};
-		return Promise.resolve(Object.keys(cc).map( key => cc[key] ));
-	}
-
-	refresh(): void {
-		this._onDidChangeTreeData.fire();
-	}
-}
 
 //---- toggle skipped files
 
@@ -112,210 +54,6 @@ function toggleSkippingFile(res: string | number): void {
 	}
 }
 
-//---- loaded script picker
-
-interface ScriptItem extends vscode.QuickPickItem {
-	source?: any;	// Source
-}
-
-function pickLoadedScript(se: ScriptsExplorer) {
-
-	se.refresh();
-
-	/*
-	return listLoadedScripts().then(items => {
-
-		let options : vscode.QuickPickOptions = {
-			placeHolder: localize('select.script', "Select a script"),
-			matchOnDescription: true,
-			matchOnDetail: true,
-			ignoreFocusOut: true
-		};
-
-		if (items === undefined) {
-			items = [ { label: localize('no.loaded.scripts', "No loaded scripts available"), description: '' } ];
-		}
-
-		vscode.window.showQuickPick(items, options).then(item => {
-			if (item && item.source) {
-				let uri = vscode.Uri.parse(`debug:${item.source.path}`);
-				vscode.workspace.openTextDocument(uri).then(doc => vscode.window.showTextDocument(doc));
-			}
-		});
-	});
-	*/
-}
-
-function listLoadedScripts() : Thenable<ScriptItem[] | undefined> {
-	return vscode.commands.executeCommand<string[]>('workbench.customDebugRequest', 'getLoadedScripts', {} ).then((reply: any) => {
-		if (reply && reply.success) {
-			return reply.body.loadedScripts;
-		} else {
-			return undefined;
-		}
-	});
-}
-
-function openScript(path: string) {
-	let uri = vscode.Uri.parse(`debug:${path}`);
-	vscode.workspace.openTextDocument(uri).then(doc => vscode.window.showTextDocument(doc));
-}
-
-//---- extension.pickNodeProcess
-
-interface ProcessItem extends vscode.QuickPickItem {
-	pid: string;	// payload for the QuickPick UI
-}
-
-function pickProcess(): Promise<string|null> {
-	return listProcesses().then(items => {
-		let options : vscode.QuickPickOptions = {
-			placeHolder: localize('pickNodeProcess', "Pick the node.js or gulp process to attach to"),
-			matchOnDescription: true,
-			matchOnDetail: true,
-			ignoreFocusOut: true
-		};
-
-		return vscode.window.showQuickPick(items, options).then(item => {
-			return item ? item.pid : null;
-		});
-	});
-}
-
-function listProcesses() : Promise<ProcessItem[]> {
-
-	return new Promise((resolve, reject) => {
-
-		const NODE = new RegExp('^(?:node|iojs|gulp)$', 'i');
-
-		if (process.platform === 'win32') {
-
-			const CMD_PID = new RegExp('^(.+) ([0-9]+)$');
-			const EXECUTABLE_ARGS = new RegExp('^(?:"([^"]+)"|([^ ]+))(?: (.+))?$');
-
-			let stdout = '';
-			let stderr = '';
-
-			const cmd = spawn('cmd');
-
-			cmd.stdout.on('data', data => {
-				stdout += data.toString();
-			});
-			cmd.stderr.on('data', data => {
-				stderr += data.toString();
-			});
-
-			cmd.on('exit', () => {
-
-				if (stderr.length > 0) {
-					reject(stderr);
-				} else {
-					const items : ProcessItem[]= [];
-
-					const lines = stdout.split('\r\n');
-					for (const line of lines) {
-						const matches = CMD_PID.exec(line.trim());
-						if (matches && matches.length === 3) {
-
-							let cmd = matches[1].trim();
-							const pid = matches[2];
-
-							// remove leading device specifier
-							if (cmd.indexOf('\\??\\') === 0) {
-								cmd = cmd.replace('\\??\\', '');
-							}
-
-							let executable_path: string | undefined;
-							let args : string;
-							const matches2 = EXECUTABLE_ARGS.exec(cmd);
-							if (matches2 && matches2.length >= 2) {
-								if (matches2.length >= 3) {
-									executable_path = matches2[1] || matches2[2];
-								} else {
-									executable_path = matches2[1];
-								}
-								if (matches2.length === 4) {
-									args = matches2[3];
-								}
-							}
-
-							if (executable_path) {
-
-								let executable_name = basename(executable_path);
-								executable_name = executable_name.split('.')[0];
-								if (!NODE.test(executable_name)) {
-									continue;
-								}
-
-								items.push({
-									label: executable_name,
-									description: pid,
-									detail: cmd,
-									pid: pid
-								});
-							}
-						}
-					}
-
-					resolve(items);
-				}
-			});
-
-			cmd.stdin.write('wmic process get ProcessId,CommandLine \n');
-			cmd.stdin.end();
-
-		} else {	// OS X & Linux
-
-			const PID_CMD = new RegExp('^\\s*([0-9]+)\\s+(.+)$');
-			const MAC_APPS = new RegExp('^.*/(.*).(?:app|bundle)/Contents/.*$');
-
-			exec('ps -ax -o pid=,command=', { maxBuffer: 1000*1024 }, (err, stdout, stderr) => {
-
-				if (err || stderr) {
-					reject(err || stderr.toString());
-				} else {
-					const items : ProcessItem[]= [];
-
-					const lines = stdout.toString().split('\n');
-					for (const line of lines) {
-
-						const matches = PID_CMD.exec(line);
-						if (matches && matches.length === 3) {
-
-							const pid = matches[1];
-							const cmd = matches[2];
-							const parts = cmd.split(' '); // this will break paths with spaces
-							const executable_path = parts[0];
-							const executable_name = basename(executable_path);
-
-							if (!NODE.test(executable_name)) {
-								continue;
-							}
-
-							let application = cmd;
-							// try to show the correct name for OS X applications and bundles
-							const matches2 = MAC_APPS.exec(cmd);
-							if (matches2 && matches2.length === 2) {
-								application = matches2[1];
-							} else {
-								application = executable_name;
-							}
-
-							items.unshift({		// build up list reverted
-								label: application,
-								description: pid,
-								detail: cmd,
-								pid: pid
-							});
-						}
-					}
-
-					resolve(items);
-				}
-			});
-		}
-	});
-}
 
 //---- extension.node-debug.provideInitialConfigurations
 
