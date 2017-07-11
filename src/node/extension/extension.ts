@@ -14,6 +14,7 @@ import { detectDebugType, detectProtocolForPid, INSPECTOR_PORT_DEFAULT, LEGACY_P
 import { LoadedScriptsProvider, pickLoadedScript, openScript } from './loadedScripts';
 import { pickProcess } from './processPicker';
 
+let loadedScriptsProvider: LoadedScriptsProvider;
 
 export function activate(context: vscode.ExtensionContext) {
 
@@ -28,9 +29,10 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.commands.registerCommand('extension.pickNodeProcess', () => pickProcess()));
 
 	// loaded scripts
-	vscode.window.registerTreeDataProvider('extension.node-debug.loadedScriptsExplorer', new LoadedScriptsProvider(context));
+	loadedScriptsProvider= new LoadedScriptsProvider(context);
+	vscode.window.registerTreeDataProvider('extension.node-debug.loadedScriptsExplorer', loadedScriptsProvider);
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.pickLoadedScript', () => pickLoadedScript()));
-	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.openScript', (path: string) => openScript(path)));
+	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.openScript', (session: vscode.DebugSession, path: string) => openScript(session, path)));
 }
 
 export function deactivate() {
@@ -227,7 +229,7 @@ function startSession(config: any): Thenable<StartSessionResult> {
 
 		if (debugType) {
 			config.type = debugType;
-			vscode.commands.executeCommand('vscode.startDebug', config);
+			vscode.debug.createDebugSession(config).then(session => loadedScriptsProvider.refresh(session));
 		}
 
 		return <StartSessionResult>{

@@ -5,18 +5,16 @@
 'use strict';
 
 import * as vscode from 'vscode';
-import { TreeDataProvider, TreeItem, EventEmitter, Event } from 'vscode';
+import { TreeDataProvider, TreeItem, EventEmitter, Event, ProviderResult } from 'vscode';
 import { localize } from './utilities';
-
+import { join, dirname, basename } from 'path';
 
 //---- loaded script explorer
 
 export class LoadedScriptsProvider implements TreeDataProvider<ScriptTreeItem> {
 
 	private _context: vscode.ExtensionContext;
-	private _root: ScriptTreeItem;
-
-	//private _disposables: Map<ScriptTreeItem, Disposable[]> = new Map<ScriptTreeItem, Disposable[]>();
+	private _root: RootTreeItem;
 
 	private _onDidChangeTreeData: EventEmitter<ScriptTreeItem> = new EventEmitter<ScriptTreeItem>();
 	readonly onDidChangeTreeData: Event<ScriptTreeItem> = this._onDidChangeTreeData.event;
@@ -25,7 +23,15 @@ export class LoadedScriptsProvider implements TreeDataProvider<ScriptTreeItem> {
 		this._context = context;
 	}
 
-	getChildren(node?: ScriptTreeItem): Thenable<ScriptTreeItem[]> {
+	refresh(session: vscode.DebugSession) {
+		if (!this._root) {
+			this._root = this.createRoot();
+		}
+		this._root.add(session);
+		this._onDidChangeTreeData.fire(undefined);
+	}
+
+	getChildren(node?: ScriptTreeItem): ProviderResult<ScriptTreeItem[]> {
 		if (node === undefined) {	// return root node
 			if (!this._root) {
 				this._root = this.createRoot();
@@ -39,26 +45,28 @@ export class LoadedScriptsProvider implements TreeDataProvider<ScriptTreeItem> {
 		return node;
 	}
 
-	private createRoot(): ScriptTreeItem {
+	private createRoot(): RootTreeItem {
 
-		const root = new ScriptTreeItem('Root');
+		const root = new RootTreeItem();
+
+		this._context.subscriptions.push(vscode.debug.onDidChangeActiveDebugSession(session => {
+			if (session && (session.type === 'node' || session.type === 'node2')) {
+				root.add(session);
+				this._onDidChangeTreeData.fire(undefined);
+			}
+		}));
+
+		this._context.subscriptions.push(vscode.debug.onDidReceiveDebugSessionCustomEvent(event => {
+			if (event.event === 'scriptLoaded' && (event.session.type === 'node' || event.session.type === 'node2')) {
+				const sessionRoot = root.add(event.session);
+				sessionRoot.addPath(event.body.path);
+				this._onDidChangeTreeData.fire(undefined);
+			}
+		}));
 
 		this._context.subscriptions.push(vscode.debug.onDidTerminateDebugSession(session => {
 			root.remove(session);
 			this._onDidChangeTreeData.fire(undefined);
-		}));
-
-		this._context.subscriptions.push(vscode.debug.onDidChangeActiveDebugSession(session => {
-			if (session && (session.type === 'node' || session.type === 'node2')) {
-				const sessionRoot = root.add(session);
-				this._onDidChangeTreeData.fire(undefined);
-
-				session.onCustomEvent(event => {
-					if (event.event === 'scriptLoaded') {
-						sessionRoot.addPath(event.body.path);
-					}
-				});
-			}
 		}));
 
 		return root;
@@ -67,76 +75,163 @@ export class LoadedScriptsProvider implements TreeDataProvider<ScriptTreeItem> {
 
 class ScriptTreeItem extends TreeItem {
 
-	children?: { [key: string]: ScriptTreeItem; };
-	session?: vscode.DebugSession;
+	_children: { [key: string]: ScriptTreeItem; };
 
 	constructor(label: string, state: vscode.TreeItemCollapsibleState = vscode.TreeItemCollapsibleState.None) {
 		super(label ? label : '/', state);
+		this._children = {};
 	}
 
-	setPath(path: string) {
-		if (path) {
-			this.command = {
-				command: 'extension.node-debug.openScript',
-				arguments: [ path ],
-				title: ''
-			};
-			this.collapsibleState = vscode.TreeItemCollapsibleState.None;
-		}
+	setPath(session: vscode.DebugSession, path: string): void {
+		this.command = {
+			command: 'extension.node-debug.openScript',
+			arguments: [ session, path ],
+			title: ''
+		};
 	}
 
-	getChildren(): Thenable<ScriptTreeItem[]> {
-
-		if (!this.children) {
-			this.children = {};
-			if (this.session) {
-				return listLoadedScripts(this.session).then(scripts => {
-					if (scripts) {
-						scripts.forEach(path => this.addPath(path.description));
-					}
-					return Object.keys(this.children).map(key => this.children[key]);
-				});
-			}
-		}
-
-		return Promise.resolve(Object.keys(this.children).map( key => this.children[key] ));
+	getChildren(): ProviderResult<ScriptTreeItem[]> {
+		const a = Object.keys(this._children).map( key => this._children[key] );
+		this.sort(a);
+		return a;
 	}
 
-	addPath(path: string): void {
-		let x: ScriptTreeItem = this;
-		path.split('/').forEach(segment => {
-			if (!x.children) {
-				x.children = {};
-			}
-			if (!x.children[segment]) {
-				x.children[segment] = new ScriptTreeItem(segment, vscode.TreeItemCollapsibleState.Collapsed);
-			}
-			x = x.children[segment];
-		});
-		x.setPath(path);
-	}
-
-	add(session: vscode.DebugSession): ScriptTreeItem {
-		if (!this.children) {
-			this.children = {};
-		}
-		let child = this.children[session.name];
-		if (!child) {
-			child = new ScriptTreeItem(session.name);
-			this.children[session.name] = child;
-		}
-		child.session = session;
-		child.collapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
-		return child;
-	}
-
-	remove(session: vscode.DebugSession) {
-		if (this.children) {
-			delete this.children[session.name];
-		}
+	protected sort(array: ScriptTreeItem[]): void {
+		array.sort((a, b) => a.label.localeCompare(b.label));
 	}
 }
 
+class RootTreeItem extends ScriptTreeItem {
+
+	private _showedMoreThanOne: boolean;
+
+	constructor() {
+		super('Root', vscode.TreeItemCollapsibleState.Expanded);
+		this._showedMoreThanOne = false;
+	}
+
+	getChildren(): ProviderResult<ScriptTreeItem[]> {
+		const ids = Object.keys(this._children);
+		if (!this._showedMoreThanOne && ids.length === 1) {
+			return this._children[ids[0]].getChildren();
+		}
+		if (ids.length > 1) {
+			this._showedMoreThanOne = true;
+		}
+		return super.getChildren();
+	}
+
+	find(session: vscode.DebugSession) {
+		return <SessionTreeItem> this._children[session.id];
+	}
+
+	add(session: vscode.DebugSession): SessionTreeItem {
+		let child = this.find(session);
+		if (!child) {
+			child = new SessionTreeItem(session);
+			this._children[session.id] = child;
+		}
+		return child;
+	}
+
+	remove(session: vscode.DebugSession): void {
+		delete this._children[session.id];
+	}
+}
+
+class SessionTreeItem extends ScriptTreeItem {
+
+	private _session: vscode.DebugSession;
+	private _initialized: boolean;
+
+	constructor(session: vscode.DebugSession) {
+		super(session.name, vscode.TreeItemCollapsibleState.Expanded);
+		this._initialized = false;
+		this._session = session;
+		const dir = dirname(__filename);
+		this.iconPath = {
+			light: join(dir, '..', '..', '..', 'images', 'debug-light.svg'),
+			dark: join(dir, '..', '..', '..', 'images', 'debug-dark.svg')
+		};
+	}
+
+	getChildren(): ProviderResult<ScriptTreeItem[]> {
+
+		if (!this._initialized) {
+			this._initialized = true;
+			return listLoadedScripts(this._session).then(scripts => {
+				if (scripts) {
+					scripts.forEach(path => this.addPath(path.description));
+				}
+				return super.getChildren();
+			});
+		}
+
+		return super.getChildren();
+	}
+
+	protected sort(array: ScriptTreeItem[]): void {
+		array.sort((a, b) => {
+			const acat = this.category(a);
+			const bcat = this.category(b);
+			if (acat != bcat) {
+				return acat - bcat;
+			}
+			return a.label.localeCompare(b.label);
+		});
+	}
+
+	private category(item: ScriptTreeItem): number {
+		if (item.label === '/') {
+			return 998;
+		}
+		if (item.label === '<node_internals>') {
+			return 999;
+		}
+
+		// find folder index
+		const folders = vscode.workspace.workspaceFolders;
+		for (let i = 0; i < folders.length; i++) {
+			const folder = folders[i].path;
+			const folderName = basename(folder);
+			if (item.label === folderName) {
+				return i+1;
+			}
+		}
+
+		return 0;
+	}
+
+	addPath(path: string): void {
+
+		const fullPath = path;
+
+		// map to root folders
+		const folders = vscode.workspace.workspaceFolders;
+		for (let i = 0; i < folders.length; i++) {
+			const folder = folders[i].path;
+			if (path.indexOf(folder) === 0) {
+				const folderName = basename(folder);
+				path = path.replace(folder, folderName);
+			}
+		}
+
+		if (path.indexOf('l1') >= 0) {
+			path = path;
+		}
+
+		let x: ScriptTreeItem = this;
+		path.split('/').forEach(segment => {
+			let initialExpandState = segment === '<node_internals>' ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.Expanded;
+			if (!x._children[segment]) {
+				x._children[segment] = new ScriptTreeItem(segment, initialExpandState);
+			}
+			x = x._children[segment];
+		});
+		x.setPath(this._session, fullPath);
+		x.collapsibleState = vscode.TreeItemCollapsibleState.None;
+	}
+}
 
 //---- loaded script picker
 
@@ -163,8 +258,7 @@ export function pickLoadedScript() {
 
 		vscode.window.showQuickPick(items, options).then(item => {
 			if (item && item.source) {
-				let uri = vscode.Uri.parse(`debug:${item.source.path}`);
-				vscode.workspace.openTextDocument(uri).then(doc => vscode.window.showTextDocument(doc));
+				openScript(session, item.source.path);
 			}
 		});
 	});
@@ -183,7 +277,7 @@ function listLoadedScripts(session: vscode.DebugSession | undefined) : Thenable<
 	}
 }
 
-export function openScript(path: string) {
-	let uri = vscode.Uri.parse(`debug:${path}`);
+export function openScript(session: vscode.DebugSession, path: string) {
+	let uri = vscode.Uri.parse(`debug:${path}?session=${session.id}`);
 	vscode.workspace.openTextDocument(uri).then(doc => vscode.window.showTextDocument(doc));
 }

@@ -93,9 +93,9 @@
 		"menus": {
 			"debug/callstack/context": [
 				{
-				"command": "extension.node-debug.toggleSkippingFile",
-				"group": "navigation",
-				"when": "inDebugMode && debugType == 'node'"
+					"command": "extension.node-debug.toggleSkippingFile",
+					"group": "navigation",
+					"when": "inDebugMode && debugType == 'node'"
 				}
 			]
 		},
