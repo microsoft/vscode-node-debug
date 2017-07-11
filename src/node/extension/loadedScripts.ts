@@ -11,13 +11,13 @@ import { join, dirname, basename } from 'path';
 
 //---- loaded script explorer
 
-export class LoadedScriptsProvider implements TreeDataProvider<ScriptTreeItem> {
+export class LoadedScriptsProvider implements TreeDataProvider<BaseTreeItem> {
 
 	private _context: vscode.ExtensionContext;
 	private _root: RootTreeItem;
 
-	private _onDidChangeTreeData: EventEmitter<ScriptTreeItem> = new EventEmitter<ScriptTreeItem>();
-	readonly onDidChangeTreeData: Event<ScriptTreeItem> = this._onDidChangeTreeData.event;
+	private _onDidChangeTreeData: EventEmitter<BaseTreeItem> = new EventEmitter<BaseTreeItem>();
+	readonly onDidChangeTreeData: Event<BaseTreeItem> = this._onDidChangeTreeData.event;
 
 	constructor(context: vscode.ExtensionContext) {
 		this._context = context;
@@ -31,7 +31,7 @@ export class LoadedScriptsProvider implements TreeDataProvider<ScriptTreeItem> {
 		this._onDidChangeTreeData.fire(undefined);
 	}
 
-	getChildren(node?: ScriptTreeItem): ProviderResult<ScriptTreeItem[]> {
+	getChildren(node?: BaseTreeItem): ProviderResult<BaseTreeItem[]> {
 		if (node === undefined) {	// return root node
 			if (!this._root) {
 				this._root = this.createRoot();
@@ -41,7 +41,7 @@ export class LoadedScriptsProvider implements TreeDataProvider<ScriptTreeItem> {
 		return node.getChildren();
 	}
 
-	getTreeItem(node: ScriptTreeItem): TreeItem {
+	getTreeItem(node: BaseTreeItem): TreeItem {
 		return node;
 	}
 
@@ -65,7 +65,7 @@ export class LoadedScriptsProvider implements TreeDataProvider<ScriptTreeItem> {
 		}));
 
 		this._context.subscriptions.push(vscode.debug.onDidTerminateDebugSession(session => {
-			root.remove(session);
+			root.remove(session.id);
 			this._onDidChangeTreeData.fire(undefined);
 		}));
 
@@ -73,9 +73,9 @@ export class LoadedScriptsProvider implements TreeDataProvider<ScriptTreeItem> {
 	}
 }
 
-class ScriptTreeItem extends TreeItem {
+class BaseTreeItem extends TreeItem {
 
-	_children: { [key: string]: ScriptTreeItem; };
+	private _children: { [key: string]: BaseTreeItem; };
 
 	constructor(label: string, state: vscode.TreeItemCollapsibleState) {
 		super(label ? label : '/', state);
@@ -90,27 +90,30 @@ class ScriptTreeItem extends TreeItem {
 		};
 	}
 
-	getChildren(): ProviderResult<ScriptTreeItem[]> {
+	getChildren(): ProviderResult<BaseTreeItem[]> {
 		const array = Object.keys(this._children).map( key => this._children[key] );
 		return array.sort((a, b) => this.compare(a, b));
 	}
 
-	protected compare(a: ScriptTreeItem, b: ScriptTreeItem): number {
+	createIfNeeded<T extends BaseTreeItem>(key: string, factory: () => T): T {
+		let child = <T> this._children[key];
+		if (!child) {
+			child = factory();
+			this._children[key] = child;
+		}
+		return child;
+	}
+
+	remove(key: string): void {
+		delete this._children[key];
+	}
+
+	protected compare(a: BaseTreeItem, b: BaseTreeItem): number {
 		return a.label.localeCompare(b.label);
 	}
 }
 
-class FolderItem extends ScriptTreeItem {
-
-	folder: vscode.Uri;
-
-	constructor(label: string, state: vscode.TreeItemCollapsibleState, uri: vscode.Uri) {
-		super(label, state);
-		this.folder = uri;
-	}
-}
-
-class RootTreeItem extends ScriptTreeItem {
+class RootTreeItem extends BaseTreeItem {
 
 	private _showedMoreThanOne: boolean;
 
@@ -119,36 +122,28 @@ class RootTreeItem extends ScriptTreeItem {
 		this._showedMoreThanOne = false;
 	}
 
-	getChildren(): ProviderResult<ScriptTreeItem[]> {
-		const ids = Object.keys(this._children);
-		if (!this._showedMoreThanOne && ids.length === 1) {
-			return this._children[ids[0]].getChildren();
-		}
-		if (ids.length > 1) {
-			this._showedMoreThanOne = true;
-		}
-		return super.getChildren();
-	}
+	getChildren(): ProviderResult<BaseTreeItem[]> {
 
-	find(session: vscode.DebugSession) {
-		return <SessionTreeItem> this._children[session.id];
+		// skip sessions if there is only one
+		const children = super.getChildren();
+		if (Array.isArray(children)) {
+			const size = children.length;
+			if (!this._showedMoreThanOne && size === 1) {
+				return children[0].getChildren();
+			}
+			if (size > 1) {
+				this._showedMoreThanOne = true;
+			}
+		}
+		return children;
 	}
 
 	add(session: vscode.DebugSession): SessionTreeItem {
-		let child = this.find(session);
-		if (!child) {
-			child = new SessionTreeItem(session);
-			this._children[session.id] = child;
-		}
-		return child;
-	}
-
-	remove(session: vscode.DebugSession): void {
-		delete this._children[session.id];
+		return this.createIfNeeded(session.id, () => new SessionTreeItem(session));
 	}
 }
 
-class SessionTreeItem extends ScriptTreeItem {
+class SessionTreeItem extends BaseTreeItem {
 
 	private _session: vscode.DebugSession;
 	private _initialized: boolean;
@@ -164,7 +159,7 @@ class SessionTreeItem extends ScriptTreeItem {
 		};
 	}
 
-	getChildren(): ProviderResult<ScriptTreeItem[]> {
+	getChildren(): ProviderResult<BaseTreeItem[]> {
 
 		if (!this._initialized) {
 			this._initialized = true;
@@ -179,10 +174,10 @@ class SessionTreeItem extends ScriptTreeItem {
 		return super.getChildren();
 	}
 
-	protected compare(a: ScriptTreeItem, b: ScriptTreeItem): number {
+	protected compare(a: BaseTreeItem, b: BaseTreeItem): number {
 		const acat = this.category(a);
 		const bcat = this.category(b);
-		if (acat != bcat) {
+		if (acat !== bcat) {
 			return acat - bcat;
 		}
 		return super.compare(a, b);
@@ -191,10 +186,10 @@ class SessionTreeItem extends ScriptTreeItem {
 	/**
 	 * Return an ordinal number for folders
 	 */
-	private category(item: ScriptTreeItem): number {
+	private category(item: BaseTreeItem): number {
 
 		// workspace scripts come at the beginning in "folder" order
-		if (item instanceof FolderItem) {
+		if (item instanceof FolderTreeItem) {
 			const folders = vscode.workspace.workspaceFolders;
 			const x = folders.indexOf(item.folder);
 			if (x >= 0) {
@@ -223,21 +218,28 @@ class SessionTreeItem extends ScriptTreeItem {
 			path = path.replace(folderPath, basename(folderPath));
 		}
 
-		let x: ScriptTreeItem = this;
+		let x: BaseTreeItem = this;
 		path.split('/').forEach(segment => {
 			let initialExpandState = segment === '<node_internals>' ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.Expanded;
-			if (!x._children[segment]) {
-				if (found && found.length > 0) {
-					x._children[segment] = new FolderItem(segment, initialExpandState, found[0]);
-					found = undefined;
-				} else {
-					x._children[segment] = new ScriptTreeItem(segment, initialExpandState);
-				}
+			if (found && found.length > 0) {
+				x = x.createIfNeeded(segment, () => new FolderTreeItem(segment, initialExpandState, found[0]));
+				found = undefined;
+			} else {
+				x = x.createIfNeeded(segment, () => new BaseTreeItem(segment, initialExpandState));
 			}
-			x = x._children[segment];
 		});
 		x.setPath(this._session, fullPath);
 		x.collapsibleState = vscode.TreeItemCollapsibleState.None;
+	}
+}
+
+class FolderTreeItem extends BaseTreeItem {
+
+	folder: vscode.Uri;
+
+	constructor(label: string, state: vscode.TreeItemCollapsibleState, uri: vscode.Uri) {
+		super(label, state);
+		this.folder = uri;
 	}
 }
 
