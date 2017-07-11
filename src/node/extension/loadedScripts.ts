@@ -77,7 +77,7 @@ class ScriptTreeItem extends TreeItem {
 
 	_children: { [key: string]: ScriptTreeItem; };
 
-	constructor(label: string, state: vscode.TreeItemCollapsibleState = vscode.TreeItemCollapsibleState.None) {
+	constructor(label: string, state: vscode.TreeItemCollapsibleState) {
 		super(label ? label : '/', state);
 		this._children = {};
 	}
@@ -91,13 +91,22 @@ class ScriptTreeItem extends TreeItem {
 	}
 
 	getChildren(): ProviderResult<ScriptTreeItem[]> {
-		const a = Object.keys(this._children).map( key => this._children[key] );
-		this.sort(a);
-		return a;
+		const array = Object.keys(this._children).map( key => this._children[key] );
+		return array.sort((a, b) => this.compare(a, b));
 	}
 
-	protected sort(array: ScriptTreeItem[]): void {
-		array.sort((a, b) => a.label.localeCompare(b.label));
+	protected compare(a: ScriptTreeItem, b: ScriptTreeItem): number {
+		return a.label.localeCompare(b.label);
+	}
+}
+
+class FolderItem extends ScriptTreeItem {
+
+	folder: vscode.Uri;
+
+	constructor(label: string, state: vscode.TreeItemCollapsibleState, uri: vscode.Uri) {
+		super(label, state);
+		this.folder = uri;
 	}
 }
 
@@ -170,36 +179,36 @@ class SessionTreeItem extends ScriptTreeItem {
 		return super.getChildren();
 	}
 
-	protected sort(array: ScriptTreeItem[]): void {
-		array.sort((a, b) => {
-			const acat = this.category(a);
-			const bcat = this.category(b);
-			if (acat != bcat) {
-				return acat - bcat;
-			}
-			return a.label.localeCompare(b.label);
-		});
+	protected compare(a: ScriptTreeItem, b: ScriptTreeItem): number {
+		const acat = this.category(a);
+		const bcat = this.category(b);
+		if (acat != bcat) {
+			return acat - bcat;
+		}
+		return super.compare(a, b);
 	}
 
+	/**
+	 * Return an ordinal number for folders
+	 */
 	private category(item: ScriptTreeItem): number {
-		if (item.label === '/') {
-			return 998;
-		}
-		if (item.label === '<node_internals>') {
-			return 999;
-		}
 
-		// find folder index
-		const folders = vscode.workspace.workspaceFolders;
-		for (let i = 0; i < folders.length; i++) {
-			const folder = folders[i].path;
-			const folderName = basename(folder);
-			if (item.label === folderName) {
-				return i+1;
+		// workspace scripts come at the beginning in "folder" order
+		if (item instanceof FolderItem) {
+			const folders = vscode.workspace.workspaceFolders;
+			const x = folders.indexOf(item.folder);
+			if (x >= 0) {
+				return x;
 			}
 		}
 
-		return 0;
+		// <node_internals> come at the very end
+		if (item.label === '<node_internals>') {
+			return 1000;
+		}
+
+		// everything else in between
+		return 999;
 	}
 
 	addPath(path: string): void {
@@ -207,24 +216,23 @@ class SessionTreeItem extends ScriptTreeItem {
 		const fullPath = path;
 
 		// map to root folders
-		const folders = vscode.workspace.workspaceFolders;
-		for (let i = 0; i < folders.length; i++) {
-			const folder = folders[i].path;
-			if (path.indexOf(folder) === 0) {
-				const folderName = basename(folder);
-				path = path.replace(folder, folderName);
-			}
-		}
-
-		if (path.indexOf('l1') >= 0) {
-			path = path;
+		const folderUris = vscode.workspace.workspaceFolders || [];
+		let found = folderUris.filter( uri => path.indexOf(uri.path) === 0);
+		if (found.length > 0) {
+			const folderPath = found[0].path;
+			path = path.replace(folderPath, basename(folderPath));
 		}
 
 		let x: ScriptTreeItem = this;
 		path.split('/').forEach(segment => {
 			let initialExpandState = segment === '<node_internals>' ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.Expanded;
 			if (!x._children[segment]) {
-				x._children[segment] = new ScriptTreeItem(segment, initialExpandState);
+				if (found && found.length > 0) {
+					x._children[segment] = new FolderItem(segment, initialExpandState, found[0]);
+					found = undefined;
+				} else {
+					x._children[segment] = new ScriptTreeItem(segment, initialExpandState);
+				}
 			}
 			x = x._children[segment];
 		});
