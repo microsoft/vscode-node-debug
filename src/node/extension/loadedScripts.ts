@@ -146,9 +146,7 @@ class RootTreeItem extends BaseTreeItem {
 			if (!this._showedMoreThanOne && size === 1) {
 				return children[0].getChildren();
 			}
-			if (size > 1) {
-				this._showedMoreThanOne = true;
-			}
+			this._showedMoreThanOne = size > 1;
 		}
 		return children;
 	}
