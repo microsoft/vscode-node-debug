@@ -227,14 +227,14 @@ class SessionTreeItem extends BaseTreeItem {
 
 		// map to root folders
 		const folderUris = workspaceFolders();
-		let found = folderUris.filter( uri => path.indexOf(uri.path) === 0);
+		let found = folderUris.filter( uri => path.indexOf(uri.fsPath) === 0);
 		if (found.length > 0) {
-			const folderPath = found[0].path;
+			const folderPath = found[0].fsPath;
 			path = path.replace(folderPath, basename(folderPath));
 		}
 
 		let x: BaseTreeItem = this;
-		path.split('/').forEach(segment => {
+		path.split(/[\/\\]/).forEach(segment => {
 			let initialExpandState = segment === '<node_internals>' ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.Expanded;
 			if (found && found.length > 0) {
 				x = x.createIfNeeded(segment, () => new FolderTreeItem(segment, initialExpandState, found[0]));
