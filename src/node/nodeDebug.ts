@@ -3714,18 +3714,8 @@ export class NodeDebugSession extends LoggingDebugSession {
 	private allLoadedScriptsRequest(response: DebugProtocol.Response, args: any) {
 
 		this._node.scripts( { types: 4 } ).then(resp => {
-			let result = Array<any>();
-			for (let script of resp.body) {
-				const path = this._scriptToPath(script);
-				const name = Path.basename(path);
-				result.push({
-					label: name,
-					description: path,
-					source: new Source(name, path)
-				});
-			}
-			result = result.sort((a, b) => a.label.localeCompare(b.label));
-			response.body = { loadedScripts: result };
+			let paths = resp.body.map(script => this._scriptToPath(script));
+			response.body = { paths: paths };
 			this.sendResponse(response);
 		}).catch(err => {
 			this.sendErrorResponse(response, 9999, `scripts error: ${err}`);

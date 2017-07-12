@@ -176,9 +176,9 @@ class SessionTreeItem extends BaseTreeItem {
 
 		if (!this._initialized) {
 			this._initialized = true;
-			return listLoadedScripts(this._session).then(scripts => {
-				if (scripts) {
-					scripts.forEach(path => this.addPath(path.description));
+			return listLoadedScripts(this._session).then(paths => {
+				if (paths) {
+					paths.forEach(path => this.addPath(path));
 				}
 				return super.getChildren();
 			});
@@ -258,15 +258,11 @@ class FolderTreeItem extends BaseTreeItem {
 
 //---- loaded script picker
 
-interface ScriptItem extends vscode.QuickPickItem {
-	source?: any;	// Source
-}
-
 export function pickLoadedScript() {
 
 	const session = vscode.debug.activeDebugSession;
 
-	return listLoadedScripts(session).then(items => {
+	return listLoadedScripts(session).then(paths => {
 
 		let options : vscode.QuickPickOptions = {
 			placeHolder: localize('select.script', "Select a script"),
@@ -275,23 +271,46 @@ export function pickLoadedScript() {
 			ignoreFocusOut: true
 		};
 
-		if (items === undefined) {
+		let items: vscode.QuickPickItem[];
+		if (paths === undefined) {
 			items = [ { label: localize('no.loaded.scripts', "No loaded scripts available"), description: '' } ];
+		} else {
+			items = paths.map(path => {
+				return {
+					label: basename(path),
+					description: path };
+			}).sort((a, b) => a.label.localeCompare(b.label));
 		}
 
 		vscode.window.showQuickPick(items, options).then(item => {
-			if (item && item.source) {
-				openScript(session, item.source.path);
+			if (item && item.description) {
+				openScript(session, item.description);
 			}
 		});
 	});
 }
 
-function listLoadedScripts(session: vscode.DebugSession | undefined) : Thenable<ScriptItem[] | undefined> {
+interface OldScriptItem {
+	label: string;
+	description: string;
+	source: {
+		name: string,
+		path: string
+	}
+}
+
+function listLoadedScripts(session: vscode.DebugSession | undefined) : Thenable<string[] | undefined> {
 
 	if (session) {
 		return session.customRequest('getLoadedScripts').then(reply => {
-			return reply.loadedScripts;
+
+			if (reply.loadedScripts) {
+				const old = <OldScriptItem[]> reply.loadedScripts;
+				return old.filter(item => !!item.description).map(item => item.description);
+			} else {
+				return reply.paths;
+			}
+
 		}, err => {
 			return undefined;
 		});
