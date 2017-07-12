@@ -81,7 +81,7 @@
 	],
 	"contributes": {
 		"views": {
-			"explorer": [
+			"debug": [
 				{
 					"id": "extension.node-debug.loadedScriptsExplorer",
 					"name": "Loaded Scripts",
