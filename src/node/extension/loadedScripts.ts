@@ -9,6 +9,21 @@ import { TreeDataProvider, TreeItem, EventEmitter, Event, ProviderResult } from 
 import { localize } from './utilities';
 import { join, dirname, basename } from 'path';
 
+let rootUri: vscode.Uri;
+
+function workspaceFolders() : vscode.Uri[] {
+	/*
+	return vscode.workspace.workspaceFolders || [];
+	*/
+	if (vscode.workspace.rootPath) {
+		if (!rootUri) {
+			rootUri = vscode.Uri.file(vscode.workspace.rootPath);
+		}
+		return [ rootUri ];
+	}
+	return [];
+}
+
 //---- loaded script explorer
 
 export class LoadedScriptsProvider implements TreeDataProvider<BaseTreeItem> {
@@ -190,7 +205,7 @@ class SessionTreeItem extends BaseTreeItem {
 
 		// workspace scripts come at the beginning in "folder" order
 		if (item instanceof FolderTreeItem) {
-			const folders = vscode.workspace.workspaceFolders;
+			const folders = workspaceFolders();
 			const x = folders.indexOf(item.folder);
 			if (x >= 0) {
 				return x;
@@ -211,7 +226,7 @@ class SessionTreeItem extends BaseTreeItem {
 		const fullPath = path;
 
 		// map to root folders
-		const folderUris = vscode.workspace.workspaceFolders || [];
+		const folderUris = workspaceFolders();
 		let found = folderUris.filter( uri => path.indexOf(uri.path) === 0);
 		if (found.length > 0) {
 			const folderPath = found[0].path;
