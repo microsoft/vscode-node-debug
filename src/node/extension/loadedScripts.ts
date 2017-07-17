@@ -9,21 +9,6 @@ import { TreeDataProvider, TreeItem, EventEmitter, Event, ProviderResult } from 
 import { localize } from './utilities';
 import { join, dirname, basename } from 'path';
 
-let rootUri: vscode.Uri;
-
-function workspaceFolders() : vscode.Uri[] {
-	/*
-	return vscode.workspace.workspaceFolders || [];
-	*/
-	if (vscode.workspace.rootPath) {
-		if (!rootUri) {
-			rootUri = vscode.Uri.file(vscode.workspace.rootPath);
-		}
-		return [ rootUri ];
-	}
-	return [];
-}
-
 //---- loaded script explorer
 
 export class LoadedScriptsProvider implements TreeDataProvider<BaseTreeItem> {
@@ -203,11 +188,7 @@ class SessionTreeItem extends BaseTreeItem {
 
 		// workspace scripts come at the beginning in "folder" order
 		if (item instanceof FolderTreeItem) {
-			const folders = workspaceFolders();
-			const x = folders.indexOf(item.folder);
-			if (x >= 0) {
-				return x;
-			}
+			return item.folder.index;
 		}
 
 		// <node_internals> come at the very end
@@ -222,25 +203,27 @@ class SessionTreeItem extends BaseTreeItem {
 	addPath(path: string): void {
 
 		const fullPath = path;
-
-		// map to root folders
-		const folderUris = workspaceFolders();
-		let found = folderUris.filter( uri => path.indexOf(uri.fsPath) === 0);
-		if (found.length > 0) {
-			const folderPath = found[0].fsPath;
-			path = path.replace(folderPath, basename(folderPath));
-		}
+		const NODE_INTERNALS = '<node_internals>';
 
 		let x: BaseTreeItem = this;
+
+		// map to root folders
+		const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(path));
+		if (folder) {
+			path = vscode.workspace.asRelativePath(path);
+			x = x.createIfNeeded(folder.name, () => new FolderTreeItem(folder));
+		} else if (path.indexOf(NODE_INTERNALS) === 0) {
+			path = path.substr(NODE_INTERNALS.length + 1);
+			x = x.createIfNeeded(NODE_INTERNALS, () => new BaseTreeItem(NODE_INTERNALS, vscode.TreeItemCollapsibleState.Collapsed));
+		} else if (path.indexOf('/') === 0) {
+			path = path.substr(1);
+			x = x.createIfNeeded('/', () => new BaseTreeItem('/', vscode.TreeItemCollapsibleState.Collapsed));
+		}
+
 		path.split(/[\/\\]/).forEach(segment => {
-			let initialExpandState = segment === '<node_internals>' ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.Expanded;
-			if (found && found.length > 0) {
-				x = x.createIfNeeded(segment, () => new FolderTreeItem(segment, initialExpandState, found[0]));
-				found = undefined;
-			} else {
-				x = x.createIfNeeded(segment, () => new BaseTreeItem(segment, initialExpandState));
-			}
+			x = x.createIfNeeded(segment, () => new BaseTreeItem(segment, vscode.TreeItemCollapsibleState.Expanded));
 		});
+
 		x.setPath(this._session, fullPath);
 		x.collapsibleState = vscode.TreeItemCollapsibleState.None;
 	}
@@ -248,11 +231,11 @@ class SessionTreeItem extends BaseTreeItem {
 
 class FolderTreeItem extends BaseTreeItem {
 
-	folder: vscode.Uri;
+	folder: vscode.WorkspaceFolder;
 
-	constructor(label: string, state: vscode.TreeItemCollapsibleState, uri: vscode.Uri) {
-		super(label, state);
-		this.folder = uri;
+	constructor(folder: vscode.WorkspaceFolder ) {
+		super(folder.name, vscode.TreeItemCollapsibleState.Expanded);
+		this.folder = folder;
 	}
 }
 
@@ -296,7 +279,7 @@ interface OldScriptItem {
 	source: {
 		name: string,
 		path: string
-	}
+	};
 }
 
 function listLoadedScripts(session: vscode.DebugSession | undefined) : Thenable<string[] | undefined> {
