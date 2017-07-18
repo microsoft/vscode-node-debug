@@ -870,6 +870,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 			if (!this._noDebug) {
 				//if (typeof args.stopOnEntry === 'boolean' && args.stopOnEntry || programArgs.some(a => a.indexOf('--extensionTestsPath=') === 0)) {
 					launchArgs.push(`--debugBrkPluginHost=${port}`);
+					launchArgs.push(`--debugId=${args['__sessionId']}`);
 				//} else {
 				//	launchArgs.push(`--debugPluginHost=${port}`);
 				//}
