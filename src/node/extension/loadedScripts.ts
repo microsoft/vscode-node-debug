@@ -190,7 +190,9 @@ class SessionTreeItem extends BaseTreeItem {
 		const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(path));
 		if (folder) {
 			path = vscode.workspace.asRelativePath(path);
-			path = path.substr(folder.name.length + 1);
+			if (vscode.workspace.workspaceFolders.length > 1) {	// multi root
+				path = path.substr(folder.name.length + 1);	// cut off the folder name
+			}
 			state = vscode.TreeItemCollapsibleState.Expanded;
 			x = x.createIfNeeded(folder.name, () => new FolderTreeItem(folder, state));
 		} else if (path.indexOf(NODE_INTERNALS) === 0) {
