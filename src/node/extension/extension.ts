@@ -115,7 +115,7 @@ function createInitialConfigurations(): string {
 	}
 
 	// Massage the configuration string, add an aditional tab and comment out processId.
-	// Add an aditional empty line between attributes which the user should not edit.
+	// Add an additional empty line between attributes which the user should not edit.
 	const configurationsMassaged = JSON.stringify(initialConfigurations, null, '\t').split('\n').map(line => '\t' + line).join('\n').trim();
 
 	const comment1 = localize('launch.config.comment1', "Use IntelliSense to learn about possible Node.js debug attributes.");
