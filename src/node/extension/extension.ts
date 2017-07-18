@@ -229,7 +229,7 @@ function startSession(config: any): Thenable<StartSessionResult> {
 
 		if (debugType) {
 			config.type = debugType;
-			vscode.debug.startDebugSession(config).then(session => loadedScriptsProvider.refresh(session));
+			vscode.debug.startDebugSession(config);
 		}
 
 		return <StartSessionResult>{

@@ -13,29 +13,38 @@ import { join, dirname, basename } from 'path';
 
 export class LoadedScriptsProvider implements TreeDataProvider<BaseTreeItem> {
 
-	private _context: vscode.ExtensionContext;
 	private _root: RootTreeItem;
 
 	private _onDidChangeTreeData: EventEmitter<BaseTreeItem> = new EventEmitter<BaseTreeItem>();
 	readonly onDidChangeTreeData: Event<BaseTreeItem> = this._onDidChangeTreeData.event;
 
 	constructor(context: vscode.ExtensionContext) {
-		this._context = context;
-	}
 
-	refresh(session: vscode.DebugSession) {
-		if (!this._root) {
-			this._root = this.createRoot();
-		}
-		this._root.add(session);
-		this._onDidChangeTreeData.fire(undefined);
+		this._root = new RootTreeItem();
+
+		context.subscriptions.push(vscode.debug.onDidStartDebugSession(session => {
+			if (session && (session.type === 'node' || session.type === 'node2')) {
+				this._root.add(session);
+				this._onDidChangeTreeData.fire(undefined);
+			}
+		}));
+
+		context.subscriptions.push(vscode.debug.onDidReceiveDebugSessionCustomEvent(event => {
+			if (event.event === 'scriptLoaded' && (event.session.type === 'node' || event.session.type === 'node2')) {
+				const sessionRoot = this._root.add(event.session);
+				sessionRoot.addPath(event.body.path);
+				this._onDidChangeTreeData.fire(undefined);
+			}
+		}));
+
+		context.subscriptions.push(vscode.debug.onDidTerminateDebugSession(session => {
+			this._root.remove(session.id);
+			this._onDidChangeTreeData.fire(undefined);
+		}));
 	}
 
 	getChildren(node?: BaseTreeItem): ProviderResult<BaseTreeItem[]> {
 		if (node === undefined) {	// return root node
-			if (!this._root) {
-				this._root = this.createRoot();
-			}
 			node = this._root;
 		}
 		return node.getChildren();
@@ -43,33 +52,6 @@ export class LoadedScriptsProvider implements TreeDataProvider<BaseTreeItem> {
 
 	getTreeItem(node: BaseTreeItem): TreeItem {
 		return node;
-	}
-
-	private createRoot(): RootTreeItem {
-
-		const root = new RootTreeItem();
-
-		this._context.subscriptions.push(vscode.debug.onDidChangeActiveDebugSession(session => {
-			if (session && (session.type === 'node' || session.type === 'node2')) {
-				root.add(session);
-				this._onDidChangeTreeData.fire(undefined);
-			}
-		}));
-
-		this._context.subscriptions.push(vscode.debug.onDidReceiveDebugSessionCustomEvent(event => {
-			if (event.event === 'scriptLoaded' && (event.session.type === 'node' || event.session.type === 'node2')) {
-				const sessionRoot = root.add(event.session);
-				sessionRoot.addPath(event.body.path);
-				this._onDidChangeTreeData.fire(undefined);
-			}
-		}));
-
-		this._context.subscriptions.push(vscode.debug.onDidTerminateDebugSession(session => {
-			root.remove(session.id);
-			this._onDidChangeTreeData.fire(undefined);
-		}));
-
-		return root;
 	}
 }
 
