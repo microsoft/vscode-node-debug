@@ -85,7 +85,7 @@
 				{
 					"id": "extension.node-debug.loadedScriptsExplorer",
 					"name": "Loaded Scripts",
-					"when": "inDebugMode"
+					"when": "inDebugMode && _isNodeDebugType"
 				}
 			]
 		},
