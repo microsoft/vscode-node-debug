@@ -44,10 +44,7 @@ export class LoadedScriptsProvider implements TreeDataProvider<BaseTreeItem> {
 	}
 
 	getChildren(node?: BaseTreeItem): ProviderResult<BaseTreeItem[]> {
-		if (node === undefined) {	// return root node
-			node = this._root;
-		}
-		return node.getChildren();
+		return (node || this._root).getChildren();
 	}
 
 	getTreeItem(node: BaseTreeItem): TreeItem {
@@ -188,22 +185,24 @@ class SessionTreeItem extends BaseTreeItem {
 		const NODE_INTERNALS = '<node_internals>';
 
 		let x: BaseTreeItem = this;
-
+		let state = vscode.TreeItemCollapsibleState.Collapsed;
 		// map to root folders
 		const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(path));
 		if (folder) {
 			path = vscode.workspace.asRelativePath(path);
-			x = x.createIfNeeded(folder.name, () => new FolderTreeItem(folder));
+			path = path.substr(folder.name.length + 1);
+			state = vscode.TreeItemCollapsibleState.Expanded;
+			x = x.createIfNeeded(folder.name, () => new FolderTreeItem(folder, state));
 		} else if (path.indexOf(NODE_INTERNALS) === 0) {
 			path = path.substr(NODE_INTERNALS.length + 1);
-			x = x.createIfNeeded(NODE_INTERNALS, () => new BaseTreeItem(NODE_INTERNALS, vscode.TreeItemCollapsibleState.Collapsed));
+			x = x.createIfNeeded(NODE_INTERNALS, () => new BaseTreeItem(NODE_INTERNALS, state));
 		} else if (path.indexOf('/') === 0) {
 			path = path.substr(1);
-			x = x.createIfNeeded('/', () => new BaseTreeItem('/', vscode.TreeItemCollapsibleState.Collapsed));
+			x = x.createIfNeeded('/', () => new BaseTreeItem('/', state));
 		}
 
 		path.split(/[\/\\]/).forEach(segment => {
-			x = x.createIfNeeded(segment, () => new BaseTreeItem(segment, vscode.TreeItemCollapsibleState.Expanded));
+			x = x.createIfNeeded(segment, () => new BaseTreeItem(segment, state));
 		});
 
 		x.setPath(this._session, fullPath);
@@ -215,8 +214,8 @@ class FolderTreeItem extends BaseTreeItem {
 
 	folder: vscode.WorkspaceFolder;
 
-	constructor(folder: vscode.WorkspaceFolder ) {
-		super(folder.name, vscode.TreeItemCollapsibleState.Expanded);
+	constructor(folder: vscode.WorkspaceFolder, state: vscode.TreeItemCollapsibleState) {
+		super(folder.name, state);
 		this.folder = folder;
 	}
 }
