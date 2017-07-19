@@ -8,6 +8,9 @@ import * as vscode from 'vscode';
 import { TreeDataProvider, TreeItem, EventEmitter, Event, ProviderResult } from 'vscode';
 import { localize } from './utilities';
 import { join, dirname, basename } from 'path';
+import { homedir } from 'os';
+
+let USERHOME: string;
 
 //---- loaded script explorer
 
@@ -199,8 +202,19 @@ class SessionTreeItem extends BaseTreeItem {
 			path = path.substr(NODE_INTERNALS.length + 1);
 			x = x.createIfNeeded(NODE_INTERNALS, () => new BaseTreeItem(NODE_INTERNALS, state));
 		} else if (path.indexOf('/') === 0) {
-			path = path.substr(1);
-			x = x.createIfNeeded('/', () => new BaseTreeItem('/', state));
+			if (!USERHOME) {
+				USERHOME = homedir();
+				if (USERHOME && USERHOME[USERHOME.length-1] !== '/') {
+					USERHOME += '/';
+				}
+			}
+			if (path.indexOf(USERHOME) === 0) {
+				path = path.substr(USERHOME.length);
+				x = x.createIfNeeded('~', () => new BaseTreeItem('~', state));
+			} else {
+				path = path.substr(1);
+				x = x.createIfNeeded('/', () => new BaseTreeItem('/', state));
+			}
 		}
 
 		path.split(/[\/\\]/).forEach(segment => {
