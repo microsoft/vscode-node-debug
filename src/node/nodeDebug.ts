@@ -299,6 +299,8 @@ interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArguments, C
 	externalConsole?: boolean;
 	/** Where to launch the debug target. */
 	console?: ConsoleType;
+	/** Use Windows Subsystem Linux */
+	useWSL?: boolean;
 }
 
 /**
@@ -375,6 +377,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 	private _console: ConsoleType = 'internalConsole';
 	private _stopOnEntry: boolean;
 	private _stepBack = false;
+	private _useSubsystemLinux = false;
 
 	// state valid between stop events
 	public _variableHandles = new Handles<VariableContainer>();
@@ -839,10 +842,42 @@ export class NodeDebugSession extends LoggingDebugSession {
 			this._console = 'externalTerminal';
 		}
 
+		let wslInternalBashPath;
+		// bash.exe path when running from external console (64 bit)
+		let wslExternalBashPath;
+		if (args.useWSL && process.platform === 'win32') {
+			// Test if bash is installed
+			this._useSubsystemLinux = true;
+			if (process.arch === 'x64') {
+				const bashPath = Path.join(process.env['SystemRoot'], 'System32', 'bash.exe');
+				wslInternalBashPath = PathUtils.findExecutable(bashPath);
+				if (wslInternalBashPath) {
+					wslExternalBashPath = wslInternalBashPath
+					logger.verbose('Using Windows Susbystem Linux Bash: ' + wslInternalBashPath);
+				} else {
+					this.sendErrorResponse(response, 2007, localize('attribute.wls.not.exist', "Cannot find Windows Subsystem Linux installation in '{0}'.", bashPath));
+					return;
+				}
+			} else {
+				const bashPath = Path.join(process.env['SystemRoot'], 'Sysnative', 'bash.exe');
+				wslInternalBashPath = PathUtils.findExecutable(bashPath);
+				if (wslInternalBashPath) {
+					wslExternalBashPath = Path.join(process.env['SystemRoot'], 'System32', 'bash.exe');
+					logger.verbose('Using Windows Susbystem Linux Bash: ' + wslInternalBashPath);
+					logger.verbose('Assuming 64-bit version is in ' + wslExternalBashPath);
+				} else {
+					this.sendErrorResponse(response, 2007, localize('attribute.wls.not.exist', "Cannot find Windows Subsystem Linux installation in '{0}'.", bashPath));
+					return;
+				}
+			}
+		}
+
 		const port = args.port || random(3000, 50000);
 
 		let runtimeExecutable = args.runtimeExecutable;
-		if (runtimeExecutable) {
+		if (this._useSubsystemLinux) {
+			runtimeExecutable = runtimeExecutable || NodeDebugSession.NODE;
+		} else if (runtimeExecutable) {
 			if (!Path.isAbsolute(runtimeExecutable)) {
 				const re = PathUtils.findOnPath(runtimeExecutable);
 				if (!re) {
@@ -872,22 +907,23 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 		// special code for 'extensionHost' debugging
 		if (this._adapterID === 'extensionHost') {
-
-			let launchArgs = [ runtimeExecutable ];
+			let runtimeArgs = [];
 			if (!this._noDebug) {
-
 				// we always launch in 'debug-brk' mode, but we only show the break event if 'stopOnEntry' attribute is true.
-				launchArgs.push(`--debugBrkPluginHost=${port}`);
-
+				runtimeArgs.push(`--debugBrkPluginHost=${port}`);
 				// pass the debug session ID to the EH so that broadcast events know where they come from
 				if (args.__sessionId) {
-					launchArgs.push(`--debugId=${args.__sessionId}`);
+					runtimeArgs.push(`--debugId=${args.__sessionId}`);
 				}
 			}
-			launchArgs = launchArgs.concat(runtimeArgs, programArgs);
+			runtimeArgs = runtimeArgs.concat(args.runtimeArgs);
+			const launchArgs = makeLaunchArgs(wslInternalBashPath, runtimeExecutable, runtimeArgs, undefined, undefined, programArgs);
+			if (launchArgs.localRoot && !args.localRoot) {
+				this._localRoot = launchArgs.localRoot;
+				this._remoteRoot = launchArgs.remoteRoot;
+			}
 
-			this.log('eh', `launchRequest: launching extensionhost`);
-			this._sendLaunchCommandToConsole(launchArgs);
+			this._sendLaunchCommandToConsole(launchArgs.executable, launchArgs.args);
 
 			let options;
 			if (args.env) {
@@ -897,7 +933,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 				};
 			}
 
-			const cmd = CP.spawn(runtimeExecutable, launchArgs.slice(1), options);
+			const cmd = CP.spawn(launchArgs.executable, launchArgs.args, options);
 			cmd.on('error', (err) => {
 				this._terminated(`failed to launch extensionHost (${err})`);
 				this.log('eh', `launchRequest: failed to launch extensionHost: ${err}`);
@@ -948,7 +984,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 						} else {
 							this.log('sm', `launchRequest: program '${programPath}' seems to be the generated file`);
 						}
-						this.launchRequest2(response, args, programPath, programArgs, <string> runtimeExecutable, runtimeArgs, port);
+						this.launchRequest2(response, args, programPath, programArgs, <string> runtimeExecutable, runtimeArgs, port, wslInternalBashPath, wslExternalBashPath);
 					});
 					return;
 				}
@@ -965,16 +1001,16 @@ export class NodeDebugSession extends LoggingDebugSession {
 					}
 					this.log('sm', `launchRequest: program '${programPath}' seems to be the source; launch the generated file '${generatedPath}' instead`);
 					programPath = generatedPath;
-					this.launchRequest2(response, args, programPath, programArgs, <string> runtimeExecutable, runtimeArgs, port);
+					this.launchRequest2(response, args, programPath, programArgs, <string> runtimeExecutable, runtimeArgs, port, wslInternalBashPath, wslExternalBashPath);
 				});
 				return;
 			}
 		}
 
-		this.launchRequest2(response, args, programPath, programArgs, runtimeExecutable, runtimeArgs, port);
+		this.launchRequest2(response, args, programPath, programArgs, runtimeExecutable, runtimeArgs, port, wslInternalBashPath, wslExternalBashPath);
 	}
 
-	private launchRequest2(response: DebugProtocol.LaunchResponse, args: LaunchRequestArguments, programPath: string, programArgs: string[], runtimeExecutable: string, runtimeArgs: string[], port: number): void {
+	private launchRequest2(response: DebugProtocol.LaunchResponse, args: LaunchRequestArguments, programPath: string, programArgs: string[], runtimeExecutable: string, runtimeArgs: string[], port: number, wslInternalBashPath: string, wslExternalBashPath: string): void {
 
 		let program: string | undefined;
 		let workingDirectory = args.cwd;
@@ -1000,7 +1036,6 @@ export class NodeDebugSession extends LoggingDebugSession {
 		}
 
 		// figure out when to add a '--debug-brk=nnnn'
-		let launchArgs = [ runtimeExecutable ];
 		if (!this._noDebug) {
 
 			if (args.port) {	// a port is specified
@@ -1009,20 +1044,21 @@ export class NodeDebugSession extends LoggingDebugSession {
 				if (!args.runtimeExecutable && !args.runtimeArgs) {
 
 					// use the specfied port
-					launchArgs.push(`--debug-brk=${port}`);
+					runtimeArgs.push(`--debug-brk=${port}`);
 				}
 			} else { // no port is specified
 
 				// use a random port
-				launchArgs.push(`--debug-brk=${port}`);
+				runtimeArgs.push(`--debug-brk=${port}`);
 			}
 		}
 
-		launchArgs = launchArgs.concat(runtimeArgs);
-		if (program) {
-			launchArgs.push(program);
+		const internalLaunchArgs = makeLaunchArgs(wslInternalBashPath, runtimeExecutable, runtimeArgs, workingDirectory, program, args.args);
+		const externalLaunchArgs = makeLaunchArgs(wslExternalBashPath, runtimeExecutable, runtimeArgs, workingDirectory, program, args.args);
+		if (internalLaunchArgs.localRoot && !args.localRoot) {
+			this._localRoot = internalLaunchArgs.localRoot;
+			this._remoteRoot = internalLaunchArgs.remoteRoot;
 		}
-		launchArgs = launchArgs.concat(programArgs);
 
 		const address = args.address;
 		const timeout = args.timeout;
@@ -1055,12 +1091,12 @@ export class NodeDebugSession extends LoggingDebugSession {
 		}
 
 		if (this._supportsRunInTerminalRequest && (this._console === 'externalTerminal' || this._console === 'integratedTerminal')) {
-
+			const laundArgs = this._console === 'integratedTerminal' ? internalLaunchArgs : externalLaunchArgs;
 			const termArgs : DebugProtocol.RunInTerminalRequestArguments = {
 				kind: this._console === 'integratedTerminal' ? 'integrated' : 'external',
 				title: localize('node.console.title', "Node Debug Console"),
 				cwd: <string> workingDirectory,
-				args: launchArgs,
+				args: [laundArgs.executable].concat(laundArgs.args),
 				env: envVars
 			};
 
@@ -1069,7 +1105,10 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 					// since node starts in a terminal, we cannot track it with an 'exit' handler
 					// plan for polling after we have gotten the process pid.
-					this._pollForNodeProcess = !args.runtimeExecutable;	// only if no 'runtimeExecutable' is specified
+					// This however won't work on WSL
+					if (!this._useSubsystemLinux) {
+						this._pollForNodeProcess = true;
+					}
 
 					if (this._noDebug) {
 						this.sendResponse(response);
@@ -1084,7 +1123,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 		} else {
 
-			this._sendLaunchCommandToConsole(launchArgs);
+			this._sendLaunchCommandToConsole(internalLaunchArgs.executable, internalLaunchArgs.args);
 
 			// merge environment variables into a copy of the process.env
 			envVars = PathUtils.extendObject(PathUtils.extendObject( {}, process.env), envVars);
@@ -1094,7 +1133,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 				env: envVars
 			};
 
-			const nodeProcess = CP.spawn(runtimeExecutable, launchArgs.slice(1), options);
+			const nodeProcess = CP.spawn(internalLaunchArgs.executable, internalLaunchArgs.args, options);
 			nodeProcess.on('error', (error) => {
 				// tslint:disable-next-line:no-bitwise
 				this.sendErrorResponse(response, 2017, localize('VSND2017', "Cannot launch debug target ({0}).", '{_error}'), { _error: error.message }, ErrorDestination.Telemetry | ErrorDestination.User );
@@ -1119,16 +1158,16 @@ export class NodeDebugSession extends LoggingDebugSession {
 		}
 	}
 
-	private _sendLaunchCommandToConsole(args: string[]) {
+	private _sendLaunchCommandToConsole(executable: string, args: string[]) {
 		// print the command to launch the target to the debug console
-		let cli = '';
+		let cli = executable;
 		for (let a of args) {
+			cli += ' ';
 			if (a.indexOf(' ') >= 0) {
 				cli += '\'' + a + '\'';
 			} else {
 				cli += a;
 			}
-			cli += ' ';
 		}
 		this.outLine(cli);
 	}
@@ -4108,5 +4147,45 @@ function endsWith(str: string, suffix: string): boolean {
 function random(low: number, high: number): number {
 	return Math.floor(Math.random() * (high - low) + low);
 }
+
+interface ILaunchArgs {
+     executable: string,
+     args: string[],
+     localRoot?: string,
+     remoteRoot?: string
+ }
+
+ function windowsPathToWSLPath(path: string) : string {
+     if (!path) {
+         return undefined;
+     } else if (PathUtils.isAbsolutePath(path)) {
+         return `/mnt/${path.substr(0,1).toLowerCase()}/${path.substr(3).replace(/\\/g, '/')}`;
+     } else {
+         return path.replace(/\\/g, '/');
+     }
+ }
+
+ function makeLaunchArgs(wslBashPath: string, executable: string, runtimeArgs: string[], cwd: string, program: string, programArgs: string[]): ILaunchArgs {
+     const args = (runtimeArgs || []).concat(program ? [program] : [], programArgs ? programArgs : []);
+     if (wslBashPath) {
+         let bashCommand = [executable].concat(runtimeArgs || [],
+                                               program ? [`'${windowsPathToWSLPath(program)}'`] : [],
+                                               programArgs ? programArgs : []).join(' ');
+         if (cwd) {
+             bashCommand = `cd '${windowsPathToWSLPath(cwd)}' && ${bashCommand}`;
+         }
+         return <ILaunchArgs>{
+             executable: wslBashPath,
+             args: ['-c', bashCommand],
+             localRoot: cwd,
+             remoteRoot: windowsPathToWSLPath(cwd)
+         }
+     } else {
+         return <ILaunchArgs>{
+             executable: executable,
+             args: args
+         };
+     }
+ }
 
 DebugSession.run(NodeDebugSession);
