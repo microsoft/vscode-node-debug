@@ -1069,7 +1069,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 					// since node starts in a terminal, we cannot track it with an 'exit' handler
 					// plan for polling after we have gotten the process pid.
-					this._pollForNodeProcess = true;
+					this._pollForNodeProcess = !args.runtimeExecutable;	// only if no 'runtimeExecutable' is specified
 
 					if (this._noDebug) {
 						this.sendResponse(response);
