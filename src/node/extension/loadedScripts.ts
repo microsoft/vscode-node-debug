@@ -32,12 +32,9 @@ export class LoadedScriptsProvider implements TreeDataProvider<BaseTreeItem> {
 		let timeout: NodeJS.Timer;
 
 		context.subscriptions.push(vscode.debug.onDidReceiveDebugSessionCustomEvent(event => {
-			if (event.event === 'scriptLoaded' && (event.session.type === 'node' || event.session.type === 'node2')) {
+			if (event.event === 'scriptLoaded' && (event.session.type === 'node' || event.session.type === 'node2' || event.session.type === 'extensionHost')) {
 				const sessionRoot = this._root.add(event.session);
-				const parent = sessionRoot.addPath(event.body.path);
-				if (parent) {
-					this._onDidChangeTreeData.fire(parent);
-				}
+				sessionRoot.addPath(event.body.path);
 
 				clearTimeout(timeout);
 				timeout = setTimeout(() => {
@@ -191,12 +188,11 @@ class SessionTreeItem extends BaseTreeItem {
 		return 999;
 	}
 
-	addPath(path: string): BaseTreeItem {
+	addPath(path: string): void {
 
 		const fullPath = path;
 		const NODE_INTERNALS = '<node_internals>';
 
-		let parent: BaseTreeItem = undefined;
 		let x: BaseTreeItem = this;
 		// map to root folders
 		const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(path));
@@ -231,8 +227,6 @@ class SessionTreeItem extends BaseTreeItem {
 
 		x.setPath(this._session, fullPath);
 		x.collapsibleState = vscode.TreeItemCollapsibleState.None;
-
-		return parent;
 	}
 }
 
