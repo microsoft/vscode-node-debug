@@ -317,7 +317,7 @@
 							"runtimeExecutable": {
 								"type": ["string", "null"],
 								"description": "%node.launch.runtimeExecutable.description%",
-								"default": null
+								"default": "node"
 							},
 							"runtimeArgs": {
 								"type": "array",
