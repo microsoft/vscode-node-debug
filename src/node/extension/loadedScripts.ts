@@ -7,7 +7,7 @@
 import * as vscode from 'vscode';
 import { TreeDataProvider, TreeItem, EventEmitter, Event, ProviderResult } from 'vscode';
 import { localize } from './utilities';
-import { join, dirname, basename } from 'path';
+import { /* join, dirname,*/ basename } from 'path';
 
 //---- loaded script explorer
 
@@ -138,11 +138,13 @@ class SessionTreeItem extends BaseTreeItem {
 		super(session.name, vscode.TreeItemCollapsibleState.Expanded);
 		this._initialized = false;
 		this._session = session;
+		/*
 		const dir = dirname(__filename);
 		this.iconPath = {
 			light: join(dir, '..', '..', '..', 'images', 'debug-light.svg'),
 			dark: join(dir, '..', '..', '..', 'images', 'debug-dark.svg')
 		};
+		*/
 	}
 
 	getChildren(): ProviderResult<BaseTreeItem[]> {
