@@ -8,9 +8,6 @@ import * as vscode from 'vscode';
 import { TreeDataProvider, TreeItem, EventEmitter, Event, ProviderResult } from 'vscode';
 import { localize } from './utilities';
 import { join, dirname, basename } from 'path';
-import { homedir } from 'os';
-
-let USERHOME: string;
 
 //---- loaded script explorer
 
@@ -28,21 +25,30 @@ export class LoadedScriptsProvider implements TreeDataProvider<BaseTreeItem> {
 		context.subscriptions.push(vscode.debug.onDidStartDebugSession(session => {
 			if (session && (session.type === 'node' || session.type === 'node2')) {
 				this._root.add(session);
-				this._onDidChangeTreeData.fire(undefined);
+				this._onDidChangeTreeData.fire(this._root);
 			}
 		}));
+
+		let timeout: NodeJS.Timer;
 
 		context.subscriptions.push(vscode.debug.onDidReceiveDebugSessionCustomEvent(event => {
 			if (event.event === 'scriptLoaded' && (event.session.type === 'node' || event.session.type === 'node2')) {
 				const sessionRoot = this._root.add(event.session);
-				sessionRoot.addPath(event.body.path);
-				this._onDidChangeTreeData.fire(undefined);
+				const parent = sessionRoot.addPath(event.body.path);
+				if (parent) {
+					this._onDidChangeTreeData.fire(parent);
+				}
+
+				clearTimeout(timeout);
+				timeout = setTimeout(() => {
+					this._onDidChangeTreeData.fire(undefined);
+				}, 300);
 			}
 		}));
 
 		context.subscriptions.push(vscode.debug.onDidTerminateDebugSession(session => {
 			this._root.remove(session.id);
-			this._onDidChangeTreeData.fire(undefined);
+			this._onDidChangeTreeData.fire(this._root);
 		}));
 	}
 
@@ -59,8 +65,8 @@ class BaseTreeItem extends TreeItem {
 
 	private _children: { [key: string]: BaseTreeItem; };
 
-	constructor(label: string, state: vscode.TreeItemCollapsibleState) {
-		super(label ? label : '/', state);
+	constructor(label: string, state = vscode.TreeItemCollapsibleState.Collapsed) {
+		super(label, state);
 		this._children = {};
 	}
 
@@ -73,14 +79,15 @@ class BaseTreeItem extends TreeItem {
 	}
 
 	getChildren(): ProviderResult<BaseTreeItem[]> {
+		this.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
 		const array = Object.keys(this._children).map( key => this._children[key] );
 		return array.sort((a, b) => this.compare(a, b));
 	}
 
-	createIfNeeded<T extends BaseTreeItem>(key: string, factory: () => T): T {
+	createIfNeeded<T extends BaseTreeItem>(key: string, factory: (label: string) => T): T {
 		let child = <T> this._children[key];
 		if (!child) {
-			child = factory();
+			child = factory(key);
 			this._children[key] = child;
 		}
 		return child;
@@ -124,6 +131,8 @@ class RootTreeItem extends BaseTreeItem {
 }
 
 class SessionTreeItem extends BaseTreeItem {
+
+	private static USERHOME: string;
 
 	private _session: vscode.DebugSession;
 	private _initialized: boolean;
@@ -182,13 +191,13 @@ class SessionTreeItem extends BaseTreeItem {
 		return 999;
 	}
 
-	addPath(path: string): void {
+	addPath(path: string): BaseTreeItem {
 
 		const fullPath = path;
 		const NODE_INTERNALS = '<node_internals>';
 
+		let parent: BaseTreeItem = undefined;
 		let x: BaseTreeItem = this;
-		let state = vscode.TreeItemCollapsibleState.Collapsed;
 		// map to root folders
 		const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(path));
 		if (folder) {
@@ -196,33 +205,34 @@ class SessionTreeItem extends BaseTreeItem {
 			if (vscode.workspace.workspaceFolders.length > 1) {	// multi root
 				path = path.substr(folder.name.length + 1);	// cut off the folder name
 			}
-			state = vscode.TreeItemCollapsibleState.Expanded;
-			x = x.createIfNeeded(folder.name, () => new FolderTreeItem(folder, state));
+			x = x.createIfNeeded(folder.name, _ => new FolderTreeItem(folder));
 		} else if (path.indexOf(NODE_INTERNALS) === 0) {
 			path = path.substr(NODE_INTERNALS.length + 1);
-			x = x.createIfNeeded(NODE_INTERNALS, () => new BaseTreeItem(NODE_INTERNALS, state));
+			x = x.createIfNeeded(NODE_INTERNALS, label => new BaseTreeItem(label));
 		} else if (path.indexOf('/') === 0) {
-			if (!USERHOME) {
-				USERHOME = homedir();
-				if (USERHOME && USERHOME[USERHOME.length-1] !== '/') {
-					USERHOME += '/';
+			if (!SessionTreeItem.USERHOME) {
+				SessionTreeItem.USERHOME = require('os').homedir();
+				if (SessionTreeItem.USERHOME && SessionTreeItem.USERHOME[SessionTreeItem.USERHOME.length-1] !== '/') {
+					SessionTreeItem.USERHOME += '/';
 				}
 			}
-			if (path.indexOf(USERHOME) === 0) {
-				path = path.substr(USERHOME.length);
-				x = x.createIfNeeded('~', () => new BaseTreeItem('~', state));
+			if (path.indexOf(SessionTreeItem.USERHOME) === 0) {
+				path = path.substr(SessionTreeItem.USERHOME.length);
+				x = x.createIfNeeded('~', label => new BaseTreeItem(label));
 			} else {
 				path = path.substr(1);
-				x = x.createIfNeeded('/', () => new BaseTreeItem('/', state));
+				x = x.createIfNeeded('/', label => new BaseTreeItem(label));
 			}
 		}
 
 		path.split(/[\/\\]/).forEach(segment => {
-			x = x.createIfNeeded(segment, () => new BaseTreeItem(segment, state));
+			x = x.createIfNeeded(segment, () => new BaseTreeItem(segment));
 		});
 
 		x.setPath(this._session, fullPath);
 		x.collapsibleState = vscode.TreeItemCollapsibleState.None;
+
+		return parent;
 	}
 }
 
@@ -230,8 +240,8 @@ class FolderTreeItem extends BaseTreeItem {
 
 	folder: vscode.WorkspaceFolder;
 
-	constructor(folder: vscode.WorkspaceFolder, state: vscode.TreeItemCollapsibleState) {
-		super(folder.name, state);
+	constructor(folder: vscode.WorkspaceFolder) {
+		super(folder.name, vscode.TreeItemCollapsibleState.Collapsed);
 		this.folder = folder;
 	}
 }
