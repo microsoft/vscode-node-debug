@@ -818,7 +818,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 		}
 
 		if (args.__restart && typeof args.__restart.port === 'number') {
-			this._attach(response, args.__restart.port, undefined, args.timeout);
+			this._attach(response, args, args.__restart.port, undefined, args.timeout);
 			return;
 		}
 
@@ -1007,7 +1007,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 				// only if the default runtime 'node' is used without arguments
 				if (!args.runtimeExecutable && !args.runtimeArgs) {
-					
+
 					// use the specfied port
 					launchArgs.push(`--debug-brk=${port}`);
 				}
@@ -1074,7 +1074,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 					if (this._noDebug) {
 						this.sendResponse(response);
 					} else {
-						this._attach(response, port, address, timeout);
+						this._attach(response, args, port, address, timeout);
 					}
 				} else {
 					this.sendErrorResponse(response, 2011, localize('VSND2011', "Cannot launch debug target in terminal ({0}).", '{_error}'), { _error: runResponse.message } );
@@ -1114,7 +1114,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 			if (this._noDebug) {
 				this.sendResponse(response);
 			} else {
-				this._attach(response, port, address, timeout);
+				this._attach(response, args, port, address, timeout);
 			}
 		}
 	}
@@ -1240,13 +1240,13 @@ export class NodeDebugSession extends LoggingDebugSession {
 			this._attachMode = true;
 		}
 
-		this._attach(response, args.port, args.address, args.timeout);
+		this._attach(response, args, args.port, args.address, args.timeout);
 	}
 
 	/*
 	 * shared 'attach' code used in launchRequest and attachRequest.
 	 */
-	private _attach(response: DebugProtocol.Response, port: number, address: string | undefined, timeout: number | undefined): void {
+	private _attach(response: DebugProtocol.Response, args: CommonArguments, port: number, address: string | undefined, timeout: number | undefined): void {
 
 		if (!port) {
 			port = 5858;
@@ -1320,7 +1320,11 @@ export class NodeDebugSession extends LoggingDebugSession {
 							socket.connect(port, address);
 						}, 200);		// retry after 200 ms
 					} else {
-						this.sendErrorResponse(response, 2009, localize('VSND2009', "Cannot connect to runtime via 'legacy' protocol; consider using 'inspector' protocol (timeout after {0} ms).", '{_timeout}'), { _timeout: timeout });
+						if (typeof args.port === 'number') {
+							this.sendErrorResponse(response, 2009, localize('VSND2009', "Cannot connect to runtime; make sure that runtime is in 'legacy' debug mode."));
+						} else {
+							this.sendErrorResponse(response, 2009, localize('VSND2009', "Cannot connect to runtime via 'legacy' protocol; try to use 'inspector' protocol."));
+						}
 					}
 				} else {
 					this.sendErrorResponse(response, 2010, localize('VSND2010', "Cannot connect to runtime process (reason: {0}).", '{_error}'), { _error: err.message });
