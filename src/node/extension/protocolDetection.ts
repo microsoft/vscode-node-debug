@@ -146,8 +146,8 @@ function detectProtocolForPidWin(pid: number): Promise<string|null> {
 
 /**
  * Netstat output is like:
-Proto  Local Address          Foreign Address        State           PID
-  TCP    0.0.0.0:135            0.0.0.0:0              LISTENING       812
+   Proto  Local Address          Foreign Address        State           PID
+   TCP    0.0.0.0:135            0.0.0.0:0              LISTENING       812
  */
 function getOpenPortsForPidWin(pid: number): Promise<number[]> {
 	return new Promise(resolve => {
@@ -170,7 +170,7 @@ function getOpenPortsForPidWin(pid: number): Promise<number[]> {
 
 				resolve(ports);
 		});
-	})
+	});
 }
 
 function detectProtocolForPidUnix(pid: number): Promise<string|null> {
