@@ -999,11 +999,25 @@ export class NodeDebugSession extends LoggingDebugSession {
 			program = Path.basename(programPath);
 		}
 
-		// we always break on entry (but if user did not request this, we will not stop in the UI).
+		// figure out when to add a '--debug-brk=nnnn'
 		let launchArgs = [ runtimeExecutable ];
-		if (! this._noDebug && !args.port) {		// if a port is given, we assume that the '--debug-brk' option is specified elsewhere
-			launchArgs.push(`--debug-brk=${port}`);
+		if (!this._noDebug) {
+
+			if (args.port) {	// a port is specified
+
+				// only if the default runtime 'node' is used without arguments
+				if (!args.runtimeExecutable && !args.runtimeArgs) {
+					
+					// use the specfied port
+					launchArgs.push(`--debug-brk=${port}`);
+				}
+			} else { // no port is specified
+
+				// use a random port
+				launchArgs.push(`--debug-brk=${port}`);
+			}
 		}
+
 		launchArgs = launchArgs.concat(runtimeArgs);
 		if (program) {
 			launchArgs.push(program);
