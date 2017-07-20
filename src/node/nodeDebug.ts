@@ -838,7 +838,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 			if (!Path.isAbsolute(runtimeExecutable)) {
 				const re = PathUtils.findOnPath(runtimeExecutable);
 				if (!re) {
-					this.sendErrorResponse(response, 2001, localize('VSND2001', "Cannot find runtime '{0}' on PATH.", '{_runtime}'), { _runtime: runtimeExecutable });
+					this.sendErrorResponse(response, 2001, localize('VSND2001', "Cannot find runtime '{0}' on PATH. Make sure to have '{0}' installed.", '{_runtime}'), { _runtime: runtimeExecutable });
 					return;
 				}
 				runtimeExecutable = re;
@@ -853,7 +853,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 		} else {
 			const re = PathUtils.findOnPath(NodeDebugSession.NODE);
 			if (!re) {
-				this.sendErrorResponse(response, 2001, localize('VSND2001', "Cannot find runtime '{0}' on PATH.", '{_runtime}'), { _runtime: NodeDebugSession.NODE });
+				this.sendErrorResponse(response, 2001, localize('VSND2001', "Cannot find runtime '{0}' on PATH. Make sure to have '{0}' installed.", '{_runtime}'), { _runtime: NodeDebugSession.NODE });
 				return;
 			}
 			runtimeExecutable = re;
