@@ -103,15 +103,14 @@ function detectProtocolForLaunch(config: any): string | undefined {
 		return 'inspector';
 	} else {
 		// only determine version if no runtimeExecutable is set (and 'node' on PATH is used)
-		const result = cp.spawnSync('node', ['--version']);
-		const semVerString = result.stdout.toString();
+		const result = cp.spawnSync('node2', ['--version']);
+		const semVerString = result.stdout ? result.stdout.toString() : undefined;
 		if (semVerString) {
 			if (semVerStringToInt(semVerString) >= InspectorMinNodeVersionLaunch) {
 				log(localize('protocol.switch.inspector.version', "Debugging with inspector protocol because Node.js {0} was detected.", semVerString.trim()));
 				return 'inspector';
 			} else {
 				log(localize('protocol.switch.legacy.version', "Debugging with legacy protocol because Node.js {0} was detected.", semVerString.trim()));
-				return 'legacy';
 			}
 		} else {
 			log(localize('protocol.switch.unknown.version', "Debugging with legacy protocol because Node.js version could not be determined."));
