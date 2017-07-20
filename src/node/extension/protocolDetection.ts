@@ -103,7 +103,7 @@ function detectProtocolForLaunch(config: any): string | undefined {
 		return 'inspector';
 	} else {
 		// only determine version if no runtimeExecutable is set (and 'node' on PATH is used)
-		const result = cp.spawnSync('node2', ['--version']);
+		const result = cp.spawnSync('node', ['--version']);
 		const semVerString = result.stdout ? result.stdout.toString() : undefined;
 		if (semVerString) {
 			if (semVerStringToInt(semVerString) >= InspectorMinNodeVersionLaunch) {
