@@ -264,6 +264,15 @@ interface CommonArguments {
 	stepBack?: boolean;
 	/** Control mapping of node.js scripts to files on disk. */
 	mapToFilesOnDisk?: boolean;
+
+	// internal attributes
+
+	/** Debug session ID */
+	__sessionId: string;
+	/** Arbitrary data looped from last session */
+	__restart?: {
+		port?: number
+	};
 }
 
 type ConsoleType = 'internalConsole' | 'integratedTerminal' | 'externalTerminal';
@@ -290,15 +299,14 @@ interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArguments, C
 	externalConsole?: boolean;
 	/** Where to launch the debug target. */
 	console?: ConsoleType;
-
-	/** internal */
-	__restart?: { port: number };
 }
 
 /**
  * This interface should always match the schema found in the node-debug extension manifest.
  */
 interface AttachRequestArguments extends DebugProtocol.AttachRequestArguments, CommonArguments {
+
+	// currently nothing is  'attach' specific
 }
 
 
@@ -865,15 +873,16 @@ export class NodeDebugSession extends LoggingDebugSession {
 		// special code for 'extensionHost' debugging
 		if (this._adapterID === 'extensionHost') {
 
-			// we always launch in 'debug-brk' mode, but we only show the break event if 'stopOnEntry' attribute is true.
 			let launchArgs = [ runtimeExecutable ];
 			if (!this._noDebug) {
-				//if (typeof args.stopOnEntry === 'boolean' && args.stopOnEntry || programArgs.some(a => a.indexOf('--extensionTestsPath=') === 0)) {
-					launchArgs.push(`--debugBrkPluginHost=${port}`);
-					launchArgs.push(`--debugId=${args['__sessionId']}`);
-				//} else {
-				//	launchArgs.push(`--debugPluginHost=${port}`);
-				//}
+
+				// we always launch in 'debug-brk' mode, but we only show the break event if 'stopOnEntry' attribute is true.
+				launchArgs.push(`--debugBrkPluginHost=${port}`);
+
+				// pass the debug session ID to the EH so that broadcast events know where they come from
+				if (args.__sessionId) {
+					launchArgs.push(`--debugId=${args.__sessionId}`);
+				}
 			}
 			launchArgs = launchArgs.concat(runtimeArgs, programArgs);
 
