@@ -1321,9 +1321,9 @@ export class NodeDebugSession extends LoggingDebugSession {
 						}, 200);		// retry after 200 ms
 					} else {
 						if (typeof args.port === 'number') {
-							this.sendErrorResponse(response, 2009, localize('VSND2009', "Cannot connect to runtime; make sure that runtime is in 'legacy' debug mode."));
+							this.sendErrorResponse(response, 2033, localize('VSND2033', "Cannot connect to runtime; make sure that runtime is in 'legacy' debug mode."));
 						} else {
-							this.sendErrorResponse(response, 2009, localize('VSND2009', "Cannot connect to runtime via 'legacy' protocol; try to use 'inspector' protocol."));
+							this.sendErrorResponse(response, 2034, localize('VSND2034', "Cannot connect to runtime via 'legacy' protocol; try to use 'inspector' protocol."));
 						}
 					}
 				} else {
