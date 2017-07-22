@@ -19,8 +19,8 @@ let loadedScriptsProvider: LoadedScriptsProvider;
 export function activate(context: vscode.ExtensionContext) {
 
 	// launch config magic
-	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.provideInitialConfigurations', () => createInitialConfigurations()));
-	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.startSession', config => startSession(config)));
+	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.provideInitialConfigurations', folderUri => createInitialConfigurations(folderUri)));
+	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.startSession', (config, folderUri) => startSession(config, folderUri)));
 
 	// toggle skipping file action
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.toggleSkippingFile', toggleSkippingFile));
@@ -59,9 +59,9 @@ function toggleSkippingFile(res: string | number): void {
 
 //---- extension.node-debug.provideInitialConfigurations
 
-function loadPackage(folderPath: string): any {
+function loadPackage(folder: vscode.WorkspaceFolder): any {
 	try {
-		const packageJsonPath = join(folderPath, 'package.json');
+		const packageJsonPath = join(folder.uri.fsPath, 'package.json');
 		const jsonContent = fs.readFileSync(packageJsonPath, 'utf8');
 		return JSON.parse(jsonContent);
 	} catch (error) {
@@ -73,9 +73,10 @@ function loadPackage(folderPath: string): any {
 /**
  * returns an initial configuration json as a string
  */
-function createInitialConfigurations(): string {
+function createInitialConfigurations(folderUri: vscode.Uri): string {
 
-	const pkg = vscode.workspace.rootPath ? loadPackage(vscode.workspace.rootPath) : undefined;
+	const folder = getFolder(folderUri);
+	const pkg = folder ? loadPackage(folder) : undefined;
 
 	const config = {
 		type: 'node',
@@ -95,7 +96,7 @@ function createInitialConfigurations(): string {
 
 		// try to find a better value for 'program' by analysing package.json
 		if (pkg) {
-			program = guessProgramFromPackage(pkg);
+			program = guessProgramFromPackage(folder, pkg);
 			if (program) {
 				log(localize('program.guessed.from.package.json.explanation', "Launch configuration created based on 'package.json'."));
 			}
@@ -135,9 +136,7 @@ function createInitialConfigurations(): string {
 function configureMern(config: any) {
 	config.protocol = 'inspector';
 	config.runtimeExecutable = 'nodemon';
-	config.runtimeArgs = [ '--inspect=9222' ];
 	config.program = '${workspaceRoot}/index.js';
-	config.port = 9222;
 	config.restart = true;
 	config.env = {
 		BABEL_DISABLE_CACHE: '1',
@@ -150,7 +149,7 @@ function configureMern(config: any) {
 /*
  * try to find the entry point ('main') from the package.json
  */
-function guessProgramFromPackage(jsonObject: any): string | undefined {
+function guessProgramFromPackage(folder: vscode.WorkspaceFolder, jsonObject: any): string | undefined {
 
 	let program: string | undefined;
 
@@ -167,7 +166,7 @@ function guessProgramFromPackage(jsonObject: any): string | undefined {
 			if (isAbsolute(program)) {
 				path = program;
 			} else {
-				path = join(<string>vscode.workspace.rootPath, program);
+				path = join(folder.uri.fsPath, program);
 				program = join('${workspaceRoot}', program);
 			}
 			if (!fs.existsSync(path) && !fs.existsSync(path + '.js')) {
@@ -192,10 +191,34 @@ class StartSessionResult {
 	content?: string;	// launch.json content for 'save'
 }
 
-function startSession(config: any): Thenable<StartSessionResult> {
+/**
+ * Tried to find a WorkspaceFolder for the given folderUri.
+ * If not found, the first WorkspaceFolder is returned.
+ * If the workspace has no folders, undefined is returned.
+ */
+function getFolder(folderUri: vscode.Uri | undefined) : vscode.WorkspaceFolder | undefined {
+
+	let folder: vscode.WorkspaceFolder;
+	const folders = vscode.workspace.workspaceFolders;
+	if (folders && folders.length > 0) {
+		folder = folders[0];
+		if (folderUri) {
+			const s = folderUri.toString();
+			const found = folders.filter(f => f.uri.toString() === s);
+			if (found.length > 0) {
+				folder = found[0];
+			}
+		}
+	}
+	return folder;
+}
+
+function startSession(config: any, folderUri: vscode.Uri | undefined): Thenable<StartSessionResult> {
+
+	const folder = getFolder(folderUri);
 
 	if (Object.keys(config).length === 0) { // an empty config represents a missing launch.json
-		config = getFreshLaunchConfig();
+		config = getFreshLaunchConfig(folder);
 		if (!config.program) {
 			const message = localize('program.not.found.message', "Cannot find a program to debug");
 			const action = localize('create.launch.json.action', "Create {0}", 'launch.json');
@@ -216,8 +239,8 @@ function startSession(config: any): Thenable<StartSessionResult> {
 
 	// make sure that 'launch' configs have a 'cwd' attribute set
 	if (config.request === 'launch' && !config.cwd) {
-		if (vscode.workspace.rootPath) {
-			config.cwd = vscode.workspace.rootPath;
+		if (folder) {
+			config.cwd = folder.uri.fsPath;
 		} else if (config.program) {
 			// derive 'cwd' from 'program'
 			config.cwd = dirname(config.program);
@@ -238,7 +261,7 @@ function startSession(config: any): Thenable<StartSessionResult> {
 	});
 }
 
-function getFreshLaunchConfig(): any {
+function getFreshLaunchConfig(folder: vscode.WorkspaceFolder): any {
 
 	const config: any = {
 		type: 'node',
@@ -246,15 +269,15 @@ function getFreshLaunchConfig(): any {
 		request: 'launch'
 	};
 
-	if (vscode.workspace.rootPath) {
+	if (folder) {
 
 		// folder case: try to find more launch info in package.json
-		const pkg = loadPackage(vscode.workspace.rootPath);
+		const pkg = loadPackage(folder);
 		if (pkg) {
 			if (pkg.name === 'mern-starter') {
 				configureMern(config);
 			} else {
-				config.program = guessProgramFromPackage(pkg);
+				config.program = guessProgramFromPackage(folder, pkg);
 			}
 		}
 	}
