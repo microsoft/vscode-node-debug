@@ -252,7 +252,7 @@ function startSession(config: any, folderUri: vscode.Uri | undefined): Thenable<
 
 		if (debugType) {
 			config.type = debugType;
-			vscode.debug.startDebugSession(folder, config);
+			vscode.commands.executeCommand('vscode.startDebug', config, folder.uri);
 		}
 
 		return <StartSessionResult>{
