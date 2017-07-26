@@ -231,7 +231,7 @@ function startSession(config: any, folderUri: vscode.Uri | undefined): Thenable<
 
 		if (debugType) {
 			config.type = debugType;
-			vscode.commands.executeCommand('vscode.startDebug', config, folder.uri);
+			vscode.commands.executeCommand('vscode.startDebug', config, folder ? folder.uri : undefined);
 		}
 
 		return <StartSessionResult>{
@@ -247,7 +247,7 @@ function ehStartSession(config: any, folderUri: vscode.Uri | undefined): Thenabl
 	if (config.protocol === 'inspector') {
 		config.type = 'extensionHost2'; // for Electron >= 1.7.4
 	}
-	vscode.commands.executeCommand('vscode.startDebug', config, folder.uri);
+	vscode.commands.executeCommand('vscode.startDebug', config, folder ? folder.uri : undefined);
 
 	return Promise.resolve(<StartSessionResult>{
 		status: 'ok'
