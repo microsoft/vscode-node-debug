@@ -143,8 +143,6 @@ class RootTreeItem extends BaseTreeItem {
 
 class SessionTreeItem extends BaseTreeItem {
 
-	private static USERHOME: string;
-
 	private _session: vscode.DebugSession;
 	private _initialized: boolean;
 
@@ -206,43 +204,19 @@ class SessionTreeItem extends BaseTreeItem {
 
 	addPath(path: string): void {
 
-		const fullPath = path;
-		const NODE_INTERNALS = '<node_internals>';
+		const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(path));
 
 		let x: BaseTreeItem = this;
-		// map to root folders
-		const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(path));
-		if (folder) {
-			path = vscode.workspace.asRelativePath(path);
-			if (vscode.workspace.workspaceFolders.length > 1) {	// multi root
-				path = path.substr(folder.name.length + 1);	// cut off the folder name
-			}
-			x = x.createIfNeeded(folder.name, _ => new FolderTreeItem(folder));
-		} else if (path.indexOf(NODE_INTERNALS) === 0) {
-			path = path.substr(NODE_INTERNALS.length + 1);
-			x = x.createIfNeeded(NODE_INTERNALS, label => new BaseTreeItem(label));
-		} else if (path.indexOf('/') === 0) {
-			if (!SessionTreeItem.USERHOME) {
-				SessionTreeItem.USERHOME = require('os').homedir();
-				if (SessionTreeItem.USERHOME && SessionTreeItem.USERHOME[SessionTreeItem.USERHOME.length - 1] !== '/') {
-					SessionTreeItem.USERHOME += '/';
-				}
-			}
-			if (path.indexOf(SessionTreeItem.USERHOME) === 0) {
-				path = path.substr(SessionTreeItem.USERHOME.length);
-				x = x.createIfNeeded('~', label => new BaseTreeItem(label));
+		trim(path).split(/[\/\\]/).forEach((segment, i) => {
+			if (i === 0 && folder) {
+				x = x.createIfNeeded(folder.name, () => new FolderTreeItem(folder));
 			} else {
-				path = path.substr(1);
-				x = x.createIfNeeded('/', label => new BaseTreeItem(label));
+				x = x.createIfNeeded(segment, () => new BaseTreeItem(segment));
 			}
-		}
-
-		path.split(/[\/\\]/).forEach(segment => {
-			x = x.createIfNeeded(segment, () => new BaseTreeItem(segment));
 		});
 
-		x.setPath(this._session, fullPath);
 		x.collapsibleState = vscode.TreeItemCollapsibleState.None;
+		x.setPath(this._session, path);
 	}
 }
 
@@ -278,7 +252,7 @@ export function pickLoadedScript() {
 			items = paths.map(path => {
 				return {
 					label: basename(path),
-					description: path
+					description: trim(path)
 				};
 			}).sort((a, b) => a.label.localeCompare(b.label));
 		}
@@ -289,6 +263,26 @@ export function pickLoadedScript() {
 			}
 		});
 	});
+}
+
+let USERHOME: string;
+
+function getUserHome(): string {
+	if (!USERHOME) {
+		USERHOME = require('os').homedir();
+		if (USERHOME && USERHOME[USERHOME.length - 1] !== '/') {
+			USERHOME += '/';
+		}
+	}
+	return USERHOME;
+}
+
+function trim(path: string) : string {
+	path = vscode.workspace.asRelativePath(path);
+	if (path.indexOf('/') === 0) {
+		path = path.replace(getUserHome(), '~/');
+	}
+	return path;
 }
 
 interface OldScriptItem {
