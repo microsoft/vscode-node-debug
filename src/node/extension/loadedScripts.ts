@@ -7,7 +7,7 @@
 import * as vscode from 'vscode';
 import { TreeDataProvider, TreeItem, EventEmitter, Event, ProviderResult } from 'vscode';
 import { localize } from './utilities';
-import { join, basename, isAbsolute } from 'path';
+import { basename } from 'path';
 
 //---- loaded script explorer
 
@@ -33,22 +33,10 @@ export class LoadedScriptsProvider implements TreeDataProvider<BaseTreeItem> {
 
 		context.subscriptions.push(vscode.debug.onDidReceiveDebugSessionCustomEvent(event => {
 
-			let path: string;
+			if (event.event === 'scriptLoaded' && (event.session.type === 'node' || event.session.type === 'node2' || event.session.type === 'extensionHost')) {
 
-			if (event.event === 'scriptLoaded' && (event.session.type === 'node' || event.session.type === 'extensionHost')) {
-				path = event.body.path;
-			}
-
-			if (event.event === 'script' && event.session.type === 'node2') {
-				path = event.body.script.source.path;
-				if (!isAbsolute(path)) {
-					path = join('<node_internals>', path);
-				}
-			}
-
-			if (path) {
 				const sessionRoot = this._root.add(event.session);
-				sessionRoot.addPath(path);
+				sessionRoot.addPath(event.body.path);
 
 				clearTimeout(timeout);
 				timeout = setTimeout(() => {
