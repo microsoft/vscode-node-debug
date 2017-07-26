@@ -21,6 +21,7 @@ export function activate(context: vscode.ExtensionContext) {
 	// launch config magic
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.provideInitialConfigurations', folderUri => createInitialConfigurations(folderUri)));
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.startSession', (config, folderUri) => startSession(config, folderUri)));
+	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.ehStartSession', (config, folderUri) => ehStartSession(config, folderUri)));
 
 	// toggle skipping file action
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.toggleSkippingFile', toggleSkippingFile));
@@ -29,7 +30,7 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.commands.registerCommand('extension.pickNodeProcess', () => pickProcess()));
 
 	// loaded scripts
-	loadedScriptsProvider= new LoadedScriptsProvider(context);
+	loadedScriptsProvider = new LoadedScriptsProvider(context);
 	vscode.window.registerTreeDataProvider('extension.node-debug.loadedScriptsExplorer', loadedScriptsProvider);
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.pickLoadedScript', () => pickLoadedScript()));
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.openScript', (session: vscode.DebugSession, path: string) => openScript(session, path)));
@@ -84,11 +85,11 @@ function createInitialConfigurations(folderUri: vscode.Uri): string {
 		name: localize('node.launch.config.name', "Launch Program")
 	};
 
-	const initialConfigurations = [ config ];
+	const initialConfigurations = [config];
 
 	if (pkg && pkg.name === 'mern-starter') {
 
-		log(localize({ key: 'mern.starter.explanation', comment: [ 'argument contains product name without translation' ]}, "Launch configuration for '{0}' project created.", 'Mern Starter'));
+		log(localize({ key: 'mern.starter.explanation', comment: ['argument contains product name without translation'] }, "Launch configuration for '{0}' project created.", 'Mern Starter'));
 		configureMern(config);
 
 	} else {
@@ -111,7 +112,7 @@ function createInitialConfigurations(folderUri: vscode.Uri): string {
 		// prepare for source maps by adding 'outFiles' if typescript or coffeescript is detected
 		if (vscode.workspace.textDocuments.some(document => document.languageId === 'typescript' || document.languageId === 'coffeescript')) {
 			log(localize('outFiles.explanation', "Adjust glob pattern(s) in the 'outFiles' attribute so that they cover the generated JavaScript."));
-			config['outFiles'] = [ '${workspaceRoot}/out/**/*.js' ];
+			config['outFiles'] = ['${workspaceRoot}/out/**/*.js'];
 		}
 	}
 
@@ -181,7 +182,7 @@ function guessProgramFromPackage(folder: vscode.WorkspaceFolder, jsonObject: any
 	return program;
 }
 
-//---- extension.node-debug.startSession
+//---- extension.node-debug.startSession & extension.node-debug.eh_startSession
 
 /**
  * The result type of the startSession command.
@@ -189,28 +190,6 @@ function guessProgramFromPackage(folder: vscode.WorkspaceFolder, jsonObject: any
 class StartSessionResult {
 	status: 'ok' | 'initialConfiguration' | 'saveConfiguration';
 	content?: string;	// launch.json content for 'save'
-}
-
-/**
- * Tried to find a WorkspaceFolder for the given folderUri.
- * If not found, the first WorkspaceFolder is returned.
- * If the workspace has no folders, undefined is returned.
- */
-function getFolder(folderUri: vscode.Uri | undefined) : vscode.WorkspaceFolder | undefined {
-
-	let folder: vscode.WorkspaceFolder;
-	const folders = vscode.workspace.workspaceFolders;
-	if (folders && folders.length > 0) {
-		folder = folders[0];
-		if (folderUri) {
-			const s = folderUri.toString();
-			const found = folders.filter(f => f.uri.toString() === s);
-			if (found.length > 0) {
-				folder = found[0];
-			}
-		}
-	}
-	return folder;
 }
 
 function startSession(config: any, folderUri: vscode.Uri | undefined): Thenable<StartSessionResult> {
@@ -261,6 +240,42 @@ function startSession(config: any, folderUri: vscode.Uri | undefined): Thenable<
 	});
 }
 
+function ehStartSession(config: any, folderUri: vscode.Uri | undefined): Thenable<StartSessionResult> {
+
+	const folder = getFolder(folderUri);
+
+	if (config.protocol === 'inspector') {
+		config.type = 'extensionHost2'; // for Electron >= 1.7.4
+	}
+	vscode.commands.executeCommand('vscode.startDebug', config, folder.uri);
+
+	return Promise.resolve(<StartSessionResult>{
+		status: 'ok'
+	});
+}
+
+/**
+ * Tried to find a WorkspaceFolder for the given folderUri.
+ * If not found, the first WorkspaceFolder is returned.
+ * If the workspace has no folders, undefined is returned.
+ */
+function getFolder(folderUri: vscode.Uri | undefined): vscode.WorkspaceFolder | undefined {
+
+	let folder: vscode.WorkspaceFolder;
+	const folders = vscode.workspace.workspaceFolders;
+	if (folders && folders.length > 0) {
+		folder = folders[0];
+		if (folderUri) {
+			const s = folderUri.toString();
+			const found = folders.filter(f => f.uri.toString() === s);
+			if (found.length > 0) {
+				folder = found[0];
+			}
+		}
+	}
+	return folder;
+}
+
 function getFreshLaunchConfig(folder: vscode.WorkspaceFolder): any {
 
 	const config: any = {
@@ -294,7 +309,7 @@ function getFreshLaunchConfig(folder: vscode.WorkspaceFolder): any {
 	return config;
 }
 
-function determineDebugType(config: any): Promise<string|null> {
+function determineDebugType(config: any): Promise<string | null> {
 	if (config.request === 'attach' && typeof config.processId === 'string') {
 		return determineDebugTypeForPidConfig(config);
 	} else if (config.protocol === 'legacy') {
@@ -307,7 +322,7 @@ function determineDebugType(config: any): Promise<string|null> {
 	}
 }
 
-function determineDebugTypeForPidConfig(config: any): Promise<string|null> {
+function determineDebugTypeForPidConfig(config: any): Promise<string | null> {
 	const getPidP = isPickProcessCommand(config.processId) ?
 		pickProcess() :
 		Promise.resolve(config.processId);
@@ -354,8 +369,8 @@ function putPidInDebugMode(pid: number): void {
 	}
 }
 
-function determineDebugTypeForPidInDebugMode(config: any, pid: number): Promise<string|null> {
-	let debugProtocolP: Promise<string|null>;
+function determineDebugTypeForPidInDebugMode(config: any, pid: number): Promise<string | null> {
+	let debugProtocolP: Promise<string | null>;
 	if (config.port === INSPECTOR_PORT_DEFAULT) {
 		debugProtocolP = Promise.resolve('inspector');
 	} else if (config.port === LEGACY_PORT_DEFAULT) {
@@ -369,6 +384,6 @@ function determineDebugTypeForPidInDebugMode(config: any, pid: number): Promise<
 	return debugProtocolP.then(debugProtocol => {
 		return debugProtocol === 'inspector' ? 'node2' :
 			debugProtocol === 'legacy' ? 'node' :
-			null;
+				null;
 	});
 }

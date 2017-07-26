@@ -1,7 +1,7 @@
 {
 	"name": "node-debug",
 	"displayName": "Node Debug",
-	"version": "1.15.15",
+	"version": "1.15.16",
 	"publisher": "ms-vscode",
 	"description": "%extension.description%",
 	"icon": "images/node-debug-icon.png",
@@ -77,6 +77,7 @@
 		"onCommand:extension.node-debug.pickLoadedScript",
 		"onCommand:extension.node-debug.provideInitialConfigurations",
 		"onCommand:extension.node-debug.startSession",
+		"onCommand:extension.node-debug.ehStartSession",
 		"onCommand:extension.pickNodeProcess"
 	],
 	"contributes": {
@@ -505,6 +506,7 @@
 				"program": "./out/node/nodeDebug.js",
 				"runtime": "node",
 				"aiKey": "AIF-d9b70cd4-b9f9-4d70-929b-a071c400b217",
+				"startSessionCommand": "extension.node-debug.ehStartSession",
 				"configurationSnippets": [{
 					"label": "%extensionHost.snippet.launch.label%",
 					"description": "%extensionHost.snippet.launch.description%",
@@ -576,6 +578,11 @@
 								"type": ["boolean", "string"],
 								"description": "%trace.description%",
 								"default": true
+							},
+							"protocol": {
+								"type": "string",
+								"enum": [ "legacy", "inspector" ],
+								"default": "legacy"
 							}
 						}
 					}
