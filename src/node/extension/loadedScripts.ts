@@ -7,7 +7,7 @@
 import * as vscode from 'vscode';
 import { TreeDataProvider, TreeItem, EventEmitter, Event, ProviderResult } from 'vscode';
 import { localize } from './utilities';
-import { /* join, dirname,*/ basename } from 'path';
+import { join, basename, isAbsolute } from 'path';
 
 //---- loaded script explorer
 
@@ -32,9 +32,23 @@ export class LoadedScriptsProvider implements TreeDataProvider<BaseTreeItem> {
 		let timeout: NodeJS.Timer;
 
 		context.subscriptions.push(vscode.debug.onDidReceiveDebugSessionCustomEvent(event => {
-			if (event.event === 'scriptLoaded' && (event.session.type === 'node' || event.session.type === 'node2' || event.session.type === 'extensionHost')) {
+
+			let path: string;
+
+			if (event.event === 'scriptLoaded' && (event.session.type === 'node' || event.session.type === 'extensionHost')) {
+				path = event.body.path;
+			}
+
+			if (event.event === 'script' && event.session.type === 'node2') {
+				path = event.body.script.source.path;
+				if (!isAbsolute(path)) {
+					path = join('<node_internals>', path);
+				}
+			}
+
+			if (path) {
 				const sessionRoot = this._root.add(event.session);
-				sessionRoot.addPath(event.body.path);
+				sessionRoot.addPath(path);
 
 				clearTimeout(timeout);
 				timeout = setTimeout(() => {
@@ -70,19 +84,19 @@ class BaseTreeItem extends TreeItem {
 	setPath(session: vscode.DebugSession, path: string): void {
 		this.command = {
 			command: 'extension.node-debug.openScript',
-			arguments: [ session, path ],
+			arguments: [session, path],
 			title: ''
 		};
 	}
 
 	getChildren(): ProviderResult<BaseTreeItem[]> {
 		this.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
-		const array = Object.keys(this._children).map( key => this._children[key] );
+		const array = Object.keys(this._children).map(key => this._children[key]);
 		return array.sort((a, b) => this.compare(a, b));
 	}
 
 	createIfNeeded<T extends BaseTreeItem>(key: string, factory: (label: string) => T): T {
-		let child = <T> this._children[key];
+		let child = <T>this._children[key];
 		if (!child) {
 			child = factory(key);
 			this._children[key] = child;
@@ -210,7 +224,7 @@ class SessionTreeItem extends BaseTreeItem {
 		} else if (path.indexOf('/') === 0) {
 			if (!SessionTreeItem.USERHOME) {
 				SessionTreeItem.USERHOME = require('os').homedir();
-				if (SessionTreeItem.USERHOME && SessionTreeItem.USERHOME[SessionTreeItem.USERHOME.length-1] !== '/') {
+				if (SessionTreeItem.USERHOME && SessionTreeItem.USERHOME[SessionTreeItem.USERHOME.length - 1] !== '/') {
 					SessionTreeItem.USERHOME += '/';
 				}
 			}
@@ -250,7 +264,7 @@ export function pickLoadedScript() {
 
 	return listLoadedScripts(session).then(paths => {
 
-		let options : vscode.QuickPickOptions = {
+		let options: vscode.QuickPickOptions = {
 			placeHolder: localize('select.script', "Select a script"),
 			matchOnDescription: true,
 			matchOnDetail: true,
@@ -259,12 +273,13 @@ export function pickLoadedScript() {
 
 		let items: vscode.QuickPickItem[];
 		if (paths === undefined) {
-			items = [ { label: localize('no.loaded.scripts', "No loaded scripts available"), description: '' } ];
+			items = [{ label: localize('no.loaded.scripts', "No loaded scripts available"), description: '' }];
 		} else {
 			items = paths.map(path => {
 				return {
 					label: basename(path),
-					description: path };
+					description: path
+				};
 			}).sort((a, b) => a.label.localeCompare(b.label));
 		}
 
@@ -285,13 +300,13 @@ interface OldScriptItem {
 	};
 }
 
-function listLoadedScripts(session: vscode.DebugSession | undefined) : Thenable<string[] | undefined> {
+function listLoadedScripts(session: vscode.DebugSession | undefined): Thenable<string[] | undefined> {
 
 	if (session) {
 		return session.customRequest('getLoadedScripts').then(reply => {
 
 			if (reply.loadedScripts) {
-				const old = <OldScriptItem[]> reply.loadedScripts;
+				const old = <OldScriptItem[]>reply.loadedScripts;
 				return old.filter(item => !!item.description).map(item => item.description);
 			} else {
 				return reply.paths;
