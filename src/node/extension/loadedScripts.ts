@@ -7,7 +7,7 @@
 import * as vscode from 'vscode';
 import { TreeDataProvider, TreeItem, EventEmitter, Event, ProviderResult } from 'vscode';
 import { localize } from './utilities';
-import { basename } from 'path';
+import { join, basename } from 'path';
 
 //---- loaded script explorer
 
@@ -193,9 +193,10 @@ class SessionTreeItem extends BaseTreeItem {
 	addPath(path: string): void {
 
 		const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(path));
+		const p = trim(path);
 
 		let x: BaseTreeItem = this;
-		trim(path).split(/[\/\\]/).forEach((segment, i) => {
+		p.split(/[\/\\]/).forEach((segment, i) => {
 			if (i === 0 && folder) {
 				x = x.createIfNeeded(folder.name, () => new FolderTreeItem(folder));
 			} else {
@@ -266,7 +267,15 @@ function getUserHome(): string {
 }
 
 function trim(path: string) : string {
+
+	const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(path));
 	path = vscode.workspace.asRelativePath(path);
+
+	// workaround for https://github.com/Microsoft/vscode/issues/31553
+	if (folder && vscode.workspace.workspaceFolders.length === 1) {
+		path = join(folder.name, path);
+	}
+
 	if (path.indexOf('/') === 0) {
 		path = path.replace(getUserHome(), '~/');
 	}
