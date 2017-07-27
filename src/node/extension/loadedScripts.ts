@@ -25,7 +25,7 @@ export class LoadedScriptsProvider implements TreeDataProvider<BaseTreeItem> {
 		context.subscriptions.push(vscode.debug.onDidStartDebugSession(session => {
 			if (session && (session.type === 'node' || session.type === 'node2')) {
 				this._root.add(session);
-				this._onDidChangeTreeData.fire(this._root);
+				this._onDidChangeTreeData.fire(undefined);
 			}
 		}));
 
@@ -47,7 +47,7 @@ export class LoadedScriptsProvider implements TreeDataProvider<BaseTreeItem> {
 
 		context.subscriptions.push(vscode.debug.onDidTerminateDebugSession(session => {
 			this._root.remove(session.id);
-			this._onDidChangeTreeData.fire(this._root);
+			this._onDidChangeTreeData.fire(undefined);
 		}));
 	}
 
