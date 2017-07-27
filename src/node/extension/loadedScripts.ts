@@ -282,27 +282,11 @@ function trim(path: string) : string {
 	return path;
 }
 
-interface OldScriptItem {
-	label: string;
-	description: string;
-	source: {
-		name: string,
-		path: string
-	};
-}
-
 function listLoadedScripts(session: vscode.DebugSession | undefined): Thenable<string[] | undefined> {
 
 	if (session) {
 		return session.customRequest('getLoadedScripts').then(reply => {
-
-			if (reply.loadedScripts) {
-				const old = <OldScriptItem[]>reply.loadedScripts;
-				return old.filter(item => !!item.description).map(item => item.description);
-			} else {
-				return reply.paths;
-			}
-
+			return reply.paths;
 		}, err => {
 			return undefined;
 		});
