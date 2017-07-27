@@ -193,10 +193,9 @@ class SessionTreeItem extends BaseTreeItem {
 	addPath(path: string): void {
 
 		const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(path));
-		const p = trim(path);
 
 		let x: BaseTreeItem = this;
-		p.split(/[\/\\]/).forEach((segment, i) => {
+		trim(path).split(/[\/\\]/).forEach((segment, i) => {
 			if (i === 0 && folder) {
 				x = x.createIfNeeded(folder.name, () => new FolderTreeItem(folder));
 			} else {
