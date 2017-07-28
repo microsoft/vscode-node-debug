@@ -196,6 +196,9 @@ class SessionTreeItem extends BaseTreeItem {
 
 		let x: BaseTreeItem = this;
 		trim(path).split(/[\/\\]/).forEach((segment, i) => {
+			if (segment.length === 0) {	// macOS or unix path
+				segment = '/';
+			}
 			if (i === 0 && folder) {
 				x = x.createIfNeeded(folder.name, () => new FolderTreeItem(folder));
 			} else {
