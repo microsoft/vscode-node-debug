@@ -7,7 +7,7 @@
 import * as vscode from 'vscode';
 import { TreeDataProvider, TreeItem, EventEmitter, Event, ProviderResult } from 'vscode';
 import { localize } from './utilities';
-import { join, basename } from 'path';
+import { basename } from 'path';
 
 //---- loaded script explorer
 
@@ -267,14 +267,7 @@ function getUserHome(): string {
 
 function trim(path: string) : string {
 
-	const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(path));
-	path = vscode.workspace.asRelativePath(path);
-
-	// workaround for https://github.com/Microsoft/vscode/issues/31553
-	if (folder && vscode.workspace.workspaceFolders.length === 1) {
-		path = join(folder.name, path);
-	}
-
+	path = vscode.workspace.asRelativePath(path, true);
 	if (path.indexOf('/') === 0) {
 		path = path.replace(getUserHome(), '~/');
 	}
