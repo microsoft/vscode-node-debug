@@ -181,8 +181,8 @@ class SessionTreeItem extends BaseTreeItem {
 			return item.folder.index;
 		}
 
-		// <node_internals> come at the very end
-		if (item.label === '<node_internals>') {
+		// <...> come at the very end
+		if (/^<.+>$/.test(item.label)) {
 			return 1000;
 		}
 
