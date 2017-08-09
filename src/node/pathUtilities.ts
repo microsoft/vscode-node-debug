@@ -132,7 +132,14 @@ export function mkdirs(path: string) {
  */
 export function findOnPath(program: string): string | undefined {
 
-	let locator = process.platform === 'win32' ? 'C:\\Windows\\System32\\where.exe' : '/usr/bin/which';
+	let locator: string;
+	if (process.platform === 'win32') {
+		const windir = process.env['WINDIR'] || 'C:\\Windows';
+		locator = Path.join(windir, 'System32', 'where.exe');
+	} else {
+		locator = '/usr/bin/which';
+	}
+
 	try {
 		if (FS.existsSync(locator)) {
 			const lines = CP.execSync(`${locator} ${program}`).toString().split(/\r?\n/);

@@ -4067,7 +4067,9 @@ export class NodeDebugSession extends LoggingDebugSession {
 	private static killTree(processId: number): void {
 
 		if (process.platform === 'win32') {
-			const TASK_KILL = 'C:\\Windows\\System32\\taskkill.exe';
+
+			const windir = process.env['WINDIR'] || 'C:\\Windows';
+			const TASK_KILL = Path.join(windir, 'System32', 'taskkill.exe');
 
 			// when killing a process in Windows its child processes are *not* killed but become root processes.
 			// Therefore we use TASKKILL.EXE
