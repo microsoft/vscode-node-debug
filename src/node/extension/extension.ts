@@ -21,7 +21,6 @@ export function activate(context: vscode.ExtensionContext) {
 	// launch config magic
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.provideInitialConfigurations', folderUri => createInitialConfigurations(folderUri)));
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.startSession', (config, folderUri) => startSession(config, folderUri)));
-	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.ehStartSession', (config, folderUri) => ehStartSession(config, folderUri)));
 
 	// toggle skipping file action
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.toggleSkippingFile', toggleSkippingFile));
@@ -237,20 +236,6 @@ function startSession(config: any, folderUri: vscode.Uri | undefined): Thenable<
 		return <StartSessionResult>{
 			status: 'ok'
 		};
-	});
-}
-
-function ehStartSession(config: any, folderUri: vscode.Uri | undefined): Thenable<StartSessionResult> {
-
-	const folder = getFolder(folderUri);
-
-	if (config.protocol === 'inspector') {
-		config.type = 'extensionHost2'; // for Electron >= 1.7.4
-	}
-	vscode.commands.executeCommand('vscode.startDebug', config, folder ? folder.uri : undefined);
-
-	return Promise.resolve(<StartSessionResult>{
-		status: 'ok'
 	});
 }
 
