@@ -277,7 +277,7 @@
 									"%node.protocol.legacy.description%"
 								],
 								"description": "%node.protocol.description%",
-								"default": "legacy"
+								"default": "inspector"
 							},
 							"program": {
 								"type": "string",
@@ -417,7 +417,7 @@
 									"%node.protocol.legacy.description%"
 								],
 								"description": "%node.protocol.description%",
-								"default": "legacy"
+								"default": "inspector"
 							},
 							"processId": {
 								"type": "string",
