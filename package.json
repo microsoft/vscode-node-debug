@@ -77,7 +77,6 @@
 		"onCommand:extension.node-debug.pickLoadedScript",
 		"onCommand:extension.node-debug.provideInitialConfigurations",
 		"onCommand:extension.node-debug.startSession",
-		"onCommand:extension.node-debug.ehStartSession",
 		"onCommand:extension.pickNodeProcess"
 	],
 	"contributes": {
