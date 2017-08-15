@@ -11,6 +11,8 @@ import { basename } from 'path';
 
 //---- loaded script explorer
 
+const URL_REGEXP = /^(https?:\/\/[^/]+)(\/.*)$/;
+
 export class LoadedScriptsProvider implements TreeDataProvider<BaseTreeItem> {
 
 	private _root: RootTreeItem;
@@ -33,7 +35,7 @@ export class LoadedScriptsProvider implements TreeDataProvider<BaseTreeItem> {
 
 		context.subscriptions.push(vscode.debug.onDidReceiveDebugSessionCustomEvent(event => {
 
-			if (event.event === 'scriptLoaded' && (event.session.type === 'node' || event.session.type === 'node2' || event.session.type === 'extensionHost')) {
+			if (event.event === 'scriptLoaded' && (event.session.type === 'node' || event.session.type === 'node2' || event.session.type === 'extensionHost' || event.session.type === 'chrome')) {
 
 				const sessionRoot = this._root.add(event.session);
 				sessionRoot.addPath(event.body.path);
@@ -192,15 +194,28 @@ class SessionTreeItem extends BaseTreeItem {
 
 	addPath(path: string): void {
 
-		const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(path));
+		let folder: vscode.WorkspaceFolder;
+		let url: string;
+		let p: string;
+
+		const match = URL_REGEXP.exec(path);
+		if (match && match.length === 3) {
+			url = match[1];
+			p = decodeURI(match[2]);
+		} else {
+			folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(path));
+			p = trim(path);
+		}
 
 		let x: BaseTreeItem = this;
-		trim(path).split(/[\/\\]/).forEach((segment, i) => {
+		p.split(/[\/\\]/).forEach((segment, i) => {
 			if (segment.length === 0) {	// macOS or unix path
 				segment = '/';
 			}
 			if (i === 0 && folder) {
 				x = x.createIfNeeded(folder.name, () => new FolderTreeItem(folder));
+			} else if (i === 0 && url) {
+				x = x.createIfNeeded(url, () => new BaseTreeItem(url));
 			} else {
 				x = x.createIfNeeded(segment, () => new BaseTreeItem(segment));
 			}
