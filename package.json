@@ -73,6 +73,7 @@
 	},
 	"main": "./out/node/extension/extension.js",
 	"activationEvents": [
+		"onCommand:workbench.action.debug.start",
 		"onCommand:extension.node-debug.toggleSkippingFile",
 		"onCommand:extension.node-debug.pickLoadedScript",
 		"onCommand:extension.node-debug.provideInitialConfigurations",
