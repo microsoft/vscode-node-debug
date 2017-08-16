@@ -85,8 +85,23 @@
 			"debug": [
 				{
 					"id": "extension.node-debug.loadedScriptsExplorer",
-					"name": "Loaded Scripts",
-					"when": "inDebugMode && _isNodeDebugType"
+					"name": "%loaded.scripts.view.name%",
+					"when": "inDebugMode && debugType == 'node'"
+				},
+				{
+					"id": "extension.node-debug.loadedScriptsExplorer",
+					"name": "%loaded.scripts.view.name%",
+					"when": "inDebugMode && debugType == 'node2'"
+				},
+				{
+					"id": "extension.node-debug.loadedScriptsExplorer",
+					"name": "%loaded.scripts.view.name%",
+					"when": "inDebugMode && debugType == 'extensionHost'"
+				},
+				{
+					"id": "extension.node-debug.loadedScriptsExplorer",
+					"name": "%loaded.scripts.view.name%",
+					"when": "inDebugMode && debugType == 'chrome'"
 				}
 			]
 		},
