@@ -434,6 +434,11 @@
 								"description": "%node.protocol.description%",
 								"default": "inspector"
 							},
+							"cwd": {
+								"type": "string",
+								"description": "%node.launch.cwd.description%",
+								"default": "${workspaceRoot}"
+							},
 							"processId": {
 								"type": "string",
 								"description": "%node.attach.processId.description%",

@@ -215,8 +215,8 @@ function startSession(config: any, folderUri: vscode.Uri | undefined): Thenable<
 		}
 	}
 
-	// make sure that 'launch' configs have a 'cwd' attribute set
-	if (config.request === 'launch' && !config.cwd) {
+	// make sure that configs have a 'cwd' attribute set
+	if (!config.cwd) {
 		if (folder) {
 			config.cwd = folder.uri.fsPath;
 		} else if (config.program) {
