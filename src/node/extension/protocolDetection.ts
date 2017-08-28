@@ -7,6 +7,7 @@
 import * as cp from 'child_process';
 import { log, localize } from './utilities';
 import * as net from 'net';
+import * as WSL from '../subsystemLinux';
 
 export const INSPECTOR_PORT_DEFAULT = 9229;
 export const LEGACY_PORT_DEFAULT = 5858;
@@ -103,7 +104,7 @@ function detectProtocolForLaunch(config: any): string | undefined {
 		return 'inspector';
 	} else {
 		// only determine version if no runtimeExecutable is set (and 'node' on PATH is used)
-		const result = cp.spawnSync('node', ['--version']);
+		const result = WSL.spawnSync(config.useWSL, 'node', ['--version']);
 		const semVerString = result.stdout ? result.stdout.toString() : undefined;
 		if (semVerString) {
 			config.__nodeVersion = semVerString.trim();

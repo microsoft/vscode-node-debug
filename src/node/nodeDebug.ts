@@ -20,6 +20,7 @@ import {
 } from './nodeV8Protocol';
 import {ISourceMaps, SourceMaps, SourceMap} from './sourceMaps';
 import * as PathUtils from './pathUtilities';
+import * as WSL from './subsystemLinux';
 import * as CP from 'child_process';
 import * as Net from 'net';
 import * as URL from 'url';
@@ -299,6 +300,8 @@ interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArguments, C
 	externalConsole?: boolean;
 	/** Where to launch the debug target. */
 	console?: ConsoleType;
+	/** Use Windows Subsystem Linux */
+	useWSL?: boolean;
 }
 
 /**
@@ -839,10 +842,16 @@ export class NodeDebugSession extends LoggingDebugSession {
 			this._console = 'externalTerminal';
 		}
 
+		if (args.useWSL && !WSL.subsystemLinuxPresent) {
+			this.sendErrorResponse(response, 2007, localize('attribute.wls.not.exist', "Cannot find Windows Subsystem Linux installation"));
+		}
+
 		const port = args.port || random(3000, 50000);
 
 		let runtimeExecutable = args.runtimeExecutable;
-		if (runtimeExecutable) {
+		if (args.useWSL) {
+			runtimeExecutable = runtimeExecutable || NodeDebugSession.NODE;
+		} else if (runtimeExecutable) {
 			if (!Path.isAbsolute(runtimeExecutable)) {
 				const re = PathUtils.findOnPath(runtimeExecutable);
 				if (!re) {
@@ -1054,13 +1063,26 @@ export class NodeDebugSession extends LoggingDebugSession {
 			}
 		}
 
+		const wslLaunchArgs = WSL.createLaunchArg(args.useWSL,
+			this._supportsRunInTerminalRequest && this._console === 'externalTerminal',
+			<string> workingDirectory,
+			launchArgs[0],
+			launchArgs.slice(1));
+		// if using subsystem linux, we will trick the debugger to map source files
+		if (args.useWSL && !args.localRoot) {
+			args.localRoot = wslLaunchArgs.localRoot;
+			this._localRoot = wslLaunchArgs.localRoot;
+			args.remoteRoot = wslLaunchArgs.remoteRoot;
+			this._remoteRoot = wslLaunchArgs.remoteRoot;
+		}
+
 		if (this._supportsRunInTerminalRequest && (this._console === 'externalTerminal' || this._console === 'integratedTerminal')) {
 
 			const termArgs : DebugProtocol.RunInTerminalRequestArguments = {
 				kind: this._console === 'integratedTerminal' ? 'integrated' : 'external',
 				title: localize('node.console.title', "Node Debug Console"),
-				cwd: <string> workingDirectory,
-				args: launchArgs,
+				cwd: wslLaunchArgs.cwd,
+				args: wslLaunchArgs.combined,
 				env: envVars
 			};
 
@@ -1069,7 +1091,8 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 					// since node starts in a terminal, we cannot track it with an 'exit' handler
 					// plan for polling after we have gotten the process pid.
-					this._pollForNodeProcess = !args.runtimeExecutable;	// only if no 'runtimeExecutable' is specified
+					this._pollForNodeProcess = !args.runtimeExecutable	// only if no 'runtimeExecutable' is specified
+					                        && !args.useWSL;            // it will not work with WSL either
 
 					if (this._noDebug) {
 						this.sendResponse(response);
@@ -1094,7 +1117,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 				env: envVars
 			};
 
-			const nodeProcess = CP.spawn(runtimeExecutable, launchArgs.slice(1), options);
+			const nodeProcess = CP.spawn(wslLaunchArgs.executable, wslLaunchArgs.args, options);
 			nodeProcess.on('error', (error) => {
 				// tslint:disable-next-line:no-bitwise
 				this.sendErrorResponse(response, 2017, localize('VSND2017', "Cannot launch debug target ({0}).", '{_error}'), { _error: error.message }, ErrorDestination.Telemetry | ErrorDestination.User );
