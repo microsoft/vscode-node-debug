@@ -106,11 +106,12 @@ function detectProtocolForLaunch(config: any): string | undefined {
 		const result = cp.spawnSync('node', ['--version']);
 		const semVerString = result.stdout ? result.stdout.toString() : undefined;
 		if (semVerString) {
-			if (semVerStringToInt(semVerString) >= InspectorMinNodeVersionLaunch) {
-				log(localize('protocol.switch.inspector.version', "Debugging with inspector protocol because Node.js {0} was detected.", semVerString.trim()));
+			config.__nodeVersion = semVerString.trim();
+			if (semVerStringToInt(config.__nodeVersion) >= InspectorMinNodeVersionLaunch) {
+				log(localize('protocol.switch.inspector.version', "Debugging with inspector protocol because Node.js {0} was detected.", config.__nodeVersion));
 				return 'inspector';
 			} else {
-				log(localize('protocol.switch.legacy.version', "Debugging with legacy protocol because Node.js {0} was detected.", semVerString.trim()));
+				log(localize('protocol.switch.legacy.version', "Debugging with legacy protocol because Node.js {0} was detected.", config.__nodeVersion));
 			}
 		} else {
 			log(localize('protocol.switch.unknown.version', "Debugging with legacy protocol because Node.js version could not be determined."));
