@@ -5,6 +5,7 @@
 
 import assert = require('assert');
 import * as Path from 'path';
+import * as FS from 'fs';
 import {DebugProtocol} from 'vscode-debugprotocol';
 import {DebugClient} from 'vscode-debugadapter-testsupport';
 
@@ -72,6 +73,21 @@ suite('Node Debug Adapter', () => {
 				dc.waitForEvent('terminated')
 			]);
 		});
+
+		if (process.platform === 'win32') {
+			const bash32bitPath = Path.join(process.env.SystemRoot, 'SYSNATIVE', 'bash.exe');
+			const bash64bitPath = Path.join(process.env.SystemRoot, 'System32', 'bash.exe');
+			if (FS.existsSync(bash32bitPath) || FS.existsSync(bash64bitPath)) {
+				test('should run program using subsystem linux', () => {
+					const PROGRAM = Path.join(DATA_ROOT, 'program.js');
+					return Promise.all([
+						dc.configurationSequence(),
+						dc.launch({ program: PROGRAM, useWSL: true }),
+						dc.waitForEvent('terminated')
+					]);
+				});
+			}
+		}
 
 		test('should stop on entry', () => {
 
