@@ -1,3 +1,3 @@
 var assert = require('assert');
 
-assert(true);	// bp in 105
+assert.equal(true, true);	// bp in 110
