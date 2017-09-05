@@ -8,6 +8,7 @@
 	"node.label": "Node.js",
 	"open.loaded.script": "開啟已載入的指令碼",
 	"toggle.skipping.this.file": "略過此檔案",
+	"loaded.scripts.view.name": "已載入的指令碼",
 	"smartStep.description": "自動逐步所執行產生無法對應回原始碼的程式碼。",
 	"skipFiles.description": "偵錯時要跳過的檔案 Glob 模式陣列。",
 	"outFiles.description": "如果已啟用來源對應，這些 Glob 模式會指定產生的 JavaScript 檔案。如果模式開頭為 '!'，檔案即遭排除。如果未指定，產生的程式碼就會位於其來源的相同目錄。",
@@ -61,13 +62,5 @@
 	"node.snippet.gulp.label": "Node.js: Gulp 工作",
 	"node.snippet.gulp.description": "對 Gulp 工作偵錯 (確認您的專案中已安裝本機 Gulp)",
 	"node.snippet.electron.label": "Node.js: Electron 主要",
-	"node.snippet.electron.description": "對 Electron 主要處理序偵錯",
-	"extensionHost.label": "VS Code 延伸模組開發",
-	"extensionHost.launch.runtimeExecutable.description": "VS Code 的絕對路徑。",
-	"extensionHost.launch.stopOnEntry.description": "在啟動後自動停止延伸主機。",
-	"extensionHost.launch.sourceMaps.description": "使用 JavaScript 來源對應。",
-	"extensionHost.launch.env.description": "已將環境變數傳遞到延伸模組主機。",
-	"extensionHost.snippet.launch.label": "VS Code 延伸模組開發",
-	"extensionHost.snippet.launch.description": "在偵錯模式中啟動 VS Code 延伸模組",
-	"extensionHost.launch.config.name": "啟動擴充功能"
+	"node.snippet.electron.description": "對 Electron 主要處理序偵錯"
 }

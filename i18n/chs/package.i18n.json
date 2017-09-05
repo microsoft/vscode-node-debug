@@ -8,6 +8,7 @@
 	"node.label": "Node.js",
 	"open.loaded.script": "打开加载脚本",
 	"toggle.skipping.this.file": "切换是否跳过此文件",
+	"loaded.scripts.view.name": "已载入的脚本",
 	"smartStep.description": "自动单步执行无法映射回原始源的生成代码。",
 	"skipFiles.description": "在调试时文件要跳过的一组 glob 模式。",
 	"outFiles.description": "如果启用源映射，则这些 glob 模式将指定生成的 JavaScript 文件。如果模式以 \"!\" 开始，则排除这些文件。如果未指定，则生成的代码应与其源位于同一目录中。",
@@ -61,13 +62,5 @@
 	"node.snippet.gulp.label": "Node.js: Gulp 任务",
 	"node.snippet.gulp.description": "调试 Gulp 任务(确保项目中已安装本地 Gulp)",
 	"node.snippet.electron.label": "Node.js: Electron 主",
-	"node.snippet.electron.description": "调试 Electron 主进程",
-	"extensionHost.label": "VS 代码扩展开发",
-	"extensionHost.launch.runtimeExecutable.description": "VS Code 的绝对路径。",
-	"extensionHost.launch.stopOnEntry.description": "启动后自动停止扩展主机。",
-	"extensionHost.launch.sourceMaps.description": "使用 JavaScript 源映射。",
-	"extensionHost.launch.env.description": "传递到扩展主机的环境变量。",
-	"extensionHost.snippet.launch.label": "VS Code 扩展开发",
-	"extensionHost.snippet.launch.description": "在调试模式下启动 VS Code 扩展",
-	"extensionHost.launch.config.name": "启动扩展"
+	"node.snippet.electron.description": "调试 Electron 主进程"
 }

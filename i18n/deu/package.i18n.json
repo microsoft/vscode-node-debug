@@ -8,6 +8,7 @@
 	"node.label": "Node.js",
 	"open.loaded.script": "Geladenes Skript öffnen",
 	"toggle.skipping.this.file": "Überspringen dieser Datei umschalten",
+	"loaded.scripts.view.name": "Geladene Skripts",
 	"smartStep.description": "Durchläuft automatisch den generierten Code, der nicht der ursprünglichen Quelle erneut zugeordnet werden kann.",
 	"skipFiles.description": "Ein Array für Globmuster für Dateien, die beim Debuggen übersprungen werden.",
 	"outFiles.description": "Wenn Quellzuordnungen aktiviert sind, geben diese Globmuster die generierten JavaScript-Dateien an. Wenn ein Muster mit \"!\" beginnt, werden die Dateien ausgeschlossen. Wenn keine Angabe erfolgt, wird der generierte Code im gleichen Verzeichnis wie seine Quelle erwartet.",
@@ -61,13 +62,5 @@
 	"node.snippet.gulp.label": "Node.js: Gulp-Aufgabe",
 	"node.snippet.gulp.description": "Gulp-Aufgabe debuggen (in Ihrem Projekt muss ein lokales Gulp installiert sein)",
 	"node.snippet.electron.label": "Node.js: Electron-Hauptprozess",
-	"node.snippet.electron.description": "Electron-Hauptprozess debuggen",
-	"extensionHost.label": "VSCode-Erweiterungsentwicklung",
-	"extensionHost.launch.runtimeExecutable.description": "Der absolute Pfad zu VS Code.",
-	"extensionHost.launch.stopOnEntry.description": "Beendet den Erweiterungshost nach dem Start automatisch.",
-	"extensionHost.launch.sourceMaps.description": "Verwendet JavaScript-Quellzuordnungen.",
-	"extensionHost.launch.env.description": "Umgebungsvariablen wurden an den Erweiterungshost weitergegeben.",
-	"extensionHost.snippet.launch.label": "VSCode-Erweiterungsentwicklung",
-	"extensionHost.snippet.launch.description": "VS Code-Erweiterung im Debugmodus starten",
-	"extensionHost.launch.config.name": "Extension starten"
+	"node.snippet.electron.description": "Electron-Hauptprozess debuggen"
 }

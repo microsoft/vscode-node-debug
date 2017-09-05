@@ -8,6 +8,7 @@
 	"node.label": "Node.js",
 	"open.loaded.script": "Ouvrir le script chargé",
 	"toggle.skipping.this.file": "Ignorer/Ne pas ignorer ce fichier",
+	"loaded.scripts.view.name": "Scripts chargés",
 	"smartStep.description": "Exécutez pas à pas de façon automatique le code généré qui ne peut être mappé à la source d'origine.",
 	"skipFiles.description": "Ensemble de modèles Glob de fichiers à ignorer durant le débogage.",
 	"outFiles.description": "Si les mappages de sources sont activés, ces modèles Glob spécifient les fichiers JavaScript générés. Si un modèle commence par '!', les fichiers sont exclus. En l'absence de spécification, le code généré est censé se trouver dans le même répertoire que sa source.",
@@ -61,13 +62,5 @@
 	"node.snippet.gulp.label": "Node.js : tâche Gulp",
 	"node.snippet.gulp.description": "Déboguer une tâche gulp (un gulp local doit être installé dans votre projet)",
 	"node.snippet.electron.label": "Node.js : processus principal Electron",
-	"node.snippet.electron.description": "Déboguer le processus principal Electron",
-	"extensionHost.label": "Développement d'extension VS Code",
-	"extensionHost.launch.runtimeExecutable.description": "Chemin absolu de VS Code.",
-	"extensionHost.launch.stopOnEntry.description": "Arrêtez automatiquement l'hôte d'extension après le lancement.",
-	"extensionHost.launch.sourceMaps.description": "Utilisez des mappages de sources JavaScript.",
-	"extensionHost.launch.env.description": "Variables d'environnement passées à l'hôte d'extension.",
-	"extensionHost.snippet.launch.label": "Développement d'extension VS Code",
-	"extensionHost.snippet.launch.description": "Lancer une extension VS Code en mode débogage",
-	"extensionHost.launch.config.name": "Lancer l'extension"
+	"node.snippet.electron.description": "Déboguer le processus principal Electron"
 }

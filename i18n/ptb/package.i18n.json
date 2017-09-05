@@ -8,6 +8,7 @@
 	"node.label": "Node.js",
 	"open.loaded.script": "Abrir Script Carregado",
 	"toggle.skipping.this.file": "Alternar para ignorar este arquivo",
+	"loaded.scripts.view.name": "Scripts Carregados",
 	"smartStep.description": "Código gerado automaticamente que não pode ser mapeado de volta para o código original. ",
 	"skipFiles.description": "Um array de padrões glob para arquivos a serem ignorados quando estiver depurando.",
 	"outFiles.description": "Se o mapeamento de fonte estiver habilitado, estes padrões glob especificam os arquivos JavaScript gerados. Se um padrão iniciar com '!' os arquivos serão excluídos. Se não especificado, o código gerado é esperado no mesmo diretório que o seu código fonte.",
@@ -61,13 +62,5 @@
 	"node.snippet.gulp.label": "Node.js: tarefa Gulp ",
 	"node.snippet.gulp.description": "Depurar tarefa gulp (certifique-se de ter um gulp local instalado no seu projeto)",
 	"node.snippet.electron.label": "Node.js: Principal Electron",
-	"node.snippet.electron.description": "Depurar o processo principal Electron",
-	"extensionHost.label": "Desenvolvimento de extensão VS Code",
-	"extensionHost.launch.runtimeExecutable.description": "Caminho absoluto do VS Code.",
-	"extensionHost.launch.stopOnEntry.description": "Para automaticamente o host de extensão após a execução.",
-	"extensionHost.launch.sourceMaps.description": "Use mapeamento de fonte JavaScript.",
-	"extensionHost.launch.env.description": "Variáveis de ambiente passadas para o host de extensão.",
-	"extensionHost.snippet.launch.label": "Desenvolvimento de extensão VS Code",
-	"extensionHost.snippet.launch.description": "Executar uma extensão VS Code em modo de depuração",
-	"extensionHost.launch.config.name": "Executar Extensão"
+	"node.snippet.electron.description": "Depurar o processo principal Electron"
 }

@@ -8,6 +8,7 @@
 	"node.label": "Node.js",
 	"open.loaded.script": "Открыть загруженный скрипт",
 	"toggle.skipping.this.file": "Отключить пропуск для этого файла",
+	"loaded.scripts.view.name": "Загруженные сценарии",
 	"smartStep.description": "Автоматическая пошаговая отработка сформированного кода, который невозможно снова добавить в исходный источник.",
 	"skipFiles.description": "Массив масок для файлов, пропускаемых при отладке.",
 	"outFiles.description": "Если включены сопоставления исходного кода, эти глобальные шаблоны указывают созданные файлы JavaScript. Если шаблон начинается с \"!\", файлы исключаются. Если не указан, созданный код должен быть в том же каталоге, что и исходный.",
@@ -61,13 +62,5 @@
 	"node.snippet.gulp.label": "Node.js: задача Gulp",
 	"node.snippet.gulp.description": "Задача Gulp по отладке (убедитесь, что в вашем проекте установлен локальный Gulp)",
 	"node.snippet.electron.label": "Node.js: основной Electron",
-	"node.snippet.electron.description": "Отладка основного процесса Electron",
-	"extensionHost.label": "Разработка расширения VS Code",
-	"extensionHost.launch.runtimeExecutable.description": "Абсолютный путь к VS Code.",
-	"extensionHost.launch.stopOnEntry.description": "Автоматически остановить хост-процесс для расширений после запуска.",
-	"extensionHost.launch.sourceMaps.description": "Использовать карты исходного кода JavaScript.",
-	"extensionHost.launch.env.description": "Переменные среды переданы в хост-процесс для расширений.",
-	"extensionHost.snippet.launch.label": "Разработка расширения VS Code",
-	"extensionHost.snippet.launch.description": "Запуск расширения VS Code в режиме отладки",
-	"extensionHost.launch.config.name": "Запуск расширения"
+	"node.snippet.electron.description": "Отладка основного процесса Electron"
 }

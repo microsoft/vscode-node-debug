@@ -8,6 +8,7 @@
 	"node.label": "Node.js",
 	"open.loaded.script": "Apri script caricato",
 	"toggle.skipping.this.file": "Attiva/disattiva Ignora questo file",
+	"loaded.scripts.view.name": "Script caricati",
 	"smartStep.description": "Esegue automaticamente un'istruzione alla volta del codice generato che non può essere mappato all'origine.",
 	"skipFiles.description": "Matrice di criteri GLOB per i file da ignorare durante il debug.",
 	"outFiles.description": "Se sono abilitati i mapping di origine, questi criteri GLOB specificano i file JavaScript generati. Se un criterio inizia con '!', i file sono esclusi. Se non è specificato, il codice generato dovrebbe trovarsi nella stessa directory dell'origine.",
@@ -61,13 +62,5 @@
 	"node.snippet.gulp.label": "Node.js: attività gulp",
 	"node.snippet.gulp.description": "Esegue il debug dell'attività gulp (assicurarsi che nel progetto sia installata un'istanza locale di gulp)",
 	"node.snippet.electron.label": "Node.js: principale Electron",
-	"node.snippet.electron.description": "Esegue il debug del processo principale Electron",
-	"extensionHost.label": "Sviluppo di estensioni per Visual Studio Code",
-	"extensionHost.launch.runtimeExecutable.description": "Percorso assoluto di Visual Studio Code.",
-	"extensionHost.launch.stopOnEntry.description": "Arresta automaticamente l'host dell'estensione dopo l'avvio.",
-	"extensionHost.launch.sourceMaps.description": "Usa i mapping di origine JavaScript.",
-	"extensionHost.launch.env.description": "Variabili di ambiente passate all'host dell'estensione.",
-	"extensionHost.snippet.launch.label": "Sviluppo di estensioni per Visual Studio Code",
-	"extensionHost.snippet.launch.description": "Avvia un'estensione Visual Studio Code in modalità di debug",
-	"extensionHost.launch.config.name": "Avvia estensione"
+	"node.snippet.electron.description": "Esegue il debug del processo principale Electron"
 }

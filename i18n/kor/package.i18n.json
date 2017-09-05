@@ -8,6 +8,7 @@
 	"node.label": "Node.js",
 	"open.loaded.script": "로드된 스크립트 열기",
 	"toggle.skipping.this.file": "이 파일에 대한 건너뛰기 토글",
+	"loaded.scripts.view.name": "로드된 스크립트",
 	"smartStep.description": "생성된 코드 중 원래 소스로 다시 매핑할 수 없는 코드를 단계별로 자동 실행합니다.",
 	"skipFiles.description": "디버그할 때 건너뛸 파일에 대한 GLOB 패턴의 배열입니다.",
 	"outFiles.description": "소스 맵이 사용되는 경우 이러한 GLOB 패턴은 생성된 JavaScript 파일을 지정합니다. 패턴이 '!'로 시작하면 파일이 제외됩니다. 지정하지 않으면 생성된 코드가 소스와 동일한 디렉터리에 필요합니다.",
@@ -61,13 +62,5 @@
 	"node.snippet.gulp.label": "Node.js: Gulp 작업",
 	"node.snippet.gulp.description": "Gulp 작업 디버그(프로젝트에 로컬 Gulp가 설치되어 있는지 확인하세요.)",
 	"node.snippet.electron.label": "Node.js: Electron 주",
-	"node.snippet.electron.description": "Electron 주 프로세스 디버그",
-	"extensionHost.label": "VS Code 확장 개발",
-	"extensionHost.launch.runtimeExecutable.description": "VS Code의 절대 경로입니다.",
-	"extensionHost.launch.stopOnEntry.description": "시작한 후 자동으로 확장 호스트를 중지합니다.",
-	"extensionHost.launch.sourceMaps.description": "JavaScript 소스 맵을 사용합니다.",
-	"extensionHost.launch.env.description": "확장 호스트에 전달된 환경 변수입니다.",
-	"extensionHost.snippet.launch.label": "VS Code 확장 개발",
-	"extensionHost.snippet.launch.description": "디버그 모드에서 VS Code 확장 시작",
-	"extensionHost.launch.config.name": "확장 시작"
+	"node.snippet.electron.description": "Electron 주 프로세스 디버그"
 }
