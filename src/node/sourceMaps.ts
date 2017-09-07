@@ -33,19 +33,19 @@ export interface ISourceMaps {
 	 * Map source language path to generated path.
 	 * Returns null if not found.
 	 */
-	MapPathFromSource(path: string): Promise<string>;
+	MapPathFromSource(path: string): Promise<string | null>;
 
 	/*
 	 * Map location in source language to location in generated code.
 	 * line and column are 0 based.
 	 */
-	MapFromSource(path: string, line: number, column: number, bias?: Bias): Promise<MappingResult>;
+	MapFromSource(path: string, line: number, column: number, bias?: Bias): Promise<MappingResult | null>;
 
 	/*
 	 * Map location in generated code to location in source language.
 	 * line and column are 0 based.
 	 */
-	MapToSource(pathToGenerated: string, content: string | null, line: number, column: number): Promise<MappingResult>;
+	MapToSource(pathToGenerated: string, content: string | null, line: number, column: number): Promise<MappingResult | null>;
 }
 
 export class SourceMaps implements ISourceMaps {
@@ -88,7 +88,7 @@ export class SourceMaps implements ISourceMaps {
 		}
 	}
 
-	public MapPathFromSource(pathToSource: string): Promise<string> {
+	public MapPathFromSource(pathToSource: string): Promise<string | null> {
 		return this._preLoad.then(() => {
 			return this._findSourceToGeneratedMapping(pathToSource).then(map => {
 				return map ? map.generatedPath() : null;
@@ -96,13 +96,13 @@ export class SourceMaps implements ISourceMaps {
 		});
 	}
 
-	public MapFromSource(pathToSource: string, line: number, column: number, bias?: Bias): Promise<MappingResult> {
+	public MapFromSource(pathToSource: string, line: number, column: number, bias?: Bias): Promise<MappingResult | null> {
 		return this._preLoad.then(() => {
 			return this._findSourceToGeneratedMapping(pathToSource).then(map => {
 				if (map) {
 					line += 1;	// source map impl is 1 based
 					const mr = map.generatedPositionFor(pathToSource, line, column, bias);
-					if (mr && typeof mr.line === 'number') {
+					if (mr && mr.line !== null && mr.column !== null) {
 						return {
 							path: map.generatedPath(),
 							line: mr.line-1,
@@ -124,7 +124,7 @@ export class SourceMaps implements ISourceMaps {
 					if (!mr) {
 						mr = map.originalPositionFor(line, column, Bias.LEAST_UPPER_BOUND);
 					}
-					if (mr && mr.source) {
+					if (mr && mr.source && mr.line !== null && mr.column !== null) {
 						return {
 							path: mr.source,
 							content: (<any>mr).content,
@@ -489,7 +489,7 @@ export class SourceMap {
 	 * Finds the nearest source location for the given location in the generated file.
 	 * Returns null if sourcemap is invalid.
 	 */
-	public originalPositionFor(line: number, column: number, bias: Bias): SM.MappedPosition | null {
+	public originalPositionFor(line: number, column: number, bias: Bias): SM.NullableMappedPosition | null {
 
 		if (!this._smc) {
 			return null;
@@ -522,7 +522,7 @@ export class SourceMap {
 	 * Finds the nearest location in the generated file for the given source location.
 	 * Returns null if sourcemap is invalid.
 	 */
-	public generatedPositionFor(absPath: string, line: number, column: number, bias?: Bias): SM.Position | null {
+	public generatedPositionFor(absPath: string, line: number, column: number, bias?: Bias): SM.NullablePosition | null {
 
 		if (!this._smc) {
 			return null;
