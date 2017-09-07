@@ -1707,7 +1707,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 		}).then(generated => {
 
-			if (PathUtils.pathCompare(generated, path)) {   // if generated and source are the same we don't need a sourcemap
+			if (generated !== null && PathUtils.pathCompare(generated, path)) {   // if generated and source are the same we don't need a sourcemap
 				this.log('bp', `_mapSourceAndUpdateBreakpoints: source and generated are same -> ignore sourcemap`);
 				generated = '';
 			}
@@ -1735,7 +1735,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 						}
 					}
 
-					path = generated;
+					path = <string> generated;
 					path = this._localToRemote(path);
 
 					this._updateBreakpoints(response, path, -1, lbs, true);
@@ -2410,7 +2410,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 				if (compareContents && (script_id || content)) {
 
-					return Promise.all<any>([
+					return Promise.all([
 						this._readFile(path),
 						content
 							? Promise.resolve(content)
@@ -2535,7 +2535,11 @@ export class NodeDebugSession extends LoggingDebugSession {
 				}
 
 				return this._resolveValues( [ scope.object ] ).then(resolved => {
-					return new Scope(scopeName, this._variableHandles.create(new ScopeContainer(scope, resolved[0], extra)), expensive);
+					const x = resolved[0];
+					if (x) {
+						return new Scope(scopeName, this._variableHandles.create(new ScopeContainer(scope, x, extra)), expensive);
+					}
+					return new Scope(scopeName, 0);
 				}).catch(error => {
 					return new Scope(scopeName, 0);
 				});
@@ -2728,11 +2732,13 @@ export class NodeDebugSession extends LoggingDebugSession {
 	 * Create a Variable with the given name and value.
 	 * For structured values the variable object will have a corresponding expander.
 	 */
-	public _createVariable(evalName: string | undefined, name: string, val: V8Handle, doPreview: boolean = true) : Promise<DebugProtocol.Variable | null> {
+	public _createVariable(evalName: string | undefined, name: string, val: V8Handle, doPreview: boolean = true) : Promise<DebugProtocol.Variable> {
 
+		/*
 		if (!val) {
 			return Promise.resolve(null);
 		}
+		*/
 
 		if (!name) {
 			name = '""';
@@ -2987,7 +2993,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 	private _getArraySize(array: V8Object) : Promise<number[]> {
 
-		if (typeof array.vscode_indexedCnt === 'number') {
+		if (typeof array.vscode_indexedCnt === 'number' && typeof array.vscode_namedCnt === 'number') {
 			return Promise.resolve([ array.vscode_indexedCnt, array.vscode_namedCnt ]);
 		}
 
@@ -3466,7 +3472,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 			return script;
 
 		} else {
-
+			// scriptIdOrPath is path
 			this.log('ls', `_loadScript: ${scriptIdOrPath}`);
 
 			// not found
@@ -3482,6 +3488,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 						return new Script(result);
 					}
 				}
+				throw new Error(`script ${scriptIdOrPath} not found`);
 			});
 		}
 	}
@@ -3624,7 +3631,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 				const set = new Set<string | number>();
 				const items = new Array<DebugProtocol.CompletionItem>();
 				for (let r of resolved) {
-					if (r.properties) {
+					if (r && r.properties) {
 						for (let property of r.properties) {
 							if (!isIndex(property.name) && !set.has(property.name)) {
 								set.add(property.name);
@@ -3868,7 +3875,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 		return null;
 	}
 
-	private _resolveValues(mirrors: V8Ref[]) : Promise<V8Object[]> {
+	private _resolveValues(mirrors: V8Ref[]) : Promise<(V8Object | null)[]> {
 
 		const needLookup = new Array<number>();
 		for (let mirror of mirrors) {
@@ -3891,15 +3898,17 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 	private _getCache(m: V8Ref): V8Object | null {
 		if (typeof m.ref === 'number') {
-			return this._refCache.get(m.ref);
+			const r = this._refCache.get(m.ref);
+			return r === undefined ? null : r;
 		}
 		if (typeof m.handle === 'number') {
-			return this._refCache.get(m.handle);
+			const r = this._refCache.get(m.handle);
+			return r === undefined ? null : r;
 		}
 		return null;
 	}
 
-	private _resolveToCache(handles: number[]) : Promise<V8Object[]> {
+	private _resolveToCache(handles: number[]) : Promise<(V8Object | undefined)[]> {
 
 		const lookup = new Array<number>();
 

@@ -11,7 +11,7 @@
 		"noImplicitReturns": true,
 
 		"preserveConstEnums": true,
-		"strictNullChecks": false,
+		"strictNullChecks": true,
 		"noUnusedParameters": false
 	},
 	"exclude": [
