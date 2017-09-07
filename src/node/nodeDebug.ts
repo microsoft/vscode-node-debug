@@ -230,7 +230,6 @@ interface CommonArguments {
 	 * 'va': data structure access
 	 * 'ss': smart steps
 	 * 'rc': ref caching
-	 * 'eh': extensionhost flow
 	 * */
 	trace?: boolean | string;
 	/** The debug port to attach to. */
@@ -745,11 +744,6 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 		this._adapterID = args.adapterID;
 
-		if (this._adapterID === 'extensionHost') {
-			// in VS Code 1.12 Electron's node.js starts to break on every Promise.reject
-			this._skipRejects = true;
-		}
-
 		if (typeof args.supportsRunInTerminalRequest === 'boolean') {
 			this._supportsRunInTerminalRequest = args.supportsRunInTerminalRequest;
 		}
@@ -869,46 +863,6 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 		let runtimeArgs = args.runtimeArgs || [];
 		const programArgs = args.args || [];
-
-		// special code for 'extensionHost' debugging
-		if (this._adapterID === 'extensionHost') {
-
-			let launchArgs = [ runtimeExecutable ];
-			if (!this._noDebug) {
-
-				// we always launch in 'debug-brk' mode, but we only show the break event if 'stopOnEntry' attribute is true.
-				launchArgs.push(`--debugBrkPluginHost=${port}`);
-
-				// pass the debug session ID to the EH so that broadcast events know where they come from
-				if (args.__sessionId) {
-					launchArgs.push(`--debugId=${args.__sessionId}`);
-				}
-			}
-			launchArgs = launchArgs.concat(runtimeArgs, programArgs);
-
-			this.log('eh', `launchRequest: launching extensionhost`);
-			this._sendLaunchCommandToConsole(launchArgs);
-
-			let options;
-			if (args.env) {
-				options = {
-					// merge environment variables into a copy of the process.env
-					env: PathUtils.extendObject(PathUtils.extendObject( {}, process.env), args.env)
-				};
-			}
-
-			const cmd = CP.spawn(runtimeExecutable, launchArgs.slice(1), options);
-			cmd.on('error', (err) => {
-				this._terminated(`failed to launch extensionHost (${err})`);
-				this.log('eh', `launchRequest: failed to launch extensionHost: ${err}`);
-			});
-			this._captureOutput(cmd);
-
-			// we are done!
-			this.sendResponse(response);
-			return;
-		}
-
 
 		let programPath = args.program;
 		if (programPath) {
@@ -1232,13 +1186,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 			return;
 		}
 
-		if (this._adapterID === 'extensionHost') {
-			// in EH mode 'attach' means 'launch' mode
-			this._attachMode = false;
-			this.log('eh', `attachRequest: args: ${JSON.stringify(args)}`);
-		} else {
-			this._attachMode = true;
-		}
+		this._attachMode = true;
 
 		this._attach(response, args, args.port, args.address, args.timeout);
 	}
@@ -1529,16 +1477,6 @@ export class NodeDebugSession extends LoggingDebugSession {
 	//---- disconnect request -------------------------------------------------------------------------------------------------
 
 	protected disconnectRequest(response: DebugProtocol.DisconnectResponse, args: DebugProtocol.DisconnectArguments): void {
-
-		// special code for 'extensionHost' debugging
-		if (this._adapterID === 'extensionHost') {
-			// detect whether this disconnect request is part of a restart session
-			if (this._nodeProcessId > 0 && args && typeof (<any>args).restart === 'boolean' && (<any>args).restart) {
-				// do not kill extensionHost (since vscode will do this for us in a nicer way without killing the window)
-				this._nodeProcessId = 0;
-				this.log('eh', `disconnectRequest: restart session requested`);
-			}
-		}
 
 		this.shutdown();
 
