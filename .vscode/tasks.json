@@ -3,15 +3,24 @@
 	"tasks": [
 		{
 			"type": "npm",
+			"script": "build",
+			"problemMatcher": [
+				"$gulp-tsc"
+			],
+			"isBackground": false,
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"identifier": "build"
+		},
+		{
+			"type": "npm",
 			"script": "watch",
 			"problemMatcher": [
 				"$gulp-tsc"
 			],
-			"isBackground": true,
-			"group": {
-				"kind": "build",
-				"isDefault": true
-			}
+			"isBackground": true
 		}
 	]
 }
