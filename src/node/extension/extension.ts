@@ -92,7 +92,7 @@ function createInitialConfigurations(folderUri: vscode.Uri): string {
 		configureMern(config);
 
 	} else {
-		let program: string | undefined = undefined;
+		let program: string | undefined;
 
 		// try to find a better value for 'program' by analysing package.json
 		if (pkg) {
@@ -149,7 +149,7 @@ function configureMern(config: any) {
 /*
  * try to find the entry point ('main') from the package.json
  */
-function guessProgramFromPackage(folder: vscode.WorkspaceFolder, jsonObject: any): string | undefined {
+function guessProgramFromPackage(folder: vscode.WorkspaceFolder | undefined, jsonObject: any): string | undefined {
 
 	let program: string | undefined;
 
@@ -162,14 +162,14 @@ function guessProgramFromPackage(folder: vscode.WorkspaceFolder, jsonObject: any
 		}
 
 		if (program) {
-			let path;
+			let path : string | undefined;
 			if (isAbsolute(program)) {
 				path = program;
 			} else {
-				path = join(folder.uri.fsPath, program);
+				path = folder ? join(folder.uri.fsPath, program) : undefined;
 				program = join('${workspaceRoot}', program);
 			}
-			if (!fs.existsSync(path) && !fs.existsSync(path + '.js')) {
+			if (path && !fs.existsSync(path) && !fs.existsSync(path + '.js')) {
 				return undefined;
 			}
 		}
@@ -246,7 +246,7 @@ function startSession(config: any, folderUri: vscode.Uri | undefined): Thenable<
  */
 function getFolder(folderUri: vscode.Uri | undefined): vscode.WorkspaceFolder | undefined {
 
-	let folder: vscode.WorkspaceFolder;
+	let folder: vscode.WorkspaceFolder | undefined;
 	const folders = vscode.workspace.workspaceFolders;
 	if (folders && folders.length > 0) {
 		folder = folders[0];
@@ -261,7 +261,7 @@ function getFolder(folderUri: vscode.Uri | undefined): vscode.WorkspaceFolder | 
 	return folder;
 }
 
-function getFreshLaunchConfig(folder: vscode.WorkspaceFolder): any {
+function getFreshLaunchConfig(folder: vscode.WorkspaceFolder | undefined): any {
 
 	const config: any = {
 		type: 'node',
