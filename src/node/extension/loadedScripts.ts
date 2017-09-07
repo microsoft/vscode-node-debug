@@ -194,7 +194,7 @@ class SessionTreeItem extends BaseTreeItem {
 
 	addPath(path: string): void {
 
-		let folder: vscode.WorkspaceFolder;
+		let folder: vscode.WorkspaceFolder | undefined;
 		let url: string;
 		let p: string;
 
@@ -213,7 +213,7 @@ class SessionTreeItem extends BaseTreeItem {
 				segment = '/';
 			}
 			if (i === 0 && folder) {
-				x = x.createIfNeeded(folder.name, () => new FolderTreeItem(folder));
+				x = x.createIfNeeded(folder.name, () => new FolderTreeItem(<vscode.WorkspaceFolder>folder));
 			} else if (i === 0 && url) {
 				x = x.createIfNeeded(url, () => new BaseTreeItem(url));
 			} else {
@@ -306,12 +306,11 @@ function listLoadedScripts(session: vscode.DebugSession | undefined): Thenable<s
 }
 
 export function openScript(session: vscode.DebugSession | undefined, path: string) {
-	let uri = vscode.Uri.parse(`debug:${path}?session=${session.id}`);
-	/*
-	let furi = vscode.Uri.file(path);
-	const s = furi.toString().replace('file:', 'debug:');
-	const x = `${s}?session=${session.id}`;
-	let uri = vscode.Uri.parse(x);
-	*/
+	let fileUri = vscode.Uri.file(path);
+	let debug = fileUri.toString().replace('file:', 'debug:');
+	if (session) {
+		debug = `${debug}?session=${session.id}`;
+	}
+	let uri = vscode.Uri.parse(debug);
 	vscode.workspace.openTextDocument(uri).then(doc => vscode.window.showTextDocument(doc));
 }
