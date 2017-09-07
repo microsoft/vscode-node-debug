@@ -1,37 +1,17 @@
 {
 	"version": "2.0.0",
-	"command": "./node_modules/.bin/gulp",
-	"windows": {
-		"command": ".\\node_modules\\.bin\\gulp"
-	},
-	"type": "shell",
 	"tasks": [
 		{
-			"taskName": "ts-watch",
-			"args": [
-				"--no-color"
+			"type": "npm",
+			"script": "watch",
+			"problemMatcher": [
+				"$gulp-tsc"
 			],
-			"group": "build",
 			"isBackground": true,
-			"problemMatcher": {
-				"owner": "typescript",
-				"applyTo": "closedDocuments",
-				"fileLocation": [ "absolute" ],
-				"pattern": {
-					"regexp": "Error: ([^(]+)\\((\\d+|\\d+,\\d+|\\d+,\\d+,\\d+,\\d+)\\): (.*)$",
-					"file": 1,
-					"location": 2,
-					"message": 3
-				},
-				"background": {
-					"beginsPattern": "Starting compilation",
-					"endsPattern": "Finished compilation"
-				}
+			"group": {
+				"kind": "build",
+				"isDefault": true
 			}
-		},
-		{
-			"taskName": "tslint",
-			"problemMatcher": "$tslint5"
 		}
 	]
 }
