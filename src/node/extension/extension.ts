@@ -181,7 +181,7 @@ function guessProgramFromPackage(folder: vscode.WorkspaceFolder | undefined, jso
 	return program;
 }
 
-//---- extension.node-debug.startSession & extension.node-debug.eh_startSession
+//---- extension.node-debug.startSession
 
 /**
  * The result type of the startSession command.
