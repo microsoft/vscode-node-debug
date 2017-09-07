@@ -144,7 +144,7 @@ export class SourceMaps implements ISourceMaps {
 	 * Tries to find a SourceMap for the given source.
 	 * This is a bit tricky because the source does not contain any information about where
 	 * the generated code or the source map is located.
-	 * The code relies on the source cache populated by the exhaustive search over the 'outDirs' glob patterns
+	 * The code relies on the source cache populated by the exhaustive search over the 'outFiles' glob patterns
 	 * and some heuristics.
 	 */
 	private _findSourceToGeneratedMapping(pathToSource: string): Promise<SourceMap | null> {
@@ -162,7 +162,7 @@ export class SourceMaps implements ISourceMaps {
 
 		let pathToGenerated = pathToSource;
 
-		return Promise.resolve(map).then(map => {
+		return Promise.resolve(null).then(map => {
 
 			// heuristic: try to find the generated code side by side to the source
 			const ext = Path.extname(pathToSource);
@@ -290,21 +290,23 @@ export class SourceMaps implements ISourceMaps {
 		// use sha256 to ensure the hash value can be used in filenames
 		const hash = CRYPTO.createHash('sha256').update(uri.uri()).digest('hex');
 
-		let promise: Promise<SourceMap | null> = this._sourceMapCache.get(hash);
-		if (!promise) {
-			try {
-				promise = this._loadSourceMap(uri, pathToGenerated, hash)
-					.catch(err => {
-						this._log(`_loadSourceMap: loading source map '${uri.uri()}' failed with exception: ${err}`);
-						return null;
-					});
-				this._sourceMapCache.set(hash, promise);
-			} catch (err) {
-				this._log(`_loadSourceMap: loading source map '${uri.uri()}' failed with exception: ${err}`);
-				promise = Promise.resolve(null);
-			}
+		let promise = this._sourceMapCache.get(hash);
+		if (promise) {
+			return promise;
 		}
-		return promise;
+
+		try {
+			const prom = this._loadSourceMap(uri, pathToGenerated, hash)
+				/*.catch(err => {
+					this._log(`_loadSourceMap: loading source map '${uri.uri()}' failed with exception: ${err}`);
+					return null;
+				})*/;
+			this._sourceMapCache.set(hash, prom);
+			return prom;
+		} catch (err) {
+			this._log(`_loadSourceMap: loading source map '${uri.uri()}' failed with exception: ${err}`);
+			return Promise.resolve(null);
+		}
 	}
 
 	/**
