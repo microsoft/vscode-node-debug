@@ -14,11 +14,12 @@
 	"license": "MIT",
 	"private": true,
 	"scripts": {
-		"prepublish": "gulp build",
+		"postinstall": "node ./node_modules/vscode/bin/install",
 		"build": "gulp build",
+		"watch": "gulp watch",
 		"test": "mocha --timeout 10000 -u tdd ./out/tests/",
 		"nodemon": "nodemon --debug --nolazy ./out/node/nodeDebug.js --server=4711",
-		"postinstall": "node ./node_modules/vscode/bin/install"
+		"prepublish": "gulp build"
 	},
 	"engines": {
 		"vscode": "^1.16.0",
@@ -60,7 +61,7 @@
 		"mocha": "^3.5.0",
 		"tslint": "^5.7.0",
 		"tsutils": "^2.8.2",
-		"typescript": "^2.2.1",
+		"typescript": "2.5.2",
 		"vscode": "^1.1.5",
 		"vscode-nls-dev": "^2.1.3",
 		"vscode-debugadapter-testsupport": "^1.23.0",
