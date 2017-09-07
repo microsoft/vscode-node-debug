@@ -83,7 +83,7 @@ gulp.task('clean', function() {
 	return del(['out/**', 'package.nls.*.json', 'node-debug-*.vsix']);
 })
 
-gulp.task('ts-watch', ['internal-build'], function(cb) {
+gulp.task('watch', ['internal-build'], function(cb) {
 	log('Watching build sources...');
 	gulp.watch(watchedSources, ['internal-build']);
 });
