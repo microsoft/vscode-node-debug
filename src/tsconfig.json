@@ -1,17 +1,21 @@
 {
 	"compilerOptions": {
 		"module": "commonjs",
-		"moduleResolution": "node",
+		"target": "es6",
+
 		"noImplicitAny": false,
 		"removeComments": false,
+		"noUnusedLocals": true,
+		"noImplicitThis": true,
+		"noFallthroughCasesInSwitch": false,
+		"noImplicitReturns": true,
+
 		"preserveConstEnums": true,
-		"target": "es5",
 		"strictNullChecks": false,
-		"noUnusedParameters": false,
-		"noUnusedLocals": true
+		"noUnusedParameters": false
 	},
 	"exclude": [
 		"node_modules",
-		".vscode-test"
+		"testdata/"
 	]
 }
