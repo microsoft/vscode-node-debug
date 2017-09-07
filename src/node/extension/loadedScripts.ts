@@ -305,7 +305,13 @@ function listLoadedScripts(session: vscode.DebugSession | undefined): Thenable<s
 	}
 }
 
-export function openScript(session: vscode.DebugSession, path: string) {
+export function openScript(session: vscode.DebugSession | undefined, path: string) {
 	let uri = vscode.Uri.parse(`debug:${path}?session=${session.id}`);
+	/*
+	let furi = vscode.Uri.file(path);
+	const s = furi.toString().replace('file:', 'debug:');
+	const x = `${s}?session=${session.id}`;
+	let uri = vscode.Uri.parse(x);
+	*/
 	vscode.workspace.openTextDocument(uri).then(doc => vscode.window.showTextDocument(doc));
 }
