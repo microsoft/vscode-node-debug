@@ -72,11 +72,9 @@
 	},
 	"main": "./out/node/extension/extension.js",
 	"activationEvents": [
-		"onCommand:workbench.action.debug.start",
+		"onDebug",
 		"onCommand:extension.node-debug.toggleSkippingFile",
 		"onCommand:extension.node-debug.pickLoadedScript",
-		"onCommand:extension.node-debug.provideInitialConfigurations",
-		"onCommand:extension.node-debug.startSession",
 		"onCommand:extension.pickNodeProcess"
 	],
 	"contributes": {
@@ -150,9 +148,7 @@
 					"PickProcess": "extension.pickNodeProcess"
 				},
 				"aiKey": "AIF-d9b70cd4-b9f9-4d70-929b-a071c400b217",
-				"initialConfigurations": "extension.node-debug.provideInitialConfigurations",
 				"languages": ["javascript", "typescript", "javascriptreact", "typescriptreact"],
-				"startSessionCommand": "extension.node-debug.startSession",
 				"configurationSnippets": [
 					{
 						"label": "%node.snippet.launch.label%",
