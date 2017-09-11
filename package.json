@@ -171,7 +171,7 @@
 							"runtimeArgs": [
 								"run-script", "debug"
 							],
-							"port": 5858
+							"port": 9229
 						}
 					},
 					{
@@ -181,7 +181,7 @@
 							"type": "node",
 							"request": "attach",
 							"name": "${1:Attach}",
-							"port": 5858
+							"port": 9229
 						}
 					},
 					{
@@ -192,7 +192,7 @@
 							"request": "attach",
 							"name": "${1:Attach to Remote}",
 							"address": "${2:TCP/IP address of process to be debugged}",
-							"port": 5858,
+							"port": 9229,
 							"localRoot": "^\"\\${workspaceRoot}\"",
 							"remoteRoot": "${3:Absolute path to the remote directory containing the program}"
 						}
@@ -366,7 +366,7 @@
 							"port": {
 								"type": "number",
 								"description": "%node.port.description%",
-								"default": 5858
+								"default": 9229
 							},
 							"address": {
 								"type": "string",
@@ -442,7 +442,7 @@
 							"port": {
 								"type": "number",
 								"description": "%node.port.description%",
-								"default": 5858
+								"default": 9229
 							},
 							"address": {
 								"type": "string",
