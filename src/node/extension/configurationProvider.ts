@@ -67,7 +67,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 	 */
 	resolveDebugConfiguration(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration, token?: vscode.CancellationToken): vscode.ProviderResult<vscode.DebugConfiguration> {
 
-		if (!config.program || !config.request || !config.type) {
+		if ((!config.program && config.request === 'launch') || !config.request || !config.type) {
 			// probably a missing launch.json for the "no-folder" case
 			config = getFreshLaunchConfig(folder);
 			if (!config.program) {
