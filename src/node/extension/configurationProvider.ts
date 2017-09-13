@@ -67,8 +67,8 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 	 */
 	resolveDebugConfiguration(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration, token?: vscode.CancellationToken): vscode.ProviderResult<vscode.DebugConfiguration> {
 
-		if ((!config.program && config.request === 'launch') || !config.request || !config.type) {
-			// probably a missing launch.json for the "no-folder" case
+		if (!config.type && !config.request && !config.name) {
+			// probably a missing launch.json
 			config = getFreshLaunchConfig(folder);
 			if (!config.program) {
 				const message = localize('program.not.found.message', "Cannot find a program to debug");
