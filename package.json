@@ -1,7 +1,7 @@
 {
 	"name": "node-debug",
 	"displayName": "Node Debug",
-	"version": "1.17.3",
+	"version": "1.17.4",
 	"publisher": "ms-vscode",
 	"description": "%extension.description%",
 	"icon": "images/node-debug-icon.png",
@@ -22,7 +22,7 @@
 		"prepublish": "gulp build"
 	},
 	"engines": {
-		"vscode": "^1.16.0",
+		"vscode": "^1.17.0",
 		"node": "^7.4.0"
 	},
 	"extensionDependencies": [
