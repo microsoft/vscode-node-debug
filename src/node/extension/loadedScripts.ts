@@ -13,6 +13,29 @@ import { basename } from 'path';
 
 const URL_REGEXP = /^(https?:\/\/[^/]+)(\/.*)$/;
 
+class Source {
+	name: string;
+	path: string;
+	sourceReference: number;
+
+	constructor(path: string) {
+		this.name = basename(path);
+		this.path = path;
+	}
+}
+
+class LoadedScriptItem implements vscode.QuickPickItem {
+	label: string;
+	description: string;
+	source?: Source;
+
+	constructor(source: Source) {
+		this.label = basename(source.path);
+		this.description = source.path;
+		this.source = source;
+	}
+}
+
 export class LoadedScriptsProvider implements TreeDataProvider<BaseTreeItem> {
 
 	private _root: RootTreeItem;
@@ -35,16 +58,22 @@ export class LoadedScriptsProvider implements TreeDataProvider<BaseTreeItem> {
 
 		context.subscriptions.push(vscode.debug.onDidReceiveDebugSessionCustomEvent(event => {
 
-			if (event.event === 'scriptLoaded' && (event.session.type === 'node' || event.session.type === 'node2' || event.session.type === 'extensionHost' || event.session.type === 'chrome')) {
+			if ((event.event === 'scriptLoaded' || event.event === 'loadedSource') && (event.session.type === 'node' || event.session.type === 'node2' || event.session.type === 'extensionHost' || event.session.type === 'chrome')) {
 
 				const sessionRoot = this._root.add(event.session);
-				sessionRoot.addPath(event.body.path);
+
+				if (event.event === 'scriptLoaded' ) {
+					sessionRoot.addPath(new Source(event.body.path));
+				} else {
+					sessionRoot.addPath(<Source> event.body.source);
+				}
 
 				clearTimeout(timeout);
 				timeout = setTimeout(() => {
 					this._onDidChangeTreeData.fire(undefined);
 				}, 300);
 			}
+
 		}));
 
 		context.subscriptions.push(vscode.debug.onDidTerminateDebugSession(session => {
@@ -71,10 +100,10 @@ class BaseTreeItem extends TreeItem {
 		this._children = {};
 	}
 
-	setPath(session: vscode.DebugSession, path: string): void {
+	setSource(session: vscode.DebugSession, source: Source): void {
 		this.command = {
 			command: 'extension.node-debug.openScript',
-			arguments: [session, path],
+			arguments: [session, source],
 			title: ''
 		};
 	}
@@ -192,11 +221,13 @@ class SessionTreeItem extends BaseTreeItem {
 		return 999;
 	}
 
-	addPath(path: string): void {
+	addPath(source: Source): void {
 
 		let folder: vscode.WorkspaceFolder | undefined;
 		let url: string;
 		let p: string;
+
+		let path = source.path;
 
 		const match = URL_REGEXP.exec(path);
 		if (match && match.length === 3) {
@@ -222,7 +253,7 @@ class SessionTreeItem extends BaseTreeItem {
 		});
 
 		x.collapsibleState = vscode.TreeItemCollapsibleState.None;
-		x.setPath(this._session, path);
+		x.setSource(this._session, source);
 	}
 }
 
@@ -242,7 +273,7 @@ export function pickLoadedScript() {
 
 	const session = vscode.debug.activeDebugSession;
 
-	return listLoadedScripts(session).then(paths => {
+	return listLoadedScripts(session).then(sources => {
 
 		let options: vscode.QuickPickOptions = {
 			placeHolder: localize('select.script', "Select a script"),
@@ -251,21 +282,16 @@ export function pickLoadedScript() {
 			ignoreFocusOut: true
 		};
 
-		let items: vscode.QuickPickItem[];
-		if (paths === undefined) {
-			items = [{ label: localize('no.loaded.scripts', "No loaded scripts available"), description: '' }];
+		let items: LoadedScriptItem[];
+		if (sources === undefined) {
+			items = [ { label: localize('no.loaded.scripts', "No loaded scripts available"), description: '' }];
 		} else {
-			items = paths.map(path => {
-				return {
-					label: basename(path),
-					description: trim(path)
-				};
-			}).sort((a, b) => a.label.localeCompare(b.label));
+			items = sources.map(source => new LoadedScriptItem(source)).sort((a, b) => a.label.localeCompare(b.label));
 		}
 
 		vscode.window.showQuickPick(items, options).then(item => {
-			if (item && item.description) {
-				openScript(session, item.description);
+			if (item && item.source) {
+				openScript(session, item.source);
 			}
 		});
 	});
@@ -292,24 +318,38 @@ function trim(path: string) : string {
 	return path;
 }
 
-function listLoadedScripts(session: vscode.DebugSession | undefined): Thenable<string[] | undefined> {
+function listLoadedScripts(session: vscode.DebugSession | undefined): Thenable<Source[] | undefined> {
 
 	if (session) {
+
+		// first try obsolete 'getLoadedScripts'
 		return session.customRequest('getLoadedScripts').then(reply => {
-			return reply.paths;
+			return reply.paths.map(path => new Source(path));
 		}, err => {
-			return undefined;
+			// then use official DAP request 'loadedSources'
+			return session.customRequest('loadedSources').then(reply => {
+				return <Source[]>reply.sources;
+			}, err => {
+				return undefined;
+			});
 		});
+
 	} else {
 		return Promise.resolve(undefined);
 	}
 }
 
-export function openScript(session: vscode.DebugSession | undefined, path: string) {
-	let fileUri = vscode.Uri.file(path);
+export function openScript(session: vscode.DebugSession | undefined, source: Source) {
+	let fileUri = vscode.Uri.file(source.path);
 	let debug = fileUri.toString().replace('file:', 'debug:');
+	let sep = '?';
 	if (session) {
-		debug = `${debug}?session=${session.id}`;
+		debug = `${debug}${sep}session=${session.id}`;
+		sep = '&';
+	}
+	if (source.sourceReference) {
+		debug = `${debug}${sep}sourceRef=${source.sourceReference}`;
+		sep = '&';
 	}
 	let uri = vscode.Uri.parse(debug);
 	vscode.workspace.openTextDocument(uri).then(doc => vscode.window.showTextDocument(doc));

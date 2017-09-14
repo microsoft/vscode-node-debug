@@ -25,7 +25,7 @@ export function activate(context: vscode.ExtensionContext) {
 	// loaded scripts
 	vscode.window.registerTreeDataProvider('extension.node-debug.loadedScriptsExplorer', new LoadedScriptsProvider(context));
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.pickLoadedScript', () => pickLoadedScript()));
-	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.openScript', (session: vscode.DebugSession, path: string) => openScript(session, path)));
+	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.openScript', (session: vscode.DebugSession, source) => openScript(session, source)));
 }
 
 export function deactivate() {

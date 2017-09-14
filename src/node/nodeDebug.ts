@@ -6,7 +6,7 @@
 import {
 	LoggingDebugSession, DebugSession, Logger, logger,
 	Thread, Source, StackFrame, Scope, Variable, Breakpoint,
-	Event, TerminatedEvent, InitializedEvent, StoppedEvent, OutputEvent,
+	TerminatedEvent, InitializedEvent, StoppedEvent, OutputEvent, LoadedSourceEvent,
 	Handles, ErrorDestination
 } from 'vscode-debugadapter';
 import {DebugProtocol} from 'vscode-debugprotocol';
@@ -441,7 +441,8 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 		this._node.on('afterCompile', (event: NodeV8Event) => {
 			//this.outLine(`afterCompile ${this._scriptToPath(event.body.script)}`);
-			this.sendEvent(new Event('scriptLoaded', { path: this._scriptToPath(event.body.script) }));
+			this.sendEvent(new LoadedSourceEvent('new', this._scriptToSource(event.body.script)));
+			//this.sendEvent(new Event('scriptLoaded', { path: this._scriptToPath(event.body.script) }));
 		});
 
 		this._node.on('close', (event: NodeV8Event) => {
@@ -692,6 +693,24 @@ export class NodeDebugSession extends LoggingDebugSession {
 			name = `VM${script.id}`;
 		}
 		return `${NodeDebugSession.NODE_INTERNALS}/${name}`;
+	}
+
+	/**
+	 * create a Source for a script following these rules:
+	 * - script name is an absolute path: return name as is
+	 * - script name is an internal module: return "<node_internals/name"
+	 * - script has no name: return "<node_internals/VMnnn" where nnn is the script ID
+	 */
+	private _scriptToSource(script: V8Script): Source {
+		let path = script.name;
+		if (path) {
+			if (!PathUtils.isAbsolutePath(path)) {
+				path = `${NodeDebugSession.NODE_INTERNALS}/${path}`;
+			}
+		} else {
+			path = `${NodeDebugSession.NODE_INTERNALS}/VM${script.id}`;
+		}
+		return new Source(Path.basename(path), path, this._getScriptIdHandle(script.id));
 	}
 
 	/**
@@ -3335,7 +3354,13 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 	protected sourceRequest(response: DebugProtocol.SourceResponse, args: DebugProtocol.SourceArguments): void {
 
-		// first try to use 'source'
+		// first try to use 'source.sourceReference'
+		if (args.source && args.source.sourceReference) {
+			this.sourceRequest2(response, args.source.sourceReference);
+			return;
+		}
+
+		// then try to use 'source.path'
 		if (args.source && args.source.path) {
 
 			this._loadScript(this._pathToScript(args.source.path)).then(script => {
@@ -3352,7 +3377,13 @@ export class NodeDebugSession extends LoggingDebugSession {
 		}
 
 		// try to use 'sourceReference'
-		const srcSource = this._sourceHandles.get(args.sourceReference);
+		return this.sourceRequest2(response, args.sourceReference);
+	}
+
+	private sourceRequest2(response: DebugProtocol.SourceResponse, sourceReference: number): void {
+
+		// try to use 'sourceReference'
+		const srcSource = this._sourceHandles.get(sourceReference);
 		if (srcSource) {
 
 			if (srcSource.source) {		// script content already cached
@@ -3664,6 +3695,19 @@ export class NodeDebugSession extends LoggingDebugSession {
 		}
 	}
 
+	//--- exception info request ----------------------------------------------------------------------------------------------
+
+	protected loadedSourcesRequest(response: DebugProtocol.LoadedSourcesResponse, args: DebugProtocol.LoadedSourcesArguments) {
+
+		this._node.scripts({ types: 4 }).then(resp => {
+			let sources = resp.body.map(script => this._scriptToSource(script));
+			response.body = { sources: sources };
+			this.sendResponse(response);
+		}).catch(err => {
+			this.sendErrorResponse(response, 9999, `scripts error: ${err}`);
+		});
+	}
+
 	//--- custom request ------------------------------------------------------------------------------------------------------
 
 	/**
@@ -3672,9 +3716,6 @@ export class NodeDebugSession extends LoggingDebugSession {
 	protected customRequest(command: string, response: DebugProtocol.Response, args: any): void {
 
 		switch (command) {
-			case 'getLoadedScripts':
-				this.allLoadedScriptsRequest(response, args);
-				break;
 			case 'toggleSkipFileStatus':
 				this.toggleSkippingResource(response, args.resource);
 				break;
@@ -3682,17 +3723,6 @@ export class NodeDebugSession extends LoggingDebugSession {
 				super.customRequest(command, response, args);
 				break;
 		}
-	}
-
-	private allLoadedScriptsRequest(response: DebugProtocol.Response, args: any) {
-
-		this._node.scripts( { types: 4 } ).then(resp => {
-			let paths = resp.body.map(script => this._scriptToPath(script));
-			response.body = { paths: paths };
-			this.sendResponse(response);
-		}).catch(err => {
-			this.sendErrorResponse(response, 9999, `scripts error: ${err}`);
-		});
 	}
 
 	//---- private helpers ----------------------------------------------------------------------------------------------------
