@@ -88,6 +88,13 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 			}
 		}
 
+		if (process.platform === 'win32' && config.request === 'launch' && typeof config.useWSL !== 'boolean') {
+			const HOME = <string> process.env.HOME;
+			if (HOME && HOME.indexOf('/home/') === 0) {
+				config.useWSL = true;
+			}
+		}
+
 		// determine which protocol to use
 		return determineDebugType(config).then(debugType => {
 
