@@ -409,6 +409,11 @@
 								"description": "%node.showAsyncStacks.description%",
 								"default": true
 							},
+							"useWSL": {
+								"type": "boolean",
+								"description": "%node.launch.useWSL.description%",
+								"default": true
+							},
 							"trace": {
 								"type": ["boolean", "string"],
 								"description": "%trace.description%",
