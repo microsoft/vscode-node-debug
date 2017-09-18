@@ -1065,7 +1065,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 					// since node starts in a terminal, we cannot track it with an 'exit' handler
 					// plan for polling after we have gotten the process pid.
 					this._pollForNodeProcess = !args.runtimeExecutable	// only if no 'runtimeExecutable' is specified
-					                        && !args.useWSL;            // it will not work with WSL either
+											&& !args.useWSL;			// it will not work with WSL either
 
 					if (this._noDebug) {
 						this.sendResponse(response);
