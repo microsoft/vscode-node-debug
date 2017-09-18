@@ -7,7 +7,7 @@
 import * as cp from 'child_process';
 import { log, localize } from './utilities';
 import * as net from 'net';
-import * as WSL from '../subsystemLinux';
+import * as WSL from '../wslSupport';
 
 export const INSPECTOR_PORT_DEFAULT = 9229;
 export const LEGACY_PORT_DEFAULT = 5858;

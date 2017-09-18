@@ -20,7 +20,7 @@ import {
 } from './nodeV8Protocol';
 import {ISourceMaps, SourceMaps, SourceMap} from './sourceMaps';
 import * as PathUtils from './pathUtilities';
-import * as WSL from './subsystemLinux';
+import * as WSL from './wslSupport';
 import * as CP from 'child_process';
 import * as Net from 'net';
 import * as URL from 'url';

@@ -11,8 +11,7 @@ const isWindows = process.platform === 'win32';
 const is64bit = process.arch === 'x64';
 
 
-
-export function subsystemLinuxPresent() : boolean {
+export function subsystemLinuxPresent(): boolean {
 	if (!isWindows) {
 		return false;
 	}
@@ -22,14 +21,14 @@ export function subsystemLinuxPresent() : boolean {
 	return fs.existsSync(bashPathHost);
 }
 
-function windowsPathToWSLPath(windowsPath: string | undefined) : string | undefined {
+function windowsPathToWSLPath(windowsPath: string | undefined): string | undefined {
 	if (!isWindows || !windowsPath) {
 		return undefined;
-	} else if (path.isAbsolute(windowsPath)) {
-		return `/mnt/${windowsPath.substr(0,1).toLowerCase()}/${windowsPath.substr(3).replace(/\\/g, '/')}`;
-	} else {
-		return windowsPath.replace(/\\/g, '/');
 	}
+	if (path.isAbsolute(windowsPath)) {
+		return `/mnt/${windowsPath.substr(0, 1).toLowerCase()}/${windowsPath.substr(3).replace(/\\/g, '/')}`;
+	}
+	return windowsPath.replace(/\\/g, '/');
 }
 
 export interface ILaunchArgs {
@@ -72,12 +71,12 @@ export function createLaunchArg(useSubsytemLinux: boolean | undefined, useExtern
 	}
 }
 
-export function spawn(useWSL: boolean, executable: string, args?: string[], options? : child_process.SpawnOptions) {
+export function spawn(useWSL: boolean, executable: string, args?: string[], options?: child_process.SpawnOptions) {
 	const launchArgs = createLaunchArg(useWSL, false, undefined, executable, args);
 	return child_process.spawn(launchArgs.executable, launchArgs.args, options);
 }
 
-export function spawnSync(useWSL: boolean, executable: string, args?: string[], options? : child_process.SpawnSyncOptions) {
+export function spawnSync(useWSL: boolean, executable: string, args?: string[], options?: child_process.SpawnSyncOptions) {
 	const launchArgs = createLaunchArg(useWSL, false, undefined, executable, args);
 	return child_process.spawnSync(launchArgs.executable, launchArgs.args, options);
 }
