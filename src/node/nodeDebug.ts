@@ -855,8 +855,9 @@ export class NodeDebugSession extends LoggingDebugSession {
 			this._console = 'externalTerminal';
 		}
 
-		if (args.useWSL && !WSL.subsystemLinuxPresent) {
+		if (args.useWSL && !WSL.subsystemLinuxPresent()) {
 			this.sendErrorResponse(response, 2007, localize('attribute.wls.not.exist', "Cannot find Windows Subsystem Linux installation"));
+			return;
 		}
 
 		const port = args.port || random(3000, 50000);
@@ -1041,11 +1042,10 @@ export class NodeDebugSession extends LoggingDebugSession {
 			<string> workingDirectory,
 			launchArgs[0],
 			launchArgs.slice(1));
-		// if using subsystem linux, we will trick the debugger to map source files
-		if (args.useWSL && !args.localRoot) {
-			args.localRoot = wslLaunchArgs.localRoot;
+
+		// if using subsystem linux, we use local/remote mapping (if not configured by user)
+		if (args.useWSL && !args.localRoot && !args.remoteRoot) {
 			this._localRoot = wslLaunchArgs.localRoot;
-			args.remoteRoot = wslLaunchArgs.remoteRoot;
 			this._remoteRoot = wslLaunchArgs.remoteRoot;
 		}
 

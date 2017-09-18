@@ -10,20 +10,20 @@ import * as child_process from 'child_process';
 const isWindows = process.platform === 'win32';
 const is64bit = process.arch === 'x64';
 
-const bashPath32bitApp = path.join(process.env['SystemRoot'], 'Sysnative', 'bash.exe');
-const bashPath64bitApp = path.join(process.env['SystemRoot'], 'System32', 'bash.exe');
-const bashPathHost = is64bit ? bashPath64bitApp : bashPath32bitApp;
+
 
 export function subsystemLinuxPresent() : boolean {
-	const bashPath = is64bit ? bashPath64bitApp : bashPath32bitApp;
 	if (!isWindows) {
 		return false;
 	}
-	return fs.existsSync(bashPath);
+	const bashPath32bitApp = path.join(process.env['SystemRoot'], 'Sysnative', 'bash.exe');
+	const bashPath64bitApp = path.join(process.env['SystemRoot'], 'System32', 'bash.exe');
+	const bashPathHost = is64bit ? bashPath64bitApp : bashPath32bitApp;
+	return fs.existsSync(bashPathHost);
 }
 
 function windowsPathToWSLPath(windowsPath: string | undefined) : string | undefined {
-	if (!windowsPath || !isWindows) {
+	if (!isWindows || !windowsPath) {
 		return undefined;
 	} else if (path.isAbsolute(windowsPath)) {
 		return `/mnt/${windowsPath.substr(0,1).toLowerCase()}/${windowsPath.substr(3).replace(/\\/g, '/')}`;
@@ -42,12 +42,17 @@ export interface ILaunchArgs {
 }
 
 export function createLaunchArg(useSubsytemLinux: boolean | undefined, useExternalConsole: boolean, cwd: string | undefined, executable: string, args?: string[]): ILaunchArgs {
-	const subsystemLinuxPath = useExternalConsole ? bashPath64bitApp : bashPathHost;
 
-	if (useSubsytemLinux) {
+	if (useSubsytemLinux && subsystemLinuxPresent()) {
+		const bashPath32bitApp = path.join(process.env['SystemRoot'], 'Sysnative', 'bash.exe');
+		const bashPath64bitApp = path.join(process.env['SystemRoot'], 'System32', 'bash.exe');
+		const bashPathHost = is64bit ? bashPath64bitApp : bashPath32bitApp;
+		const subsystemLinuxPath = useExternalConsole ? bashPath64bitApp : bashPathHost;
+
 		let bashCommand = [executable].concat(args || []).map((element) => {
 			return element.indexOf(' ') > 0 ? `'${element}'` : element;
 		}).join(' ');
+
 		return <ILaunchArgs>{
 			cwd: cwd,
 			executable: subsystemLinuxPath,
@@ -56,6 +61,7 @@ export function createLaunchArg(useSubsytemLinux: boolean | undefined, useExtern
 			localRoot: cwd,
 			remoteRoot: windowsPathToWSLPath(cwd)
 		};
+
 	} else {
 		return <ILaunchArgs>{
 			cwd: cwd,
