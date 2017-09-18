@@ -17,7 +17,7 @@ export function subsystemLinuxPresent() : boolean {
 	return fs.existsSync(bashPath);
 }
 
-function windowsPathToWSLPath(windowsPath: string) : string {
+function windowsPathToWSLPath(windowsPath: string | undefined) : string | undefined {
 	if (!windowsPath || !isWindows) {
 		return undefined;
 	} else if (path.isAbsolute(windowsPath)) {
@@ -36,7 +36,7 @@ export interface ILaunchArgs {
 	remoteRoot?: string;
 }
 
-export function createLaunchArg(useSubsytemLinux: boolean, useExternalConsole: boolean, cwd: string | undefined, executable: string, args?: string[]): ILaunchArgs {
+export function createLaunchArg(useSubsytemLinux: boolean | undefined, useExternalConsole: boolean, cwd: string | undefined, executable: string, args?: string[]): ILaunchArgs {
 	const subsystemLinuxPath = useExternalConsole ? bashPath64bitApp : bashPathHost;
 
 	if (useSubsytemLinux) {

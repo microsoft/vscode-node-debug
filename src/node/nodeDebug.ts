@@ -369,7 +369,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 	// session configurations
 	private _noDebug = false;
 	private _attachMode = false;
-	private _localRoot: string;
+	private _localRoot: string | undefined;
 	private _remoteRoot: string | undefined;
 	private _restartMode = false;
 	private _port: number | undefined;
