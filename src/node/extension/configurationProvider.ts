@@ -55,7 +55,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 			// prepare for source maps by adding 'outFiles' if typescript or coffeescript is detected
 			if (vscode.workspace.textDocuments.some(document => document.languageId === 'typescript' || document.languageId === 'coffeescript')) {
 				log(localize('outFiles.explanation', "Adjust glob pattern(s) in the 'outFiles' attribute so that they cover the generated JavaScript."));
-				config['outFiles'] = ['${workspaceRoot}/out/**/*.js'];
+				config['outFiles'] = ['${workspaceFolder}/out/**/*.js'];
 			}
 		}
 
@@ -121,7 +121,7 @@ function loadPackage(folder: vscode.WorkspaceFolder): any {
 function configureMern(config: any) {
 	config.protocol = 'inspector';
 	config.runtimeExecutable = 'nodemon';
-	config.program = '${workspaceRoot}/index.js';
+	config.program = '${workspaceFolder}/index.js';
 	config.restart = true;
 	config.env = {
 		BABEL_DISABLE_CACHE: '1',
@@ -152,7 +152,7 @@ function guessProgramFromPackage(folder: vscode.WorkspaceFolder | undefined, jso
 				path = program;
 			} else {
 				path = folder ? join(folder.uri.fsPath, program) : undefined;
-				program = join('${workspaceRoot}', program);
+				program = join('${workspaceFolder}', program);
 			}
 			if (path && !fs.existsSync(path) && !fs.existsSync(path + '.js')) {
 				return undefined;

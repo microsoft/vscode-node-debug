@@ -3768,7 +3768,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 	 */
 	private sendRelativePathErrorResponse(response: DebugProtocol.Response, attribute: string, path: string) {
 
-		const format = localize('attribute.path.not.absolute', "Attribute '{0}' is not absolute ('{1}'); consider adding '{2}' as a prefix to make it absolute.", attribute, '{path}', '${workspaceRoot}/');
+		const format = localize('attribute.path.not.absolute', "Attribute '{0}' is not absolute ('{1}'); consider adding '{2}' as a prefix to make it absolute.", attribute, '{path}', '${workspaceFolder}/');
 		this.sendErrorResponseWithInfoLink(response, 2008, format, { path: path }, 20003);
 	}
 
