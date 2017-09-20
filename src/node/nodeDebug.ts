@@ -4068,8 +4068,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 		if (process.platform === 'win32') {
 
-			const windir = process.env['WINDIR'] || 'C:\\Windows';
-			const TASK_KILL = Path.join(windir, 'System32', 'taskkill.exe');
+			const TASK_KILL = Path.join(process.env['SystemRoot'], 'System32', 'taskkill.exe')
 
 			// when killing a process in Windows its child processes are *not* killed but become root processes.
 			// Therefore we use TASKKILL.EXE
