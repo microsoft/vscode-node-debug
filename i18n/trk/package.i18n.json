@@ -39,6 +39,7 @@
 	"node.launch.runtimeArgs.description": "Çalışma zamanı yürütülebilir dosyasına iletilecek isteğe bağlı argümanlar.",
 	"node.launch.env.description": "Programa iletilecek ortam değişkenleri.",
 	"node.launch.envFile.description": "Ortam değişkenleri tanımlamalarını içeren bir dosyanın mutlak yolu.",
+	"node.launch.useWSL.description": "Linux için Windows Alt Sistemi'ni kullan.",
 	"node.launch.config.name": "Başlat",
 	"node.attach.processId.description": "Bağlanacak işlem Id'si.",
 	"node.attach.config.name": "Bağla",

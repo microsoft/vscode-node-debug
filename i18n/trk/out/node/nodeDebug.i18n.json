@@ -19,6 +19,7 @@
 	"exceptions.uncaught": "Yakalanmamış İstisnalar",
 	"exceptions.rejects": "Promise Retleri",
 	"VSND2028": "Bilinmeyen konsol türü '{0}'.",
+	"attribute.wls.not.exist": "Linux için Windows Alt Sistemi kurulumu bulunamıyor",
 	"VSND2001": "PATH değişkeninde '{0}' çalışma zamanı bulunamadı. '{0}'ın yüklü olduğundan emin olun.",
 	"program.path.case.mismatch.warning": "Program yolu ile diskteki dosya arasında büyük küçük karakter farkları var; bu, kesme noktalarının atlanmasına neden olabilir.",
 	"VSND2002": "'{0}' programı başlatılamıyor; kaynak haritalarını yapılandırmak yardımcı olabilir.",

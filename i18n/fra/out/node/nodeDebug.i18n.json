@@ -19,6 +19,7 @@
 	"exceptions.uncaught": "Exceptions interceptées",
 	"exceptions.rejects": "Rejets de promesse",
 	"VSND2028": "Type de console inconnu '{0}'.",
+	"attribute.wls.not.exist": "Impossible de trouver d'installation du sous-système Linux pour Windows ",
 	"VSND2001": "Impossible de trouver le runtime '{0}' pour le chemin d’accès. Assurez-vous d’avoir installé '{0}'.",
 	"program.path.case.mismatch.warning": "Le chemin du programme utilise un nom de fichier contenant des caractères avec des casses différentes, ce qui peut empêcher l'accès aux points d'arrêt.",
 	"VSND2002": "Impossible de lancer le programme '{0}'. Essayez éventuellement de configurer les mappages de sources.",

@@ -19,6 +19,7 @@
 	"exceptions.uncaught": "Excepciones no detectadas",
 	"exceptions.rejects": "Rechazos de Promise",
 	"VSND2028": "Tipo de consola desconocido: '{0}'.",
+	"attribute.wls.not.exist": "No se puede encontrar la instalación del subsistema de Windows Linux",
 	"VSND2001": "No se encuentra el sistema en tiempo de ejecución '{0}' en PATH. Cerciórese de que se ha instalado '{0}'.",
 	"program.path.case.mismatch.warning": "El uso de mayúsculas y minúsculas en la ruta de acceso del programa no es igual al del archivo en disco. Esto puede hacer que no se llegue a los puntos de interrupción.",
 	"VSND2002": "No se puede iniciar el programa '{0}'. Configurar mapas de origen puede ser útil.",

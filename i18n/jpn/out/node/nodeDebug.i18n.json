@@ -19,6 +19,7 @@
 	"exceptions.uncaught": "キャッチされない例外",
 	"exceptions.rejects": "Promise が失敗",
 	"VSND2028": "不明なコンソールの種類 '{0}'.",
+	"attribute.wls.not.exist": "Windows Subsystem Linux のインストールが見つかりません",
 	"VSND2001": "PATH 上で '{0}' のランタイムが見つかりません。'{0}' がインストールされていることを確認してください。",
 	"program.path.case.mismatch.warning": "プログラム パスで使用されている文字と、ディスク上のファイルの文字の間で大文字と小文字が異なっています。ブレークポイントがヒットしない可能性があります。",
 	"VSND2002": "プログラム '{0}' を起動できません。ソース マップを構成すると役立つ場合があります。",
