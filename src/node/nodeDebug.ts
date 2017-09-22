@@ -1563,7 +1563,6 @@ export class NodeDebugSession extends LoggingDebugSession {
 				}
 			}
 
-			// plan for shutting down this process after a delay of 100ms
 			super.shutdown();
 		}
 	}
@@ -4086,7 +4085,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 			// on linux and OS X we kill all direct and indirect child processes as well
 			try {
-				const cmd = Path.join(__dirname, './terminateProcess.sh');
+				const cmd = Path.join(__dirname, 'terminateProcess.sh');
 				CP.spawnSync(cmd, [ processId.toString() ]);
 			} catch (err) {
 			}
