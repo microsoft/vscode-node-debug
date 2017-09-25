@@ -81,22 +81,22 @@
 		"views": {
 			"debug": [
 				{
-					"id": "extension.node-debug.loadedScriptsExplorer",
+					"id": "extension.node-debug.loadedScriptsExplorer.node",
 					"name": "%loaded.scripts.view.name%",
 					"when": "inDebugMode && debugType == 'node'"
 				},
 				{
-					"id": "extension.node-debug.loadedScriptsExplorer",
+					"id": "extension.node-debug.loadedScriptsExplorer.node2",
 					"name": "%loaded.scripts.view.name%",
 					"when": "inDebugMode && debugType == 'node2'"
 				},
 				{
-					"id": "extension.node-debug.loadedScriptsExplorer",
+					"id": "extension.node-debug.loadedScriptsExplorer.extensionHost",
 					"name": "%loaded.scripts.view.name%",
 					"when": "inDebugMode && debugType == 'extensionHost'"
 				},
 				{
-					"id": "extension.node-debug.loadedScriptsExplorer",
+					"id": "extension.node-debug.loadedScriptsExplorer.chrome",
 					"name": "%loaded.scripts.view.name%",
 					"when": "inDebugMode && debugType == 'chrome'"
 				}

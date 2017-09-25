@@ -48,7 +48,8 @@ export class LoadedScriptsProvider implements TreeDataProvider<BaseTreeItem> {
 		this._root = new RootTreeItem();
 
 		context.subscriptions.push(vscode.debug.onDidStartDebugSession(session => {
-			if (session && (session.type === 'node' || session.type === 'node2')) {
+			const t = session ? session.type : undefined;
+			if (t === 'node' || t === 'node2' || t === 'extensionHost' || t === 'chrome') {
 				this._root.add(session);
 				this._onDidChangeTreeData.fire(undefined);
 			}
@@ -57,7 +58,7 @@ export class LoadedScriptsProvider implements TreeDataProvider<BaseTreeItem> {
 		let timeout: NodeJS.Timer;
 
 		context.subscriptions.push(vscode.debug.onDidReceiveDebugSessionCustomEvent(event => {
-
+			
 			if ((event.event === 'scriptLoaded' || event.event === 'loadedSource') && (event.session.type === 'node' || event.session.type === 'node2' || event.session.type === 'extensionHost' || event.session.type === 'chrome')) {
 
 				const sessionRoot = this._root.add(event.session);

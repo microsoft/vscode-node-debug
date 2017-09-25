@@ -23,7 +23,11 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.commands.registerCommand('extension.pickNodeProcess', () => pickProcess()));
 
 	// loaded scripts
-	vscode.window.registerTreeDataProvider('extension.node-debug.loadedScriptsExplorer', new LoadedScriptsProvider(context));
+	const provider = new LoadedScriptsProvider(context);
+	vscode.window.registerTreeDataProvider('extension.node-debug.loadedScriptsExplorer.node', provider);
+	vscode.window.registerTreeDataProvider('extension.node-debug.loadedScriptsExplorer.node2', provider);
+	vscode.window.registerTreeDataProvider('extension.node-debug.loadedScriptsExplorer.extensionHost', provider);
+	vscode.window.registerTreeDataProvider('extension.node-debug.loadedScriptsExplorer.chrome', provider);
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.pickLoadedScript', () => pickLoadedScript()));
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.openScript', (session: vscode.DebugSession, source) => openScript(session, source)));
 }
