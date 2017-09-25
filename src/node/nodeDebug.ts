@@ -28,7 +28,7 @@ import * as Path from 'path';
 import * as FS from 'fs';
 import * as nls from 'vscode-nls';
 
-const localize = nls.config(process.env.VSCODE_NLS_CONFIG)();
+let localize = nls.config(process.env.VSCODE_NLS_CONFIG)();
 
 type FilterType = 'named' | 'indexed' | 'all';
 
@@ -765,6 +765,10 @@ export class NodeDebugSession extends LoggingDebugSession {
 		this.log('la', `initializeRequest: adapterID: ${args.adapterID}`);
 
 		this._adapterID = args.adapterID;
+
+		if (args.locale) {
+			localize = nls.config({ locale: args.locale })();
+		}
 
 		if (typeof args.supportsRunInTerminalRequest === 'boolean') {
 			this._supportsRunInTerminalRequest = args.supportsRunInTerminalRequest;
