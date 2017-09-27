@@ -39,6 +39,7 @@
 	"node.launch.runtimeArgs.description": "Argomenti facoltativi passati all'eseguibile del runtime.",
 	"node.launch.env.description": "Variabili di ambiente passate al programma.",
 	"node.launch.envFile.description": "Percorso assoluto di un file che contiene le definizioni delle variabili di ambiente.",
+	"node.launch.useWSL.description": "Usa il sottosistema Linux per Windows",
 	"node.launch.config.name": "Launch",
 	"node.attach.processId.description": "ID del processo a cui collegarsi.",
 	"node.attach.config.name": "Attach",

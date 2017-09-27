@@ -19,6 +19,7 @@
 	"exceptions.uncaught": "Eccezioni non rilevate",
 	"exceptions.rejects": "Promise rifiutate",
 	"VSND2028": "Il tipo di console '{0}' è sconosciuto.",
+	"attribute.wls.not.exist": "Impossibile trovare l'installazione del sottosistema Linux per Windows",
 	"VSND2001": "Il runtime '{0}' non è stato trovato in PATH. Assicurarsi che '{0}' sia installato.",
 	"program.path.case.mismatch.warning": "La combinazione di minuscole/maiuscole usata nel percorso del programma è diversa rispetto al file su disco. È possibile che i punti di interruzione non vengano rilevati.",
 	"VSND2002": "Non è possibile avviare il programma '{0}'. Per risolvere il problema, provare a configurare i mapping di origine.",

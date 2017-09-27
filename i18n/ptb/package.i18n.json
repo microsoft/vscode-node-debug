@@ -39,6 +39,7 @@
 	"node.launch.runtimeArgs.description": "Argumentos opcionais passados ao executável runtime.",
 	"node.launch.env.description": "Variáveis de ambiente passadas ao programa.",
 	"node.launch.envFile.description": "Caminho absoluto para um arquivo que contém definições de variáveis de ambiente.",
+	"node.launch.useWSL.description": "Use o Linux de subsistema do Windows.",
 	"node.launch.config.name": "Executar",
 	"node.attach.processId.description": "ID do processo para anexar.",
 	"node.attach.config.name": "Anexar",

@@ -23,6 +23,7 @@
 	"VSND2001": "PATH değişkeninde '{0}' çalışma zamanı bulunamadı. '{0}'ın yüklü olduğundan emin olun.",
 	"program.path.case.mismatch.warning": "Program yolu ile diskteki dosya arasında büyük küçük karakter farkları var; bu, kesme noktalarının atlanmasına neden olabilir.",
 	"VSND2002": "'{0}' programı başlatılamıyor; kaynak haritalarını yapılandırmak yardımcı olabilir.",
+	"VSND2009": "İlgili JavaScript bulunamadığı için '{0}' programı başlatılamadı.",
 	"VSND2003": "'{0}' programı başlatılamıyor; '{1}' özniteliğini ayarlamak yardımcı olabilir.",
 	"VSND2029": "Dosyadan ortam değişkenleri yüklenemedi ({0}).",
 	"node.console.title": "Node Hata Ayıklama Konsolu",
