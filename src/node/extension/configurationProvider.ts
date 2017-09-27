@@ -18,48 +18,11 @@ import { pickProcess } from './processPicker';
 export class NodeConfigurationProvider implements vscode.DebugConfigurationProvider {
 
 	/**
-	 * Returns an initial debug configurations based on contextual information, e.g. package.json or folder.
+	 * Returns an initial debug configuration based on contextual information, e.g. package.json or folder.
 	 */
 	provideDebugConfigurations(folder: vscode.WorkspaceFolder | undefined, token?: vscode.CancellationToken): vscode.ProviderResult<vscode.DebugConfiguration[]> {
 
-		const pkg = folder ? loadPackage(folder) : undefined;
-
-		const config = {
-			type: 'node',
-			request: 'launch',
-			name: localize('node.launch.config.name', "Launch Program")
-		};
-
-		if (pkg && pkg.name === 'mern-starter') {
-
-			log(localize({ key: 'mern.starter.explanation', comment: ['argument contains product name without translation'] }, "Launch configuration for '{0}' project created.", 'Mern Starter'));
-			configureMern(config);
-
-		} else {
-			let program: string | undefined;
-
-			// try to find a better value for 'program' by analysing package.json
-			if (pkg) {
-				program = guessProgramFromPackage(folder, pkg);
-				if (program) {
-					log(localize('program.guessed.from.package.json.explanation', "Launch configuration created based on 'package.json'."));
-				}
-			}
-
-			if (!program) {
-				log(localize('program.fall.back.explanation', "Launch configuration created will debug file in the active editor."));
-				program = '${file}';
-			}
-			config['program'] = program;
-
-			// prepare for source maps by adding 'outFiles' if typescript or coffeescript is detected
-			if (vscode.workspace.textDocuments.some(document => document.languageId === 'typescript' || document.languageId === 'coffeescript')) {
-				log(localize('outFiles.explanation', "Adjust glob pattern(s) in the 'outFiles' attribute so that they cover the generated JavaScript."));
-				config['outFiles'] = ['${workspaceFolder}/out/**/*.js'];
-			}
-		}
-
-		return [ config ];
+		return [ createLaunchConfigFromContext(folder, false) ];
 	}
 
 	/**
@@ -67,9 +30,11 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 	 */
 	resolveDebugConfiguration(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration, token?: vscode.CancellationToken): vscode.ProviderResult<vscode.DebugConfiguration> {
 
+		// if launch.json is missing or empty
 		if (!config.type && !config.request && !config.name) {
-			// probably a missing launch.json
-			config = getFreshLaunchConfig(folder);
+
+			config = createLaunchConfigFromContext(folder, true);
+
 			if (!config.program) {
 				const message = localize('program.not.found.message', "Cannot find a program to debug");
 				return vscode.window.showInformationMessage(message).then(_ => {
@@ -88,6 +53,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 			}
 		}
 
+		// if we detect that VS Code was launched for WSL, we add the 'useWSL' attribute on the fly
 		if (process.platform === 'win32' && config.request === 'launch' && typeof config.useWSL !== 'boolean') {
 			const HOME = <string> process.env.HOME;
 			if (HOME && HOME.indexOf('/home/') === 0) {
@@ -107,13 +73,97 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 	}
 }
 
-function loadPackage(folder: vscode.WorkspaceFolder): any {
-	try {
-		const packageJsonPath = join(folder.uri.fsPath, 'package.json');
-		const jsonContent = fs.readFileSync(packageJsonPath, 'utf8');
-		return JSON.parse(jsonContent);
-	} catch (error) {
-		// silently ignore
+//---- helpers ----------------------------------------------------------------------------------------------------------------
+
+function createLaunchConfigFromContext(folder: vscode.WorkspaceFolder | undefined, resolve: boolean): vscode.DebugConfiguration {
+
+	const config = {
+		type: 'node',
+		request: 'launch',
+		name: localize('node.launch.config.name', "Launch Program")
+	};
+
+	const pkg = loadJSON(folder, 'package.json');
+	if (pkg && pkg.name === 'mern-starter') {
+
+		if (resolve) {
+			log(localize({ key: 'mern.starter.explanation', comment: ['argument contains product name without translation'] }, "Launch configuration for '{0}' project created.", 'Mern Starter'));
+		}
+		configureMern(config);
+
+	} else {
+		let program: string | undefined;
+		let useSourceMaps = false;
+
+		// try to find a better value for 'program' by analysing package.json
+		if (pkg) {
+			program = guessProgramFromPackage(folder, pkg);
+			if (program && resolve) {
+				log(localize('program.guessed.from.package.json.explanation', "Launch configuration created based on 'package.json'."));
+			}
+		}
+
+		// use file open in editor
+		if (!program && folder) {
+			const editor = vscode.window.activeTextEditor;
+			if (editor) {
+				const languageId = editor.document.languageId;
+				if (languageId === 'javascript' || isTranspiledLanguage(languageId)) {
+					const wf = vscode.workspace.getWorkspaceFolder(editor.document.uri);
+					if (wf === folder) {
+						const path = vscode.workspace.asRelativePath(editor.document.uri);
+						program = '${workspaceFolder}/' + path;
+					}
+				}
+				useSourceMaps = isTranspiledLanguage(languageId);
+			}
+		}
+
+		// if we couldn't find a value for 'program', we just let the launch config use the file open in the editor
+		if (!resolve && !program) {
+			program = '${file}';
+		}
+
+		if (program) {
+			config['program'] = program;
+		}
+
+		// prepare for source maps by adding 'outFiles' if typescript or coffeescript is detected
+		if (useSourceMaps || vscode.workspace.textDocuments.some(document => isTranspiledLanguage(document.languageId))) {
+			if (resolve) {
+				log(localize('outFiles.explanation', "Adjust glob pattern(s) in the 'outFiles' attribute so that they cover the generated JavaScript."));
+			}
+
+			let dir = '';
+			const tsConfig = loadJSON(folder, 'tsconfig.json');
+			if (tsConfig && tsConfig.compilerOptions && tsConfig.compilerOptions.outDir) {
+				const outDir = <string> tsConfig.compilerOptions.outDir;
+				if (!isAbsolute(outDir)) {
+					dir = outDir;
+					if (dir.indexOf('./') === 0) {
+						dir = dir.substr(2);
+					}
+					if (dir[dir.length-1] !== '/') {
+						dir += '/';
+					}
+				}
+			}
+			config['outFiles'] = ['${workspaceFolder}/' + dir + '**/*.js'];
+		}
+	}
+
+	return config;
+}
+
+function loadJSON(folder: vscode.WorkspaceFolder | undefined, file: string): any {
+	if (folder) {
+		try {
+			const path = join(folder.uri.fsPath, file);
+			const content = fs.readFileSync(path, 'utf8');
+			return JSON.parse(content);
+		} catch (error) {
+			// silently ignore
+		}
 	}
 	return undefined;
 }
@@ -131,19 +181,23 @@ function configureMern(config: any) {
 	config.internalConsoleOptions = 'neverOpen';
 }
 
+function isTranspiledLanguage(languagId: string) : boolean {
+	return languagId === 'typescript' || languagId === 'coffeescript';
+}
+
 /*
  * try to find the entry point ('main') from the package.json
  */
-function guessProgramFromPackage(folder: vscode.WorkspaceFolder | undefined, jsonObject: any): string | undefined {
+function guessProgramFromPackage(folder: vscode.WorkspaceFolder | undefined, packageJson: any): string | undefined {
 
 	let program: string | undefined;
 
 	try {
-		if (jsonObject.main) {
-			program = jsonObject.main;
-		} else if (jsonObject.scripts && typeof jsonObject.scripts.start === 'string') {
+		if (packageJson.main) {
+			program = packageJson.main;
+		} else if (packageJson.scripts && typeof packageJson.scripts.start === 'string') {
 			// assume a start script of the form 'node server.js'
-			program = (<string>jsonObject.scripts.start).split(' ').pop();
+			program = (<string>packageJson.scripts.start).split(' ').pop();
 		}
 
 		if (program) {
@@ -166,38 +220,7 @@ function guessProgramFromPackage(folder: vscode.WorkspaceFolder | undefined, jso
 	return program;
 }
 
-function getFreshLaunchConfig(folder: vscode.WorkspaceFolder | undefined): any {
-
-	const config: any = {
-		type: 'node',
-		name: 'Launch',
-		request: 'launch'
-	};
-
-	if (folder) {
-
-		// folder case: try to find more launch info in package.json
-		const pkg = loadPackage(folder);
-		if (pkg) {
-			if (pkg.name === 'mern-starter') {
-				configureMern(config);
-			} else {
-				config.program = guessProgramFromPackage(folder, pkg);
-			}
-		}
-	}
-
-	if (!config.program) {
-
-		// 'no folder' case (or no program found)
-		const editor = vscode.window.activeTextEditor;
-		if (editor && editor.document.languageId === 'javascript') {
-			config.program = editor.document.fileName;
-		}
-	}
-
-	return config;
-}
+//---- debug type -------------------------------------------------------------------------------------------------------------
 
 function determineDebugType(config: any): Promise<string | null> {
 	if (config.request === 'attach' && typeof config.processId === 'string') {
