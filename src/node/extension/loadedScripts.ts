@@ -58,16 +58,13 @@ export class LoadedScriptsProvider implements TreeDataProvider<BaseTreeItem> {
 		let timeout: NodeJS.Timer;
 
 		context.subscriptions.push(vscode.debug.onDidReceiveDebugSessionCustomEvent(event => {
-			
-			if ((event.event === 'scriptLoaded' || event.event === 'loadedSource') && (event.session.type === 'node' || event.session.type === 'node2' || event.session.type === 'extensionHost' || event.session.type === 'chrome')) {
+
+			const t = (event.event === 'loadedSource' && event.session) ? event.session.type : undefined;
+			if (t === 'node' || t === 'node2' || t === 'extensionHost' || t === 'chrome') {
 
 				const sessionRoot = this._root.add(event.session);
 
-				if (event.event === 'scriptLoaded' ) {
-					sessionRoot.addPath(new Source(event.body.path));
-				} else {
-					sessionRoot.addPath(<Source> event.body.source);
-				}
+				sessionRoot.addPath(<Source> event.body.source);
 
 				clearTimeout(timeout);
 				timeout = setTimeout(() => {
@@ -323,16 +320,10 @@ function listLoadedScripts(session: vscode.DebugSession | undefined): Thenable<S
 
 	if (session) {
 
-		// first try obsolete 'getLoadedScripts'
-		return session.customRequest('getLoadedScripts').then(reply => {
-			return reply.paths.map(path => new Source(path));
+		return session.customRequest('loadedSources').then(reply => {
+			return <Source[]>reply.sources;
 		}, err => {
-			// then use official DAP request 'loadedSources'
-			return session.customRequest('loadedSources').then(reply => {
-				return <Source[]>reply.sources;
-			}, err => {
-				return undefined;
-			});
+			return undefined;
 		});
 
 	} else {
