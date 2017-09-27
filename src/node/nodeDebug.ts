@@ -948,7 +948,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 				this._sourceMaps.MapPathFromSource(programPath).then(generatedPath => {
 					if (!generatedPath) {	// cannot find generated file
 						if (args.outFiles || args.outDir) {
-							this.sendErrorResponse(response, 2009, localize('VSND2003', "Cannot launch program '{0}' because corresponding JavaScript cannot be found.", '{path}'), { path: programPath });
+							this.sendErrorResponse(response, 2009, localize('VSND2009', "Cannot launch program '{0}' because corresponding JavaScript cannot be found.", '{path}'), { path: programPath });
 						} else {
 							this.sendErrorResponse(response, 2003, localize('VSND2003', "Cannot launch program '{0}'; setting the '{1}' attribute might help.", '{path}', 'outFiles'), { path: programPath });
 						}
