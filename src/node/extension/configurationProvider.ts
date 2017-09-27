@@ -147,6 +147,7 @@ function createLaunchConfigFromContext(folder: vscode.WorkspaceFolder | undefine
 						dir += '/';
 					}
 				}
+				config['preLaunchTask'] = 'tsc: build - tsconfig.json';
 			}
 			config['outFiles'] = ['${workspaceFolder}/' + dir + '**/*.js'];
 		}
