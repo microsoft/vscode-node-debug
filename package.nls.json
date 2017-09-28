@@ -44,7 +44,8 @@
 	"node.launch.env.description": "Environment variables passed to the program.",
 	"node.launch.envFile.description": "Absolute path to a file containing environment variable definitions.",
 	"node.launch.useWSL.description": "Use Windows Subsystem Linux.",
-	
+	"node.launch.outputCapture.description": "From where to capture output messages: The debug API, or stdout/stderr streams.",
+
 	"node.launch.config.name": "Launch",
 
 	"node.attach.processId.description": "Id of process to attach to.",

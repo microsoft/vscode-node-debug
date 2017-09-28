@@ -1,7 +1,7 @@
 {
 	"name": "node-debug",
 	"displayName": "Node Debug",
-	"version": "1.17.16",
+	"version": "1.17.17",
 	"publisher": "ms-vscode",
 	"description": "%extension.description%",
 	"icon": "images/node-debug-icon.png",
@@ -418,6 +418,14 @@
 								"type": ["boolean", "string"],
 								"description": "%trace.description%",
 								"default": true
+							},
+							"outputCapture": {
+								"enum": [
+									"console",
+									"std"
+								],
+								"description": "%node.launch.outputCapture.description%",
+								"default": "console"
 							}
 						}
 					},
