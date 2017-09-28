@@ -40,7 +40,7 @@ export interface ILaunchArgs {
 	remoteRoot?: string;
 }
 
-export function createLaunchArg(useSubsytemLinux: boolean | undefined, useExternalConsole: boolean, cwd: string | undefined, executable: string, args?: string[]): ILaunchArgs {
+export function createLaunchArg(useSubsytemLinux: boolean | undefined, useExternalConsole: boolean, cwd: string | undefined, executable: string, args?: string[], program?: string): ILaunchArgs {
 
 	if (useSubsytemLinux && subsystemLinuxPresent()) {
 		const bashPath32bitApp = path.join(process.env['SystemRoot'], 'Sysnative', 'bash.exe');
@@ -48,7 +48,10 @@ export function createLaunchArg(useSubsytemLinux: boolean | undefined, useExtern
 		const bashPathHost = is64bit ? bashPath64bitApp : bashPath32bitApp;
 		const subsystemLinuxPath = useExternalConsole ? bashPath64bitApp : bashPathHost;
 
-		let bashCommand = [executable].concat(args || []).map((element) => {
+		let bashCommand = [executable].concat(args || []).map(element => {
+			if (element === program) {	// workaround for issue #35249
+				element = element.replace(/\\/g, '/');
+			}
 			return element.indexOf(' ') > 0 ? `'${element}'` : element;
 		}).join(' ');
 
@@ -69,11 +72,6 @@ export function createLaunchArg(useSubsytemLinux: boolean | undefined, useExtern
 			combined: [executable].concat(args || [])
 		};
 	}
-}
-
-export function spawn(useWSL: boolean, executable: string, args?: string[], options?: child_process.SpawnOptions) {
-	const launchArgs = createLaunchArg(useWSL, false, undefined, executable, args);
-	return child_process.spawn(launchArgs.executable, launchArgs.args, options);
 }
 
 export function spawnSync(useWSL: boolean, executable: string, args?: string[], options?: child_process.SpawnSyncOptions) {

@@ -1049,7 +1049,8 @@ export class NodeDebugSession extends LoggingDebugSession {
 			this._supportsRunInTerminalRequest && this._console === 'externalTerminal',
 			<string> workingDirectory,
 			launchArgs[0],
-			launchArgs.slice(1));
+			launchArgs.slice(1),
+			program);	// workaround for #35249
 
 		// if using subsystem linux, we use local/remote mapping (if not configured by user)
 		if (args.useWSL && !args.localRoot && !args.remoteRoot) {
