@@ -39,6 +39,8 @@
 	"node.launch.runtimeArgs.description": "Необязательные аргументы, переданные исполняемому файлу среды выполнения.",
 	"node.launch.env.description": "Переменные окружения, переданные в программу.",
 	"node.launch.envFile.description": "Абсолютный путь к файлу с определениями переменных среды.",
+	"node.launch.useWSL.description": "Использовать подсистему Windows для Linux.",
+	"node.launch.outputCapture.description": "Источник для получения выходных сообщений: API отладки, стандартный поток вывода или стандартный поток ошибок. ",
 	"node.launch.config.name": "Запустить",
 	"node.attach.processId.description": "Идентификатор процесса, к которому необходимо подключиться.",
 	"node.attach.config.name": "Подключить",

@@ -23,6 +23,7 @@
 	"VSND2001": "Impossible de trouver le runtime '{0}' pour le chemin d’accès. Assurez-vous d’avoir installé '{0}'.",
 	"program.path.case.mismatch.warning": "Le chemin du programme utilise un nom de fichier contenant des caractères avec des casses différentes, ce qui peut empêcher l'accès aux points d'arrêt.",
 	"VSND2002": "Impossible de lancer le programme '{0}'. Essayez éventuellement de configurer les mappages de sources.",
+	"VSND2009": "Impossible de démarrer le programme '{0}' car le JavaScript correspondant est introuvable.",
 	"VSND2003": "Impossible de lancer le programme '{0}' ; essayez de définir l'attribut '{1}'.",
 	"VSND2029": "Impossible de charger les variables d'environnement à partir du fichier ({0}).",
 	"node.console.title": "Console de débogage de nœud",

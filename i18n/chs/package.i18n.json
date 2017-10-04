@@ -40,6 +40,7 @@
 	"node.launch.env.description": "传递给程序的环境变量。",
 	"node.launch.envFile.description": "包含环境变量定义的文件的绝对路径。",
 	"node.launch.useWSL.description": "使用 Windows 的 Linux 子系统。",
+	"node.launch.outputCapture.description": "捕获输出信息的位置: 调试 API 或者 stdout/stderr 流。",
 	"node.launch.config.name": "启动",
 	"node.attach.processId.description": "要附加到的进程 ID。",
 	"node.attach.config.name": "附加",

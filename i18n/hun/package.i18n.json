@@ -40,6 +40,7 @@
 	"node.launch.env.description": "A program számára átadott környezeti változók.",
 	"node.launch.envFile.description": "A környezetiváltozó-definíciókat tartalmazó fájl abszolút elérési útja.",
 	"node.launch.useWSL.description": "Windows Subsystem for Linux használata.",
+	"node.launch.outputCapture.description": "Honnan legyenek rögzítve a kimeneti üzenetek: a hibakeresési API-ról vagy stdout/stderr streamekről.",
 	"node.launch.config.name": "Indítás",
 	"node.attach.processId.description": "Annak a folyamatnak az azonosítója, amelyhez csatlakozás történik",
 	"node.attach.config.name": "Csatlakozás",

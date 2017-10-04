@@ -39,6 +39,8 @@
 	"node.launch.runtimeArgs.description": "Optionale Argumente, die an die ausführbare Laufzeitdatei übergeben werden.",
 	"node.launch.env.description": "Umgebungsvariablen, die an das Programm übergeben werden.",
 	"node.launch.envFile.description": "Absoluter Pfad zu einer Datei mit Definitionen für Umgebungsvariablen.",
+	"node.launch.useWSL.description": "Verwenden Sie das Windows-Subsystem für Linux.",
+	"node.launch.outputCapture.description": "Ort der Erfassung von Ausgabemeldungen: die Debug-API oder stdout/stderr-Streams. ",
 	"node.launch.config.name": "Starten",
 	"node.attach.processId.description": "Die ID des Prozesses, an den die Anfügung erfolgen soll.",
 	"node.attach.config.name": "Anfügen",

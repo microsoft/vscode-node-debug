@@ -40,6 +40,7 @@
 	"node.launch.env.description": "Variabili di ambiente passate al programma.",
 	"node.launch.envFile.description": "Percorso assoluto di un file che contiene le definizioni delle variabili di ambiente.",
 	"node.launch.useWSL.description": "Usa il sottosistema Linux per Windows",
+	"node.launch.outputCapture.description": "Da dove catturare i messaggi di output: dalle API di debug o dai flussi stdout/stderr.",
 	"node.launch.config.name": "Launch",
 	"node.attach.processId.description": "ID del processo a cui collegarsi.",
 	"node.attach.config.name": "Attach",

@@ -39,6 +39,8 @@
 	"node.launch.runtimeArgs.description": "傳遞給執行階段可執行檔的選擇性引數。",
 	"node.launch.env.description": "傳遞給程式的環境變數。",
 	"node.launch.envFile.description": "包含環境變數定義之檔案的絕對路徑。",
+	"node.launch.useWSL.description": "使用 Windows Subsystem Linux。",
+	"node.launch.outputCapture.description": "從該處擷取輸出訊息: 偵錯 API 或 StdOut/STDERR 資料流。",
 	"node.launch.config.name": "啟動",
 	"node.attach.processId.description": "要附加的處理序識別碼。",
 	"node.attach.config.name": "附加",

@@ -40,6 +40,7 @@
 	"node.launch.env.description": "Variables d'environnement passées au programme.",
 	"node.launch.envFile.description": "Chemin absolu d'un fichier contenant des définitions de variables d'environnement.",
 	"node.launch.useWSL.description": "Utiliser le sous-système Linux pour Windows.",
+	"node.launch.outputCapture.description": "A partir de quelle source capturer les messages de sortie : l’API de débogage ou les flux stdout/stderr.",
 	"node.launch.config.name": "Lancer",
 	"node.attach.processId.description": "ID du processus auquel effectuer la jonction.",
 	"node.attach.config.name": "Attacher",

@@ -23,6 +23,7 @@
 	"VSND2001": "Il runtime '{0}' non è stato trovato in PATH. Assicurarsi che '{0}' sia installato.",
 	"program.path.case.mismatch.warning": "La combinazione di minuscole/maiuscole usata nel percorso del programma è diversa rispetto al file su disco. È possibile che i punti di interruzione non vengano rilevati.",
 	"VSND2002": "Non è possibile avviare il programma '{0}'. Per risolvere il problema, provare a configurare i mapping di origine.",
+	"VSND2009": "Non è possibile avviare il programma '{0}' perché non è stata trovata la versione di JavaScript corrispondente.",
 	"VSND2003": "Non è possibile avviare il programma '{0}'. Per risolvere il problema, provare a impostare l'attributo '{1}'.",
 	"VSND2029": "Non è possibile caricare le variabili di ambiente dal file ({0}).",
 	"node.console.title": "Console di debug nodo",

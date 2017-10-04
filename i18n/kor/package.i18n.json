@@ -39,6 +39,8 @@
 	"node.launch.runtimeArgs.description": "선택적 인수가 런타임 실행 파일에 전달되었습니다.",
 	"node.launch.env.description": "환경 변수가 프로그램에 전달되었습니다.",
 	"node.launch.envFile.description": "환경 변수 정의가 포함된 파일의 절대 경로입니다.",
+	"node.launch.useWSL.description": "Windows Subsystem Linux를 사용합니다.",
+	"node.launch.outputCapture.description": "출력 메시지를 캡처하는 위치: 디버그 API 또는 stdout/stderr 스트림",
 	"node.launch.config.name": "시작",
 	"node.attach.processId.description": "연결할 프로세스의 ID입니다.",
 	"node.attach.config.name": "연결",

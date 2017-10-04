@@ -40,6 +40,7 @@
 	"node.launch.env.description": "Variables de entorno pasadas al programa.",
 	"node.launch.envFile.description": "Ruta de acceso absoluta a un archivo que contiene definiciones de variables de entorno.",
 	"node.launch.useWSL.description": "Utilizar el subsistema de Windows Linux.",
+	"node.launch.outputCapture.description": "Capturar los mensajes de salida desde el API de depuración o desde los canales stdout/stderr.",
 	"node.launch.config.name": "Iniciar",
 	"node.attach.processId.description": "Id. de proceso para asociar.",
 	"node.attach.config.name": "Asociar",

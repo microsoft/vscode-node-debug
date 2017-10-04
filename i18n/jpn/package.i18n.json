@@ -40,6 +40,7 @@
 	"node.launch.env.description": "プログラムに渡される環境変数。",
 	"node.launch.envFile.description": "環境変数の定義を含むファイルへの絶対パス。",
 	"node.launch.useWSL.description": "Windows Subsystem Linux を使用します。",
+	"node.launch.outputCapture.description": "出力メッセージのキャプチャ場所: debug API, stdout/stderr ストリーム",
 	"node.launch.config.name": "起動",
 	"node.attach.processId.description": "アタッチ先のプロセスの ID。",
 	"node.attach.config.name": "アタッチ",
