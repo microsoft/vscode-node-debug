@@ -120,8 +120,9 @@ function createLaunchConfigFromContext(folder: vscode.WorkspaceFolder | undefine
 		}
 
 		// if we couldn't find a value for 'program', we just let the launch config use the file open in the editor
-		if (!resolve && !program) {
-			program = '${file}';
+		const editor = vscode.window.activeTextEditor;
+		if (editor && !program) {
+			program = editor.document.uri.fsPath;
 		}
 
 		if (program) {
