@@ -95,24 +95,26 @@ function createLaunchConfigFromContext(folder: vscode.WorkspaceFolder | undefine
 		let program: string | undefined;
 		let useSourceMaps = false;
 
-		// try to find a better value for 'program' by analysing package.json
 		if (pkg) {
+			// try to find a value for 'program' by analysing package.json
 			program = guessProgramFromPackage(folder, pkg);
 			if (program && resolve) {
 				log(localize('program.guessed.from.package.json.explanation', "Launch configuration created based on 'package.json'."));
 			}
 		}
 
-		// use file open in editor
-		if (!program && folder) {
+		if (!program) {
+			// try to use file open in editor
 			const editor = vscode.window.activeTextEditor;
 			if (editor) {
 				const languageId = editor.document.languageId;
 				if (languageId === 'javascript' || isTranspiledLanguage(languageId)) {
 					const wf = vscode.workspace.getWorkspaceFolder(editor.document.uri);
 					if (wf === folder) {
-						const path = vscode.workspace.asRelativePath(editor.document.uri);
-						program = '${workspaceFolder}/' + path;
+						program = vscode.workspace.asRelativePath(editor.document.uri);
+						if (!isAbsolute(program)) {
+							program = '${workspaceFolder}/' + program;
+						}
 					}
 				}
 				useSourceMaps = isTranspiledLanguage(languageId);
