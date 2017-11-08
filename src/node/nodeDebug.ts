@@ -354,7 +354,6 @@ export class NodeDebugSession extends LoggingDebugSession {
 	private _supportsRunInTerminalRequest = false;
 
 	// session state
-	private _adapterID: string;
 	private _node: NodeV8Protocol;
 	private _attachSuccessful: boolean;
 	private _nodeProcessId: number = -1; 					// pid of the node runtime
@@ -763,8 +762,6 @@ export class NodeDebugSession extends LoggingDebugSession {
 	protected initializeRequest(response: DebugProtocol.InitializeResponse, args: DebugProtocol.InitializeRequestArguments): void {
 
 		this.log('la', `initializeRequest: adapterID: ${args.adapterID}`);
-
-		this._adapterID = args.adapterID;
 
 		if (args.locale) {
 			localize = nls.config({ locale: args.locale })();

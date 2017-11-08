@@ -75,16 +75,12 @@ function listProcesses() : Promise<ProcessItem[]> {
 							}
 
 							let executable_path: string | undefined;
-							let args : string;
 							const matches2 = EXECUTABLE_ARGS.exec(cmd);
 							if (matches2 && matches2.length >= 2) {
 								if (matches2.length >= 3) {
 									executable_path = matches2[1] || matches2[2];
 								} else {
 									executable_path = matches2[1];
-								}
-								if (matches2.length === 4) {
-									args = matches2[3];
 								}
 							}
 
