@@ -491,7 +491,7 @@ export class SourceMap {
 	 * Finds the nearest source location for the given location in the generated file.
 	 * Returns null if sourcemap is invalid.
 	 */
-	public originalPositionFor(line: number, column: number, bias: Bias): SM.NullableMappedPosition | null {
+	public originalPositionFor(line: number, column: number, bias: Bias): SM.MappedPosition | null {
 
 		if (!this._smc) {
 			return null;
@@ -524,7 +524,7 @@ export class SourceMap {
 	 * Finds the nearest location in the generated file for the given source location.
 	 * Returns null if sourcemap is invalid.
 	 */
-	public generatedPositionFor(absPath: string, line: number, column: number, bias?: Bias): SM.NullablePosition | null {
+	public generatedPositionFor(absPath: string, line: number, column: number, bias?: Bias): SM.Position | null {
 
 		if (!this._smc) {
 			return null;

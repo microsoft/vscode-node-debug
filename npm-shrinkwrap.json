@@ -1,6 +1,6 @@
 {
   "name": "node-debug",
-  "version": "1.17.0",
+  "version": "1.19.0",
   "dependencies": {
     "agent-base": {
       "version": "1.0.2",
@@ -23,9 +23,9 @@
       "resolved": "https://registry.npmjs.org/concat-map/-/concat-map-0.0.1.tgz"
     },
     "debug": {
-      "version": "2.6.8",
+      "version": "2.6.9",
       "from": "debug@>=2.0.0 <3.0.0",
-      "resolved": "https://registry.npmjs.org/debug/-/debug-2.6.8.tgz"
+      "resolved": "https://registry.npmjs.org/debug/-/debug-2.6.9.tgz"
     },
     "extend": {
       "version": "3.0.1",
@@ -39,7 +39,7 @@
     },
     "glob": {
       "version": "7.1.2",
-      "from": "glob@>=7.1.2 <8.0.0",
+      "from": "glob@7.1.2",
       "resolved": "https://registry.npmjs.org/glob/-/glob-7.1.2.tgz"
     },
     "http-proxy-agent": {
@@ -64,7 +64,7 @@
     },
     "minimatch": {
       "version": "3.0.4",
-      "from": "minimatch@>=3.0.4 <4.0.0",
+      "from": "minimatch@3.0.4",
       "resolved": "https://registry.npmjs.org/minimatch/-/minimatch-3.0.4.tgz"
     },
     "ms": {
@@ -84,17 +84,17 @@
     },
     "request-light": {
       "version": "0.2.1",
-      "from": "request-light@>=0.2.1 <0.3.0",
+      "from": "request-light@0.2.1",
       "resolved": "https://registry.npmjs.org/request-light/-/request-light-0.2.1.tgz"
     },
     "source-map": {
-      "version": "0.5.7",
-      "from": "source-map@>=0.5.7 <0.6.0",
-      "resolved": "https://registry.npmjs.org/source-map/-/source-map-0.5.7.tgz"
+      "version": "0.6.1",
+      "from": "source-map@0.6.1",
+      "resolved": "https://registry.npmjs.org/source-map/-/source-map-0.6.1.tgz"
     },
     "vscode-debugadapter": {
       "version": "1.24.0",
-      "from": "vscode-debugadapter@>=1.24.0 <2.0.0",
+      "from": "vscode-debugadapter@1.24.0",
       "resolved": "https://registry.npmjs.org/vscode-debugadapter/-/vscode-debugadapter-1.24.0.tgz"
     },
     "vscode-debugprotocol": {
@@ -104,7 +104,7 @@
     },
     "vscode-nls": {
       "version": "2.0.2",
-      "from": "vscode-nls@>=2.0.2 <3.0.0",
+      "from": "vscode-nls@2.0.2",
       "resolved": "https://registry.npmjs.org/vscode-nls/-/vscode-nls-2.0.2.tgz"
     },
     "wrappy": {
