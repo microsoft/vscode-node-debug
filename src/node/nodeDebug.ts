@@ -861,8 +861,6 @@ export class NodeDebugSession extends LoggingDebugSession {
 			return;
 		}
 
-		const port = args.port || random(3000, 50000);
-
 		let runtimeExecutable = args.runtimeExecutable;
 		if (args.useWSL) {
 			runtimeExecutable = runtimeExecutable || NodeDebugSession.NODE;
@@ -932,7 +930,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 						} else {
 							this.log('sm', `launchRequest: program '${programPath}' seems to be the generated file`);
 						}
-						this.launchRequest2(response, args, programPath, programArgs, <string> runtimeExecutable, runtimeArgs, port);
+						this.launchRequest2(response, args, programPath, programArgs, <string> runtimeExecutable, runtimeArgs);
 					});
 					return;
 				}
@@ -953,16 +951,16 @@ export class NodeDebugSession extends LoggingDebugSession {
 					}
 					this.log('sm', `launchRequest: program '${programPath}' seems to be the source; launch the generated file '${generatedPath}' instead`);
 					programPath = generatedPath;
-					this.launchRequest2(response, args, programPath, programArgs, <string> runtimeExecutable, runtimeArgs, port);
+					this.launchRequest2(response, args, programPath, programArgs, <string> runtimeExecutable, runtimeArgs);
 				});
 				return;
 			}
 		}
 
-		this.launchRequest2(response, args, programPath, programArgs, runtimeExecutable, runtimeArgs, port);
+		this.launchRequest2(response, args, programPath, programArgs, runtimeExecutable, runtimeArgs);
 	}
 
-	private launchRequest2(response: DebugProtocol.LaunchResponse, args: LaunchRequestArguments, programPath: string, programArgs: string[], runtimeExecutable: string, runtimeArgs: string[], port: number): void {
+	private launchRequest2(response: DebugProtocol.LaunchResponse, args: LaunchRequestArguments, programPath: string, programArgs: string[], runtimeExecutable: string, runtimeArgs: string[]): void {
 
 		let program: string | undefined;
 		let workingDirectory = args.cwd;
@@ -988,10 +986,11 @@ export class NodeDebugSession extends LoggingDebugSession {
 		}
 
 		// figure out when to add a '--debug-brk=nnnn'
-		let launchArgs = [ runtimeExecutable ];
+		let port = args.port;
+		let launchArgs = [ runtimeExecutable ].concat(runtimeArgs);
 		if (!this._noDebug) {
 
-			if (args.port) {	// a port is specified
+			if (args.port) {	// a port was specified in launch config
 
 				// only if the default runtime 'node' is used without arguments
 				if (!args.runtimeExecutable && !args.runtimeArgs) {
@@ -1002,11 +1001,11 @@ export class NodeDebugSession extends LoggingDebugSession {
 			} else { // no port is specified
 
 				// use a random port
+				port = random(3000, 50000);
 				launchArgs.push(`--debug-brk=${port}`);
 			}
 		}
 
-		launchArgs = launchArgs.concat(runtimeArgs);
 		if (program) {
 			launchArgs.push(program);
 		}
