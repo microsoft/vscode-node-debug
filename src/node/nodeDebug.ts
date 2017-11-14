@@ -333,6 +333,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 	private static NODE_INTERNALS = '<node_internals>';
 	private static NODE_INTERNALS_PREFIX = /^<node_internals>[/\\]/;
 	private static NODE_INTERNALS_VM = /^<node_internals>[/\\]VM([0-9]+)/;
+	private static JS_EXTENSIONS = [ ".js", ".es6", ".jsx", ".mjs" ];
 
 	private static NODE_SHEBANG_MATCHER = new RegExp('#! */usr/bin/env +node');
 	private static LONG_STRING_MATCHER = /\.\.\. \(length: [0-9]+\)$/;
@@ -4013,8 +4014,8 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 	private static isJavaScript(path: string): boolean {
 
-		const name = Path.basename(path).toLowerCase();
-		if (endsWith(name, '.js')) {
+		const name = Path.extname(path).toLowerCase();
+		if (NodeDebugSession.JS_EXTENSIONS.indexOf(name) >= 0) {
 			return true;
 		}
 
@@ -4109,10 +4110,6 @@ function isIndex(name: string | number) {
 		default:
 			return false;
 	}
-}
-
-function endsWith(str: string, suffix: string): boolean {
-	return str.indexOf(suffix, str.length - suffix.length) !== -1;
 }
 
 function random(low: number, high: number): number {
