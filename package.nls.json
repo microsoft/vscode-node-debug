@@ -30,6 +30,7 @@
 	"node.localRoot.description": "Path to the local directory containing the program.",
 	"node.remoteRoot.description": "Absolute path to the remote directory containing the program.",
 	"node.showAsyncStacks.description": "Show the async calls that led to the current call stack. 'inspector' protocol only.",
+	"node.sourceMapPathOverrides.description": "A set of mappings for rewriting the locations of source files from what the sourcemap says, to their locations on disk.",
 
 	"node.launch.program.description": "Absolute path to the program. Generated value is guessed by looking at package.json and opened files. Edit this attribute.",
 	"node.launch.externalConsole.deprecationMessage": "Attribute 'externalConsole' is deprecated, use 'console' instead.",

@@ -429,6 +429,15 @@
 								],
 								"description": "%node.launch.outputCapture.description%",
 								"default": "console"
+							},
+							"sourceMapPathOverrides": {
+								"type": "object",
+								"description": "%node.sourceMapPathOverrides.description%",
+								"default": {
+									"webpack:///./~/*": "${workspaceRoot}/node_modules/*",
+									"webpack:///./*": "${workspaceRoot}/*",
+									"webpack:///*": "*"
+								}
 							}
 						}
 					},
@@ -526,6 +535,15 @@
 								"type": ["boolean", "string"],
 								"description": "%trace.description%",
 								"default": true
+							},
+							"sourceMapPathOverrides": {
+								"type": "object",
+								"description": "%node.sourceMapPathOverrides.description%",
+								"default": {
+									"webpack:///./~/*": "${workspaceRoot}/node_modules/*",
+									"webpack:///./*": "${workspaceRoot}/*",
+									"webpack:///*": "*"
+								}
 							}
 						}
 					}
