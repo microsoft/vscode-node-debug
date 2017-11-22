@@ -25,14 +25,14 @@
 		"multi-root ready"
 	],
 	"engines": {
-		"vscode": "^1.17.0",
+		"vscode": "^1.19.0",
 		"node": "^7.4.0"
 	},
 	"extensionDependencies": [
 		"ms-vscode.node-debug2"
 	],
 	"dependencies": {
-		"vscode-debugadapter": "1.24.0",
+		"vscode-debugadapter": "1.25.0-pre.0",
 		"source-map": "0.6.1",
 		"vscode-nls": "2.0.2",
 		"request-light": "0.2.1",
@@ -151,7 +151,12 @@
 					"PickProcess": "extension.pickNodeProcess"
 				},
 				"aiKey": "AIF-d9b70cd4-b9f9-4d70-929b-a071c400b217",
-				"languages": ["javascript", "typescript", "javascriptreact", "typescriptreact"],
+				"languages": [
+					"javascript",
+					"typescript",
+					"javascriptreact",
+					"typescriptreact"
+				],
 				"configurationSnippets": [
 					{
 						"label": "%node.snippet.launch.label%",
@@ -172,7 +177,8 @@
 							"name": "${1:Launch via NPM}",
 							"runtimeExecutable": "npm",
 							"runtimeArgs": [
-								"run-script", "debug"
+								"run-script",
+								"debug"
 							],
 							"port": 9229
 						}
@@ -233,8 +239,10 @@
 							"name": "Mocha Tests",
 							"program": "^\"\\${workspaceFolder}/node_modules/mocha/bin/_mocha\"",
 							"args": [
-								"-u", "tdd",
-								"--timeout", "999999",
+								"-u",
+								"tdd",
+								"--timeout",
+								"999999",
 								"--colors",
 								"^\"\\${workspaceFolder}/${1:test}\""
 							],
@@ -249,7 +257,9 @@
 							"request": "launch",
 							"name": "Yeoman ${1:generator}",
 							"program": "^\"\\${workspaceFolder}/node_modules/yo/lib/cli.js\"",
-							"args": [ "${1:generator}" ],
+							"args": [
+								"${1:generator}"
+							],
 							"console": "integratedTerminal",
 							"internalConsoleOptions": "neverOpen"
 						}
@@ -262,7 +272,9 @@
 							"request": "launch",
 							"name": "Gulp ${1:task}",
 							"program": "^\"\\${workspaceFolder}/node_modules/gulp/bin/gulp.js\"",
-							"args": [ "${1:task}" ]
+							"args": [
+								"${1:task}"
+							]
 						}
 					},
 					{
@@ -283,7 +295,11 @@
 						"properties": {
 							"protocol": {
 								"type": "string",
-								"enum": [ "auto", "inspector", "legacy" ],
+								"enum": [
+									"auto",
+									"inspector",
+									"legacy"
+								],
 								"enumDescriptions": [
 									"%node.protocol.auto.description%",
 									"%node.protocol.inspector.description%",
@@ -308,7 +324,11 @@
 							},
 							"console": {
 								"type": "string",
-								"enum": [ "internalConsole", "integratedTerminal", "externalTerminal" ],
+								"enum": [
+									"internalConsole",
+									"integratedTerminal",
+									"externalTerminal"
+								],
 								"enumDescriptions": [
 									"%node.launch.console.internalConsole.description%",
 									"%node.launch.console.integratedTerminal.description%",
@@ -320,7 +340,9 @@
 							"args": {
 								"type": "array",
 								"description": "%launch.args.description%",
-								"items": { "type": "string" },
+								"items": {
+									"type": "string"
+								},
 								"default": []
 							},
 							"cwd": {
@@ -329,19 +351,26 @@
 								"default": "${workspaceFolder}"
 							},
 							"runtimeExecutable": {
-								"type": ["string", "null"],
+								"type": [
+									"string",
+									"null"
+								],
 								"description": "%node.launch.runtimeExecutable.description%",
 								"default": "node"
 							},
 							"runtimeArgs": {
 								"type": "array",
 								"description": "%node.launch.runtimeArgs.description%",
-								"items": { "type": "string" },
+								"items": {
+									"type": "string"
+								},
 								"default": []
 							},
 							"env": {
 								"type": "object",
-								"additionalProperties": { "type": "string" },
+								"additionalProperties": {
+									"type": "string"
+								},
 								"description": "%node.launch.env.description%",
 								"default": {}
 							},
@@ -356,14 +385,19 @@
 								"default": true
 							},
 							"outDir": {
-								"type": ["string", "null"],
+								"type": [
+									"string",
+									"null"
+								],
 								"deprecationMessage": "%outDir.deprecationMessage%",
 								"default": null
 							},
 							"outFiles": {
 								"type": "array",
 								"description": "%outFiles.description%",
-								"items": { "type": "string" },
+								"items": {
+									"type": "string"
+								},
 								"default": []
 							},
 							"port": {
@@ -387,12 +421,18 @@
 								"default": true
 							},
 							"localRoot": {
-								"type": ["string", "null"],
+								"type": [
+									"string",
+									"null"
+								],
 								"description": "%node.localRoot.description%",
 								"default": null
 							},
 							"remoteRoot": {
-								"type": ["string", "null"],
+								"type": [
+									"string",
+									"null"
+								],
 								"description": "%node.remoteRoot.description%",
 								"default": null
 							},
@@ -404,7 +444,9 @@
 							"skipFiles": {
 								"type": "array",
 								"description": "%skipFiles.description%",
-								"items": { "type": "string" },
+								"items": {
+									"type": "string"
+								},
 								"default": []
 							},
 							"showAsyncStacks": {
@@ -418,7 +460,10 @@
 								"default": true
 							},
 							"trace": {
-								"type": ["boolean", "string"],
+								"type": [
+									"boolean",
+									"string"
+								],
 								"description": "%trace.description%",
 								"default": true
 							},
@@ -445,7 +490,11 @@
 						"properties": {
 							"protocol": {
 								"type": "string",
-								"enum": [ "auto", "inspector", "legacy" ],
+								"enum": [
+									"auto",
+									"inspector",
+									"legacy"
+								],
 								"enumDescriptions": [
 									"%node.protocol.auto.description%",
 									"%node.protocol.inspector.description%",
@@ -490,14 +539,19 @@
 								"default": true
 							},
 							"outDir": {
-								"type": ["string", "null"],
+								"type": [
+									"string",
+									"null"
+								],
 								"deprecationMessage": "%outDir.deprecationMessage%",
 								"default": null
 							},
 							"outFiles": {
 								"type": "array",
 								"description": "%outFiles.description%",
-								"items": { "type": "string" },
+								"items": {
+									"type": "string"
+								},
 								"default": []
 							},
 							"stopOnEntry": {
@@ -506,12 +560,18 @@
 								"default": true
 							},
 							"localRoot": {
-								"type": ["string", "null"],
+								"type": [
+									"string",
+									"null"
+								],
 								"description": "%node.localRoot.description%",
 								"default": null
 							},
 							"remoteRoot": {
-								"type": ["string", "null"],
+								"type": [
+									"string",
+									"null"
+								],
 								"description": "%node.remoteRoot.description%",
 								"default": null
 							},
@@ -523,7 +583,9 @@
 							"skipFiles": {
 								"type": "array",
 								"description": "%skipFiles.description%",
-								"items": { "type": "string" },
+								"items": {
+									"type": "string"
+								},
 								"default": []
 							},
 							"showAsyncStacks": {
@@ -532,7 +594,10 @@
 								"default": true
 							},
 							"trace": {
-								"type": ["boolean", "string"],
+								"type": [
+									"boolean",
+									"string"
+								],
 								"description": "%trace.description%",
 								"default": true
 							},

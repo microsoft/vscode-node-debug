@@ -10,5 +10,5 @@ import * as nls from 'vscode-nls';
 export const localize = nls.config(process.env.VSCODE_NLS_CONFIG)();
 
 export function log(message: string) {
-	vscode.commands.executeCommand('debug.logToDebugConsole', message + '\n');
+	vscode.debug.activeDebugConsole.appendLine(message);
 }
