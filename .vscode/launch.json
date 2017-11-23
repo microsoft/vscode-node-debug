@@ -15,7 +15,6 @@
 			"type": "node",
 			"request": "launch",
 			"name": "Server",
-			"protocol": "legacy",
 			"program": "${workspaceFolder}/src/node/nodeDebug.ts",
 			"args": [ "--server=4711" ],
 			"outFiles": [ "${workspaceFolder}/out/**/*.js" ],
@@ -25,7 +24,6 @@
 			"type": "node",
 			"request": "launch",
 			"name": "Server (nodemon)",
-			"protocol": "legacy",
 			"runtimeExecutable": "npm",
 			"runtimeArgs": [
 				"run-script", "nodemon"
@@ -39,7 +37,6 @@
 			"type": "node",
 			"request": "launch",
 			"name": "Tests",
-			"protocol": "legacy",
 			"program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
 			"args": [
 				"-u", "tdd",
