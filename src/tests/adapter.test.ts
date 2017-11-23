@@ -15,6 +15,7 @@ suite('Node Debug Adapter', () => {
 
 	const PROJECT_ROOT = Path.join(__dirname, '../../');
 	const DATA_ROOT = Path.join(PROJECT_ROOT, 'testdata/');
+	const RUNTIME = 'node';
 
 
 	let dc: DebugClient;
@@ -69,7 +70,7 @@ suite('Node Debug Adapter', () => {
 
 			return Promise.all([
 				dc.configurationSequence(),
-				dc.launch({ program: PROGRAM }),
+				dc.launch({ runtimeExecutable: RUNTIME, program: PROGRAM }),
 				dc.waitForEvent('terminated')
 			]);
 		});
@@ -83,7 +84,7 @@ suite('Node Debug Adapter', () => {
 					const PROGRAM = Path.join(DATA_ROOT, 'program.js');
 					return Promise.all([
 						dc.configurationSequence(),
-						dc.launch({ program: PROGRAM, useWSL: true }),
+						dc.launch({ runtimeExecutable: RUNTIME, program: PROGRAM, useWSL: true }),
 						dc.waitForEvent('terminated')
 					]);
 				});
@@ -97,7 +98,7 @@ suite('Node Debug Adapter', () => {
 
 			return Promise.all([
 				dc.configurationSequence(),
-				dc.launch({ program: PROGRAM, stopOnEntry: true }),
+				dc.launch({ runtimeExecutable: RUNTIME, program: PROGRAM, stopOnEntry: true }),
 				dc.assertStoppedLocation('entry', { path: PROGRAM, line: ENTRY_LINE } )
 			]);
 		});
@@ -109,7 +110,7 @@ suite('Node Debug Adapter', () => {
 
 			return Promise.all([
 				dc.configurationSequence(),
-				dc.launch({ program: PROGRAM }),
+				dc.launch({ runtimeExecutable: RUNTIME, program: PROGRAM }),
 				dc.assertStoppedLocation('debugger_statement', { path: PROGRAM, line: DEBUGGER_LINE } )
 			]);
 		});
@@ -121,7 +122,7 @@ suite('Node Debug Adapter', () => {
 
 			return Promise.all([
 				dc.configurationSequence(),
-				dc.launch({ program: PROGRAM }),
+				dc.launch({ runtimeExecutable: RUNTIME, program: PROGRAM }),
 				dc.assertStoppedLocation('debugger_statement', { path: PROGRAM, line: DEBUGGER_LINE } )
 			]);
 		});
@@ -135,7 +136,7 @@ suite('Node Debug Adapter', () => {
 			const PROGRAM = Path.join(DATA_ROOT, 'program.js');
 			const BREAKPOINT_LINE = 2;
 
-			return dc.hitBreakpoint({ program: PROGRAM }, { path: PROGRAM, line: BREAKPOINT_LINE} );
+			return dc.hitBreakpoint({ runtimeExecutable: RUNTIME, program: PROGRAM }, { path: PROGRAM, line: BREAKPOINT_LINE} );
 		});
 
 		test('should stop on a breakpoint in file with spaces in its name', () => {
@@ -143,7 +144,7 @@ suite('Node Debug Adapter', () => {
 			const PROGRAM = Path.join(DATA_ROOT, 'folder with spaces', 'file with spaces.js');
 			const BREAKPOINT_LINE = 2;
 
-			return dc.hitBreakpoint({ program: PROGRAM }, { path: PROGRAM, line: BREAKPOINT_LINE} );
+			return dc.hitBreakpoint({ runtimeExecutable: RUNTIME, program: PROGRAM }, { path: PROGRAM, line: BREAKPOINT_LINE} );
 		});
 
 		test('should stop on a breakpoint identical to the entrypoint', () => {		// verifies the 'hide break on entry point' logic
@@ -151,7 +152,7 @@ suite('Node Debug Adapter', () => {
 			const PROGRAM = Path.join(DATA_ROOT, 'program.js');
 			const ENTRY_LINE = 1;
 
-			return dc.hitBreakpoint({ program: PROGRAM }, { path: PROGRAM, line: ENTRY_LINE } );
+			return dc.hitBreakpoint({ runtimeExecutable: RUNTIME, program: PROGRAM }, { path: PROGRAM, line: ENTRY_LINE } );
 		});
 
 		test('should break on a specific column in a single line program', () => {
@@ -160,7 +161,7 @@ suite('Node Debug Adapter', () => {
 			const LINE = 1;
 			const COLUMN = 55;
 
-			return dc.hitBreakpoint({ program: SINGLE_LINE_PROGRAM }, { path: SINGLE_LINE_PROGRAM, line: LINE, column: COLUMN } );
+			return dc.hitBreakpoint({ runtimeExecutable: RUNTIME, program: SINGLE_LINE_PROGRAM }, { path: SINGLE_LINE_PROGRAM, line: LINE, column: COLUMN } );
 		});
 
 		test('should stop on a conditional breakpoint', () => {
@@ -184,7 +185,7 @@ suite('Node Debug Adapter', () => {
 					return dc.configurationDoneRequest();
 				}),
 
-				dc.launch({ program: PROGRAM }),
+				dc.launch({ runtimeExecutable: RUNTIME, program: PROGRAM }),
 
 				dc.assertStoppedLocation('breakpoint', { path: PROGRAM, line: COND_BREAKPOINT_LINE } ).then(response => {
 					const frame = response.body.stackFrames[0];
@@ -200,7 +201,7 @@ suite('Node Debug Adapter', () => {
 
 			const PROGRAM = Path.join(DATA_ROOT, 'programWithInternal.js');
 
-			return dc.hitBreakpoint({ program: PROGRAM }, { path: '<node_internals>/assert.js', line: 110 });
+			return dc.hitBreakpoint({ runtimeExecutable: RUNTIME, program: PROGRAM }, { path: '<node_internals>/assert.js', line: 110 });
 		});
 
 		test('should stop on debugger statement in eval', () => {
@@ -210,7 +211,7 @@ suite('Node Debug Adapter', () => {
 
 			return Promise.all([
 				dc.configurationSequence(),
-				dc.launch({ program: PROGRAM }),
+				dc.launch({ runtimeExecutable: RUNTIME, program: PROGRAM }),
 				dc.assertStoppedLocation('debugger_statement', { path: /^<node_internals>\/VM[0-9]+$/, line: DEBUGGER_LINE } )
 			]);
 		});
@@ -225,7 +226,7 @@ suite('Node Debug Adapter', () => {
 
 			return Promise.all([
 				dc.configurationSequence(),
-				dc.launch({ program: PROGRAM, stopOnEntry: true }),
+				dc.launch({ runtimeExecutable: RUNTIME, program: PROGRAM, stopOnEntry: true }),
 				dc.assertStoppedLocation('entry', { path: PROGRAM, line: TS_LINE } )
 			]);
 		});
@@ -237,6 +238,7 @@ suite('Node Debug Adapter', () => {
 			const TS_LINE = 17;
 
 			return dc.hitBreakpoint({
+				runtimeExecutable: RUNTIME,
 				program: PROGRAM,
 				runtimeArgs: [ '--nolazy' ]
 			}, {
@@ -252,6 +254,7 @@ suite('Node Debug Adapter', () => {
 			const TS_LINE = 17;
 
 			return dc.hitBreakpoint({
+				runtimeExecutable: RUNTIME,
 				program: PROGRAM,
 				runtimeArgs: [ '--nolazy' ]
 			}, {
@@ -267,6 +270,7 @@ suite('Node Debug Adapter', () => {
 			const BREAKPOINT_LINE = 17;
 
 			return dc.hitBreakpoint({
+				runtimeExecutable: RUNTIME,
 				program: PROGRAM,
 				outDir: OUT_DIR,
 				runtimeArgs: [ '--nolazy' ]
@@ -283,6 +287,7 @@ suite('Node Debug Adapter', () => {
 			const BREAKPOINT_LINE = 17;
 
 			return dc.hitBreakpoint({
+				runtimeExecutable: RUNTIME,
 				program: PROGRAM,
 				outFiles: [ OUT_FILES ],
 				runtimeArgs: [ '--nolazy' ]
@@ -299,6 +304,7 @@ suite('Node Debug Adapter', () => {
 			const BREAKPOINT_LINE = 17;
 
 			return dc.hitBreakpoint({
+				runtimeExecutable: RUNTIME,
 				program: PROGRAM,
 				outDir: OUT_DIR,
 				runtimeArgs: [ '--nolazy' ]
@@ -315,6 +321,7 @@ suite('Node Debug Adapter', () => {
 			const BREAKPOINT_LINE = 17;
 
 			return dc.hitBreakpoint({
+				runtimeExecutable: RUNTIME,
 				program: PROGRAM,
 				outFiles: [ OUT_FILES ],
 				runtimeArgs: [ '--nolazy' ]
@@ -333,6 +340,7 @@ suite('Node Debug Adapter', () => {
 			const TS_LINE = 17;
 
 			return dc.hitBreakpoint({
+				runtimeExecutable: RUNTIME,
 				program: PROGRAM,
 				outDir: OUT_DIR,
 				runtimeArgs: [ '--nolazy' ]
@@ -350,6 +358,7 @@ suite('Node Debug Adapter', () => {
 			const TS_LINE = 17;
 
 			return dc.hitBreakpoint({
+				runtimeExecutable: RUNTIME,
 				program: PROGRAM,
 				outDir: OUT_DIR,
 				runtimeArgs: [ '--nolazy' ]
@@ -369,6 +378,7 @@ suite('Node Debug Adapter', () => {
 			const TS_LINE = 17;
 
 			return dc.hitBreakpoint({
+				runtimeExecutable: RUNTIME,
 				program: PROGRAM,
 				outDir: OUT_DIR,
 				runtimeArgs: [ '--nolazy' ]
@@ -389,6 +399,7 @@ suite('Node Debug Adapter', () => {
 			const TS_LINE = 17;
 
 			return dc.hitBreakpoint({
+				runtimeExecutable: RUNTIME,
 				program: PROGRAM,
 				sourceMaps: true,
 				outDir: OUT_DIR,
@@ -402,6 +413,7 @@ suite('Node Debug Adapter', () => {
 			const TS_LINE = 3;
 
 			return dc.hitBreakpoint({
+				runtimeExecutable: RUNTIME,
 				program: PROGRAM,
 				sourceMaps: true,
 				outFiles: [],
@@ -424,7 +436,7 @@ suite('Node Debug Adapter', () => {
 
 			return Promise.all<DebugProtocol.ProtocolMessage>([
 
-				dc.launch({ program: PROGRAM }),
+				dc.launch({ runtimeExecutable: RUNTIME, program: PROGRAM }),
 
 				dc.configurationSequence(),
 
@@ -474,7 +486,7 @@ suite('Node Debug Adapter', () => {
 					return dc.configurationDoneRequest();
 				}),
 
-				dc.launch({ program: PROGRAM }),
+				dc.launch({ runtimeExecutable: RUNTIME, program: PROGRAM }),
 
 				dc.waitForEvent('terminated')
 			]);
@@ -494,7 +506,7 @@ suite('Node Debug Adapter', () => {
 					return dc.configurationDoneRequest();
 				}),
 
-				dc.launch({ program: PROGRAM }),
+				dc.launch({ runtimeExecutable: RUNTIME, program: PROGRAM }),
 
 				dc.assertStoppedLocation('exception', { path: PROGRAM, line: EXCEPTION_LINE } )
 			]);
@@ -514,7 +526,7 @@ suite('Node Debug Adapter', () => {
 					return dc.configurationDoneRequest();
 				}),
 
-				dc.launch({ program: PROGRAM }),
+				dc.launch({ runtimeExecutable: RUNTIME, program: PROGRAM }),
 
 				dc.assertStoppedLocation('exception', { path: PROGRAM, line: UNCAUGHT_EXCEPTION_LINE } )
 			]);
@@ -528,7 +540,7 @@ suite('Node Debug Adapter', () => {
 		test('stdout and stderr events should be complete and in correct order', () => {
 			return Promise.all([
 				dc.configurationSequence(),
-				dc.launch({ program: PROGRAM }),
+				dc.launch({ runtimeExecutable: RUNTIME, program: PROGRAM }),
 				dc.assertOutput('stdout', 'Hello stdout 0\nHello stdout 1\nHello stdout 2\n'),
 				//dc.assertOutput('stderr', 'Hello stderr 0\nHello stderr 1\nHello stderr 2\n')
 			]);
