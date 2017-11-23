@@ -32,7 +32,7 @@
 		"ms-vscode.node-debug2"
 	],
 	"dependencies": {
-		"vscode-debugadapter": "1.25.0-pre.0",
+		"vscode-debugadapter": "1.25.0-pre.3",
 		"source-map": "0.6.1",
 		"vscode-nls": "2.0.2",
 		"request-light": "0.2.1",
@@ -47,9 +47,9 @@
 		"url": "https://github.com/Microsoft/vscode-node-debug/issues"
 	},
 	"devDependencies": {
-		"@types/mocha": "2.2.42",
-		"@types/node": "6.0.52",
-		"@types/source-map": "0.5.1",
+		"@types/mocha": "2.2.44",
+		"@types/node": "7.0.43",
+		"@types/source-map": "0.5.2",
 		"gulp": "3.9.1",
 		"gulp-util": "3.0.8",
 		"gulp-typescript": "3.2.2",
@@ -65,13 +65,13 @@
 		"tslint": "5.8.0",
 		"tsutils": "2.12.2",
 		"typescript": "2.6.1",
-		"vscode": "1.1.6",
+		"vscode": "1.1.8",
 		"vscode-nls-dev": "2.1.6",
 		"vscode-debugadapter-testsupport": "1.24.0",
-		"vscode-debugprotocol": "1.24.0",
+		"vscode-debugprotocol": "1.25.0-pre.3",
 		"event-stream": "3.3.4",
 		"nodemon": "1.12.1",
-		"vsce": "1.32.0"
+		"vsce": "1.33.2"
 	},
 	"main": "./out/node/extension/extension.js",
 	"activationEvents": [
