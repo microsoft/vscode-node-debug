@@ -1093,8 +1093,8 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 			// delete all variables that have a 'null' value
 			if (envVars) {
-				const e = envVars || {};
-				Object.keys(e).filter(v => v === null).forEach(key => delete e[key] );
+				const e = envVars; // without this tsc complains about envVars potentially undefined
+				Object.keys(e).filter(v => e[v] === null).forEach(key => delete e[key] );
 			}
 
 			const options = {
