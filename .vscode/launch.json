@@ -44,6 +44,14 @@
 				"--colors",
 				"./out/tests"
 			],
+			"env": {
+				"LEGACY_NODE_PATH": "${env:NVM_DIR}/versions/node/v7.9.0/bin:${env:PATH}"
+			},
+			"windows": {
+				"env": {
+					"LEGACY_NODE_PATH": "${env:NVM_HOME}\\versions\\node\\v7.9.0\\bin;${env:Path}"
+				}
+			},
 			"outFiles": [ "${workspaceFolder}/out/**/*.js" ],
 			"internalConsoleOptions": "openOnSessionStart"
 		}

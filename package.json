@@ -67,7 +67,7 @@
 		"typescript": "2.6.1",
 		"vscode": "1.1.8",
 		"vscode-nls-dev": "2.1.6",
-		"vscode-debugadapter-testsupport": "1.24.0",
+		"vscode-debugadapter-testsupport": "1.25.0-pre.2",
 		"vscode-debugprotocol": "1.25.0-pre.3",
 		"event-stream": "3.3.4",
 		"nodemon": "1.12.1",
