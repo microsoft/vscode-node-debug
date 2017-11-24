@@ -292,7 +292,7 @@ interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArguments, C
 	/** Optional arguments passed to the runtime executable. */
 	runtimeArgs?: string[];
 	/** Optional environment variables to pass to the debuggee. The string valued properties of the 'environmentVariables' are used as key/value pairs. */
-	env?: { [key: string]: string; };
+	env?: { [key: string]: string | null; };
 	/** Optional path to .env file. */
 	envFile?: string;
 	/** Deprecated: if true launch the target in an external console. */
@@ -1090,6 +1090,12 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 			// merge environment variables into a copy of the process.env
 			envVars = PathUtils.extendObject(PathUtils.extendObject( {}, process.env), envVars);
+
+			// delete all variables that have a 'null' value
+			if (envVars) {
+				const e = envVars || {};
+				Object.keys(e).filter(v => v === null).forEach(key => delete e[key] );
+			}
 
 			const options = {
 				cwd: workingDirectory,

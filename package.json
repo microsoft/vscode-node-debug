@@ -369,7 +369,7 @@
 							"env": {
 								"type": "object",
 								"additionalProperties": {
-									"type": "string"
+									"type": [ "string", "null" ]
 								},
 								"description": "%node.launch.env.description%",
 								"default": {}
