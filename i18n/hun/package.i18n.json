@@ -37,7 +37,6 @@
 	"node.launch.cwd.description": "A program munkakönyvtárának abszolút elérési útja hibakeresésnél.",
 	"node.launch.runtimeExecutable.description": "A használt futtatókörnyezet. Vagy egy abszolút elérési út vagy olyan futtatókörnyezet, amely elérhető a PATH-ban. Ha nincs megadva, akkor 'node' van használva.",
 	"node.launch.runtimeArgs.description": "A futtatókörnyezet számára átadott kiegészítő argumentumok.",
-	"node.launch.env.description": "A program számára átadott környezeti változók.",
 	"node.launch.envFile.description": "A környezetiváltozó-definíciókat tartalmazó fájl abszolút elérési útja.",
 	"node.launch.useWSL.description": "Windows Subsystem for Linux használata.",
 	"node.launch.outputCapture.description": "Honnan legyenek rögzítve a kimeneti üzenetek: a hibakeresési API-ról vagy stdout/stderr streamekről.",
