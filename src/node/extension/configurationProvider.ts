@@ -97,7 +97,7 @@ function createLaunchConfigFromContext(folder: vscode.WorkspaceFolder | undefine
 
 		if (pkg) {
 			// try to find a value for 'program' by analysing package.json
-			program = guessProgramFromPackage(folder, pkg);
+			program = guessProgramFromPackage(folder, pkg, resolve);
 			if (program && resolve) {
 				log(localize('program.guessed.from.package.json.explanation', "Launch configuration created based on 'package.json'."));
 			}
@@ -191,7 +191,7 @@ function isTranspiledLanguage(languagId: string) : boolean {
 /*
  * try to find the entry point ('main') from the package.json
  */
-function guessProgramFromPackage(folder: vscode.WorkspaceFolder | undefined, packageJson: any): string | undefined {
+function guessProgramFromPackage(folder: vscode.WorkspaceFolder | undefined, packageJson: any, resolve: boolean): string | undefined {
 
 	let program: string | undefined;
 
@@ -211,7 +211,7 @@ function guessProgramFromPackage(folder: vscode.WorkspaceFolder | undefined, pac
 				path = folder ? join(folder.uri.fsPath, program) : undefined;
 				program = join('${workspaceFolder}', program);
 			}
-			if (path && !fs.existsSync(path) && !fs.existsSync(path + '.js')) {
+			if (resolve && path && !fs.existsSync(path) && !fs.existsSync(path + '.js')) {
 				return undefined;
 			}
 		}
