@@ -75,7 +75,8 @@
 	},
 	"main": "./out/node/extension/extension.js",
 	"activationEvents": [
-		"onDebug",
+		"onDebugInitialConfigurations",
+		"onDebugResolve:node",
 		"onCommand:extension.node-debug.toggleSkippingFile",
 		"onCommand:extension.node-debug.pickLoadedScript",
 		"onCommand:extension.pickNodeProcess"
