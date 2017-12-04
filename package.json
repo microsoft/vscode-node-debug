@@ -1,7 +1,7 @@
 {
 	"name": "node-debug",
 	"displayName": "Node Debug",
-	"version": "1.19.6",
+	"version": "1.19.7",
 	"publisher": "ms-vscode",
 	"description": "%extension.description%",
 	"icon": "images/node-debug-icon.png",
@@ -32,7 +32,7 @@
 		"ms-vscode.node-debug2"
 	],
 	"dependencies": {
-		"vscode-debugadapter": "1.25.0-pre.3",
+		"vscode-debugadapter": "1.25.0",
 		"source-map": "0.6.1",
 		"vscode-nls": "2.0.2",
 		"request-light": "0.2.1",
@@ -67,8 +67,8 @@
 		"typescript": "2.6.1",
 		"vscode": "1.1.8",
 		"vscode-nls-dev": "2.1.6",
-		"vscode-debugadapter-testsupport": "1.25.0-pre.2",
-		"vscode-debugprotocol": "1.25.0-pre.3",
+		"vscode-debugadapter-testsupport": "1.25.0",
+		"vscode-debugprotocol": "1.25.0",
 		"event-stream": "3.3.4",
 		"nodemon": "1.12.1",
 		"vsce": "1.33.2"
@@ -370,7 +370,10 @@
 							"env": {
 								"type": "object",
 								"additionalProperties": {
-									"type": [ "string", "null" ]
+									"type": [
+										"string",
+										"null"
+									]
 								},
 								"description": "%node.launch.env.description%",
 								"default": {}
