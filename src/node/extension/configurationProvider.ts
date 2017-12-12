@@ -12,6 +12,7 @@ import * as fs from 'fs';
 import { log, localize } from './utilities';
 import { detectDebugType, detectProtocolForPid, INSPECTOR_PORT_DEFAULT, LEGACY_PORT_DEFAULT } from './protocolDetection';
 import { pickProcess } from './processPicker';
+import { prepareCluster } from './childProcesses';
 
 //---- NodeConfigurationProvider
 
@@ -59,6 +60,10 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 			if (HOME && HOME.indexOf('/home/') === 0) {
 				config.useWSL = true;
 			}
+		}
+
+		if (config.autoAttachChildren) {
+			prepareCluster(config);
 		}
 
 		// determine which protocol to use

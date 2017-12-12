@@ -1514,7 +1514,9 @@ export class NodeDebugSession extends LoggingDebugSession {
 		// so we use the stopped state of the VM
 		if (this._attachMode) {
 			this.log('la', `_startInitialize2: in attach mode we guess stopOnEntry flag to be '${stopped}''`);
-			this._stopOnEntry = stopped;
+			if (this._stopOnEntry === undefined) {
+				this._stopOnEntry = stopped;
+			}
 		}
 
 		if (this._stopOnEntry) {

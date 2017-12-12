@@ -9,6 +9,7 @@ import * as vscode from 'vscode';
 import { NodeConfigurationProvider } from './configurationProvider';
 import { LoadedScriptsProvider, pickLoadedScript, openScript } from './loadedScripts';
 import { pickProcess } from './processPicker';
+import { startCluster, stopCluster } from './childProcesses';
 
 
 export function activate(context: vscode.ExtensionContext) {
@@ -30,6 +31,10 @@ export function activate(context: vscode.ExtensionContext) {
 	vscode.window.registerTreeDataProvider('extension.node-debug.loadedScriptsExplorer.chrome', provider);
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.pickLoadedScript', () => pickLoadedScript()));
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.openScript', (session: vscode.DebugSession, source) => openScript(session, source)));
+
+	// cluster
+	context.subscriptions.push(vscode.debug.onDidStartDebugSession(session => startCluster(session)));
+	context.subscriptions.push(vscode.debug.onDidTerminateDebugSession(session => stopCluster(session)));
 }
 
 export function deactivate() {
