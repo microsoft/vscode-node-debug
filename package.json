@@ -487,6 +487,11 @@
 									"webpack:///./*": "${workspaceRoot}/*",
 									"webpack:///*": "*"
 								}
+							},
+							"autoAttachChildProcesses": {
+								"type": "boolean",
+								"description": "%node.launch.autoAttachChildProcesses.description%",
+								"default": true
 							}
 						}
 					},

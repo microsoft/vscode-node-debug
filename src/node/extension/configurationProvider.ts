@@ -12,7 +12,7 @@ import * as fs from 'fs';
 import { log, localize } from './utilities';
 import { detectDebugType, detectProtocolForPid, INSPECTOR_PORT_DEFAULT, LEGACY_PORT_DEFAULT } from './protocolDetection';
 import { pickProcess } from './processPicker';
-import { prepareCluster } from './childProcesses';
+import { prepareAutoAttachChildProcesses } from './childProcesses';
 
 //---- NodeConfigurationProvider
 
@@ -54,16 +54,9 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 			}
 		}
 
-		// if we detect that VS Code was launched for WSL, we add the 'useWSL' attribute on the fly
-		if (process.platform === 'win32' && config.request === 'launch' && typeof config.useWSL !== 'boolean') {
-			const HOME = <string> process.env.HOME;
-			if (HOME && HOME.indexOf('/home/') === 0) {
-				config.useWSL = true;
-			}
-		}
-
-		if (config.autoAttachChildren) {
-			prepareCluster(config);
+		// is "auto attach child process" mode enabled?
+		if (config.autoAttachChildProcesses) {
+			prepareAutoAttachChildProcesses(config);
 		}
 
 		// determine which protocol to use

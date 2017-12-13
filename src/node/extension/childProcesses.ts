@@ -7,16 +7,19 @@
 
 import { exec } from 'child_process';
 import * as vscode from 'vscode';
+import { localize } from './utilities';
 
 const DEBUG_PORT_PATTERN = /\s--(inspect|debug)-port=(\d+)/;
 const DEBUG_FLAGS_PATTERN = /\s--(inspect|debug)(-brk)?(=(\d+))?/;
 
 class Cluster {
+	config: vscode.DebugConfiguration;
 	session: vscode.DebugSession;
 	pids: Set<number>;
 	intervalId: NodeJS.Timer;
 
-	constructor() {
+	constructor(config: vscode.DebugConfiguration) {
+		this.config = config;
 		this.pids = new Set<number>();
 	}
 
@@ -29,7 +32,7 @@ class Cluster {
 			this.pollChildProcesses(rootPid, (pid, cmd) => {
 				if (!this.pids.has(pid)) {
 					this.pids.add(pid);
-					attachChildProcess(pid, cmd);
+					attachChildProcess(pid, cmd, this.config);
 				}
 			});
 		});
@@ -62,18 +65,18 @@ class Cluster {
 
 const clusters = new Map<string,Cluster>();
 
-export function prepareCluster(config: vscode.DebugConfiguration) {
-	clusters.set(config.name, new Cluster());
+export function prepareAutoAttachChildProcesses(config: vscode.DebugConfiguration) {
+	clusters.set(config.name, new Cluster(config));
 }
 
-export function startCluster(session: vscode.DebugSession) {
+export function startSession(session: vscode.DebugSession) {
 	const cluster = clusters.get(session.name);
 	if (cluster) {
 		cluster.startWatching(session);
 	}
 }
 
-export function stopCluster(session: vscode.DebugSession) {
+export function stopSession(session: vscode.DebugSession) {
 	const cluster = clusters.get(session.name);
 	if (cluster) {
 		cluster.stopWatching();
@@ -81,14 +84,40 @@ export function stopCluster(session: vscode.DebugSession) {
 	}
 }
 
-function attachChildProcess(pid: number, cmd: string) {
+function attachChildProcess(pid: number, cmd: string, baseConfig: vscode.DebugConfiguration) {
 
 	const config: vscode.DebugConfiguration = {
 		type: 'node',
 		request: 'attach',
-		name: `Child Process ${pid}`,
+		name: localize('childProcessWithPid', "Child Process {0}", pid),
 		stopOnEntry: false
 	};
+
+	// selectively copy attributes
+	if (baseConfig.timeout) {
+		config.timeout = baseConfig.timeout;
+	}
+	if (baseConfig.sourceMaps) {
+		config.sourceMaps = baseConfig.sourceMaps;
+	}
+	if (baseConfig.outFiles) {
+		config.outFiles = baseConfig.outFiles;
+	}
+	if (baseConfig.sourceMapPathOverrides) {
+		config.sourceMapPathOverrides = baseConfig.sourceMapPathOverrides;
+	}
+	if (baseConfig.smartStep) {
+		config.smartStep = baseConfig.smartStep;
+	}
+	if (baseConfig.skipFiles) {
+		config.skipFiles = baseConfig.skipFiles;
+	}
+	if (baseConfig.showAsyncStacks) {
+		config.sourceMaps = baseConfig.showAsyncStacks;
+	}
+	if (baseConfig.trace) {
+		config.trace = baseConfig.trace;
+	}
 
 	// match --debug, --debug=1234, --debug-brk, debug-brk=1234, --inspect, --inspect=1234, --inspect-brk, --inspect-brk=1234
 	let matches = DEBUG_FLAGS_PATTERN.exec(cmd);

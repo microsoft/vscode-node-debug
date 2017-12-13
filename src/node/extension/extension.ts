@@ -9,7 +9,7 @@ import * as vscode from 'vscode';
 import { NodeConfigurationProvider } from './configurationProvider';
 import { LoadedScriptsProvider, pickLoadedScript, openScript } from './loadedScripts';
 import { pickProcess } from './processPicker';
-import { startCluster, stopCluster } from './childProcesses';
+import { startSession, stopSession } from './childProcesses';
 
 
 export function activate(context: vscode.ExtensionContext) {
@@ -33,8 +33,8 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.openScript', (session: vscode.DebugSession, source) => openScript(session, source)));
 
 	// cluster
-	context.subscriptions.push(vscode.debug.onDidStartDebugSession(session => startCluster(session)));
-	context.subscriptions.push(vscode.debug.onDidTerminateDebugSession(session => stopCluster(session)));
+	context.subscriptions.push(vscode.debug.onDidStartDebugSession(session => startSession(session)));
+	context.subscriptions.push(vscode.debug.onDidTerminateDebugSession(session => stopSession(session)));
 }
 
 export function deactivate() {

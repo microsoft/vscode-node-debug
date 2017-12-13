@@ -46,6 +46,7 @@
 	"node.launch.envFile.description": "Absolute path to a file containing environment variable definitions.",
 	"node.launch.useWSL.description": "Use Windows Subsystem Linux.",
 	"node.launch.outputCapture.description": "From where to capture output messages: The debug API, or stdout/stderr streams.",
+	"node.launch.autoAttachChildProcesses.description": "Attach debugger to new child processes automatically.",
 
 	"node.launch.config.name": "Launch",
 
