@@ -9,6 +9,8 @@ import { exec } from 'child_process';
 import * as vscode from 'vscode';
 import { localize } from './utilities';
 
+const POLL_INTERVAL = 1000;
+
 const DEBUG_PORT_PATTERN = /\s--(inspect|debug)-port=(\d+)/;
 const DEBUG_FLAGS_PATTERN = /\s--(inspect|debug)(-brk)?(=(\d+))?/;
 
@@ -26,17 +28,16 @@ class Cluster {
 	startWatching(session: vscode.DebugSession) {
 		this.session = session;
 
-		// get the process ID from the debuggee
-		this.session.customRequest('evaluate', { expression: 'process.pid', global: true }).then(reply => {
-			const rootPid = parseInt(reply.result);
-			this.pollChildProcesses(rootPid, (pid, cmd) => {
-				if (!this.pids.has(pid)) {
-					this.pids.add(pid);
-					attachChildProcess(pid, cmd, this.config);
-				}
+		setTimeout(_ => {
+			// get the process ID from the debuggee
+			this.session.customRequest('evaluate', { expression: 'process.pid' }).then(reply => {
+				const rootPid = parseInt(reply.result);
+				this.attachChildProcesses(rootPid);
+			}, e => {
+				// 'evaluate' error -> use the fall back strategy
+				this.attachChildProcesses(NaN);
 			});
-		});
-
+		}, this.session.type === 'node2' ? 500 : 100);
 	}
 
 	stopWatching() {
@@ -45,21 +46,20 @@ class Cluster {
 		}
 	}
 
-	private pollChildProcesses(rootPid: number, cb: (pid, cmd) => void) {
-
-		function filter(pid: number, cmd: string) {
-
-			const matches = DEBUG_PORT_PATTERN.exec(cmd);
-			const matches2 = DEBUG_FLAGS_PATTERN.exec(cmd);
-			if ((matches && matches.length >= 3) || (matches2 && matches2.length >= 5)) {
-				cb(pid, cmd);
+	private attachChildProcesses(rootPid: number) {
+		this.pollChildProcesses(rootPid, (pid, cmd) => {
+			if (!this.pids.has(pid)) {
+				this.pids.add(pid);
+				attachChildProcess(pid, cmd, this.config);
 			}
-		}
+		});
+	}
 
-		findChildProcesses(rootPid, filter);
+	private pollChildProcesses(rootPid: number, cb: (pid, cmd) => void) {
+		findChildProcesses(rootPid, cb);
 		this.intervalId = setInterval(() => {
-			findChildProcesses(rootPid, filter);
-		}, 1000);
+			findChildProcesses(rootPid, cb);
+		}, POLL_INTERVAL);
 	}
 }
 
@@ -148,12 +148,28 @@ function findChildProcesses(rootPid: number, cb: (pid: number, cmd: string) => v
 
 	const set = new Set<number>();
 
-	set.add(rootPid);
+	if (!isNaN(rootPid) && rootPid > 0) {
+		set.add(rootPid);
+	}
 
-	function addToTree(pid: number, ppid: number, cmd: string) {
+	function oneProcess(pid: number, ppid: number, cmd: string) {
+
+		if (set.size === 0) {
+			// try to find the root process
+			const matches = DEBUG_PORT_PATTERN.exec(cmd);
+			if (matches && matches.length >= 3) {
+				// since this is a child we add the parent id as the root id
+				set.add(ppid);
+			}
+		}
+
 		if (set.has(ppid)) {
 			set.add(pid);
-			cb(pid, cmd);
+			const matches = DEBUG_PORT_PATTERN.exec(cmd);
+			const matches2 = DEBUG_FLAGS_PATTERN.exec(cmd);
+			if ((matches && matches.length >= 3) || (matches2 && matches2.length >= 5)) {
+				cb(pid, cmd);
+			}
 		}
 	}
 
@@ -168,7 +184,7 @@ function findChildProcesses(rootPid: number, cb: (pid: number, cmd: string) => v
 				for (let line of lines) {
 					let matches = CMD_PAT.exec(line.trim());
 					if (matches && matches.length === 4) {
-						addToTree(parseInt(matches[3]), parseInt(matches[2]), matches[1].trim());
+						oneProcess(parseInt(matches[3]), parseInt(matches[2]), matches[1].trim());
 					}
 				}
 			}
@@ -184,7 +200,7 @@ function findChildProcesses(rootPid: number, cb: (pid: number, cmd: string) => v
 				for (const line of lines) {
 					let matches = CMD_PAT.exec(line.trim());
 					if (matches && matches.length === 4) {
-						addToTree(parseInt(matches[1]), parseInt(matches[2]), matches[3]);
+						oneProcess(parseInt(matches[1]), parseInt(matches[2]), matches[3]);
 					}
 				}
 			}
