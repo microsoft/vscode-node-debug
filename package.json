@@ -359,6 +359,11 @@
 								"description": "%node.launch.runtimeExecutable.description%",
 								"default": "node"
 							},
+							"runtimeVersion": {
+								"type": "string",
+								"description": "%node.launch.runtimeVersion.description%",
+								"default": "default"
+							},
 							"runtimeArgs": {
 								"type": "array",
 								"description": "%node.launch.runtimeArgs.description%",

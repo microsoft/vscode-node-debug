@@ -54,6 +54,45 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 			}
 		}
 
+		if (config.runtimeVersion) {
+			const dir = process.env['NVM_DIR'];
+			if (dir) {
+				const bin = join(dir, 'versions', 'node', `v${config.runtimeVersion}`, 'bin');
+				if (fs.existsSync(bin)) {
+					if (!config.env) {
+						config.env = {};
+					}
+					// config.env['PATH'] = `${bin}:${process.env['PATH']}`;
+					config.runtimeExecutable = join(bin, 'node');
+				} else {
+					return vscode.window.showInformationMessage(`nvm version ${config.runtimeVersion} not available`).then(_ => {
+						return undefined;	// abort launch
+					});
+				}
+			} else {
+				// C:\Users\weinand\AppData\Roaming\nvm
+				const home = process.env['NVM_HOME'];
+				if (home) {
+					const bin = join(home, `v${config.runtimeVersion}`);
+					if (fs.existsSync(bin)) {
+						if (!config.env) {
+							config.env = {};
+						}
+						// config.env['Path'] = `${bin}:${process.env['Path']}`;
+						config.runtimeExecutable = join(bin, 'node.exe');
+					} else {
+						return vscode.window.showInformationMessage(`nvm version ${config.runtimeVersion} not available`).then(_ => {
+							return undefined;	// abort launch
+						});
+					}
+				} else {
+					return vscode.window.showInformationMessage(`nvm not available (environment available 'NVM_DIR' not found)`).then(_ => {
+						return undefined;	// abort launch
+					});
+				}
+			}
+		}
+
 		// is "auto attach child process" mode enabled?
 		if (config.autoAttachChildProcesses) {
 			prepareAutoAttachChildProcesses(config);
