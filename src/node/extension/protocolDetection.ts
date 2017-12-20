@@ -5,7 +5,7 @@
 'use strict';
 
 import * as cp from 'child_process';
-import { log, localize } from './utilities';
+import { log, localize, extendObject } from './utilities';
 import * as net from 'net';
 import * as WSL from '../wslSupport';
 
@@ -104,7 +104,11 @@ function detectProtocolForLaunch(config: any): string | undefined {
 		return 'inspector';
 	} else {
 		// only determine version if no runtimeExecutable is set (and 'node' on PATH is used)
-		const result = WSL.spawnSync(config.useWSL, 'node', ['--version']);
+		let env = process.env;
+		if (config.env) {
+			env = extendObject(extendObject( {} , process.env), config.env);
+		}
+		const result = WSL.spawnSync(config.useWSL, 'node', ['--version'], { shell: true, env: env });
 		const semVerString = result.stdout ? result.stdout.toString() : undefined;
 		if (semVerString) {
 			config.__nodeVersion = semVerString.trim();
