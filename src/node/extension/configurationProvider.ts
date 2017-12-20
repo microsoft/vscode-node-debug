@@ -78,8 +78,9 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 						if (!config.env) {
 							config.env = {};
 						}
-						// config.env['Path'] = `${bin}:${process.env['Path']}`;
-						config.runtimeExecutable = join(bin, 'node.exe');
+						config.env['Path'] = `${bin};${process.env['Path']}`;
+						//config.runtimeExecutable = 'node64';
+						//config.runtimeExecutable = join(bin, 'node64.exe');
 					} else {
 						return vscode.window.showInformationMessage(`nvm version ${config.runtimeVersion} not available`).then(_ => {
 							return undefined;	// abort launch
