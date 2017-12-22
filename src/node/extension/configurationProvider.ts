@@ -54,23 +54,12 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 			}
 		}
 
+		// "nvm" support
 		if (config.runtimeVersion) {
-			const dir = process.env['NVM_DIR'];
-			if (dir) {
-				const bin = join(dir, 'versions', 'node', `v${config.runtimeVersion}`, 'bin');
-				if (fs.existsSync(bin)) {
-					if (!config.env) {
-						config.env = {};
-					}
-					config.env['PATH'] = `${bin}:${process.env['PATH']}`;
-					//config.runtimeExecutable = join(bin, 'node');
-				} else {
-					return vscode.window.showInformationMessage(`nvm version ${config.runtimeVersion} not available`).then(_ => {
-						return undefined;	// abort launch
-					});
-				}
-			} else {
-				// C:\Users\weinand\AppData\Roaming\nvm
+
+			// if a runtime version is specified we prepend env.PATH with the folder that corresponds to the version
+
+			if (process.platform === 'win32') {
 				const home = process.env['NVM_HOME'];
 				if (home) {
 					const bin = join(home, `v${config.runtimeVersion}`);
@@ -79,15 +68,32 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 							config.env = {};
 						}
 						config.env['Path'] = `${bin};${process.env['Path']}`;
-						//config.runtimeExecutable = 'node64';
-						//config.runtimeExecutable = join(bin, 'node64.exe');
 					} else {
-						return vscode.window.showInformationMessage(`nvm version ${config.runtimeVersion} not available`).then(_ => {
+						return vscode.window.showInformationMessage(localize('nvm.version.not.found.message', "Node.js version {0} not available via nvm.", config.runtimeVersion)).then(_ => {
 							return undefined;	// abort launch
 						});
 					}
 				} else {
-					return vscode.window.showInformationMessage(`nvm not available (environment available 'NVM_DIR' not found)`).then(_ => {
+					return vscode.window.showInformationMessage(localize('NVM_HOME.not.found.message', "Node version manager 'nvm' not found (no environment variable 'NVM_HOME').")).then(_ => {
+						return undefined;	// abort launch
+					});
+				}
+			} else {
+				const dir = process.env['NVM_DIR'];
+				if (dir) {
+					const bin = join(dir, 'versions', 'node', `v${config.runtimeVersion}`, 'bin');
+					if (fs.existsSync(bin)) {
+						if (!config.env) {
+							config.env = {};
+						}
+						config.env['PATH'] = `${bin}:${process.env['PATH']}`;
+					} else {
+						return vscode.window.showInformationMessage(localize('nvm.version.not.found.message', "Node.js version {0} not available via nvm.", config.runtimeVersion)).then(_ => {
+							return undefined;	// abort launch
+						});
+					}
+				} else {
+					return vscode.window.showInformationMessage(localize('NVM_DIR.not.found.message', "Node version manager 'nvm' not found (no environment variable 'NVM_DIR').")).then(_ => {
 						return undefined;	// abort launch
 					});
 				}
