@@ -38,13 +38,6 @@ export function detectDebugType(config: any): Promise<string|null> {
 function detectProtocolForAttach(config: any): Promise<string | undefined> {
 	const address = config.address || '127.0.0.1';
 	const port = config.port;
-
-	if (config.processId) {
-		// this is only supported for legacy protocol
-		log(localize('protocol.switch.attach.process', "Debugging with legacy protocol because attaching to a process by ID is only supported for legacy protocol."));
-		return Promise.resolve('legacy');
-	}
-
 	const socket = new net.Socket();
 	const cleanup = () => {
 		try {
