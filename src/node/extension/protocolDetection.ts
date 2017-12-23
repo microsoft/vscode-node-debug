@@ -91,7 +91,7 @@ function detectProtocolForAttach(config: any): Promise<string | undefined> {
 	});
 }
 
-function detectProtocolForLaunch(config: any): string | undefined {
+function detectProtocolForLaunch(config: any): 'legacy'|'inspector' {
 	if (config.runtimeExecutable) {
 		log(localize('protocol.switch.runtime.set', "Debugging with inspector protocol because a runtime executable is set."));
 		return 'inspector';
@@ -110,13 +110,13 @@ function detectProtocolForLaunch(config: any): string | undefined {
 				return 'inspector';
 			} else {
 				log(localize('protocol.switch.legacy.version', "Debugging with legacy protocol because Node.js {0} was detected.", config.__nodeVersion));
+				return 'legacy';
 			}
 		} else {
-			log(localize('protocol.switch.unknown.version', "Debugging with legacy protocol because Node.js version could not be determined."));
+			log(localize('protocol.switch.unknown.version', "Debugging with inspector protocol because Node.js version could not be determined."));
+			return 'inspector';
 		}
 	}
-
-	return undefined;
 }
 
 /**
