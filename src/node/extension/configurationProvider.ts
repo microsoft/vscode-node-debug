@@ -34,7 +34,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 		// if launch.json is missing or empty
 		if (!config.type && !config.request && !config.name) {
 
-			config = createLaunchConfigFromContext(folder, true);
+			config = createLaunchConfigFromContext(folder, true, config);
 
 			if (!config.program) {
 				const message = localize('program.not.found.message', "Cannot find a program to debug");
@@ -119,13 +119,17 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 
 //---- helpers ----------------------------------------------------------------------------------------------------------------
 
-function createLaunchConfigFromContext(folder: vscode.WorkspaceFolder | undefined, resolve: boolean): vscode.DebugConfiguration {
+function createLaunchConfigFromContext(folder: vscode.WorkspaceFolder | undefined, resolve: boolean, existingConfig?: vscode.DebugConfiguration): vscode.DebugConfiguration {
 
 	const config = {
 		type: 'node',
 		request: 'launch',
 		name: localize('node.launch.config.name', "Launch Program")
 	};
+
+	if (existingConfig && existingConfig.noDebug) {
+		config['noDebug'] = true;
+	}
 
 	const pkg = loadJSON(folder, 'package.json');
 	if (pkg && pkg.name === 'mern-starter') {
