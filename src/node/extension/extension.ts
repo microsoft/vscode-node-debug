@@ -15,7 +15,7 @@ import { startSession, stopSession } from './childProcesses';
 export function activate(context: vscode.ExtensionContext) {
 
 	// register a configuration provider
-	context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('node', new NodeConfigurationProvider()));
+	context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('node', new NodeConfigurationProvider(context)));
 
 	// toggle skipping file action
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.toggleSkippingFile', toggleSkippingFile));

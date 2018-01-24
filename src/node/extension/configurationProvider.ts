@@ -18,6 +18,10 @@ import { prepareAutoAttachChildProcesses } from './childProcesses';
 
 export class NodeConfigurationProvider implements vscode.DebugConfigurationProvider {
 
+	constructor(
+		private extensionContext: vscode.ExtensionContext
+	) { }
+
 	/**
 	 * Returns an initial debug configuration based on contextual information, e.g. package.json or folder.
 	 */
@@ -112,8 +116,20 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 				config.type = debugType;
 			}
 
-			return config;
+			return this.fixupLogParameters(config);
 		});
+	}
+
+	private async fixupLogParameters(config: vscode.DebugConfiguration): Promise<vscode.DebugConfiguration> {
+		if (config.trace && !config.logFilePath) {
+			const fileName = config.type === 'node' ?
+				'vscode-node-debug.txt' :
+				'vscode-node-debug2.txt';
+
+			config.logFilePath = join(await this.extensionContext.logger.logDirectory, fileName);
+		}
+
+		return config;
 	}
 }
 
