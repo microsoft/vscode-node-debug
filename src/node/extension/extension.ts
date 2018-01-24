@@ -52,8 +52,8 @@ function toggleSkippingFile(res: string | number): void {
 		resource = activeEditor && activeEditor.document.fileName;
 	}
 
-	if (resource) {
+	if (resource && vscode.debug.activeDebugSession) {
 		const args = typeof resource === 'string' ? { resource } : { sourceReference: resource };
-		vscode.commands.executeCommand('workbench.customDebugRequest', 'toggleSkipFileStatus', args);
+		vscode.debug.activeDebugSession.customRequest('toggleSkipFileStatus', args);
 	}
 }
