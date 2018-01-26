@@ -20,7 +20,9 @@
 		"test": "mocha --timeout 10000 -u tdd ./out/tests/",
 		"nodemon": "nodemon --debug --nolazy ./out/node/nodeDebug.js --server=4711",
 		"prepublish": "gulp build",
+		"package": "gulp package",
 		"publish": "gulp publish",
+		"bump": "npm version patch -m 'Upgrade to %s'",
 		"tslint": "gulp tslint"
 	},
 	"keywords": [
