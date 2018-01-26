@@ -7,3 +7,4 @@ testdata/**/*
 .vscode/**/*
 appveyor.yml
 gulpfile.js
+package-lock.json
