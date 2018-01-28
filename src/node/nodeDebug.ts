@@ -28,7 +28,7 @@ import * as Path from 'path';
 import * as FS from 'fs';
 import * as nls from 'vscode-nls';
 
-let localize = nls.config(process.env.VSCODE_NLS_CONFIG)();
+let localize = nls.loadMessageBundle();
 
 type FilterType = 'named' | 'indexed' | 'all';
 
