@@ -22,7 +22,7 @@
 		"prepublish": "gulp build",
 		"package": "gulp package",
 		"publish": "gulp publish",
-		"bump": "npm version patch -m 'Bump to %s'",
+		"bump": "npm version patch -m 'bump to %s'",
 		"tslint": "gulp tslint"
 	},
 	"keywords": [
