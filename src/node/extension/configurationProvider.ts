@@ -123,8 +123,8 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 	private async fixupLogParameters(config: vscode.DebugConfiguration): Promise<vscode.DebugConfiguration> {
 		if (config.trace && !config.logFilePath) {
 			const fileName = config.type === 'node' ?
-				'vscode-node-debug.txt' :
-				'vscode-node-debug2.txt';
+				'debugadapter-legacy.txt' :
+				'debugadapter.txt';
 
 			config.logFilePath = join(await this.extensionContext.logger.logDirectory, fileName);
 		}
