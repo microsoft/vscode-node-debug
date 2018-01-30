@@ -70,7 +70,7 @@
 		"tsutils": "2.12.2",
 		"typescript": "2.6.2",
 		"vscode": "1.1.10",
-		"vscode-nls-dev": "3.0.6",
+		"vscode-nls-dev": "3.0.7",
 		"vscode-debugadapter-testsupport": "1.25.0",
 		"vscode-debugprotocol": "1.25.0",
 		"event-stream": "3.3.4",
