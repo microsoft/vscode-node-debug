@@ -62,7 +62,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 		}
 
 		// "nvm" support
-		if (config.runtimeVersion) {
+		if (config.runtimeVersion && config.runtimeVersion !== 'default') {
 
 			// if a runtime version is specified we prepend env.PATH with the folder that corresponds to the version
 
