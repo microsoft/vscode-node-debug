@@ -81,7 +81,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 						});
 					}
 				} else {
-					return vscode.window.showInformationMessage(localize('NVM_HOME.not.found.message', "Node version manager 'nvm' not found (no environment variable 'NVM_HOME').")).then(_ => {
+					return vscode.window.showInformationMessage(localize('NVM_HOME.not.found.message', "Attribute 'runtimeVersion' requires Node.js version manager 'nvm-windows' (no environment variable 'NVM_HOME').")).then(_ => {
 						return undefined;	// abort launch
 					});
 				}
@@ -100,7 +100,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 						});
 					}
 				} else {
-					return vscode.window.showInformationMessage(localize('NVM_DIR.not.found.message', "Node version manager 'nvm' not found (no environment variable 'NVM_DIR').")).then(_ => {
+					return vscode.window.showInformationMessage(localize('NVM_DIR.not.found.message', "Attribute 'runtimeVersion' requires Node.js version manager 'nvm' (no environment variable 'NVM_DIR').")).then(_ => {
 						return undefined;	// abort launch
 					});
 				}
