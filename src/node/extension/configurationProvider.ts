@@ -76,12 +76,12 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 						}
 						config.env['Path'] = `${bin};${process.env['Path']}`;
 					} else {
-						return vscode.window.showInformationMessage(localize('nvm.version.not.found.message', "Node.js version {0} not available via nvm.", config.runtimeVersion)).then(_ => {
+						return vscode.window.showErrorMessage(localize('nvm.version.not.found.message', "Node.js version '{0}' not available via nvm.", config.runtimeVersion)).then(_ => {
 							return undefined;	// abort launch
 						});
 					}
 				} else {
-					return vscode.window.showInformationMessage(localize('NVM_HOME.not.found.message', "Attribute 'runtimeVersion' requires Node.js version manager 'nvm-windows' (no environment variable 'NVM_HOME').")).then(_ => {
+					return vscode.window.showErrorMessage(localize('NVM_HOME.not.found.message', "Attribute 'runtimeVersion' requires Node.js version manager 'nvm-windows' (no environment variable 'NVM_HOME').")).then(_ => {
 						return undefined;	// abort launch
 					});
 				}
@@ -95,12 +95,12 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 						}
 						config.env['PATH'] = `${bin}:${process.env['PATH']}`;
 					} else {
-						return vscode.window.showInformationMessage(localize('nvm.version.not.found.message', "Node.js version {0} not available via nvm.", config.runtimeVersion)).then(_ => {
+						return vscode.window.showErrorMessage(localize('nvm.version.not.found.message', "Node.js version '{0}' not available via nvm.", config.runtimeVersion)).then(_ => {
 							return undefined;	// abort launch
 						});
 					}
 				} else {
-					return vscode.window.showInformationMessage(localize('NVM_DIR.not.found.message', "Attribute 'runtimeVersion' requires Node.js version manager 'nvm' (no environment variable 'NVM_DIR').")).then(_ => {
+					return vscode.window.showErrorMessage(localize('NVM_DIR.not.found.message', "Attribute 'runtimeVersion' requires Node.js version manager 'nvm' (no environment variable 'NVM_DIR').")).then(_ => {
 						return undefined;	// abort launch
 					});
 				}
