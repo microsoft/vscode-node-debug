@@ -5,9 +5,11 @@
 
 'use strict';
 
+import * as nls from 'vscode-nls';
 import { exec } from 'child_process';
 import * as vscode from 'vscode';
-import { localize } from './utilities';
+
+const localize = nls.loadMessageBundle();
 
 const POLL_INTERVAL = 1000;
 

@@ -4,10 +4,13 @@
 
 'use strict';
 
+import * as nls from 'vscode-nls';
 import * as cp from 'child_process';
-import { log, localize, extendObject } from './utilities';
+import { log, extendObject } from './utilities';
 import * as net from 'net';
 import * as WSL from '../wslSupport';
+
+const localize = nls.loadMessageBundle();
 
 export const INSPECTOR_PORT_DEFAULT = 9229;
 export const LEGACY_PORT_DEFAULT = 5858;

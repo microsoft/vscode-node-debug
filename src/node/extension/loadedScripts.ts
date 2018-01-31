@@ -4,10 +4,12 @@
 
 'use strict';
 
+import * as nls from 'vscode-nls';
 import * as vscode from 'vscode';
 import { TreeDataProvider, TreeItem, EventEmitter, Event, ProviderResult } from 'vscode';
-import { localize } from './utilities';
 import { basename } from 'path';
+
+const localize = nls.loadMessageBundle();
 
 //---- loaded script explorer
 

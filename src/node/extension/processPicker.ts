@@ -4,11 +4,12 @@
 
 'use strict';
 
+import * as nls from 'vscode-nls';
 import * as vscode from 'vscode';
 import { spawn, exec } from 'child_process';
 import { basename } from 'path';
-import { localize } from './utilities';
 
+const localize = nls.loadMessageBundle();
 
 //---- extension.pickNodeProcess
 

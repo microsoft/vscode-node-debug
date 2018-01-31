@@ -4,15 +4,18 @@
 
 'use strict';
 
+import * as nls from 'vscode-nls';
 import * as vscode from 'vscode';
 import { execSync } from 'child_process';
 import { join, isAbsolute, dirname } from 'path';
 import * as fs from 'fs';
 
-import { log, localize } from './utilities';
+import { log } from './utilities';
 import { detectDebugType, detectProtocolForPid, INSPECTOR_PORT_DEFAULT, LEGACY_PORT_DEFAULT } from './protocolDetection';
 import { pickProcess } from './processPicker';
 import { prepareAutoAttachChildProcesses } from './childProcesses';
+
+const localize = nls.loadMessageBundle();
 
 //---- NodeConfigurationProvider
 
