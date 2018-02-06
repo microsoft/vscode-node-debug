@@ -9,5 +9,6 @@
 	"protocol.switch.unknown.error": "Node.js のバージョンを判別できなかったため、以前のプロトコルでデバッグしています ({0})",
 	"protocol.switch.runtime.set": "ランタイム実行可能ファイルが設定されているため、インスペクター プロトコルでデバッグしています。",
 	"protocol.switch.inspector.version": "Node.js {0} が検出されたため、インスペクター プロトコルでデバッグしています。",
-	"protocol.switch.legacy.version": "Node.js {0} が検出されたため、以前のプロトコルでデバッグしています。"
+	"protocol.switch.legacy.version": "Node.js {0} が検出されたため、以前のプロトコルでデバッグしています。",
+	"protocol.switch.unknown.version": "Node.js のバージョンを判別できなかったため、インスペクター プロトコルをデバッグしています。"
 }
