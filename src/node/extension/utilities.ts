@@ -9,7 +9,7 @@ import * as vscode from 'vscode';
 /**
  * Send to debug console.
  */
-export function log(message: string) {
+export function writeToConsole(message: string) {
 	vscode.debug.activeDebugConsole.appendLine(message);
 }
 

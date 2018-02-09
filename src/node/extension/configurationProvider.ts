@@ -10,7 +10,7 @@ import { execSync } from 'child_process';
 import { join, isAbsolute, dirname } from 'path';
 import * as fs from 'fs';
 
-import { log } from './utilities';
+import { writeToConsole } from './utilities';
 import { detectDebugType, detectProtocolForPid, INSPECTOR_PORT_DEFAULT, LEGACY_PORT_DEFAULT } from './protocolDetection';
 import { pickProcess } from './processPicker';
 import { prepareAutoAttachChildProcesses } from './childProcesses';
@@ -113,7 +113,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 		}
 
 		// determine which protocol to use
-		return determineDebugType(config).then(debugType => {
+		return determineDebugType(config, this.extensionContext.logger).then(debugType => {
 
 			if (debugType) {
 				config.type = debugType;
@@ -154,7 +154,7 @@ function createLaunchConfigFromContext(folder: vscode.WorkspaceFolder | undefine
 	if (pkg && pkg.name === 'mern-starter') {
 
 		if (resolve) {
-			log(localize({ key: 'mern.starter.explanation', comment: ['argument contains product name without translation'] }, "Launch configuration for '{0}' project created.", 'Mern Starter'));
+			writeToConsole(localize({ key: 'mern.starter.explanation', comment: ['argument contains product name without translation'] }, "Launch configuration for '{0}' project created.", 'Mern Starter'));
 		}
 		configureMern(config);
 
@@ -166,7 +166,7 @@ function createLaunchConfigFromContext(folder: vscode.WorkspaceFolder | undefine
 			// try to find a value for 'program' by analysing package.json
 			program = guessProgramFromPackage(folder, pkg, resolve);
 			if (program && resolve) {
-				log(localize('program.guessed.from.package.json.explanation', "Launch configuration created based on 'package.json'."));
+				writeToConsole(localize('program.guessed.from.package.json.explanation', "Launch configuration created based on 'package.json'."));
 			}
 		}
 
@@ -200,7 +200,7 @@ function createLaunchConfigFromContext(folder: vscode.WorkspaceFolder | undefine
 		// prepare for source maps by adding 'outFiles' if typescript or coffeescript is detected
 		if (useSourceMaps || vscode.workspace.textDocuments.some(document => isTranspiledLanguage(document.languageId))) {
 			if (resolve) {
-				log(localize('outFiles.explanation', "Adjust glob pattern(s) in the 'outFiles' attribute so that they cover the generated JavaScript."));
+				writeToConsole(localize('outFiles.explanation', "Adjust glob pattern(s) in the 'outFiles' attribute so that they cover the generated JavaScript."));
 			}
 
 			let dir = '';
@@ -292,7 +292,7 @@ function guessProgramFromPackage(folder: vscode.WorkspaceFolder | undefined, pac
 
 //---- debug type -------------------------------------------------------------------------------------------------------------
 
-function determineDebugType(config: any): Promise<string | null> {
+function determineDebugType(config: any, logger: vscode.Logger): Promise<string | null> {
 	if (config.request === 'attach' && typeof config.processId === 'string') {
 		return determineDebugTypeForPidConfig(config);
 	} else if (config.protocol === 'legacy') {
@@ -301,7 +301,7 @@ function determineDebugType(config: any): Promise<string | null> {
 		return Promise.resolve('node2');
 	} else {
 		// 'auto', or unspecified
-		return detectDebugType(config);
+		return detectDebugType(config, logger);
 	}
 }
 
