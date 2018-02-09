@@ -22,7 +22,7 @@ const localize = nls.loadMessageBundle();
 export class NodeConfigurationProvider implements vscode.DebugConfigurationProvider {
 
 	constructor(
-		private extensionContext: vscode.ExtensionContext
+		private _extensionContext: vscode.ExtensionContext
 	) { }
 
 	/**
@@ -59,6 +59,12 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 				// derive 'cwd' from 'program'
 				config.cwd = dirname(config.program);
 			}
+		}
+
+		// remove 'useWSL' on all platforms but Windows
+		if (process.platform !== 'win32' && config.useWSL) {
+			this._extensionContext.logger.debug('useWSL attribute ignored on non-Windows OS.');
+			delete config.useWSL;
 		}
 
 		// "nvm" support
@@ -113,7 +119,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 		}
 
 		// determine which protocol to use
-		return determineDebugType(config, this.extensionContext.logger).then(debugType => {
+		return determineDebugType(config, this._extensionContext.logger).then(debugType => {
 
 			if (debugType) {
 				config.type = debugType;
@@ -129,7 +135,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 				'debugadapter-legacy.txt' :
 				'debugadapter.txt';
 
-			config.logFilePath = join(await this.extensionContext.logger.logDirectory, fileName);
+			config.logFilePath = join(await this._extensionContext.logger.logDirectory, fileName);
 		}
 
 		return config;
