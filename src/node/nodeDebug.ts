@@ -359,6 +359,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 	private _attachSuccessful: boolean;
 	private _processId: number = -1;						// pid of the program launched
 	private _nodeProcessId: number = -1; 					// pid of the node runtime
+	private _isWSL = false;
 	private _functionBreakpoints = new Array<number>();		// node function breakpoint ids
 	private _scripts = new Map<number, Promise<Script>>();	// script cache
 	private _files = new Map<string, Promise<string>>();	// file cache
@@ -858,9 +859,12 @@ export class NodeDebugSession extends LoggingDebugSession {
 			this._console = 'externalTerminal';
 		}
 
-		if (args.useWSL && !WSL.subsystemLinuxPresent()) {
-			this.sendErrorResponse(response, 2007, localize('attribute.wls.not.exist', "Cannot find Windows Subsystem Linux installation"));
-			return;
+		if (args.useWSL) {
+			if (!WSL.subsystemLinuxPresent()) {
+				this.sendErrorResponse(response, 2007, localize('attribute.wls.not.exist', "Cannot find Windows Subsystem Linux installation"));
+				return;
+			}
+			this._isWSL = true;
 		}
 
 		let runtimeExecutable = args.runtimeExecutable;
@@ -1569,13 +1573,24 @@ export class NodeDebugSession extends LoggingDebugSession {
 				// stop socket connection (otherwise node.js dies with ECONNRESET on Windows)
 				this._node.stop();
 
-				// kill the whole process tree by starting with the runtimeExecutable launched
-				let pid = this._processId;
+				// kill the whole process tree by starting with the launched runtimeExecutable
+				const node_pid = this._nodeProcessId;
+				const pid = this._processId;
 				if (pid > 0) {
 					this._processId = -1;
 					this._nodeProcessId = -1;
+
 					this.log('la', 'shutdown: kill debugee and sub-processes');
 					NodeDebugSession.killTree(pid);
+
+					// under WSL killing the "bash" shell on the Windows side does not automatically kill node.js on the linux side
+					if (this._isWSL) {
+						// so let's kill node.js explicitly
+						try {
+							WSL.spawnSync(true, '/bin/kill', [ '-9', node_pid.toString() ]);
+						} catch (err) {
+						}
+					}
 				}
 			}
 
