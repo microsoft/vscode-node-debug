@@ -357,6 +357,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 	// session state
 	private _node: NodeV8Protocol;
 	private _attachSuccessful: boolean;
+	private _processId: number = -1;						// pid of the program launched
 	private _nodeProcessId: number = -1; 					// pid of the node runtime
 	private _functionBreakpoints = new Array<number>();		// node function breakpoint ids
 	private _scripts = new Map<number, Promise<Script>>();	// script cache
@@ -1115,7 +1116,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 				this._terminated('target closed');
 			});
 
-			this._nodeProcessId = nodeProcess.pid;
+			this._processId = nodeProcess.pid;
 
 			this._captureOutput(nodeProcess);
 
@@ -1568,9 +1569,10 @@ export class NodeDebugSession extends LoggingDebugSession {
 				// stop socket connection (otherwise node.js dies with ECONNRESET on Windows)
 				this._node.stop();
 
-				// kill the whole process tree by starting with the node process
-				let pid = this._nodeProcessId;
+				// kill the whole process tree by starting with the runtimeExecutable launched
+				let pid = this._processId;
 				if (pid > 0) {
+					this._processId = -1;
 					this._nodeProcessId = -1;
 					this.log('la', 'shutdown: kill debugee and sub-processes');
 					NodeDebugSession.killTree(pid);
