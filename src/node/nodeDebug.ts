@@ -1573,23 +1573,38 @@ export class NodeDebugSession extends LoggingDebugSession {
 				// stop socket connection (otherwise node.js dies with ECONNRESET on Windows)
 				this._node.stop();
 
-				// kill the whole process tree by starting with the launched runtimeExecutable
-				const node_pid = this._nodeProcessId;
-				const pid = this._processId;
-				if (pid > 0) {
-					this._processId = -1;
-					this._nodeProcessId = -1;
+				this.log('la', 'shutdown: kill debugee and sub-processes');
 
-					this.log('la', 'shutdown: kill debugee and sub-processes');
-					NodeDebugSession.killTree(pid);
+				let pid = this._processId;
+				this._processId = -1;
+
+				if (this._isWSL) {
+
+					// kill the whole process tree by starting with the launched runtimeExecutable
+					if (pid > 0) {
+						NodeDebugSession.killTree(pid);
+					}
 
 					// under WSL killing the "bash" shell on the Windows side does not automatically kill node.js on the linux side
-					if (this._isWSL) {
-						// so let's kill node.js explicitly
+					// so let's kill the node.js process on the linux side explicitly
+					const node_pid = this._nodeProcessId;
+					if (node_pid > 0) {
+						this._nodeProcessId = -1;
 						try {
 							WSL.spawnSync(true, '/bin/kill', [ '-9', node_pid.toString() ]);
 						} catch (err) {
 						}
+					}
+
+				} else {
+
+					// backward compatibilty
+					if (this._nodeProcessId > 0) {
+						pid = this._nodeProcessId;
+						this._nodeProcessId = -1;
+					}
+					if (pid > 0) {
+						NodeDebugSession.killTree(pid);
 					}
 				}
 			}
