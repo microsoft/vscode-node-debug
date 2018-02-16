@@ -353,19 +353,6 @@
 								"description": "%node.launch.runtimeVersion.description%",
 								"default": "default"
 							},
-							"runtimeVersionManager": {
-								"type": "string",
-								"enum": [
-									"nvm",
-									"nvs"
-								],
-								"enumDescriptions": [
-									"%node.launch.runtimeVersionManager.nvm.description%",
-									"%node.launch.runtimeVersionManager.nvs.description%"
-								],
-								"description": "%node.launch.runtimeVersionManager.description%",
-								"default": "nvm"
-							},
 							"runtimeArgs": {
 								"type": "array",
 								"description": "%node.launch.runtimeArgs.description%",
