@@ -39,7 +39,7 @@
 		"vscode-debugadapter": "1.26.0",
 		"source-map": "0.6.1",
 		"vscode-nls": "3.2.1",
-		"request-light": "0.2.1",
+		"request-light": "0.2.2",
 		"glob": "7.1.2",
 		"minimatch": "3.0.4"
 	},
@@ -75,7 +75,7 @@
 		"vscode-debugprotocol": "1.26.0",
 		"event-stream": "3.3.4",
 		"nodemon": "1.14.11",
-		"vsce": "1.35.0"
+		"vsce": "1.36.3"
 	},
 	"main": "./out/node/extension/extension.js",
 	"activationEvents": [
