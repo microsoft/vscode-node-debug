@@ -72,44 +72,56 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 
 			// if a runtime version is specified we prepend env.PATH with the folder that corresponds to the version
 
-			if (process.platform === 'win32') {
-				const home = process.env['NVM_HOME'];
-				if (home) {
-					const bin = join(home, `v${config.runtimeVersion}`);
-					if (fs.existsSync(bin)) {
-						if (!config.env) {
-							config.env = {};
-						}
-						config.env['Path'] = `${bin};${process.env['Path']}`;
-					} else {
-						return vscode.window.showErrorMessage(localize('nvm.version.not.found.message', "Node.js version '{0}' not available via nvm.", config.runtimeVersion)).then(_ => {
+			const nvsHome = process.env['NVS_HOME'];
+
+			const nvmEnvVarName = process.platform === 'win32' ? 'NVM_HOME' : 'NVM_DIR';
+			const nvmHome = process.env[nvmEnvVarName];
+
+			const { nvsFormat, remoteName, semanticVersion, arch } = parseVersionString(config.runtimeVersion);
+
+			let bin: string | undefined = undefined;
+
+			if (nvsFormat || nvsHome) {
+				if (nvsHome) {
+					bin = join(nvsHome, remoteName, semanticVersion, arch);
+				} else {
+					return vscode.window.showErrorMessage(localize('NVS_HOME.not.found.message', "Attribute 'runtimeVersion' requires Node.js version manager 'nvs' (no environment variable 'NVS_HOME').")).then(_ => {
+						return undefined;	// abort launch
+					});
+				}
+			}
+
+			if (!bin || (!fs.existsSync(bin) && nvmHome)) {
+				if (process.platform === 'win32') {
+					if (!nvmHome) {
+						return vscode.window.showErrorMessage(localize('NVM_HOME.not.found.message', "Attribute 'runtimeVersion' requires Node.js version manager 'nvm-windows' (no environment variable 'NVM_HOME').")).then(_ => {
 							return undefined;	// abort launch
 						});
 					}
+					bin = join(nvmHome, `v${config.runtimeVersion}`);
 				} else {
-					return vscode.window.showErrorMessage(localize('NVM_HOME.not.found.message', "Attribute 'runtimeVersion' requires Node.js version manager 'nvm-windows' (no environment variable 'NVM_HOME').")).then(_ => {
-						return undefined;	// abort launch
-					});
+					if (!nvmHome) {
+						return vscode.window.showErrorMessage(localize('NVM_DIR.not.found.message', "Attribute 'runtimeVersion' requires Node.js version manager 'nvm' (no environment variable 'NVM_DIR').")).then(_ => {
+							return undefined;	// abort launch
+						});
+					}
+					bin = join(nvmHome, 'versions', 'node', `v${config.runtimeVersion}`, 'bin');
+				}
+			}
+
+			if (fs.existsSync(bin)) {
+				if (!config.env) {
+					config.env = {};
+				}
+				if (process.platform === 'win32') {
+					config.env['Path'] = `${bin};${process.env['Path']}`;
+				} else {
+					config.env['PATH'] = `${bin}:${process.env['PATH']}`;
 				}
 			} else {
-				const dir = process.env['NVM_DIR'];
-				if (dir) {
-					const bin = join(dir, 'versions', 'node', `v${config.runtimeVersion}`, 'bin');
-					if (fs.existsSync(bin)) {
-						if (!config.env) {
-							config.env = {};
-						}
-						config.env['PATH'] = `${bin}:${process.env['PATH']}`;
-					} else {
-						return vscode.window.showErrorMessage(localize('nvm.version.not.found.message', "Node.js version '{0}' not available via nvm.", config.runtimeVersion)).then(_ => {
-							return undefined;	// abort launch
-						});
-					}
-				} else {
-					return vscode.window.showErrorMessage(localize('NVM_DIR.not.found.message', "Attribute 'runtimeVersion' requires Node.js version manager 'nvm' (no environment variable 'NVM_DIR').")).then(_ => {
-						return undefined;	// abort launch
-					});
-				}
+				return vscode.window.showErrorMessage(localize('runtime.version.not.found.message', "Node.js version '{0}' not available via any Node.js version manager.", config.runtimeVersion)).then(_ => {
+					return undefined;	// abort launch
+				});
 			}
 		}
 
@@ -375,4 +387,42 @@ function determineDebugTypeForPidInDebugMode(config: any, pid: number): Promise<
 			debugProtocol === 'legacy' ? 'node' :
 				null;
 	});
+}
+
+function nvsStandardArchName(arch) {
+	switch (arch) {
+		case '32':
+		case 'x86':
+		case 'ia32':
+			return 'x86';
+		case '64':
+		case 'x64':
+		case 'amd64':
+			return 'x64';
+		case 'arm':
+			const arm_version = (process.config.variables as any).arm_version;
+			return arm_version ? 'armv' + arm_version + 'l' : 'arm';
+		default:
+			return arch;
+	}
+}
+
+/**
+ * Parses a node version string into remote name, semantic version, and architecture
+ * components. Infers some unspecified components based on configuration.
+ */
+function parseVersionString(versionString) {
+	const versionRegex = /^(([\w-]+)\/)?(v?(\d+(\.\d+(\.\d+)?)?))(\/((x86)|(32)|((x)?64)|(arm\w*)|(ppc\w*)))?$/i;
+
+	const match = versionRegex.exec(versionString);
+	if (!match) {
+		throw new Error('Invalid version string: ' + versionString);
+	}
+
+	const nvsFormat = !!(match[2] || match[8]);
+	const remoteName = match[2] || 'node';
+	const semanticVersion = match[4] || '';
+	const arch = nvsStandardArchName(match[8] || process.arch);
+
+	return { nvsFormat, remoteName, semanticVersion, arch };
 }
