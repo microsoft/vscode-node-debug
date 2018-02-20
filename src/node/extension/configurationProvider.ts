@@ -71,7 +71,6 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 		if (config.runtimeVersion && config.runtimeVersion !== 'default') {
 
 			// if a runtime version is specified we prepend env.PATH with the folder that corresponds to the version
-			const pathEnvVarName = process.platform === 'win32' ? 'Path' : 'PATH';
 
 			const nvsHome = process.env['NVS_HOME'];
 
@@ -114,7 +113,11 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 				if (!config.env) {
 					config.env = {};
 				}
-				config.env[pathEnvVarName] = `${bin}:${process.env[pathEnvVarName]}`;
+				if (process.platform === 'win32') {
+					config.env['Path'] = `${bin};${process.env['Path']}`;
+				} else {
+					config.env['PATH'] = `${bin}:${process.env['PATH']}`;
+				}
 			} else {
 				return vscode.window.showErrorMessage(localize('runtime.version.not.found.message', "Node.js version '{0}' not available via any Node.js version manager.", config.runtimeVersion)).then(_ => {
 					return undefined;	// abort launch
