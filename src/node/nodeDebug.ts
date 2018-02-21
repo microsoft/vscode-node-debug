@@ -1080,6 +1080,11 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 					if (this._noDebug) {
 						this.sendResponse(response);
+
+						// since we do not know the process ID we will not be able to terminate it properly
+						// therefore we end the session
+						this._terminated('cannot track process');
+
 					} else {
 						this._attach(response, args, port, address, timeout);
 					}
