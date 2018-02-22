@@ -196,10 +196,19 @@ class InternalSourceBreakpoint {
 	hitter: HitterFunction | undefined;
 	verificationMessage: string;
 
-	constructor(line: number, column: number = 0, condition?: string, hitter?: HitterFunction) {
+	constructor(line: number, column: number = 0, condition?: string, logMessage?: string, hitter?: HitterFunction) {
 		this.line = this.orgLine = line;
 		this.column = this.orgColumn = column;
-		this.condition = condition;
+
+		if (logMessage) {
+			this.condition = `console.log('${logMessage}')`;
+			if (condition) {
+				this.condition = `(${condition}) && ${this.condition}`;
+			}
+		} else if (condition) {
+			this.condition = condition;
+		}
+
 		this.hitCount = 0;
 		this.hitter = hitter;
 	}
@@ -1650,7 +1659,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 				sbs.push(new InternalSourceBreakpoint(
 					this.convertClientLineToDebugger(b.line),
 					typeof b.column === 'number' ? this.convertClientColumnToDebugger(b.column) : 0,
-					b.condition, hitter)
+					b.condition, b.logMessage, hitter)
 				);
 			}
 		} else if (args.lines) {
