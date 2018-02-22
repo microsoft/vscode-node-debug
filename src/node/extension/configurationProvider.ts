@@ -67,6 +67,11 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 			delete config.useWSL;
 		}
 
+		// when using "integratedTerminal" ensure that debug console doesn't get activated; see #43164
+		if (config.console === 'integratedTerminal' && !config.internalConsoleOptions) {
+			config.internalConsoleOptions = 'neverOpen';
+		}
+
 		// "nvm" support
 		if (config.runtimeVersion && config.runtimeVersion !== 'default') {
 
