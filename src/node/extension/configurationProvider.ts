@@ -72,14 +72,10 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 
 			// if a runtime version is specified we prepend env.PATH with the folder that corresponds to the version
 
-			const nvsHome = process.env['NVS_HOME'];
-
-			const nvmEnvVarName = process.platform === 'win32' ? 'NVM_HOME' : 'NVM_DIR';
-			const nvmHome = process.env[nvmEnvVarName];
-
-			const { nvsFormat, remoteName, semanticVersion, arch } = parseVersionString(config.runtimeVersion);
-
 			let bin: string | undefined = undefined;
+
+			const nvsHome = process.env['NVS_HOME'];
+			const { nvsFormat, remoteName, semanticVersion, arch } = parseVersionString(config.runtimeVersion);
 
 			if (nvsFormat || nvsHome) {
 				if (nvsHome) {
@@ -90,6 +86,8 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 					});
 				}
 			}
+
+			const nvmHome = process.env[process.platform === 'win32' ? 'NVM_HOME' : 'NVM_DIR'];
 
 			if (!bin || (!fs.existsSync(bin) && nvmHome)) {
 				if (process.platform === 'win32') {
