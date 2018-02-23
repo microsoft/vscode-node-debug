@@ -7,7 +7,7 @@ import {
 	LoggingDebugSession, DebugSession, Logger, logger,
 	Thread, Source, StackFrame, Scope, Variable, Breakpoint,
 	TerminatedEvent, InitializedEvent, StoppedEvent, OutputEvent, LoadedSourceEvent,
-	Handles, ErrorDestination
+	Handles, ErrorDestination, CapabilitiesEvent
 } from 'vscode-debugadapter';
 import {DebugProtocol} from 'vscode-debugprotocol';
 
@@ -1307,13 +1307,8 @@ export class NodeDebugSession extends LoggingDebugSession {
 							const v = this._node.embeddedHostVersion;	// x.y.z version represented as (x*100+y)*100+z
 							if (!this._node.v8Version && v >= 70000) {
 								this._stepBack = true;
+								this.sendEvent(new CapabilitiesEvent({ supportsStepBack: true}));
 							}
-						}
-
-						if (this._stepBack) {
-							response.body = {
-								supportsStepBack: true
-							};
 						}
 
 						this.sendResponse(response);
