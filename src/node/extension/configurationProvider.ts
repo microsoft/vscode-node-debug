@@ -55,9 +55,27 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 		if (!config.cwd) {
 			if (folder) {
 				config.cwd = folder.uri.fsPath;
-			} else if (config.program) {
+			}
+
+			// no folder -> config is a user or workspace launch config
+			if (!config.cwd && vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
+				config.cwd = vscode.workspace.workspaceFolders[0].uri.fsPath;
+			}
+
+			// no folder case
+			if (!config.cwd && config.program === '${file}') {
+				config.cwd = '${fileDirname}';
+			}
+
+			// program is some absolute path
+			if (!config.cwd && isAbsolute(config.program)) {
 				// derive 'cwd' from 'program'
 				config.cwd = dirname(config.program);
+			}
+
+			// last resort
+			if (!config.cwd) {
+				config.cwd = '${workspaceFolder}';
 			}
 		}
 
