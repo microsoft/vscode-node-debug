@@ -127,7 +127,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 				if (process.platform === 'win32') {
 					const nvmHome = process.env['NVM_HOME'];
 					if (!nvmHome) {
-						return vscode.window.showErrorMessage(localize('NVM_HOME.not.found.message', "Attribute 'runtimeVersion' requires Node.js version manager 'nvm-windows'."), { modal: true }).then(_ => {
+						return vscode.window.showErrorMessage(localize('NVM_HOME.not.found.message', "Attribute 'runtimeVersion' requires Node.js version manager 'nvm-windows' or 'nvs'."), { modal: true }).then(_ => {
 							return undefined;	// abort launch
 						});
 					}
@@ -143,7 +143,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 						}
 					}
 					if (!nvmHome) {
-						return vscode.window.showErrorMessage(localize('NVM_DIR.not.found.message', "Attribute 'runtimeVersion' requires Node.js version manager 'nvm'."), { modal: true }).then(_ => {
+						return vscode.window.showErrorMessage(localize('NVM_DIR.not.found.message', "Attribute 'runtimeVersion' requires Node.js version manager 'nvm' or 'nvs'."), { modal: true }).then(_ => {
 							return undefined;	// abort launch
 						});
 					}
