@@ -121,7 +121,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 				}
 			}
 
-			if (!bin || !fs.existsSync(bin)) {
+			if (!bin) {
 
 				// now try the Node Version Manager 'nvm'
 				if (process.platform === 'win32') {
