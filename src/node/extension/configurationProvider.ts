@@ -133,11 +133,11 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 					}
 					bin = join(nvmHome, `v${config.runtimeVersion}`);
 					versionManagerName = 'nvm-windows';
-				} else {
+				} else {	// macOS and linux
 					let nvmHome = process.env['NVM_DIR'];
 					if (!nvmHome) {
-						// if NVM_DIR is not set. Probe for '.nvs' directory instead
-						const nvmDir = join(process.env['HOME'], '.nvs');
+						// if NVM_DIR is not set. Probe for '.nvm' directory instead
+						const nvmDir = join(process.env['HOME'], '.nvm');
 						if (fs.existsSync(nvmDir)) {
 							nvmHome = nvmDir;
 						}
