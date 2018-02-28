@@ -96,13 +96,23 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 			// if a runtime version is specified we prepend env.PATH with the folder that corresponds to the version
 
 			let bin: string | undefined = undefined;
+			let versionManagerName: string | undefined = undefined;
 
-			const nvsHome = process.env['NVS_HOME'];
+			let nvsHome = process.env['NVS_HOME'];
+			if (!nvsHome && process.platform === 'win32') {
+				// NVS_HOME is not consistently set. Probe for 'nvs' directory instead
+				const nvsDir = join(process.env['LOCALAPPDATA'], 'nvs');
+				if (fs.existsSync(nvsDir)) {
+					nvsHome = nvsDir;
+				}
+			}
+
 			const { nvsFormat, remoteName, semanticVersion, arch } = parseVersionString(config.runtimeVersion);
 
 			if (nvsFormat || nvsHome) {
 				if (nvsHome) {
 					bin = join(nvsHome, remoteName, semanticVersion, arch);
+					versionManagerName = 'nvs';
 				} else {
 					return vscode.window.showErrorMessage(localize('NVS_HOME.not.found.message', "Attribute 'runtimeVersion' requires Node.js version manager 'nvs' (no environment variable 'NVS_HOME').")).then(_ => {
 						return undefined;	// abort launch
@@ -120,6 +130,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 						});
 					}
 					bin = join(nvmHome, `v${config.runtimeVersion}`);
+					versionManagerName = 'nvm-windows';
 				} else {
 					if (!nvmHome) {
 						return vscode.window.showErrorMessage(localize('NVM_DIR.not.found.message', "Attribute 'runtimeVersion' requires Node.js version manager 'nvm' (no environment variable 'NVM_DIR').")).then(_ => {
@@ -127,6 +138,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 						});
 					}
 					bin = join(nvmHome, 'versions', 'node', `v${config.runtimeVersion}`, 'bin');
+					versionManagerName = 'nvm';
 				}
 			}
 
@@ -140,7 +152,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 					config.env['PATH'] = `${bin}:${process.env['PATH']}`;
 				}
 			} else {
-				return vscode.window.showErrorMessage(localize('runtime.version.not.found.message', "Node.js version '{0}' not available via any Node.js version manager.", config.runtimeVersion)).then(_ => {
+				return vscode.window.showErrorMessage(localize('runtime.version.not.found.message', "Node.js version '{0}' not installed in '{1}'.", config.runtimeVersion, versionManagerName)).then(_ => {
 					return undefined;	// abort launch
 				});
 			}
