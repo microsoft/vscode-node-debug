@@ -100,9 +100,9 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 
 			// first try the Node Version Switcher 'nvs'
 			let nvsHome = process.env['NVS_HOME'];
-			if (!nvsHome && process.platform === 'win32') {
-				// NVS_HOME is not consistently set. Probe for 'nvs' directory instead
-				const nvsDir = join(process.env['LOCALAPPDATA'], 'nvs');
+			if (!nvsHome) {
+				// NVS_HOME is not always set. Probe for 'nvs' directory instead
+				const nvsDir = process.platform === 'win32' ? join(process.env['LOCALAPPDATA'], 'nvs') : join(process.env['HOME'], '.nvs');
 				if (fs.existsSync(nvsDir)) {
 					nvsHome = nvsDir;
 				}
@@ -113,6 +113,9 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 			if (nvsFormat || nvsHome) {
 				if (nvsHome) {
 					bin = join(nvsHome, remoteName, semanticVersion, arch);
+					if (process.platform !== 'win32') {
+						bin = join(bin, 'bin');
+					}
 					versionManagerName = 'nvs';
 				} else {
 					return vscode.window.showErrorMessage(localize('NVS_HOME.not.found.message', "Attribute 'runtimeVersion' requires Node.js version manager 'nvs'."), { modal: true }).then(_ => {
