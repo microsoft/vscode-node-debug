@@ -1,25 +1,21 @@
-# VS Code Node Debug
+# Node Debug (legacy)
 
 [![build status](https://travis-ci.org/Microsoft/vscode-node-debug.svg?branch=master)](https://travis-ci.org/Microsoft/vscode-node-debug)
 [![build status](https://ci.appveyor.com/api/projects/status/t74psolxi3k7bcjp/branch/master?svg=true)](https://ci.appveyor.com/project/weinand/vscode-node-debug)
 
-This repository contains the debug extension for [node.js](https://nodejs.org) that ships with [VS Code](https://code.visualstudio.com).
+This extension is bundled with Visual Studio Code and together with **Node Debug** forms the [Node.js](https://nodejs.org) debugging experience.
 
-The [`vscode-node-debug`](https://github.com/microsoft/vscode-node-debug) repository is where we do development and there are many ways you can participate in the project, for example:
+**Node debug (legacy)** is the debugger for Node.js versions < 8.0.
 
-* [Submit bugs and feature requests](https://github.com/microsoft/vscode-node-debug/issues) and help us verify as they are checked in
-* Review [source code changes](https://github.com/microsoft/vscode-node-debug/pulls)
+See a general overview of debugging in VS Code [here](https://code.visualstudio.com/docs/editor/debugging).
 
-## Contributing
-If you are interested in fixing issues and contributing directly to the code base,
-please see the document [How to Contribute](https://github.com/Microsoft/vscode/wiki/How-to-Contribute), which covers the following:
+Documentation for Node.js specific debugging can be found [here](https://code.visualstudio.com/docs/nodejs/nodejs-debugging).
 
-* [How to build and run from source](https://github.com/Microsoft/vscode/wiki/How-to-Contribute#build-and-run-from-source)
-* [The development workflow, including debugging and running tests](https://github.com/Microsoft/vscode/wiki/How-to-Contribute#development-workflow)
-* [Coding Guidelines](https://github.com/Microsoft/vscode/wiki/Coding-Guidelines)
-* [Submitting pull requests](https://github.com/Microsoft/vscode/wiki/How-to-Contribute#pull-requests)
+Please submit bugs and feature requests to the [VS Code repoitory](https://github.com/microsoft/vscode/issues).
 
-This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/). For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
 
 ## License
-[MIT](LICENSE.txt)
+
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+Licensed under the [MIT](LICENSE.txt) License.

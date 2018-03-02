@@ -1,6 +1,6 @@
 {
 	"name": "node-debug",
-	"displayName": "Node Debug",
+	"displayName": "Node Debug (legacy)",
 	"version": "1.21.6",
 	"publisher": "ms-vscode",
 	"description": "%extension.description%",

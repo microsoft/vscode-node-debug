@@ -1,5 +1,5 @@
 {
-	"extension.description": "Visual Studio Code debugger extension for Node.js",
+	"extension.description": "Node.js debugging support (versions < 8.0)",
 
 	"node.label": "Node.js",
 
