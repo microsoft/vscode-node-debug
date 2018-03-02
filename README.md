@@ -11,7 +11,7 @@ See a general overview of debugging in VS Code [here](https://code.visualstudio.
 
 Documentation for Node.js specific debugging can be found [here](https://code.visualstudio.com/docs/nodejs/nodejs-debugging).
 
-Please submit bugs and feature requests to the [VS Code repoitory](https://github.com/microsoft/vscode/issues).
+Please submit bugs and feature requests to the [VS Code repository](https://github.com/microsoft/vscode/issues).
 
 
 ## License
