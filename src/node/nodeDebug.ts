@@ -1947,20 +1947,28 @@ export class NodeDebugSession extends LoggingDebugSession {
 		});
 	}
 
-	private _setBreakpoint2(ibp: InternalSourceBreakpoint, path: string | null, actualSrcLine: number, actualSrcColumn: number, actualLine: number, actualColumn: number) : Breakpoint {
+	private async _setBreakpoint2(ibp: InternalSourceBreakpoint, path: string | null, actualSrcLine: number, actualSrcColumn: number, actualLine: number, actualColumn: number) : Promise<Breakpoint> {
 
 		// nasty corner case: since we ignore the break-on-entry event we have to make sure that we
 		// stop in the entry point line if the user has an explicit breakpoint there (or if there is a 'debugger' statement).
 		// For this we check here whether a breakpoint is at the same location as the 'break-on-entry' location.
 		// If yes, then we plan for hitting the breakpoint instead of 'continue' over it!
 
-		if (!this._stopOnEntry && path && PathUtils.pathCompare(this._entryPath, path)) {	// only relevant if we do not stop on entry and have a matching file
-			if (this._entryLine === actualLine && this._entryColumn === actualColumn) {
+		if (path && PathUtils.pathCompare(this._entryPath, path) && this._entryLine === actualLine && this._entryColumn === actualColumn) {	// only relevant if the breakpoints matches entrypoint
+
+			let conditionMet = true;	// for regular breakpoints condition is always true
+			if (ibp.condition) {
+				// if conditional breakpoint we have to evaluate the condition because node didn't do it (because it stopped on entry).
+				conditionMet = await this.evaluateCondition(ibp.condition);
+			}
+
+			if (!this._stopOnEntry && conditionMet) {
 				// we do not have to 'continue' but we have to generate a stopped event instead
 				this._needContinue = false;
 				this._needBreakpointEvent = true;
 				this.log('la', '_setBreakpoint2: remember to fire a breakpoint event later');
 			}
+
 		}
 
 		if (ibp.verificationMessage) {
@@ -1970,6 +1978,21 @@ export class NodeDebugSession extends LoggingDebugSession {
 		} else {
 			return new Breakpoint(true, this.convertDebuggerLineToClient(actualSrcLine), this.convertDebuggerColumnToClient(actualSrcColumn));
 		}
+	}
+
+	private evaluateCondition(condition: string): Promise<boolean> {
+
+		const args = {
+			expression: condition,
+			frame: 0,	// evaluate always in top frame
+			disable_break: true
+		};
+
+		return this._node.evaluate(args).then(response => {
+			return !!response.body.value;
+		}).catch(e => {
+			return false;
+		});
 	}
 
 	/**
