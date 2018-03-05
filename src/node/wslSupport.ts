@@ -76,5 +76,5 @@ export function createLaunchArg(useSubsytemLinux: boolean | undefined, useExtern
 
 export function spawnSync(useWSL: boolean, executable: string, args?: string[], options?: child_process.SpawnSyncOptions) {
 	const launchArgs = createLaunchArg(useWSL, false, undefined, executable, args);
-	return child_process.spawnSync(launchArgs.executable, launchArgs.args, options);
+	return child_process.spawnSync(launchArgs.executable, launchArgs.args, useWSL ? undefined : options);
 }
