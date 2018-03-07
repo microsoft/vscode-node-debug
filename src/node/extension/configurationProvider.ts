@@ -173,7 +173,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 
 		// is "auto attach child process" mode enabled?
 		if (config.autoAttachChildProcesses) {
-			prepareAutoAttachChildProcesses(config);
+			prepareAutoAttachChildProcesses(folder, config);
 		}
 
 		// determine which protocol to use

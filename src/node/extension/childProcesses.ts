@@ -17,12 +17,14 @@ const DEBUG_PORT_PATTERN = /\s--(inspect|debug)-port=(\d+)/;
 const DEBUG_FLAGS_PATTERN = /\s--(inspect|debug)(-brk)?(=(\d+))?/;
 
 class Cluster {
+	folder: vscode.WorkspaceFolder | undefined;
 	config: vscode.DebugConfiguration;
 	session: vscode.DebugSession;
 	pids: Set<number>;
 	intervalId: NodeJS.Timer;
 
-	constructor(config: vscode.DebugConfiguration) {
+	constructor(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration) {
+		this.folder = folder;
 		this.config = config;
 		this.pids = new Set<number>();
 	}
@@ -52,7 +54,7 @@ class Cluster {
 		this.pollChildProcesses(rootPid, (pid, cmd) => {
 			if (!this.pids.has(pid)) {
 				this.pids.add(pid);
-				attachChildProcess(pid, cmd, this.config);
+				attachChildProcess(this.folder, pid, cmd, this.config);
 			}
 		});
 	}
@@ -67,8 +69,8 @@ class Cluster {
 
 const clusters = new Map<string,Cluster>();
 
-export function prepareAutoAttachChildProcesses(config: vscode.DebugConfiguration) {
-	clusters.set(config.name, new Cluster(config));
+export function prepareAutoAttachChildProcesses(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration) {
+	clusters.set(config.name, new Cluster(folder, config));
 }
 
 export function startSession(session: vscode.DebugSession) {
@@ -86,7 +88,7 @@ export function stopSession(session: vscode.DebugSession) {
 	}
 }
 
-function attachChildProcess(pid: number, cmd: string, baseConfig: vscode.DebugConfiguration) {
+function attachChildProcess(folder: vscode.WorkspaceFolder | undefined, pid: number, cmd: string, baseConfig: vscode.DebugConfiguration) {
 
 	const config: vscode.DebugConfiguration = {
 		type: 'node',
@@ -143,7 +145,7 @@ function attachChildProcess(pid: number, cmd: string, baseConfig: vscode.DebugCo
 
 	//log(`attach: ${config.protocol} ${config.port}`);
 
-	vscode.debug.startDebugging(undefined, config);
+	vscode.debug.startDebugging(folder, config);
 }
 
 function findChildProcesses(rootPid: number, cb: (pid: number, cmd: string) => void) {
