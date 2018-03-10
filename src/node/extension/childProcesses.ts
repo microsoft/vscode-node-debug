@@ -6,8 +6,9 @@
 'use strict';
 
 import * as nls from 'vscode-nls';
-import { exec } from 'child_process';
+import { spawn } from 'child_process';
 import * as vscode from 'vscode';
+import { join } from 'path';
 
 const localize = nls.loadMessageBundle();
 
@@ -177,37 +178,45 @@ function findChildProcesses(rootPid: number, cb: (pid: number, cmd: string) => v
 		}
 	}
 
+	// returns a function that aggregates chunks of data until one or more complete lines are received and passes them to a callback.
+	function lines(callback: (a: string) => void) {
+		let unfinished = '';	// unfinished last line of chunk
+		return (data: string | Buffer) => {
+			const lines = data.toString().split(/\r?\n/);
+			const finishedLines = lines.slice(0, lines.length - 1);
+			finishedLines[0] = unfinished + finishedLines[0]; // complete previous unfinished line
+			unfinished = lines[lines.length - 1]; // remember unfinished last line of this chunk for next round
+			for (const s of finishedLines) {
+				callback(s);
+			}
+		}
+	}
+
 	if (process.platform === 'win32') {
 
-		const CMD = 'wmic process get CommandLine,ParentProcessId,ProcessId';
 		const CMD_PAT = /^(.+)\s+([0-9]+)\s+([0-9]+)$/;
 
-		exec(CMD, { maxBuffer: 1000 * 1024 }, (err, stdout, stderr) => {
-			if (!err && !stderr) {
-				const lines = stdout.split('\r\n');
-				for (let line of lines) {
-					let matches = CMD_PAT.exec(line.trim());
-					if (matches && matches.length === 4) {
-						oneProcess(parseInt(matches[3]), parseInt(matches[2]), matches[1].trim());
-					}
-				}
+		const wmic = join(process.env['WINDIR'] || 'C:\\Windows', 'System32', 'wbem', 'WMIC.exe');
+		var proc = spawn(wmic, [ 'process', 'get', 'CommandLine,ParentProcessId,ProcessId' ]);
+		proc.stdout.setEncoding('utf8');
+		proc.stdout.on('data', lines(line => {
+			let matches = CMD_PAT.exec(line.trim());
+			if (matches && matches.length === 4) {
+				oneProcess(parseInt(matches[3]), parseInt(matches[2]), matches[1].trim());
 			}
-		});
+		}));
+
 	} else {	// OS X & Linux
 
-		const CMD = 'ps -ax -o pid=,ppid=,command=';
 		const CMD_PAT = /^\s*([0-9]+)\s+([0-9]+)\s+(.+)$/;
 
-		exec(CMD, { maxBuffer: 1000 * 1024 }, (err, stdout, stderr) => {
-			if (!err && !stderr) {
-				const lines = stdout.toString().split('\n');
-				for (const line of lines) {
-					let matches = CMD_PAT.exec(line.trim());
-					if (matches && matches.length === 4) {
-						oneProcess(parseInt(matches[1]), parseInt(matches[2]), matches[3]);
-					}
-				}
+		var proc = spawn('/bin/ps', [ '-ax', '-o', 'pid=,ppid=,command=' ]);
+		proc.stdout.setEncoding('utf8');
+		proc.stdout.on('data', lines(line => {
+			let matches = CMD_PAT.exec(line.trim());
+			if (matches && matches.length === 4) {
+				oneProcess(parseInt(matches[1]), parseInt(matches[2]), matches[3]);
 			}
-		});
+		}));
 	}
 }
