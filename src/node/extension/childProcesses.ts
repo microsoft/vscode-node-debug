@@ -19,9 +19,9 @@ const DEBUG_FLAGS_PATTERN = /\s--(inspect|debug)(-brk)?(=(\d+))?/;
 class Cluster {
 	folder: vscode.WorkspaceFolder | undefined;
 	config: vscode.DebugConfiguration;
-	session: vscode.DebugSession;
+	session: vscode.DebugSession | undefined;
 	pids: Set<number>;
-	intervalId: NodeJS.Timer;
+	timeoutId: NodeJS.Timer | undefined;
 
 	constructor(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration) {
 		this.folder = folder;
@@ -34,26 +34,29 @@ class Cluster {
 
 		setTimeout(_ => {
 			// get the process ID from the debuggee
-			this.session.customRequest('evaluate', { expression: 'process.pid' }).then(reply => {
-				const rootPid = parseInt(reply.result);
-				this.attachChildProcesses(rootPid);
-			}, e => {
-				// 'evaluate' error -> use the fall back strategy
-				this.attachChildProcesses(NaN);
-			});
+			if (this.session) {
+				this.session.customRequest('evaluate', { expression: 'process.pid' }).then(reply => {
+					const rootPid = parseInt(reply.result);
+					this.attachChildProcesses(rootPid);
+				}, e => {
+					// 'evaluate' error -> use the fall back strategy
+					this.attachChildProcesses(NaN);
+				});
+			}
 		}, this.session.type === 'node2' ? 500 : 100);
 	}
 
 	stopWatching() {
-		if (this.intervalId) {
-			clearTimeout(this.intervalId);
+		this.session = undefined;
+		if (this.timeoutId) {
+			clearTimeout(this.timeoutId);
+			this.timeoutId = undefined;
 		}
 	}
 
 	private attachChildProcesses(rootPid: number) {
 		this.pollChildProcesses(rootPid, (pid, cmd) => {
 			if (!this.pids.has(pid)) {
-				console.log("add: " + pid);
 				this.pids.add(pid);
 				attachChildProcess(this.folder, pid, cmd, this.config);
 			}
@@ -61,12 +64,14 @@ class Cluster {
 	}
 
 	private pollChildProcesses(rootPid: number, cb: (pid, cmd) => void) {
-		const start = Date.now();
+		//const start = Date.now();
 		findChildProcesses(rootPid, cb).then(_ => {
 			//console.log(`duration: ${Date.now() - start}`);
-			this.intervalId = setTimeout(_ => {
-				this.pollChildProcesses(rootPid, cb);
-			}, POLL_INTERVAL);
+			if (this.session) {
+				this.timeoutId = setTimeout(_ => {
+					this.pollChildProcesses(rootPid, cb);
+				}, POLL_INTERVAL);
+			}
 		});
 	}
 }
