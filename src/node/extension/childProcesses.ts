@@ -6,9 +6,8 @@
 'use strict';
 
 import * as nls from 'vscode-nls';
-import { spawn } from 'child_process';
 import * as vscode from 'vscode';
-import { join } from 'path';
+import { getProcessTree, ProcessTreeNode } from './processTree';
 
 const localize = nls.loadMessageBundle();
 
@@ -47,13 +46,14 @@ class Cluster {
 
 	stopWatching() {
 		if (this.intervalId) {
-			clearInterval(this.intervalId);
+			clearTimeout(this.intervalId);
 		}
 	}
 
 	private attachChildProcesses(rootPid: number) {
 		this.pollChildProcesses(rootPid, (pid, cmd) => {
 			if (!this.pids.has(pid)) {
+				console.log("add: " + pid);
 				this.pids.add(pid);
 				attachChildProcess(this.folder, pid, cmd, this.config);
 			}
@@ -61,10 +61,13 @@ class Cluster {
 	}
 
 	private pollChildProcesses(rootPid: number, cb: (pid, cmd) => void) {
-		findChildProcesses(rootPid, cb);
-		this.intervalId = setInterval(() => {
-			findChildProcesses(rootPid, cb);
-		}, POLL_INTERVAL);
+		const start = Date.now();
+		findChildProcesses(rootPid, cb).then(_ => {
+			//console.log(`duration: ${Date.now() - start}`);
+			this.intervalId = setTimeout(_ => {
+				this.pollChildProcesses(rootPid, cb);
+			}, POLL_INTERVAL);
+		});
 	}
 }
 
@@ -149,74 +152,28 @@ function attachChildProcess(folder: vscode.WorkspaceFolder | undefined, pid: num
 	vscode.debug.startDebugging(folder, config);
 }
 
-function findChildProcesses(rootPid: number, cb: (pid: number, cmd: string) => void) {
+function findChildProcesses(rootPid: number, cb: (pid: number, cmd: string) => void): Promise<void> {
 
-	const set = new Set<number>();
+	function walker(node: ProcessTreeNode) {
 
-	if (!isNaN(rootPid) && rootPid > 0) {
-		set.add(rootPid);
-	}
+		const matches = DEBUG_PORT_PATTERN.exec(node.args);
+		const matches2 = DEBUG_FLAGS_PATTERN.exec(node.args);
 
-	function oneProcess(pid: number, ppid: number, cmd: string) {
-
-		if (set.size === 0) {
-			// try to find the root process
-			const matches = DEBUG_PORT_PATTERN.exec(cmd);
-			if (matches && matches.length >= 3) {
-				// since this is a child we add the parent id as the root id
-				set.add(ppid);
-			}
+		if ((matches && matches.length >= 3) || (matches2 && matches2.length >= 5)) {
+			cb(node.pid, node.args);
 		}
 
-		if (set.has(ppid)) {
-			set.add(pid);
-			const matches = DEBUG_PORT_PATTERN.exec(cmd);
-			const matches2 = DEBUG_FLAGS_PATTERN.exec(cmd);
-			if ((matches && matches.length >= 3) || (matches2 && matches2.length >= 5)) {
-				cb(pid, cmd);
-			}
+		for (const child of node.children || []) {
+			walker(child);
 		}
 	}
 
-	// returns a function that aggregates chunks of data until one or more complete lines are received and passes them to a callback.
-	function lines(callback: (a: string) => void) {
-		let unfinished = '';	// unfinished last line of chunk
-		return (data: string | Buffer) => {
-			const lines = data.toString().split(/\r?\n/);
-			const finishedLines = lines.slice(0, lines.length - 1);
-			finishedLines[0] = unfinished + finishedLines[0]; // complete previous unfinished line
-			unfinished = lines[lines.length - 1]; // remember unfinished last line of this chunk for next round
-			for (const s of finishedLines) {
-				callback(s);
-			}
+	return getProcessTree(rootPid).then(tree => {
+
+		for (const child of tree.children || []) {
+			walker(child);
 		}
-	}
 
-	if (process.platform === 'win32') {
-
-		const CMD_PAT = /^(.+)\s+([0-9]+)\s+([0-9]+)$/;
-
-		const wmic = join(process.env['WINDIR'] || 'C:\\Windows', 'System32', 'wbem', 'WMIC.exe');
-		var proc = spawn(wmic, [ 'process', 'get', 'CommandLine,ParentProcessId,ProcessId' ]);
-		proc.stdout.setEncoding('utf8');
-		proc.stdout.on('data', lines(line => {
-			let matches = CMD_PAT.exec(line.trim());
-			if (matches && matches.length === 4) {
-				oneProcess(parseInt(matches[3]), parseInt(matches[2]), matches[1].trim());
-			}
-		}));
-
-	} else {	// OS X & Linux
-
-		const CMD_PAT = /^\s*([0-9]+)\s+([0-9]+)\s+(.+)$/;
-
-		var proc = spawn('/bin/ps', [ '-ax', '-o', 'pid=,ppid=,command=' ]);
-		proc.stdout.setEncoding('utf8');
-		proc.stdout.on('data', lines(line => {
-			let matches = CMD_PAT.exec(line.trim());
-			if (matches && matches.length === 4) {
-				oneProcess(parseInt(matches[1]), parseInt(matches[2]), matches[3]);
-			}
-		}));
-	}
+	}).catch(err => {
+	});
 }
