@@ -38,7 +38,7 @@ export function getProcessTree(rootPid: number, asTree = false) : Promise<Proces
 			for (const s of finishedLines) {
 				callback(s);
 			}
-		}
+		};
 	}
 
 	function finish(rootPid: number) : ProcessTreeNode | undefined {
