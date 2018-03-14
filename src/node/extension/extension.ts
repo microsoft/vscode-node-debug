@@ -10,7 +10,10 @@ import { NodeConfigurationProvider } from './configurationProvider';
 import { LoadedScriptsProvider, pickLoadedScript, openScript } from './loadedScripts';
 import { pickProcess } from './processPicker';
 import { startSession, stopSession } from './childProcesses';
+import { startAutoAttach } from './autoAttach';
+import * as nls from 'vscode-nls';
 
+const localize = nls.loadMessageBundle();
 
 export function activate(context: vscode.ExtensionContext) {
 
@@ -31,6 +34,27 @@ export function activate(context: vscode.ExtensionContext) {
 	// cluster
 	context.subscriptions.push(vscode.debug.onDidStartDebugSession(session => startSession(session)));
 	context.subscriptions.push(vscode.debug.onDidTerminateDebugSession(session => stopSession(session)));
+
+	// auto attach in terminal
+	const statusItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
+	statusItem.command = 'extension.node-debug.toggleAutoAttach';
+	statusItem.text = localize('auto.attach', "Auto Attach");
+	statusItem.tooltip = 'Automatically attach to node.js processes in debug mode';
+	statusItem.show();
+	context.subscriptions.push(statusItem);
+
+	let autoAttacher: vscode.Disposable | undefined;
+	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.toggleAutoAttach', _ => {
+		const icon = '$(plug) ';
+		if (autoAttacher) {
+			statusItem.text = statusItem.text.replace(icon, '');
+			autoAttacher.dispose();
+			autoAttacher = undefined;
+		} else {
+			statusItem.text = icon + statusItem.text;
+			autoAttacher = startAutoAttach();
+		}
+	}));
 }
 
 export function deactivate() {
