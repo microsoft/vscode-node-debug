@@ -278,10 +278,6 @@ interface CommonArguments {
 
 	/** Debug session ID */
 	__sessionId: string;
-	/** Arbitrary data looped from last session */
-	__restart?: {
-		port?: number
-	};
 }
 
 type ConsoleType = 'internalConsole' | 'integratedTerminal' | 'externalTerminal';
@@ -317,7 +313,7 @@ interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArguments, C
  */
 interface AttachRequestArguments extends DebugProtocol.AttachRequestArguments, CommonArguments {
 
-	// currently nothing is  'attach' specific
+	// currently nothing is 'attach' specific
 }
 
 
