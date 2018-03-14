@@ -83,7 +83,8 @@
 		"onDebugResolve:node",
 		"onCommand:extension.node-debug.toggleSkippingFile",
 		"onCommand:extension.node-debug.pickLoadedScript",
-		"onCommand:extension.pickNodeProcess"
+		"onCommand:extension.pickNodeProcess",
+		"onCommand:extension.node-debug.toggleAutoAttach"
 	],
 	"contributes": {
 		"views": {
@@ -113,6 +114,10 @@
 			{
 				"command": "extension.node-debug.toggleSkippingFile",
 				"title": "%toggle.skipping.this.file%"
+			},
+			{
+				"command": "extension.node-debug.toggleAutoAttach",
+				"title": "Toggle Auto Attach"
 			}
 		],
 		"keybindings": [
