@@ -21,11 +21,38 @@ export class ProcessTreeNode {
 	}
 }
 
-export function getProcessTree(rootPid: number, asTree = false) : Promise<ProcessTreeNode> {
+export async function getProcessTree(rootPid: number) : Promise<ProcessTreeNode | undefined> {
 
 	const map = new Map<number, ProcessTreeNode>();
 
 	map.set(0, new ProcessTreeNode(0, 0, ''));
+
+	try {
+		await getProcesses((pid: number, ppid: number, cmd: string) => {
+			map.set(pid, new ProcessTreeNode(pid, ppid, cmd));
+		});
+	} catch (err) {
+		return undefined;
+	}
+
+	const values = map.values();
+	for (const p of values) {
+		const parent = map.get(p.ppid);
+		if (parent) {
+			if (!parent.children) {
+				parent.children = [];
+			}
+			parent.children.push(p);
+		}
+	}
+
+	if (!isNaN(rootPid) && rootPid > 0) {
+		return map.get(rootPid);
+	}
+	return map.get(0);
+}
+
+export function getProcesses(one: (pid: number, ppid: number, cmdline: string) => void) : Promise<void> {
 
 	// returns a function that aggregates chunks of data until one or more complete lines are received and passes them to a callback.
 	function lines(callback: (a: string) => void) {
@@ -39,25 +66,6 @@ export function getProcessTree(rootPid: number, asTree = false) : Promise<Proces
 				callback(s);
 			}
 		};
-	}
-
-	function finish(rootPid: number) : ProcessTreeNode | undefined {
-
-		const values = map.values();
-		for (const p of values) {
-			const parent = map.get(p.ppid);
-			if (parent) {
-				if (!parent.children) {
-					parent.children = [];
-				}
-				parent.children.push(p);
-			}
-		}
-
-		if (!isNaN(rootPid) && rootPid > 0) {
-			return map.get(rootPid);
-		}
-		return map.get(0);
 	}
 
 	return new Promise((resolve, reject) => {
@@ -75,7 +83,7 @@ export function getProcessTree(rootPid: number, asTree = false) : Promise<Proces
 				let matches = CMD_PAT.exec(line.trim());
 				if (matches && matches.length === 4) {
 					const pid = parseInt(matches[3]);
-					map.set(pid, new ProcessTreeNode(pid, parseInt(matches[2]), matches[1].trim()));
+					one(pid, parseInt(matches[2]), matches[1].trim());
 				}
 			}));
 
@@ -89,40 +97,41 @@ export function getProcessTree(rootPid: number, asTree = false) : Promise<Proces
 				let matches = CMD_PAT.exec(line.trim());
 				if (matches && matches.length === 4) {
 					const pid = parseInt(matches[1]);
-					map.set(pid, new ProcessTreeNode(pid, parseInt(matches[2]), matches[3]));
+					one(pid, parseInt(matches[2]), matches[3]);
 				}
 			}));
 		}
 
 		proc.on('error', err => {
-			reject(err.message);
+			reject(err);
 		});
 
 		proc.stderr.setEncoding('utf8');
 		proc.stderr.on('data', data => {
-			reject(data.toString());
+			reject(new Error(data.toString()));
 		});
 
 		proc.on('close', (code, signal) => {
 			if (code === 0) {
-				resolve(finish(rootPid));
+				resolve();
 			} else if (code > 0) {
-				reject(`process terminated with exit code: ${code}`);
+				reject(new Error(`process terminated with exit code: ${code}`));
 			}
 			if (signal) {
-				reject(`process terminated with signal: ${signal}`);
+				reject(new Error(`process terminated with signal: ${signal}`));
 			}
 		});
 
 		proc.on('exit', (code, signal) => {
 			if (code === 0) {
-				//resolve(finish(rootPid));
+				//resolve();
 			} else if (code > 0) {
-				reject(`process terminated with exit code: ${code}`);
+				reject(new Error(`process terminated with exit code: ${code}`));
 			}
 			if (signal) {
-				reject(`process terminated with signal: ${signal}`);
+				reject(new Error(`process terminated with signal: ${signal}`));
 			}
 		});
 	});
 }
+

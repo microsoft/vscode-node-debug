@@ -118,9 +118,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 					}
 					versionManagerName = 'nvs';
 				} else {
-					return vscode.window.showErrorMessage(localize('NVS_HOME.not.found.message', "Attribute 'runtimeVersion' requires Node.js version manager 'nvs'."), { modal: true }).then(_ => {
-						return undefined;	// abort launch
-					});
+					return vscode.window.showErrorMessage(localize('NVS_HOME.not.found.message', "Attribute 'runtimeVersion' requires Node.js version manager 'nvs'."), { modal: true }).then(_ => undefined); // abort launch
 				}
 			}
 
@@ -130,9 +128,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 				if (process.platform === 'win32') {
 					const nvmHome = process.env['NVM_HOME'];
 					if (!nvmHome) {
-						return vscode.window.showErrorMessage(localize('NVM_HOME.not.found.message', "Attribute 'runtimeVersion' requires Node.js version manager 'nvm-windows' or 'nvs'."), { modal: true }).then(_ => {
-							return undefined;	// abort launch
-						});
+						return vscode.window.showErrorMessage(localize('NVM_HOME.not.found.message', "Attribute 'runtimeVersion' requires Node.js version manager 'nvm-windows' or 'nvs'."), { modal: true }).then(_ => undefined); // abort launch
 					}
 					bin = join(nvmHome, `v${config.runtimeVersion}`);
 					versionManagerName = 'nvm-windows';
@@ -146,9 +142,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 						}
 					}
 					if (!nvmHome) {
-						return vscode.window.showErrorMessage(localize('NVM_DIR.not.found.message', "Attribute 'runtimeVersion' requires Node.js version manager 'nvm' or 'nvs'."), { modal: true }).then(_ => {
-							return undefined;	// abort launch
-						});
+						return vscode.window.showErrorMessage(localize('NVM_DIR.not.found.message', "Attribute 'runtimeVersion' requires Node.js version manager 'nvm' or 'nvs'."), { modal: true }).then(_ => undefined); // abort launch
 					}
 					bin = join(nvmHome, 'versions', 'node', `v${config.runtimeVersion}`, 'bin');
 					versionManagerName = 'nvm';
@@ -165,9 +159,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 					config.env['PATH'] = `${bin}:${process.env['PATH']}`;
 				}
 			} else {
-				return vscode.window.showErrorMessage(localize('runtime.version.not.found.message', "Node.js version '{0}' not installed for '{1}'.", config.runtimeVersion, versionManagerName), { modal: true }).then(_ => {
-					return undefined;	// abort launch
-				});
+				return vscode.window.showErrorMessage(localize('runtime.version.not.found.message', "Node.js version '{0}' not installed for '{1}'.", config.runtimeVersion, versionManagerName), { modal: true }).then(_ => undefined); // abort launch
 			}
 		}
 

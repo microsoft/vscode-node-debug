@@ -123,11 +123,10 @@ function findChildProcesses(rootPid: number, cb: (pid: number, cmd: string) => v
 	}
 
 	return getProcessTree(rootPid).then(tree => {
-
-		for (const child of tree.children || []) {
-			walker(child);
+		if (tree) {
+			for (const child of tree.children || []) {
+				walker(child);
+			}
 		}
-
-	}).catch(err => {
 	});
 }
