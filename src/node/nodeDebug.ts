@@ -1117,6 +1117,28 @@ export class NodeDebugSession extends LoggingDebugSession {
 				env: envVars
 			};
 
+			// see bug #45832
+			if (process.platform === 'win32' && wslLaunchArgs.executable.indexOf(' ') > 0) {
+				let foundArgWithSpace = false;
+
+				// check whether there is one arg with a space
+				const args: string[] = [];
+				for (const a of wslLaunchArgs.args) {
+					if (a.indexOf(' ') > 0) {
+						args.push(`"${a}"`);
+						foundArgWithSpace = true;
+					} else {
+						args.push(a);
+					}
+				}
+
+				if (foundArgWithSpace) {
+					wslLaunchArgs.args = args;
+					wslLaunchArgs.executable = `"${wslLaunchArgs.executable}"`;
+					(<any>options).shell = true;
+				}
+			}
+
 			const nodeProcess = CP.spawn(wslLaunchArgs.executable, wslLaunchArgs.args, options);
 			nodeProcess.on('error', (error) => {
 				// tslint:disable-next-line:no-bitwise
