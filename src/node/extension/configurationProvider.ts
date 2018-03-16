@@ -37,6 +37,15 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 	 * Try to add all missing attributes to the debug configuration being launched.
 	 */
 	resolveDebugConfiguration(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration, token?: vscode.CancellationToken): vscode.ProviderResult<vscode.DebugConfiguration> {
+		return this.resolveDebugConfiguration2(folder, config).catch(err => {
+			return vscode.window.showErrorMessage(err.message, { modal: true }).then(_ => undefined); // abort launch
+		});
+	}
+
+	/**
+	 * Try to add all missing attributes to the debug configuration being launched.
+	 */
+	private async resolveDebugConfiguration2(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration, token?: vscode.CancellationToken): Promise<vscode.DebugConfiguration | undefined> {
 
 		// if launch.json is missing or empty
 		if (!config.type && !config.request && !config.name) {
@@ -44,10 +53,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 			config = createLaunchConfigFromContext(folder, true, config);
 
 			if (!config.program) {
-				const message = localize('program.not.found.message', "Cannot find a program to debug");
-				return vscode.window.showErrorMessage(message, { modal: true }).then(_ => {
-					return undefined;	// abort launch
-				});
+				throw new Error(localize('program.not.found.message', "Cannot find a program to debug"));
 			}
 		}
 
@@ -91,104 +97,147 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 		}
 
 		// "nvm" support
-		if (config.runtimeVersion && config.runtimeVersion !== 'default') {
-
-			// if a runtime version is specified we prepend env.PATH with the folder that corresponds to the version
-
-			let bin: string | undefined = undefined;
-			let versionManagerName: string | undefined = undefined;
-
-			// first try the Node Version Switcher 'nvs'
-			let nvsHome = process.env['NVS_HOME'];
-			if (!nvsHome) {
-				// NVS_HOME is not always set. Probe for 'nvs' directory instead
-				const nvsDir = process.platform === 'win32' ? join(process.env['LOCALAPPDATA'], 'nvs') : join(process.env['HOME'], '.nvs');
-				if (fs.existsSync(nvsDir)) {
-					nvsHome = nvsDir;
-				}
-			}
-
-			const { nvsFormat, remoteName, semanticVersion, arch } = parseVersionString(config.runtimeVersion);
-
-			if (nvsFormat || nvsHome) {
-				if (nvsHome) {
-					bin = join(nvsHome, remoteName, semanticVersion, arch);
-					if (process.platform !== 'win32') {
-						bin = join(bin, 'bin');
-					}
-					versionManagerName = 'nvs';
-				} else {
-					return vscode.window.showErrorMessage(localize('NVS_HOME.not.found.message', "Attribute 'runtimeVersion' requires Node.js version manager 'nvs'."), { modal: true }).then(_ => undefined); // abort launch
-				}
-			}
-
-			if (!bin) {
-
-				// now try the Node Version Manager 'nvm'
-				if (process.platform === 'win32') {
-					const nvmHome = process.env['NVM_HOME'];
-					if (!nvmHome) {
-						return vscode.window.showErrorMessage(localize('NVM_HOME.not.found.message', "Attribute 'runtimeVersion' requires Node.js version manager 'nvm-windows' or 'nvs'."), { modal: true }).then(_ => undefined); // abort launch
-					}
-					bin = join(nvmHome, `v${config.runtimeVersion}`);
-					versionManagerName = 'nvm-windows';
-				} else {	// macOS and linux
-					let nvmHome = process.env['NVM_DIR'];
-					if (!nvmHome) {
-						// if NVM_DIR is not set. Probe for '.nvm' directory instead
-						const nvmDir = join(process.env['HOME'], '.nvm');
-						if (fs.existsSync(nvmDir)) {
-							nvmHome = nvmDir;
-						}
-					}
-					if (!nvmHome) {
-						return vscode.window.showErrorMessage(localize('NVM_DIR.not.found.message', "Attribute 'runtimeVersion' requires Node.js version manager 'nvm' or 'nvs'."), { modal: true }).then(_ => undefined); // abort launch
-					}
-					bin = join(nvmHome, 'versions', 'node', `v${config.runtimeVersion}`, 'bin');
-					versionManagerName = 'nvm';
-				}
-			}
-
-			if (fs.existsSync(bin)) {
-				if (!config.env) {
-					config.env = {};
-				}
-				if (process.platform === 'win32') {
-					config.env['Path'] = `${bin};${process.env['Path']}`;
-				} else {
-					config.env['PATH'] = `${bin}:${process.env['PATH']}`;
-				}
-			} else {
-				return vscode.window.showErrorMessage(localize('runtime.version.not.found.message', "Node.js version '{0}' not installed for '{1}'.", config.runtimeVersion, versionManagerName), { modal: true }).then(_ => undefined); // abort launch
-			}
+		if (config.request === 'launch' && typeof config.runtimeVersion === 'string' && config.runtimeVersion !== 'default') {
+			await this.nvmSupport(config);
 		}
 
-		// is "auto attach child process" mode enabled?
+		// "auto attach child process" support
 		if (config.autoAttachChildProcesses) {
 			prepareAutoAttachChildProcesses(folder, config);
 		}
 
-		// determine which protocol to use
-		return determineDebugType(config, this._extensionContext.logger).then(debugType => {
-
-			if (debugType) {
-				config.type = debugType;
+		// "attach to process via pid" support
+		if (config.request === 'attach' && typeof config.processId === 'string') {
+			// we resolve Process Picker early (before VS Code) so that we can probe the process for its protocol here
+			if (await this.resolveProcessPicker(config)) {
+				return undefined;	// abort launch
 			}
+		}
 
-			return this.fixupLogParameters(config);
-		});
-	}
+		// finally determine which protocol to use
+		const debugType = await determineDebugType(config, this._extensionContext.logger);
+		if (debugType) {
+			config.type = debugType;
+		}
 
-	private async fixupLogParameters(config: vscode.DebugConfiguration): Promise<vscode.DebugConfiguration> {
+		// fixup log parameters
 		if (config.trace && !config.logFilePath) {
-			const fileName = config.type === 'node' ?
-				'debugadapter-legacy.txt' :
-				'debugadapter.txt';
-
+			const fileName = config.type === 'node' ? 'debugadapter-legacy.txt' : 'debugadapter.txt';
 			config.logFilePath = join(await this._extensionContext.logger.logDirectory, fileName);
 		}
 
+		// everything ok: let VS Code start the debug session
 		return config;
+	}
+
+	/**
+	 * returns true if UI was cancelled
+	 */
+	private async resolveProcessPicker(config: vscode.DebugConfiguration) : Promise<boolean> {
+
+		const processId = config.processId.trim();
+		if (processId === '${command:PickProcess}' || processId === '${command:extension.pickNodeProcess}') {
+
+			const pidResult = await pickProcess();
+			if (pidResult === null) {
+				// UI dismissed (cancelled)
+				return true;
+			}
+
+			if (pidResult && pidResult.match(/^[0-9]+$/)) {
+				const pid = Number(pidResult);
+
+				putPidInDebugMode(pid);
+
+				const debugType = await determineDebugTypeForPidInDebugMode(config, pid);
+				if (debugType) {
+					// processID is handled, so turn this config into a normal port attach configuration
+					delete config.processId;
+					config.port = debugType === 'node2' ? INSPECTOR_PORT_DEFAULT : LEGACY_PORT_DEFAULT;
+					config.protocol = debugType === 'node2' ? 'inspector' : 'legacy';
+				} else {
+					throw new Error(localize('pid.error', "Attach to process: cannot put process '{0}' in debug mode.", pidResult));
+				}
+			} else {
+				throw new Error(localize('VSND2006', "Attach to process: '{0}' doesn't look like a process id.", pidResult));
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * if a runtime version is specified we prepend env.PATH with the folder that corresponds to the version.
+	 * Returns false on error
+	 */
+	private async nvmSupport(config: vscode.DebugConfiguration) : Promise<void> {
+
+		let bin: string | undefined = undefined;
+		let versionManagerName: string | undefined = undefined;
+
+		// first try the Node Version Switcher 'nvs'
+		let nvsHome = process.env['NVS_HOME'];
+		if (!nvsHome) {
+			// NVS_HOME is not always set. Probe for 'nvs' directory instead
+			const nvsDir = process.platform === 'win32' ? join(process.env['LOCALAPPDATA'], 'nvs') : join(process.env['HOME'], '.nvs');
+			if (fs.existsSync(nvsDir)) {
+				nvsHome = nvsDir;
+			}
+		}
+
+		const { nvsFormat, remoteName, semanticVersion, arch } = parseVersionString(config.runtimeVersion);
+
+		if (nvsFormat || nvsHome) {
+			if (nvsHome) {
+				bin = join(nvsHome, remoteName, semanticVersion, arch);
+				if (process.platform !== 'win32') {
+					bin = join(bin, 'bin');
+				}
+				versionManagerName = 'nvs';
+			} else {
+				throw new Error(localize('NVS_HOME.not.found.message', "Attribute 'runtimeVersion' requires Node.js version manager 'nvs'."));
+			}
+		}
+
+		if (!bin) {
+
+			// now try the Node Version Manager 'nvm'
+			if (process.platform === 'win32') {
+				const nvmHome = process.env['NVM_HOME'];
+				if (!nvmHome) {
+					throw new Error(localize('NVM_HOME.not.found.message', "Attribute 'runtimeVersion' requires Node.js version manager 'nvm-windows' or 'nvs'."));
+				}
+				bin = join(nvmHome, `v${config.runtimeVersion}`);
+				versionManagerName = 'nvm-windows';
+			} else {	// macOS and linux
+				let nvmHome = process.env['NVM_DIR'];
+				if (!nvmHome) {
+					// if NVM_DIR is not set. Probe for '.nvm' directory instead
+					const nvmDir = join(process.env['HOME'], '.nvm');
+					if (fs.existsSync(nvmDir)) {
+						nvmHome = nvmDir;
+					}
+				}
+				if (!nvmHome) {
+					throw new Error(localize('NVM_DIR.not.found.message', "Attribute 'runtimeVersion' requires Node.js version manager 'nvm' or 'nvs'."));
+				}
+				bin = join(nvmHome, 'versions', 'node', `v${config.runtimeVersion}`, 'bin');
+				versionManagerName = 'nvm';
+			}
+		}
+
+		if (fs.existsSync(bin)) {
+			if (!config.env) {
+				config.env = {};
+			}
+			if (process.platform === 'win32') {
+				config.env['Path'] = `${bin};${process.env['Path']}`;
+			} else {
+				config.env['PATH'] = `${bin}:${process.env['PATH']}`;
+			}
+		} else {
+			throw new Error(localize('runtime.version.not.found.message', "Node.js version '{0}' not installed for '{1}'.", config.runtimeVersion, versionManagerName));
+		}
 	}
 }
 
@@ -349,9 +398,7 @@ function guessProgramFromPackage(folder: vscode.WorkspaceFolder | undefined, pac
 //---- debug type -------------------------------------------------------------------------------------------------------------
 
 function determineDebugType(config: any, logger: vscode.Logger): Promise<string | null> {
-	if (config.request === 'attach' && typeof config.processId === 'string') {
-		return determineDebugTypeForPidConfig(config);
-	} else if (config.protocol === 'legacy') {
+	if (config.protocol === 'legacy') {
 		return Promise.resolve('node');
 	} else if (config.protocol === 'inspector') {
 		return Promise.resolve('node2');
@@ -359,36 +406,6 @@ function determineDebugType(config: any, logger: vscode.Logger): Promise<string 
 		// 'auto', or unspecified
 		return detectDebugType(config, logger);
 	}
-}
-
-function determineDebugTypeForPidConfig(config: any): Promise<string | null> {
-	const getPidP = isPickProcessCommand(config.processId) ?
-		pickProcess() :
-		Promise.resolve(config.processId);
-
-	return getPidP.then(pid => {
-		if (pid && pid.match(/^[0-9]+$/)) {
-			const pidNum = Number(pid);
-			putPidInDebugMode(pidNum);
-
-			return determineDebugTypeForPidInDebugMode(config, pidNum);
-		} else {
-			throw new Error(localize('VSND2006', "Attach to process: '{0}' doesn't look like a process id.", pid));
-		}
-	}).then(debugType => {
-		if (debugType) {
-			// processID is handled, so turn this config into a normal port attach config
-			config.processId = undefined;
-			config.port = debugType === 'node2' ? INSPECTOR_PORT_DEFAULT : LEGACY_PORT_DEFAULT;
-		}
-
-		return debugType;
-	});
-}
-
-function isPickProcessCommand(configProcessId: string): boolean {
-	configProcessId = configProcessId.trim();
-	return configProcessId === '${command:PickProcess}' || configProcessId === '${command:extension.pickNodeProcess}';
 }
 
 function putPidInDebugMode(pid: number): void {
