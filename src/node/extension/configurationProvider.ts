@@ -37,7 +37,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 	 * Try to add all missing attributes to the debug configuration being launched.
 	 */
 	resolveDebugConfiguration(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration, token?: vscode.CancellationToken): vscode.ProviderResult<vscode.DebugConfiguration> {
-		return this.resolveDebugConfiguration2(folder, config).catch(err => {
+		return this.resolveConfigAsync(folder, config).catch(err => {
 			return vscode.window.showErrorMessage(err.message, { modal: true }).then(_ => undefined); // abort launch
 		});
 	}
@@ -45,7 +45,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 	/**
 	 * Try to add all missing attributes to the debug configuration being launched.
 	 */
-	private async resolveDebugConfiguration2(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration, token?: vscode.CancellationToken): Promise<vscode.DebugConfiguration | undefined> {
+	private async resolveConfigAsync(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration, token?: vscode.CancellationToken): Promise<vscode.DebugConfiguration | undefined> {
 
 		// if launch.json is missing or empty
 		if (!config.type && !config.request && !config.name) {
