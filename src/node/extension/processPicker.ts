@@ -17,7 +17,7 @@ const localize = nls.loadMessageBundle();
 
 interface ProcessItem extends vscode.QuickPickItem {
 	pidOrPort: string;	// picker result
-	pid: number;		// used for sorting
+	sortKey: number;
 }
 
 /**
@@ -75,7 +75,7 @@ export async function pickProcessForConfig(config: vscode.DebugConfiguration) : 
 		}
 
 	} else {
-		throw new Error(localize('VSND2006', "Attach to process: '{0}' doesn't look like a process id.", pidResult));
+		throw new Error(localize('process.id.error', "Attach to process: '{0}' doesn't look like a process id.", pidResult));
 	}
 
 	return false;
@@ -154,14 +154,14 @@ function listProcesses(ports: boolean): Promise<ProcessItem[]> {
 				port = protocol === 'inspector' ? INSPECTOR_PORT_DEFAULT : LEGACY_PORT_DEFAULT;
 			}
 			if (protocol === 'inspector') {
-				description = `process Id: ${pid}, debug Port: ${port}`;
+				description = localize('process.id.port', "process id: {0}, debug port: {1}", pid, port);
 			} else {
-				description = `process Id: ${pid}, debug Port: ${port} (legacy protocol)`;
+				description = localize('process.id.port.legacy', "process id: {0}, debug port: {1} (legacy protocol)", pid, port);
 			}
 			pidOrPort = `${protocol}${port}`;
 		} else {
 			if (NODE.test(executable_name)) {
-				description = `process id: ${pid}`;
+				description = localize('process.id.port.legacy', "process id: {0}", pid);
 				pidOrPort = pid.toString();
 			}
 		}
@@ -176,11 +176,11 @@ function listProcesses(ports: boolean): Promise<ProcessItem[]> {
 				// picker result
 				pidOrPort: pidOrPort,
 				// sort key
-				pid: date ? date : pid
+				sortKey: date ? date : pid
 			});
 		}
 
-	}).then(() => items.sort((a, b) => b.pid - a.pid));		// sort items by process id, newest first
+	}).then(() => items.sort((a, b) => b.sortKey - a.sortKey));		// sort items by process id, newest first
 }
 
 function putPidInDebugMode(pid: number): void {
@@ -196,7 +196,7 @@ function putPidInDebugMode(pid: number): void {
 			process.kill(pid, 'SIGUSR1');
 		}
 	} catch (e) {
-		throw new Error(localize('VSND2021', "Attach to process: cannot enable debug mode for process '{0}' ({1}).", pid, e));
+		throw new Error(localize('cannot.enable.debug.mode.error', "Attach to process: cannot enable debug mode for process '{0}' ({1}).", pid, e));
 	}
 }
 
