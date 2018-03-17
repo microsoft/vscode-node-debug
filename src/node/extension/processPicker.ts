@@ -115,6 +115,8 @@ function listProcesses(ports: boolean): Promise<ProcessItem[]> {
 
 	const NODE = new RegExp('^(?:node|iojs)$', 'i');
 
+	let seq = 0;	// default sort key
+
 	return getProcesses((pid: number, ppid: number, command: string, args: string, date: number) => {
 
 		if (process.platform === 'win32' && command.indexOf('\\??\\') === 0) {
@@ -176,7 +178,7 @@ function listProcesses(ports: boolean): Promise<ProcessItem[]> {
 				// picker result
 				pidOrPort: pidOrPort,
 				// sort key
-				sortKey: date ? date : pid
+				sortKey: date ? date : seq++
 			});
 		}
 
