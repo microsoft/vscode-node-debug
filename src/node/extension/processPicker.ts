@@ -115,7 +115,7 @@ function listProcesses(ports: boolean): Promise<ProcessItem[]> {
 
 	const NODE = new RegExp('^(?:node|iojs)$', 'i');
 
-	return getProcesses((pid: number, ppid: number, command: string, args: string) => {
+	return getProcesses((pid: number, ppid: number, command: string, args: string, date: number) => {
 
 		if (process.platform === 'win32' && command.indexOf('\\??\\') === 0) {
 			// remove leading device specifier
@@ -154,14 +154,14 @@ function listProcesses(ports: boolean): Promise<ProcessItem[]> {
 				port = protocol === 'inspector' ? INSPECTOR_PORT_DEFAULT : LEGACY_PORT_DEFAULT;
 			}
 			if (protocol === 'inspector') {
-				description = `Debug Port: ${port}`;
+				description = `process Id: ${pid}, debug Port: ${port}`;
 			} else {
-				description = `Debug Port: ${port} (legacy protocol)`;
+				description = `process Id: ${pid}, debug Port: ${port} (legacy protocol)`;
 			}
 			pidOrPort = `${protocol}${port}`;
 		} else {
 			if (NODE.test(executable_name)) {
-				description = `Process Id: ${pid}`;
+				description = `process id: ${pid}`;
 				pidOrPort = pid.toString();
 			}
 		}
@@ -176,7 +176,7 @@ function listProcesses(ports: boolean): Promise<ProcessItem[]> {
 				// picker result
 				pidOrPort: pidOrPort,
 				// sort key
-				pid: pid
+				pid: date ? date : pid
 			});
 		}
 

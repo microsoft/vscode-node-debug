@@ -46,7 +46,7 @@ export async function getProcessTree(rootPid: number) : Promise<ProcessTreeNode 
 	return map.get(0);
 }
 
-export function getProcesses(one: (pid: number, ppid: number, command: string, args: string) => void) : Promise<void> {
+export function getProcesses(one: (pid: number, ppid: number, command: string, args: string, date?: number) => void) : Promise<void> {
 
 	// returns a function that aggregates chunks of data until one or more complete lines are received and passes them to a callback.
 	function lines(callback: (a: string) => void) {
@@ -68,16 +68,38 @@ export function getProcesses(one: (pid: number, ppid: number, command: string, a
 
 		if (process.platform === 'win32') {
 
-			const CMD_PAT = /^(.+)\s+([0-9]+)\s+([0-9]+)$/;
+			// attributes columns are in alphabetic order!
+			const CMD_PAT = /^(.*)\s+([0-9]+)\.[0-9]+\+[0-9]+\s+([0-9]+)\s+([0-9]+)$/;
 
 			const wmic = join(process.env['WINDIR'] || 'C:\\Windows', 'System32', 'wbem', 'WMIC.exe');
-			proc = spawn(wmic, [ 'process', 'get', 'CommandLine,ParentProcessId,ProcessId' ]);
+			proc = spawn(wmic, [ 'process', 'get', 'CommandLine,CreationDate,ParentProcessId,ProcessId' ]);
 			proc.stdout.setEncoding('utf8');
 			proc.stdout.on('data', lines(line => {
 				let matches = CMD_PAT.exec(line.trim());
-				if (matches && matches.length === 4) {
-					const pid = parseInt(matches[3]);
-					one(pid, parseInt(matches[2]), matches[1].trim(), matches[1].trim());
+				if (matches && matches.length === 5) {
+					const pid = Number(matches[4]);
+					const ppid = Number(matches[3]);
+					const date = Number(matches[2]);
+					let args = matches[1].trim();
+					if (!isNaN(pid) && !isNaN(ppid) && args) {
+						let command = args;
+						if (args[0] === '"') {
+							const end = args.indexOf('"', 1);
+							if (end > 0) {
+								command = args.substr(1, end-1);
+								args = args.substr(end + 2);
+							}
+						} else {
+							const end = args.indexOf(' ');
+							if (end > 0) {
+								command = args.substr(0, end);
+								args = args.substr(end + 1);
+							} else {
+								args = '';
+							}
+						}
+						one(pid, ppid, command, args, date);
+					}
 				}
 			}));
 
