@@ -4,6 +4,7 @@
 	"node.label": "Node.js",
 
 	"open.loaded.script": "Open Loaded Script",
+	"attach.node.process": "Attach to Node Process",
 	"toggle.skipping.this.file": "Toggle Skipping this File",
 
 	"loaded.scripts.view.name": "Loaded Scripts",

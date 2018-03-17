@@ -9,15 +9,9 @@ import { spawn, ChildProcess } from 'child_process';
 import { join } from 'path';
 
 export class ProcessTreeNode {
-	pid: number;
-	ppid: number;
 	children: ProcessTreeNode[];
-	args: string;
 
-	constructor(pid: number, ppid: number, args: string) {
-		this.pid = pid;
-		this.ppid = ppid;
-		this.args = args;
+	constructor(public pid: number, public ppid: number, public command: string, public args: string) {
 	}
 }
 
@@ -25,11 +19,11 @@ export async function getProcessTree(rootPid: number) : Promise<ProcessTreeNode 
 
 	const map = new Map<number, ProcessTreeNode>();
 
-	map.set(0, new ProcessTreeNode(0, 0, ''));
+	map.set(0, new ProcessTreeNode(0, 0, '???', ''));
 
 	try {
-		await getProcesses((pid: number, ppid: number, cmd: string) => {
-			map.set(pid, new ProcessTreeNode(pid, ppid, cmd));
+		await getProcesses((pid: number, ppid: number, command: string, args: string) => {
+			map.set(pid, new ProcessTreeNode(pid, ppid, command, args));
 		});
 	} catch (err) {
 		return undefined;
@@ -52,7 +46,7 @@ export async function getProcessTree(rootPid: number) : Promise<ProcessTreeNode 
 	return map.get(0);
 }
 
-export function getProcesses(one: (pid: number, ppid: number, cmdline: string) => void) : Promise<void> {
+export function getProcesses(one: (pid: number, ppid: number, command: string, args: string) => void) : Promise<void> {
 
 	// returns a function that aggregates chunks of data until one or more complete lines are received and passes them to a callback.
 	function lines(callback: (a: string) => void) {
@@ -83,21 +77,23 @@ export function getProcesses(one: (pid: number, ppid: number, cmdline: string) =
 				let matches = CMD_PAT.exec(line.trim());
 				if (matches && matches.length === 4) {
 					const pid = parseInt(matches[3]);
-					one(pid, parseInt(matches[2]), matches[1].trim());
+					one(pid, parseInt(matches[2]), matches[1].trim(), matches[1].trim());
 				}
 			}));
 
 		} else {	// OS X & Linux
 
-			const CMD_PAT = /^\s*([0-9]+)\s+([0-9]+)\s+(.+)$/;
-
-			proc = spawn('/bin/ps', [ '-ax', '-o', 'pid=,ppid=,command=' ]);
+			proc = spawn('/bin/ps', [ '-x', '-o', `pid,ppid,comm=${'a'.repeat(256)},command` ]);
 			proc.stdout.setEncoding('utf8');
 			proc.stdout.on('data', lines(line => {
-				let matches = CMD_PAT.exec(line.trim());
-				if (matches && matches.length === 4) {
-					const pid = parseInt(matches[1]);
-					one(pid, parseInt(matches[2]), matches[3]);
+
+				const pid = Number(line.substr(0, 5));
+				const ppid = Number(line.substr(6, 5));
+				const command = line.substr(12, 256).trim();
+				const args = line.substr(269 + command.length);
+
+				if (!isNaN(pid) && !isNaN(ppid)) {
+					one(pid, ppid, command, args);
 				}
 			}));
 		}

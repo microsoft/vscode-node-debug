@@ -11,13 +11,11 @@ import { pollProcesses, attachToProcess } from './nodeProcessTree';
 
 const localize = nls.loadMessageBundle();
 
-export function startAutoAttach() : vscode.Disposable {
-
-	const rootPid = parseInt(process.env['VSCODE_PID']);
+export function startAutoAttach(rootPid: number) : vscode.Disposable {
 
 	return pollProcesses(rootPid, (pid, cmd) => {
 		if (cmd.indexOf('node ') >= 0) {
-			const name = localize('processWithPid', "Process {0}", pid);
+			const name = localize('process.with.pid.label', "Process {0}", pid);
 			attachToProcess(undefined, name, pid, cmd);
 		}
 	});

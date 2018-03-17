@@ -11,40 +11,36 @@ import { pollProcesses, attachToProcess } from './nodeProcessTree';
 
 const localize = nls.loadMessageBundle();
 
-const clusters = new Map<string,Cluster>();
+export class Cluster {
 
-export function prepareAutoAttachChildProcesses(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration) {
-	clusters.set(config.name, new Cluster(folder, config));
-}
+	static clusters = new Map<string,Cluster>();
 
-export function startSession(session: vscode.DebugSession) {
-	const cluster = clusters.get(session.name);
-	if (cluster) {
-		cluster.startWatching(session);
-	}
-}
+	private poller?: vscode.Disposable;
 
-export function stopSession(session: vscode.DebugSession) {
-	const cluster = clusters.get(session.name);
-	if (cluster) {
-		cluster.stopWatching();
-		clusters.delete(session.name);
-	}
-}
 
-//---- private
-
-class Cluster {
-	folder: vscode.WorkspaceFolder | undefined;
-	config: vscode.DebugConfiguration;
-	poller?: vscode.Disposable;
-
-	constructor(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration) {
-		this.folder = folder;
-		this.config = config;
+	public static prepareAutoAttachChildProcesses(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration) {
+		this.clusters.set(config.name, new Cluster(folder, config));
 	}
 
-	startWatching(session: vscode.DebugSession) {
+	static startSession(session: vscode.DebugSession) {
+		const cluster = this.clusters.get(session.name);
+		if (cluster) {
+			cluster.startWatching(session);
+		}
+	}
+
+	static stopSession(session: vscode.DebugSession) {
+		const cluster = this.clusters.get(session.name);
+		if (cluster) {
+			cluster.stopWatching();
+			this.clusters.delete(session.name);
+		}
+	}
+
+	private constructor(private _folder: vscode.WorkspaceFolder | undefined, private _config: vscode.DebugConfiguration) {
+	}
+
+	private startWatching(session: vscode.DebugSession) {
 
 		setTimeout(_ => {
 			// get the process ID from the debuggee
@@ -60,7 +56,7 @@ class Cluster {
 		}, session.type === 'node2' ? 500 : 100);
 	}
 
-	stopWatching() {
+	private stopWatching() {
 		if (this.poller) {
 			this.poller.dispose();
 			this.poller = undefined;
@@ -69,8 +65,8 @@ class Cluster {
 
 	private attachChildProcesses(rootPid: number) {
 		this.poller = pollProcesses(rootPid, (pid, cmd) => {
-			const name = localize('childProcessWithPid', "Child Process {0}", pid);
-			attachToProcess(this.folder, name, pid, cmd, this.config);
+			const name = localize('child.process.with.pid.label', "Child Process {0}", pid);
+			attachToProcess(this._folder, name, pid, cmd, this._config);
 		});
 	}
 }

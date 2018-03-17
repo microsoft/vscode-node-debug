@@ -81,10 +81,11 @@
 	"activationEvents": [
 		"onDebugInitialConfigurations",
 		"onDebugResolve:node",
+		"onCommand:extension.pickNodeProcess",
 		"onCommand:extension.node-debug.toggleSkippingFile",
 		"onCommand:extension.node-debug.pickLoadedScript",
-		"onCommand:extension.pickNodeProcess",
-		"onCommand:extension.node-debug.toggleAutoAttach"
+		"onCommand:extension.node-debug.toggleAutoAttach",
+		"onCommand:extension.node-debug.attachNodeProcess"
 	],
 	"contributes": {
 		"views": {
@@ -109,6 +110,11 @@
 			{
 				"command": "extension.node-debug.pickLoadedScript",
 				"title": "%open.loaded.script%",
+				"category": "Debug"
+			},
+			{
+				"command": "extension.node-debug.attachNodeProcess",
+				"title": "%attach.node.process%",
 				"category": "Debug"
 			},
 			{

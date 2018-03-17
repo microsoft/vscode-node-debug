@@ -8,100 +8,213 @@ import * as nls from 'vscode-nls';
 import * as vscode from 'vscode';
 import { basename } from 'path';
 import { getProcesses } from './processTree';
+import { execSync } from 'child_process';
+import { detectProtocolForPid, INSPECTOR_PORT_DEFAULT, LEGACY_PORT_DEFAULT } from './protocolDetection';
 
 const localize = nls.loadMessageBundle();
 
 //---- extension.pickNodeProcess
 
 interface ProcessItem extends vscode.QuickPickItem {
-	pid: string;	// payload for the QuickPick UI
+	pidOrPort: string;	// picker result
+	pid: number;		// used for sorting
 }
 
-export function pickProcess(): Promise<string|null> {
-	return listProcesses().then(items => {
-		let options : vscode.QuickPickOptions = {
+/**
+ * end user action for picking a process and attaching debugger to it
+ */
+export async function attachProcess() {
+
+	const config = {
+		type: 'node',
+		request: 'attach',
+		name: 'process'
+	};
+
+	if (!await pickProcessForConfig(config)) {
+		return vscode.debug.startDebugging(undefined, config);
+	}
+	return undefined;
+}
+
+/**
+ * returns true if UI was cancelled
+ */
+export async function pickProcessForConfig(config: vscode.DebugConfiguration) : Promise<boolean> {
+
+	const pidResult = await pickProcess(true);	// ask for pids and ports!
+	if (!pidResult) {
+		// UI dismissed (cancelled)
+		return true;
+	}
+	const matches = /^(inspector|legacy)?([0-9]+)$/.exec(pidResult);
+	if (matches && matches.length === 3) {
+
+		if (matches[1]) {
+
+			// debug port
+			config.port = Number(matches[2]);
+			config.protocol = matches[1];
+			delete config.processId;
+
+		} else {
+
+			// process id
+			const pid = Number(matches[2]);
+			putPidInDebugMode(pid);
+
+			const debugType = await determineDebugTypeForPidInDebugMode(config, pid);
+			if (debugType) {
+				// processID is handled, so turn this config into a normal port attach configuration
+				delete config.processId;
+				config.port = debugType === 'node2' ? INSPECTOR_PORT_DEFAULT : LEGACY_PORT_DEFAULT;
+				config.protocol = debugType === 'node2' ? 'inspector' : 'legacy';
+			} else {
+				throw new Error(localize('pid.error', "Attach to process: cannot put process '{0}' in debug mode.", pidResult));
+			}
+		}
+
+	} else {
+		throw new Error(localize('VSND2006', "Attach to process: '{0}' doesn't look like a process id.", pidResult));
+	}
+
+	return false;
+}
+
+/**
+ * Process picker command (for launch config variable)
+ * Returns as a string with these formats:
+ * - "12345": process id
+ * - "inspector12345": port number and inspector protocol
+ * - "legacy12345": port number and legacy protocol
+ * - null: abort launch silently
+ */
+export function pickProcess(ports?): Promise<string | null> {
+
+	return listProcesses(ports).then(items => {
+		let options: vscode.QuickPickOptions = {
 			placeHolder: localize('pickNodeProcess', "Pick the node.js or gulp process to attach to"),
 			matchOnDescription: true,
 			matchOnDetail: true,
 			ignoreFocusOut: true
 		};
-		return vscode.window.showQuickPick(items, options).then(item => item ? item.pid : null);
+		return vscode.window.showQuickPick(items, options).then(item => item ? item.pidOrPort : null);
 	}).catch(err => {
 		return vscode.window.showErrorMessage(localize('process.picker.error', "Process picker failed ({0})", err.message), { modal: true }).then(_ => null);
 	});
 }
 
-function listProcesses() : Promise<ProcessItem[]> {
+//---- private
 
-	const NODE = new RegExp('^(?:node|iojs|gulp)$', 'i');
+function listProcesses(ports: boolean): Promise<ProcessItem[]> {
 
-	const items : ProcessItem[]= [];
-	let promise : Promise<void>;
+	const items: ProcessItem[] = [];
 
-	if (process.platform === 'win32') {
+	const DEBUG_PORT_PATTERN = /\s--(inspect|debug)-port=(\d+)/;
+	const DEBUG_FLAGS_PATTERN = /\s--(inspect|debug)(-brk)?(=(\d+))?/;
 
-		const EXECUTABLE_ARGS = new RegExp('^(?:"([^"]+)"|([^ ]+))(?: (.+))?$');
+	const NODE = new RegExp('^(?:node|iojs)$', 'i');
 
-		promise = getProcesses((pid: number, ppid: number, cmd: string) => {
+	return getProcesses((pid: number, ppid: number, command: string, args: string) => {
 
+		if (process.platform === 'win32' && command.indexOf('\\??\\') === 0) {
 			// remove leading device specifier
-			if (cmd.indexOf('\\??\\') === 0) {
-				cmd = cmd.replace('\\??\\', '');
-			}
+			command = command.replace('\\??\\', '');
+		}
 
-			let executable_path: string | undefined;
-			const matches2 = EXECUTABLE_ARGS.exec(cmd);
-			if (matches2 && matches2.length >= 2) {
-				if (matches2.length >= 3) {
-					executable_path = matches2[1] || matches2[2];
-				} else {
-					executable_path = matches2[1];
+		const executable_name = basename(command);
+
+		let port = -1;
+		let protocol = '';
+
+		if (ports) {
+			// match --debug, --debug=1234, --debug-brk, debug-brk=1234, --inspect, --inspect=1234, --inspect-brk, --inspect-brk=1234
+			let matches = DEBUG_FLAGS_PATTERN.exec(args);
+			if (matches && matches.length >= 2) {
+				// attach via port
+				if (matches.length === 5 && matches[4]) {
+					port = parseInt(matches[4]);
 				}
+				protocol = matches[1] === 'debug' ? 'legacy' : 'inspector';
 			}
 
-			if (executable_path) {
-
-				let executable_name = basename(executable_path);
-				executable_name = executable_name.split('.')[0];
-				if (NODE.test(executable_name)) {
-					items.push({
-						label: executable_name,
-						description: pid.toString(),
-						detail: cmd,
-						pid: pid.toString()
-					});
-				}
+			// a debug-port=1234 or --inspect-port=1234 overrides the port
+			matches = DEBUG_PORT_PATTERN.exec(args);
+			if (matches && matches.length === 3) {
+				// override port
+				port = parseInt(matches[2]);
+				protocol = matches[1] === 'debug' ? 'legacy' : 'inspector';
 			}
-		});
+		}
 
-	} else {
-		const MAC_APPS = new RegExp('^.*/(.*).(?:app|bundle)/Contents/.*$');
-
-		promise = getProcesses((pid: number, ppid: number, cmd: string) => {
-
-			const parts = cmd.split(' '); // this will break paths with spaces
-			const executable_path = parts[0];
-			const executable_name = basename(executable_path);
-
+		let description = '';
+		let pidOrPort = '';
+		if (protocol) {
+			if (port < 0) {
+				port = protocol === 'inspector' ? INSPECTOR_PORT_DEFAULT : LEGACY_PORT_DEFAULT;
+			}
+			if (protocol === 'inspector') {
+				description = `Debug Port: ${port}`;
+			} else {
+				description = `Debug Port: ${port} (legacy protocol)`;
+			}
+			pidOrPort = `${protocol}${port}`;
+		} else {
 			if (NODE.test(executable_name)) {
-				let application = cmd;
-				// try to show the correct name for OS X applications and bundles
-				const matches2 = MAC_APPS.exec(cmd);
-				if (matches2 && matches2.length === 2) {
-					application = matches2[1];
-				} else {
-					application = executable_name;
-				}
-
-				items.unshift({		// build up list reverted
-					label: application,
-					description: pid.toString(),
-					detail: cmd,
-					pid: pid.toString()
-				});
+				description = `Process Id: ${pid}`;
+				pidOrPort = pid.toString();
 			}
-		});
+		}
+
+		if (description && pidOrPort) {
+			items.push({
+				// render data
+				label: executable_name,
+				description: args,
+				detail: description,
+
+				// picker result
+				pidOrPort: pidOrPort,
+				// sort key
+				pid: pid
+			});
+		}
+
+	}).then(() => items.sort((a, b) => b.pid - a.pid));		// sort items by process id, newest first
+}
+
+function putPidInDebugMode(pid: number): void {
+	try {
+		if (process.platform === 'win32') {
+			// regular node has an undocumented API function for forcing another node process into debug mode.
+			// 		(<any>process)._debugProcess(pid);
+			// But since we are running on Electron's node, process._debugProcess doesn't work (for unknown reasons).
+			// So we use a regular node instead:
+			const command = `node -e process._debugProcess(${pid})`;
+			execSync(command);
+		} else {
+			process.kill(pid, 'SIGUSR1');
+		}
+	} catch (e) {
+		throw new Error(localize('VSND2021', "Attach to process: cannot enable debug mode for process '{0}' ({1}).", pid, e));
+	}
+}
+
+function determineDebugTypeForPidInDebugMode(config: any, pid: number): Promise<string | null> {
+	let debugProtocolP: Promise<string | null>;
+	if (config.port === INSPECTOR_PORT_DEFAULT) {
+		debugProtocolP = Promise.resolve('inspector');
+	} else if (config.port === LEGACY_PORT_DEFAULT) {
+		debugProtocolP = Promise.resolve('legacy');
+	} else if (config.protocol) {
+		debugProtocolP = Promise.resolve(config.protocol);
+	} else {
+		debugProtocolP = detectProtocolForPid(pid);
 	}
 
-	return promise.then(() => items);
+	return debugProtocolP.then(debugProtocol => {
+		return debugProtocol === 'inspector' ? 'node2' :
+			debugProtocol === 'legacy' ? 'node' :
+				null;
+	});
 }

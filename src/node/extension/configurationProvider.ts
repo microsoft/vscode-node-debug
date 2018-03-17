@@ -6,14 +6,13 @@
 
 import * as nls from 'vscode-nls';
 import * as vscode from 'vscode';
-import { execSync } from 'child_process';
 import { join, isAbsolute, dirname } from 'path';
 import * as fs from 'fs';
 
 import { writeToConsole } from './utilities';
-import { detectDebugType, detectProtocolForPid, INSPECTOR_PORT_DEFAULT, LEGACY_PORT_DEFAULT } from './protocolDetection';
-import { pickProcess } from './processPicker';
-import { prepareAutoAttachChildProcesses } from './childProcesses';
+import { detectDebugType } from './protocolDetection';
+import { pickProcessForConfig } from './processPicker';
+import { Cluster } from './cluster';
 
 const localize = nls.loadMessageBundle();
 
@@ -21,9 +20,8 @@ const localize = nls.loadMessageBundle();
 
 export class NodeConfigurationProvider implements vscode.DebugConfigurationProvider {
 
-	constructor(
-		private _extensionContext: vscode.ExtensionContext
-	) { }
+	constructor(private _extensionContext: vscode.ExtensionContext) {
+	}
 
 	/**
 	 * Returns an initial debug configuration based on contextual information, e.g. package.json or folder.
@@ -103,14 +101,17 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 
 		// "auto attach child process" support
 		if (config.autoAttachChildProcesses) {
-			prepareAutoAttachChildProcesses(folder, config);
+			Cluster.prepareAutoAttachChildProcesses(folder, config);
 		}
 
-		// "attach to process via pid" support
+		// "attach to process via picker" support
 		if (config.request === 'attach' && typeof config.processId === 'string') {
-			// we resolve Process Picker early (before VS Code) so that we can probe the process for its protocol here
-			if (await this.resolveProcessPicker(config)) {
-				return undefined;	// abort launch
+			// we resolve Process Picker early (before VS Code) so that we can probe the process for its protocol
+			const processId = config.processId.trim();
+			if (processId === '${command:PickProcess}' || processId === '${command:extension.pickNodeProcess}') {
+				if (await pickProcessForConfig(config)) {
+					return undefined;	// abort launch
+				}
 			}
 		}
 
@@ -128,42 +129,6 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 
 		// everything ok: let VS Code start the debug session
 		return config;
-	}
-
-	/**
-	 * returns true if UI was cancelled
-	 */
-	private async resolveProcessPicker(config: vscode.DebugConfiguration) : Promise<boolean> {
-
-		const processId = config.processId.trim();
-		if (processId === '${command:PickProcess}' || processId === '${command:extension.pickNodeProcess}') {
-
-			const pidResult = await pickProcess();
-			if (pidResult === null) {
-				// UI dismissed (cancelled)
-				return true;
-			}
-
-			if (pidResult && pidResult.match(/^[0-9]+$/)) {
-				const pid = Number(pidResult);
-
-				putPidInDebugMode(pid);
-
-				const debugType = await determineDebugTypeForPidInDebugMode(config, pid);
-				if (debugType) {
-					// processID is handled, so turn this config into a normal port attach configuration
-					delete config.processId;
-					config.port = debugType === 'node2' ? INSPECTOR_PORT_DEFAULT : LEGACY_PORT_DEFAULT;
-					config.protocol = debugType === 'node2' ? 'inspector' : 'legacy';
-				} else {
-					throw new Error(localize('pid.error', "Attach to process: cannot put process '{0}' in debug mode.", pidResult));
-				}
-			} else {
-				throw new Error(localize('VSND2006', "Attach to process: '{0}' doesn't look like a process id.", pidResult));
-			}
-		}
-
-		return false;
 	}
 
 	/**
@@ -406,42 +371,6 @@ function determineDebugType(config: any, logger: vscode.Logger): Promise<string 
 		// 'auto', or unspecified
 		return detectDebugType(config, logger);
 	}
-}
-
-function putPidInDebugMode(pid: number): void {
-	try {
-		if (process.platform === 'win32') {
-			// regular node has an undocumented API function for forcing another node process into debug mode.
-			// 		(<any>process)._debugProcess(pid);
-			// But since we are running on Electron's node, process._debugProcess doesn't work (for unknown reasons).
-			// So we use a regular node instead:
-			const command = `node -e process._debugProcess(${pid})`;
-			execSync(command);
-		} else {
-			process.kill(pid, 'SIGUSR1');
-		}
-	} catch (e) {
-		throw new Error(localize('VSND2021', "Attach to process: cannot enable debug mode for process '{0}' ({1}).", pid, e));
-	}
-}
-
-function determineDebugTypeForPidInDebugMode(config: any, pid: number): Promise<string | null> {
-	let debugProtocolP: Promise<string | null>;
-	if (config.port === INSPECTOR_PORT_DEFAULT) {
-		debugProtocolP = Promise.resolve('inspector');
-	} else if (config.port === LEGACY_PORT_DEFAULT) {
-		debugProtocolP = Promise.resolve('legacy');
-	} else if (config.protocol) {
-		debugProtocolP = Promise.resolve(config.protocol);
-	} else {
-		debugProtocolP = detectProtocolForPid(pid);
-	}
-
-	return debugProtocolP.then(debugProtocol => {
-		return debugProtocol === 'inspector' ? 'node2' :
-			debugProtocol === 'legacy' ? 'node' :
-				null;
-	});
 }
 
 function nvsStandardArchName(arch) {
