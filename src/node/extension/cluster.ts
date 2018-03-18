@@ -64,9 +64,9 @@ export class Cluster {
 	}
 
 	private attachChildProcesses(rootPid: number) {
-		this.poller = pollProcesses(rootPid, (pid, cmd) => {
+		this.poller = pollProcesses(rootPid, false, (pid, cmd, args) => {
 			const name = localize('child.process.with.pid.label', "Child Process {0}", pid);
-			attachToProcess(this._folder, name, pid, cmd, this._config);
+			attachToProcess(this._folder, name, pid, args, this._config);
 		});
 	}
 }

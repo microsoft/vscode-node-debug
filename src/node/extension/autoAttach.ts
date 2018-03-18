@@ -7,16 +7,18 @@
 
 import * as vscode from 'vscode';
 import * as nls from 'vscode-nls';
+import { basename } from 'path';
 import { pollProcesses, attachToProcess } from './nodeProcessTree';
 
 const localize = nls.loadMessageBundle();
 
 export function startAutoAttach(rootPid: number) : vscode.Disposable {
 
-	return pollProcesses(rootPid, (pid, cmd) => {
-		if (cmd.indexOf('node ') >= 0) {
+	return pollProcesses(rootPid, true, (pid, cmdPath, args) => {
+		const cmdName = basename(cmdPath, '.exe');
+		if (cmdName === 'node') {
 			const name = localize('process.with.pid.label', "Process {0}", pid);
-			attachToProcess(undefined, name, pid, cmd);
+			attachToProcess(undefined, name, pid, args);
 		}
 	});
 }

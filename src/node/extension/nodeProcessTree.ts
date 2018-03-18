@@ -18,13 +18,13 @@ const POLL_INTERVAL = 1000;
 /**
  * Poll for all subprocesses of given root process.
  */
-export function pollProcesses(rootPid: number, cb: (pid, cmd) => void) : vscode.Disposable {
+export function pollProcesses(rootPid: number, inTerminal: boolean, cb: (pid: number, cmd: string, args: string) => void) : vscode.Disposable {
 
 	let stopped = false;
 
 	function poll() {
 		//const start = Date.now();
-		findChildProcesses(rootPid, cb).then(_ => {
+		findChildProcesses(rootPid, inTerminal, cb).then(_ => {
 			//console.log(`duration: ${Date.now() - start}`);
 			setTimeout(_ => {
 				if (!stopped) {
@@ -39,7 +39,7 @@ export function pollProcesses(rootPid: number, cb: (pid, cmd) => void) : vscode.
 	return new vscode.Disposable(() => stopped = true);
 }
 
-export function attachToProcess(folder: vscode.WorkspaceFolder | undefined, name: string, pid: number, cmd: string, baseConfig?: vscode.DebugConfiguration) {
+export function attachToProcess(folder: vscode.WorkspaceFolder | undefined, name: string, pid: number, args: string, baseConfig?: vscode.DebugConfiguration) {
 
 	if (pids.has(pid)) {
 		return;
@@ -82,7 +82,7 @@ export function attachToProcess(folder: vscode.WorkspaceFolder | undefined, name
 	}
 
 	// match --debug, --debug=1234, --debug-brk, debug-brk=1234, --inspect, --inspect=1234, --inspect-brk, --inspect-brk=1234
-	let matches = DEBUG_FLAGS_PATTERN.exec(cmd);
+	let matches = DEBUG_FLAGS_PATTERN.exec(args);
 	if (matches && matches.length >= 2) {
 		// attach via port
 		if (matches.length === 5 && matches[4]) {
@@ -95,7 +95,7 @@ export function attachToProcess(folder: vscode.WorkspaceFolder | undefined, name
 	}
 
 	// a debug-port=1234 or --inspect-port=1234 overrides the port
-	matches = DEBUG_PORT_PATTERN.exec(cmd);
+	matches = DEBUG_PORT_PATTERN.exec(args);
 	if (matches && matches.length === 3) {
 		// override port
 		config.port = parseInt(matches[2]);
@@ -106,26 +106,30 @@ export function attachToProcess(folder: vscode.WorkspaceFolder | undefined, name
 	vscode.debug.startDebugging(folder, config);
 }
 
-function findChildProcesses(rootPid: number, cb: (pid: number, cmd: string) => void): Promise<void> {
+function findChildProcesses(rootPid: number, inTerminal: boolean, cb: (pid: number, cmd: string, args: string) => void): Promise<void> {
 
-	function walker(node: ProcessTreeNode) {
+	function walker(node: ProcessTreeNode, terminal: boolean) {
 
 		const matches = DEBUG_PORT_PATTERN.exec(node.args);
 		const matches2 = DEBUG_FLAGS_PATTERN.exec(node.args);
 
-		if ((matches && matches.length >= 3) || (matches2 && matches2.length >= 5)) {
-			cb(node.pid, node.args);
+		if (node.args.indexOf('--type=terminal') >= 0) {
+			terminal = true;
+		}
+
+		if (terminal && ((matches && matches.length >= 3) || (matches2 && matches2.length >= 5))) {
+			cb(node.pid, node.command, node.args);
 		}
 
 		for (const child of node.children || []) {
-			walker(child);
+			walker(child, terminal);
 		}
 	}
 
 	return getProcessTree(rootPid).then(tree => {
 		if (tree) {
 			for (const child of tree.children || []) {
-				walker(child);
+				walker(child, !inTerminal);
 			}
 		}
 	});
