@@ -68,7 +68,7 @@
 	"node.snippet.remoteattach.label": "Node.js: Attach to Remote Program",
 	"node.snippet.remoteattach.description": "Attach to the debug port of a remote node program",
 	"node.snippet.attachProcess.label": "Node.js: Attach to Process",
-	"node.snippet.attachProcess.description": "Open process picker to select node or gulp process to attach to",
+	"node.snippet.attachProcess.description": "Open process picker to select node process to attach to",
 	"node.snippet.nodemon.label": "Node.js: Nodemon Setup",
 	"node.snippet.nodemon.description": "Use nodemon to relaunch a debug session on source changes",
 	"node.snippet.mocha.label": "Node.js: Mocha Tests",
