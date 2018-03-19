@@ -6,7 +6,7 @@
 !function() {
 
 	var CHUNK_SIZE = 100;			// break large objects into chunks of this size
-	var INDEX_PATTERN = /^[0-9]+$/;
+	var INDEX_PATTERN = /^(0|[1-9][0-9]*)$/;
 
 	// try to load 'vm' even if 'require' isn't available in the current context
 	var vm = process.mainModule ? process.mainModule.require('vm') : require('vm');

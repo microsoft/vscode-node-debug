@@ -4192,7 +4192,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 	}
 }
 
-const INDEX_PATTERN = /^[0-9]+$/;
+const INDEX_PATTERN = /^(0|[1-9][0-9]*)$/;	// 0, 1, 2, ... are indexes but not 007
 
 function isIndex(name: string | number) {
 	switch (typeof name) {
