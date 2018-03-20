@@ -9,7 +9,7 @@ import * as vscode from 'vscode';
 import { join, isAbsolute, dirname } from 'path';
 import * as fs from 'fs';
 
-import { writeToConsole } from './utilities';
+import { writeToConsole, mkdirP } from './utilities';
 import { detectDebugType } from './protocolDetection';
 import { pickProcessForConfig } from './processPicker';
 import { Cluster } from './cluster';
@@ -124,7 +124,16 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 		// fixup log parameters
 		if (config.trace && !config.logFilePath) {
 			const fileName = config.type === 'node' ? 'debugadapter-legacy.txt' : 'debugadapter.txt';
-			config.logFilePath = join(await this._extensionContext.logger.logDirectory, fileName);
+
+			if (this._extensionContext.logDirectory) {
+				try {
+					await mkdirP(this._extensionContext.logDirectory);
+				} catch (e) {
+					// Already exists
+				}
+
+				config.logFilePath = join(this._extensionContext.logDirectory, fileName);
+			}
 		}
 
 		// everything ok: let VS Code start the debug session

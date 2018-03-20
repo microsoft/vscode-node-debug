@@ -5,6 +5,7 @@
 'use strict';
 
 import * as vscode from 'vscode';
+import * as FS from 'fs';
 
 /**
  * Send to debug console.
@@ -24,4 +25,16 @@ export function extendObject<T>(toObject: T, fromObject: T): T {
 		}
 	}
 	return toObject;
+}
+
+export function mkdirP(path: string): Promise<void> {
+	return new Promise((resolve, reject) => {
+		FS.mkdir(path, err => {
+			if (err) {
+				return reject(err);
+			}
+
+			resolve();
+		});
+	});
 }
