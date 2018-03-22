@@ -201,7 +201,7 @@ class InternalSourceBreakpoint {
 		this.column = this.orgColumn = column;
 
 		if (logMessage) {
-			this.condition = `console.log('${logMessage}')`;
+			this.condition = logMessageToExpression(logMessage);
 			if (condition) {
 				this.condition = `(${condition}) && ${this.condition}`;
 			}
@@ -4203,6 +4203,28 @@ function isIndex(name: string | number) {
 		default:
 			return false;
 	}
+}
+
+const LOGMESSAGE_VARIABLE_REGEXP = /{(.*?)}/g;
+
+function logMessageToExpression(msg) {
+
+	msg = msg.replace('%', '%%');
+
+	let args: string[] = [];
+	let format = msg.replace(LOGMESSAGE_VARIABLE_REGEXP, (match, group) => {
+		const a = group.trim();
+		if (a) {
+			args.push(`(${a})`);
+			return '%s';
+		} else {
+			return '';
+		}
+	});
+
+	format = format.replace('\'', '\\\'');
+
+	return `console.log('${format}', ${args.join(', ')})`;
 }
 
 function random(low: number, high: number): number {
