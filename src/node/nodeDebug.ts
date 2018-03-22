@@ -201,7 +201,7 @@ class InternalSourceBreakpoint {
 		this.column = this.orgColumn = column;
 
 		if (logMessage) {
-			this.condition = `console.log('${logMessage}')`;
+			this.condition = `console.log(${logMessage})`;
 			if (condition) {
 				this.condition = `(${condition}) && ${this.condition}`;
 			}
