@@ -4229,12 +4229,12 @@ function logMessageToExpression(msg) {
 
 function findport(): Promise<number> {
 	return new Promise((c, e) => {
-		let port = 0
+		let port = 0;
 		const server = Net.createServer();
 		server.on('listening', _ => {
 			port = server.address().port;
 			server.close();
-		})
+		});
 		server.on('close', _ => c(port));
 		server.on('error', (err) => e(err));
 		server.listen(0, '127.0.0.1');
