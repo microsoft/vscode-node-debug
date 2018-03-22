@@ -974,7 +974,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 		this.launchRequest2(response, args, programPath, programArgs, runtimeExecutable, runtimeArgs);
 	}
 
-	private launchRequest2(response: DebugProtocol.LaunchResponse, args: LaunchRequestArguments, programPath: string, programArgs: string[], runtimeExecutable: string, runtimeArgs: string[]): void {
+	private async launchRequest2(response: DebugProtocol.LaunchResponse, args: LaunchRequestArguments, programPath: string, programArgs: string[], runtimeExecutable: string, runtimeArgs: string[]): Promise<void> {
 
 		let program: string | undefined;
 		let workingDirectory = args.cwd;
@@ -1015,7 +1015,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 			} else { // no port is specified
 
 				// use a random port
-				port = random(3000, 50000);
+				port = await findport();
 				launchArgs.push(`--debug-brk=${port}`);
 			}
 		}
@@ -4227,8 +4227,18 @@ function logMessageToExpression(msg) {
 	return `console.log('${format}', ${args.join(', ')})`;
 }
 
-function random(low: number, high: number): number {
-	return Math.floor(Math.random() * (high - low) + low);
+function findport(): Promise<number> {
+	return new Promise((c, e) => {
+		let port = 0
+		const server = Net.createServer();
+		server.on('listening', _ => {
+			port = server.address().port;
+			server.close();
+		})
+		server.on('close', _ => c(port));
+		server.on('error', (err) => e(err));
+		server.listen(0, '127.0.0.1');
+	});
 }
 
 DebugSession.run(NodeDebugSession);
