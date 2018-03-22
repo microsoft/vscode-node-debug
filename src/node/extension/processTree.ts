@@ -139,7 +139,7 @@ export function getProcesses(one: (pid: number, ppid: number, command: string, a
 						}
 						pos++;
 					}
-					command = args.substr(0, pos)
+					command = args.substr(0, pos);
 					args = args.substr(pos + 1);
 				}
 
