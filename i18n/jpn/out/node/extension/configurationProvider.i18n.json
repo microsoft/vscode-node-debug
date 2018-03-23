@@ -12,7 +12,5 @@
 	"node.launch.config.name": "プログラムの起動",
 	"mern.starter.explanation": "'{0}' プロジェクトのための起動構成を生成しました。",
 	"program.guessed.from.package.json.explanation": "'package.json' を基に起動構成を生成しました。",
-	"outFiles.explanation": "生成された JavaScript をカバーするように、 'outFiles' 属性で glob パターンを調整します。",
-	"VSND2006": "プロセスにアタッチ: '{0}' はプロセス ID ではないようです。",
-	"VSND2021": "プロセスに添付: プロセス '{0}' ({1}) に対してデバッグ モードを有効にできません。"
+	"outFiles.explanation": "生成された JavaScript をカバーするように、 'outFiles' 属性で glob パターンを調整します。"
 }

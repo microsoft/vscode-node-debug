@@ -12,7 +12,5 @@
 	"node.launch.config.name": "Programm starten",
 	"mern.starter.explanation": "Startet die Konfiguration für das erstellte Projekt \"{0}\".",
 	"program.guessed.from.package.json.explanation": "Startet die auf Basis von \"package.json\" erstellte Konfiguration.",
-	"outFiles.explanation": "Stellt das oder die Globmuster im \"outFiles\"- Attribut so ein, dass sie den generierten JavaScript-Code abdecken.",
-	"VSND2006": "An Prozess anfügen: \"{0}\" scheint keine Prozess-ID zu sein.",
-	"VSND2021": "An den Prozess anhängen: Der Debugmodus für den Prozess \"{0}\" kann nicht aktiviert werden ({1})."
+	"outFiles.explanation": "Stellt das oder die Globmuster im \"outFiles\"- Attribut so ein, dass sie den generierten JavaScript-Code abdecken."
 }

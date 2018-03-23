@@ -12,7 +12,5 @@
 	"node.launch.config.name": "Iniciar programa",
 	"mern.starter.explanation": "La configuración de inicio del proyecto '{0}' fue creada. ",
 	"program.guessed.from.package.json.explanation": "La configuración de inicio fue creada basada en \"package.json\".",
-	"outFiles.explanation": "Ajusta modelos globales en los atributos ‘outFiles’ para cubrir el código JavaScript generado.",
-	"VSND2006": "Asociar al proceso: '{0}' no parece un id de proceso.",
-	"VSND2021": "Asociar al proceso: no se puede habilitar el modo de depuración para el proceso '{0}' ({1})."
+	"outFiles.explanation": "Ajusta modelos globales en los atributos ‘outFiles’ para cubrir el código JavaScript generado."
 }
