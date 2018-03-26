@@ -75,7 +75,7 @@
 		"vscode-debugprotocol": "1.28.0-pre.2",
 		"event-stream": "3.3.4",
 		"nodemon": "1.14.11",
-		"vsce": "1.36.3"
+		"vsce": "1.37.6"
 	},
 	"main": "./out/node/extension/extension.js",
 	"activationEvents": [
