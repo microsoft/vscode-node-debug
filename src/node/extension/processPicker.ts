@@ -28,10 +28,11 @@ export async function attachProcess() {
 	const config = {
 		type: 'node',
 		request: 'attach',
-		name: 'process'
+		name: 'process',
+		processId: '${command:extension.pickNodeProcess}'
 	};
 
-	if (!await pickProcessForConfig(config)) {
+	if (!await resolveProcessId(config)) {
 		return vscode.debug.startDebugging(undefined, config);
 	}
 	return undefined;
@@ -40,14 +41,20 @@ export async function attachProcess() {
 /**
  * returns true if UI was cancelled
  */
-export async function pickProcessForConfig(config: vscode.DebugConfiguration) : Promise<boolean> {
+export async function resolveProcessId(config: vscode.DebugConfiguration) : Promise<boolean> {
 
-	const pidResult = await pickProcess(true);	// ask for pids and ports!
-	if (!pidResult) {
-		// UI dismissed (cancelled)
-		return true;
+	// we resolve Process Picker early (before VS Code) so that we can probe the process for its protocol
+	let processId = config.processId.trim();
+	if (processId === '${command:PickProcess}' || processId === '${command:extension.pickNodeProcess}') {
+		const result = await pickProcess(true);	// ask for pids and ports!
+		if (!result) {
+			// UI dismissed (cancelled)
+			return true;
+		}
+		processId = result;
 	}
-	const matches = /^(inspector|legacy)?([0-9]+)(inspector|legacy)?([0-9]+)?$/.exec(pidResult);
+
+	const matches = /^(inspector|legacy)?([0-9]+)(inspector|legacy)?([0-9]+)?$/.exec(processId);
 	if (matches && matches.length === 5) {
 
 		if (matches[2] && matches[3] && matches[4]) {
@@ -85,13 +92,13 @@ export async function pickProcessForConfig(config: vscode.DebugConfiguration) : 
 					config.port = debugType === 'node2' ? INSPECTOR_PORT_DEFAULT : LEGACY_PORT_DEFAULT;
 					config.protocol = debugType === 'node2' ? 'inspector' : 'legacy';
 				} else {
-					throw new Error(localize('pid.error', "Attach to process: cannot put process '{0}' in debug mode.", pidResult));
+					throw new Error(localize('pid.error', "Attach to process: cannot put process '{0}' in debug mode.", processId));
 				}
 			}
 		}
 
 	} else {
-		throw new Error(localize('process.id.error', "Attach to process: '{0}' doesn't look like a process id.", pidResult));
+		throw new Error(localize('process.id.error', "Attach to process: '{0}' doesn't look like a process id.", processId));
 	}
 
 	return false;

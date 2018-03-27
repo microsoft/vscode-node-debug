@@ -11,7 +11,7 @@ import * as fs from 'fs';
 
 import { writeToConsole, mkdirP } from './utilities';
 import { detectDebugType } from './protocolDetection';
-import { pickProcessForConfig } from './processPicker';
+import { resolveProcessId } from './processPicker';
 import { Cluster } from './cluster';
 
 const localize = nls.loadMessageBundle();
@@ -107,11 +107,8 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 		// "attach to process via picker" support
 		if (config.request === 'attach' && typeof config.processId === 'string') {
 			// we resolve Process Picker early (before VS Code) so that we can probe the process for its protocol
-			const processId = config.processId.trim();
-			if (processId === '${command:PickProcess}' || processId === '${command:extension.pickNodeProcess}') {
-				if (await pickProcessForConfig(config)) {
-					return undefined;	// abort launch
-				}
+			if (await resolveProcessId(config)) {
+				return undefined;	// abort launch
 			}
 		}
 
