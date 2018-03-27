@@ -8,8 +8,8 @@
 import { getProcessTree, ProcessTreeNode } from './processTree';
 import * as vscode from 'vscode';
 
+const DEBUG_FLAGS_PATTERN = /--(inspect|debug)(-brk)?(=(\d+))?[^-]/;
 const DEBUG_PORT_PATTERN = /--(inspect|debug)-port=(\d+)/;
-const DEBUG_FLAGS_PATTERN = /--(inspect|debug)(-brk)?(=(\d+))?/;
 
 const pids = new Set<number>();
 

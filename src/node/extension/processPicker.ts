@@ -47,30 +47,46 @@ export async function pickProcessForConfig(config: vscode.DebugConfiguration) : 
 		// UI dismissed (cancelled)
 		return true;
 	}
-	const matches = /^(inspector|legacy)?([0-9]+)$/.exec(pidResult);
-	if (matches && matches.length === 3) {
+	const matches = /^(inspector|legacy)?([0-9]+)(inspector|legacy)?([0-9]+)?$/.exec(pidResult);
+	if (matches && matches.length === 5) {
 
-		if (matches[1]) {
+		if (matches[2] && matches[3] && matches[4]) {
+
+			// process id and protocol and port
+
+			const pid = Number(matches[2]);
+			putPidInDebugMode(pid);
 
 			// debug port
-			config.port = Number(matches[2]);
-			config.protocol = matches[1];
+			config.port = Number(matches[4]);
+			config.protocol = matches[3];
 			delete config.processId;
 
 		} else {
 
-			// process id
-			const pid = Number(matches[2]);
-			putPidInDebugMode(pid);
+			// protocol and port
+			if (matches[1]) {
 
-			const debugType = await determineDebugTypeForPidInDebugMode(config, pid);
-			if (debugType) {
-				// processID is handled, so turn this config into a normal port attach configuration
+				// debug port
+				config.port = Number(matches[2]);
+				config.protocol = matches[1];
 				delete config.processId;
-				config.port = debugType === 'node2' ? INSPECTOR_PORT_DEFAULT : LEGACY_PORT_DEFAULT;
-				config.protocol = debugType === 'node2' ? 'inspector' : 'legacy';
+
 			} else {
-				throw new Error(localize('pid.error', "Attach to process: cannot put process '{0}' in debug mode.", pidResult));
+
+				// process id
+				const pid = Number(matches[2]);
+				putPidInDebugMode(pid);
+
+				const debugType = await determineDebugTypeForPidInDebugMode(config, pid);
+				if (debugType) {
+					// processID is handled, so turn this config into a normal port attach configuration
+					delete config.processId;
+					config.port = debugType === 'node2' ? INSPECTOR_PORT_DEFAULT : LEGACY_PORT_DEFAULT;
+					config.protocol = debugType === 'node2' ? 'inspector' : 'legacy';
+				} else {
+					throw new Error(localize('pid.error', "Attach to process: cannot put process '{0}' in debug mode.", pidResult));
+				}
 			}
 		}
 
@@ -110,8 +126,8 @@ function listProcesses(ports: boolean): Promise<ProcessItem[]> {
 
 	const items: ProcessItem[] = [];
 
+	const DEBUG_FLAGS_PATTERN = /--(inspect|debug)(-brk)?(=(\d+))?[^-]/;
 	const DEBUG_PORT_PATTERN = /--(inspect|debug)-port=(\d+)/;
-	const DEBUG_FLAGS_PATTERN = /--(inspect|debug)(-brk)?(=(\d+))?/;
 
 	const NODE = new RegExp('^(?:node|iojs)$', 'i');
 
@@ -128,6 +144,7 @@ function listProcesses(ports: boolean): Promise<ProcessItem[]> {
 
 		let port = -1;
 		let protocol = '';
+		let usePid = true;
 
 		if (ports) {
 			// match --debug, --debug=1234, --debug-brk, debug-brk=1234, --inspect, --inspect=1234, --inspect-brk, --inspect-brk=1234
@@ -138,6 +155,7 @@ function listProcesses(ports: boolean): Promise<ProcessItem[]> {
 					port = parseInt(matches[4]);
 				}
 				protocol = matches[1] === 'debug' ? 'legacy' : 'inspector';
+				usePid = false;
 			}
 
 			// a debug-port=1234 or --inspect-port=1234 overrides the port
@@ -151,7 +169,19 @@ function listProcesses(ports: boolean): Promise<ProcessItem[]> {
 
 		let description = '';
 		let pidOrPort = '';
-		if (protocol) {
+
+		if (usePid) {
+			if (protocol && port > 0) {
+				description = localize('process.id.port.signal', "process id: {0}, debug port: {1} ({2})", pid, port, 'SIGUSR1');
+				pidOrPort = `${pid}${protocol}${port}`;
+			} else {
+				// no port given
+				if (NODE.test(executable_name)) {
+					description = localize('process.id.signal', "process id: {0} ({1})", pid, 'SIGUSR1');
+					pidOrPort = pid.toString();
+				}
+			}
+		} else {
 			if (port < 0) {
 				port = protocol === 'inspector' ? INSPECTOR_PORT_DEFAULT : LEGACY_PORT_DEFAULT;
 			}
@@ -161,11 +191,6 @@ function listProcesses(ports: boolean): Promise<ProcessItem[]> {
 				description = localize('process.id.port.legacy', "process id: {0}, debug port: {1} (legacy protocol)", pid, port);
 			}
 			pidOrPort = `${protocol}${port}`;
-		} else {
-			if (NODE.test(executable_name)) {
-				description = localize('process.id.port.legacy', "process id: {0}", pid);
-				pidOrPort = pid.toString();
-			}
 		}
 
 		if (description && pidOrPort) {
