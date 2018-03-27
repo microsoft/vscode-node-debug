@@ -140,7 +140,7 @@ function listProcesses(ports: boolean): Promise<ProcessItem[]> {
 			command = command.replace('\\??\\', '');
 		}
 
-		const executable_name = basename(command);
+		const executable_name = basename(command, '.exe');
 
 		let port = -1;
 		let protocol = '';
