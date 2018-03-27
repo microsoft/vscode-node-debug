@@ -93,7 +93,7 @@ export function pickProcess(ports?): Promise<string | null> {
 
 	return listProcesses(ports).then(items => {
 		let options: vscode.QuickPickOptions = {
-			placeHolder: localize('pickNodeProcess', "Pick the node.js or gulp process to attach to"),
+			placeHolder: localize('pickNodeProcess', "Pick the node.js process to attach to"),
 			matchOnDescription: true,
 			matchOnDetail: true,
 			ignoreFocusOut: true
