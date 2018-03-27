@@ -111,8 +111,7 @@ export function pickProcess(ports?): Promise<string | null> {
 		let options: vscode.QuickPickOptions = {
 			placeHolder: localize('pickNodeProcess', "Pick the node.js process to attach to"),
 			matchOnDescription: true,
-			matchOnDetail: true,
-			ignoreFocusOut: true
+			matchOnDetail: true
 		};
 		return vscode.window.showQuickPick(items, options).then(item => item ? item.pidOrPort : null);
 	}).catch(err => {
