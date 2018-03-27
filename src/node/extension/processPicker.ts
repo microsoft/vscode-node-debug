@@ -110,8 +110,8 @@ function listProcesses(ports: boolean): Promise<ProcessItem[]> {
 
 	const items: ProcessItem[] = [];
 
-	const DEBUG_PORT_PATTERN = /\s--(inspect|debug)-port=(\d+)/;
-	const DEBUG_FLAGS_PATTERN = /\s--(inspect|debug)(-brk)?(=(\d+))?/;
+	const DEBUG_PORT_PATTERN = /--(inspect|debug)-port=(\d+)/;
+	const DEBUG_FLAGS_PATTERN = /--(inspect|debug)(-brk)?(=(\d+))?/;
 
 	const NODE = new RegExp('^(?:node|iojs)$', 'i');
 
