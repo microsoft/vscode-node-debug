@@ -23,7 +23,9 @@ export async function getProcessTree(rootPid: number) : Promise<ProcessTreeNode 
 
 	try {
 		await getProcesses((pid: number, ppid: number, command: string, args: string) => {
-			map.set(pid, new ProcessTreeNode(pid, ppid, command, args));
+			if (pid !== ppid) {
+				map.set(pid, new ProcessTreeNode(pid, ppid, command, args));
+			}
 		});
 	} catch (err) {
 		return undefined;
@@ -32,7 +34,7 @@ export async function getProcessTree(rootPid: number) : Promise<ProcessTreeNode 
 	const values = map.values();
 	for (const p of values) {
 		const parent = map.get(p.ppid);
-		if (parent) {
+		if (parent && parent !== p) {
 			if (!parent.children) {
 				parent.children = [];
 			}
