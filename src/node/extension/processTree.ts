@@ -71,7 +71,7 @@ export function getProcesses(one: (pid: number, ppid: number, command: string, a
 		if (process.platform === 'win32') {
 
 			// attributes columns are in alphabetic order!
-			const CMD_PAT = /^(.*)\s+([0-9]+)\.[0-9]+\+[0-9]+\s+([0-9]+)\s+([0-9]+)$/;
+			const CMD_PAT = /^(.*)\s+([0-9]+)\.[0-9]+[+-][0-9]+\s+([0-9]+)\s+([0-9]+)$/;
 
 			const wmic = join(process.env['WINDIR'] || 'C:\\Windows', 'System32', 'wbem', 'WMIC.exe');
 			proc = spawn(wmic, [ 'process', 'get', 'CommandLine,CreationDate,ParentProcessId,ProcessId' ]);
