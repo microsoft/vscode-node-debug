@@ -6,8 +6,10 @@
 {
 	"pid.error": "プロセスにアタッチ: 処理 '{0}' をデバッグ モードにできません。",
 	"process.id.error": "プロセスにアタッチ: '{0}' はプロセス ID ではないようです。",
-	"pickNodeProcess": "添付先の node.js プロセスか gulp プロセスを選びます",
+	"pickNodeProcess": "アタッチする node.js プロセスを選択してください",
 	"process.picker.error": "プロセス ピッカーが失敗しました ({0})",
+	"process.id.port.signal": "プロセス id: {0}、デバッグ ポート: {1} ({2})",
+	"process.id.signal": "プロセス id: {0} ({1})",
 	"process.id.port": "プロセス id: {0}、デバッグ ポート: {1}",
 	"process.id.port.legacy": "プロセス id: {0}、デバッグ ポート: {1} (レガシー プロトコル)",
 	"cannot.enable.debug.mode.error": "プロセスに添付: プロセス '{0}' ({1}) に対してデバッグ モードを有効にできません。"

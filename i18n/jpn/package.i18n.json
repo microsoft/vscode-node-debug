@@ -66,7 +66,7 @@
 	"node.snippet.mocha.description": "Mocha テストをデバッグします",
 	"node.snippet.yo.label": "Node.js: Yeoman ジェネレーター",
 	"node.snippet.yo.description": "yeoman ジェネレーターをデバッグします (プロジェクト フォルダーで 'npm link' を実行してインストールします)",
-	"node.snippet.gulp.label": "Node.js: gulp タスク",
+	"node.snippet.gulp.label": "Node.js: Gulp タスク",
 	"node.snippet.gulp.description": "gulp タスクをデバッグします (プロジェクトにローカルの gulp がインストールされていることを確認します)",
 	"node.snippet.electron.label": "Node.js: Electron (メイン)",
 	"node.snippet.electron.description": "Electron のメイン プロセスをデバッグします"
