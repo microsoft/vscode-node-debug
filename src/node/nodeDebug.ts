@@ -4224,7 +4224,10 @@ function logMessageToExpression(msg) {
 
 	format = format.replace('\'', '\\\'');
 
-	return `console.log('${format}', ${args.join(', ')})`;
+	if (args.length > 0) {
+		return `console.log('${format}', ${args.join(', ')})`;
+	}
+	return `console.log('${format}')`;
 }
 
 function findport(): Promise<number> {
