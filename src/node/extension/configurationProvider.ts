@@ -72,7 +72,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 			}
 
 			// program is some absolute path
-			if (!config.cwd && isAbsolute(config.program)) {
+			if (!config.cwd && config.program && isAbsolute(config.program)) {
 				// derive 'cwd' from 'program'
 				config.cwd = dirname(config.program);
 			}
