@@ -89,8 +89,12 @@ export class LoadedScriptsProvider implements TreeDataProvider<BaseTreeItem> {
 
 	private async isSupportedDebugType(debugType: string | undefined, session: vscode.DebugSession): Promise<boolean> {
 		if (debugType === 'vslsShare') {
-			const debugSessionInfo = session ? await session.customRequest('debugSessionInfo', {}) : undefined;
-			debugType = (debugSessionInfo && debugSessionInfo.configurationProperties) ? debugSessionInfo.configurationProperties.type : undefined;
+			try {
+				const debugSessionInfo = session ? await session.customRequest('debugSessionInfo', {}) : undefined;
+				debugType = (debugSessionInfo && debugSessionInfo.configurationProperties) ? debugSessionInfo.configurationProperties.type : undefined;
+			}
+			catch (e) {
+			}
 		}
 		return debugType === 'node' || debugType === 'node2' || debugType === 'extensionHost' || debugType === 'chrome';
 	}
