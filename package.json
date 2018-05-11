@@ -102,7 +102,7 @@
 				{
 					"command": "extension.node-debug.toggleSkippingFile",
 					"group": "navigation",
-					"when": "inDebugMode && debugType == 'node'"
+					"when": "inDebugMode && debugType == 'node' && callStackItemType == 'stackFrame'"
 				}
 			]
 		},
