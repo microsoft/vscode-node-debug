@@ -29,8 +29,8 @@
 		"multi-root ready"
 	],
 	"engines": {
-		"vscode": "^1.19.0",
-		"node": "^7.4.0"
+		"vscode": "^1.24.0",
+		"node": "^8.9.1"
 	},
 	"extensionDependencies": [
 		"ms-vscode.node-debug2"

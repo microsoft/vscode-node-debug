@@ -128,7 +128,10 @@ class BaseTreeItem extends TreeItem {
 	}
 
 	protected compare(a: BaseTreeItem, b: BaseTreeItem): number {
-		return a.label.localeCompare(b.label);
+		if (a.label && b.label) {
+			return a.label.localeCompare(b.label);
+		}
+		return 0;
 	}
 }
 
@@ -213,7 +216,7 @@ class SessionTreeItem extends BaseTreeItem {
 		}
 
 		// <...> come at the very end
-		if (/^<.+>$/.test(item.label)) {
+		if (item.label && /^<.+>$/.test(item.label)) {
 			return 1000;
 		}
 
