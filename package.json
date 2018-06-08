@@ -36,7 +36,7 @@
 		"ms-vscode.node-debug2"
 	],
 	"dependencies": {
-		"vscode-debugadapter": "1.29.0",
+		"vscode-debugadapter": "1.30.0-pre.0",
 		"source-map": "0.6.1",
 		"vscode-nls": "3.2.2",
 		"request-light": "0.2.2",
