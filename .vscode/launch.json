@@ -49,7 +49,7 @@
 			},
 			"windows": {
 				"env": {
-					"LEGACY_NODE_PATH": "${env:NVM_HOME}\\versions\\node\\v7.9.0\\bin;${env:Path}"
+					"LEGACY_NODE_PATH": "${env:NVM_HOME}\\v7.9.0;${env:Path}"
 				}
 			},
 			"outFiles": [ "${workspaceFolder}/out/**/*.js" ],
