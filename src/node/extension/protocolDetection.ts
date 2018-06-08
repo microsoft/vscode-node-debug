@@ -84,8 +84,8 @@ function detectProtocolForAttach(config: any, logger: Logger): Promise<string | 
 		}, 2000);
 	}).catch(err => {
 		return {
-			reason: localize('protocol.switch.unknown.error', "Debugging with legacy protocol because Node.js version could not be determined ({0})", err.toString()),
-			protocol: 'legacy'
+			reason: localize('protocol.switch.unknown.error', "Debugging with inspector protocol because Node.js version could not be determined ({0})", err.toString()),
+			protocol: 'inspector'
 		};
 	}).then(result => {
 		cleanup();
