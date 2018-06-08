@@ -93,7 +93,7 @@
 				{
 					"id": "extension.node-debug.loadedScriptsExplorer",
 					"name": "%loaded.scripts.view.name%",
-					"when": "inDebugMode && debugType =~ /^(node|node2|extensionHost|chrome)$/"
+					"when": "inDebugMode && showLoadedScriptsExplorer"
 				}
 			]
 		},

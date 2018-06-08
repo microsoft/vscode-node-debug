@@ -46,12 +46,12 @@ export class LoadedScriptsProvider implements TreeDataProvider<BaseTreeItem> {
 	readonly onDidChangeTreeData: Event<BaseTreeItem> = this._onDidChangeTreeData.event;
 
 	constructor(context: vscode.ExtensionContext) {
-
 		this._root = new RootTreeItem();
 
-		context.subscriptions.push(vscode.debug.onDidStartDebugSession(session => {
+		context.subscriptions.push(vscode.debug.onDidStartDebugSession(async (session: vscode.DebugSession): Promise<void> => {
 			const t = session ? session.type : undefined;
-			if (t === 'node' || t === 'node2' || t === 'extensionHost' || t === 'chrome') {
+			if (await this.isSupportedDebugType(t, session)) {
+				vscode.commands.executeCommand('setContext', 'showLoadedScriptsExplorer', true);
 				this._root.add(session);
 				this._onDidChangeTreeData.fire(undefined);
 			}
@@ -59,13 +59,10 @@ export class LoadedScriptsProvider implements TreeDataProvider<BaseTreeItem> {
 
 		let timeout: NodeJS.Timer;
 
-		context.subscriptions.push(vscode.debug.onDidReceiveDebugSessionCustomEvent(event => {
-
+		context.subscriptions.push(vscode.debug.onDidReceiveDebugSessionCustomEvent(async (event): Promise<void> => {
 			const t = (event.event === 'loadedSource' && event.session) ? event.session.type : undefined;
-			if (t === 'node' || t === 'node2' || t === 'extensionHost' || t === 'chrome') {
-
+			if (await this.isSupportedDebugType(t, event.session)) {
 				const sessionRoot = this._root.add(event.session);
-
 				sessionRoot.addPath(<Source> event.body.source);
 
 				clearTimeout(timeout);
@@ -88,6 +85,17 @@ export class LoadedScriptsProvider implements TreeDataProvider<BaseTreeItem> {
 
 	getTreeItem(node: BaseTreeItem): TreeItem {
 		return node;
+	}
+
+	private async isSupportedDebugType(debugType: string | undefined, session: vscode.DebugSession): Promise<boolean> {
+		if (debugType === 'vslsShare') {
+			try {
+				debugType = session ? await session.customRequest('debugType', {}) : undefined;
+			}
+			catch (e) {
+			}
+		}
+		return debugType === 'node' || debugType === 'node2' || debugType === 'extensionHost' || debugType === 'chrome';
 	}
 }
 
