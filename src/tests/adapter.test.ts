@@ -103,8 +103,8 @@ suite('Node Debug Adapter', () => {
 		});
 
 		if (process.platform === 'win32') {
-			const bash32bitPath = Path.join(process.env.SystemRoot, 'SYSNATIVE', 'bash.exe');
-			const bash64bitPath = Path.join(process.env.SystemRoot, 'System32', 'bash.exe');
+			const bash32bitPath = Path.join(process.env.SystemRoot, 'SYSNATIVE', 'wsl.exe');
+			const bash64bitPath = Path.join(process.env.SystemRoot, 'System32', 'wsl.exe');
 			if (FS.existsSync(bash32bitPath) || FS.existsSync(bash64bitPath)) {
 
 				test('should run program using WSL', () => {

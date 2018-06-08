@@ -15,8 +15,8 @@ export function subsystemLinuxPresent(): boolean {
 	if (!isWindows) {
 		return false;
 	}
-	const bashPath32bitApp = path.join(process.env['SystemRoot'], 'Sysnative', 'bash.exe');
-	const bashPath64bitApp = path.join(process.env['SystemRoot'], 'System32', 'bash.exe');
+	const bashPath32bitApp = path.join(process.env['SystemRoot'], 'Sysnative', 'wsl.exe');
+	const bashPath64bitApp = path.join(process.env['SystemRoot'], 'System32', 'wsl.exe');
 	const bashPathHost = is64bit ? bashPath64bitApp : bashPath32bitApp;
 	return fs.existsSync(bashPathHost);
 }
@@ -43,23 +43,23 @@ export interface ILaunchArgs {
 export function createLaunchArg(useSubsytemLinux: boolean | undefined, useExternalConsole: boolean, cwd: string | undefined, executable: string, args?: string[], program?: string): ILaunchArgs {
 
 	if (useSubsytemLinux && subsystemLinuxPresent()) {
-		const bashPath32bitApp = path.join(process.env['SystemRoot'], 'Sysnative', 'bash.exe');
-		const bashPath64bitApp = path.join(process.env['SystemRoot'], 'System32', 'bash.exe');
+		const bashPath32bitApp = path.join(process.env['SystemRoot'], 'Sysnative', 'wsl.exe');
+		const bashPath64bitApp = path.join(process.env['SystemRoot'], 'System32', 'wsl.exe');
 		const bashPathHost = is64bit ? bashPath64bitApp : bashPath32bitApp;
 		const subsystemLinuxPath = useExternalConsole ? bashPath64bitApp : bashPathHost;
 
-		let bashCommand = [executable].concat(args || []).map(element => {
+		let wslArgs = [executable].concat(args || []).map(element => {
 			if (element === program) {	// workaround for issue #35249
 				element = element.replace(/\\/g, '/');
 			}
 			return element.indexOf(' ') > 0 ? `'${element}'` : element;
-		}).join(' ');
+		});
 
 		return <ILaunchArgs>{
 			cwd: cwd,
 			executable: subsystemLinuxPath,
-			args: ['-c', bashCommand],
-			combined: [subsystemLinuxPath].concat(['-c', bashCommand]),
+			args: wslArgs,
+			combined: [subsystemLinuxPath].concat(wslArgs),
 			localRoot: cwd,
 			remoteRoot: windowsPathToWSLPath(cwd)
 		};
@@ -76,5 +76,6 @@ export function createLaunchArg(useSubsytemLinux: boolean | undefined, useExtern
 
 export function spawnSync(useWSL: boolean, executable: string, args?: string[], options?: child_process.SpawnSyncOptions) {
 	const launchArgs = createLaunchArg(useWSL, false, undefined, executable, args);
+	launchArgs.args = [ 'node', '--version'];
 	return child_process.spawnSync(launchArgs.executable, launchArgs.args, useWSL ? undefined : options);
 }
