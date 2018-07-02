@@ -10,6 +10,7 @@ import { basename } from 'path';
 import { getProcesses } from './processTree';
 import { execSync } from 'child_process';
 import { detectProtocolForPid, INSPECTOR_PORT_DEFAULT, LEGACY_PORT_DEFAULT } from './protocolDetection';
+import { analyseArguments } from './protocolDetection';
 
 const localize = nls.loadMessageBundle();
 
@@ -132,9 +133,6 @@ function listProcesses(ports: boolean): Promise<ProcessItem[]> {
 
 	const items: ProcessItem[] = [];
 
-	const DEBUG_FLAGS_PATTERN = /--(inspect|debug)(-brk)?(=(\d+))?[^-]/;
-	const DEBUG_PORT_PATTERN = /--(inspect|debug)-port=(\d+)/;
-
 	const NODE = new RegExp('^(?:node|iojs)$', 'i');
 
 	let seq = 0;	// default sort key
@@ -149,34 +147,27 @@ function listProcesses(ports: boolean): Promise<ProcessItem[]> {
 		const executable_name = basename(command, '.exe');
 
 		let port = -1;
-		let protocol = '';
-		let usePid = true;
+		let protocol: string | undefined = '';
+		let usePort = true;
 
 		if (ports) {
-			// match --debug, --debug=1234, --debug-brk, debug-brk=1234, --inspect, --inspect=1234, --inspect-brk, --inspect-brk=1234
-			let matches = DEBUG_FLAGS_PATTERN.exec(args);
-			if (matches && matches.length >= 2) {
-				// attach via port
-				if (matches.length === 5 && matches[4]) {
-					port = parseInt(matches[4]);
-				}
-				protocol = matches[1] === 'debug' ? 'legacy' : 'inspector';
-				usePid = false;
-			}
-
-			// a debug-port=1234 or --inspect-port=1234 overrides the port
-			matches = DEBUG_PORT_PATTERN.exec(args);
-			if (matches && matches.length === 3) {
-				// override port
-				port = parseInt(matches[2]);
-				protocol = matches[1] === 'debug' ? 'legacy' : 'inspector';
-			}
+			const x = analyseArguments(args);
+			usePort = x.usePort;
+			protocol = x.protocol;
+			port = x.port;
 		}
 
 		let description = '';
 		let pidOrPort = '';
 
-		if (usePid) {
+		if (usePort) {
+			if (protocol === 'inspector') {
+				description = localize('process.id.port', "process id: {0}, debug port: {1}", pid, port);
+			} else {
+				description = localize('process.id.port.legacy', "process id: {0}, debug port: {1} (legacy protocol)", pid, port);
+			}
+			pidOrPort = `${protocol}${port}`;
+		} else {
 			if (protocol && port > 0) {
 				description = localize('process.id.port.signal', "process id: {0}, debug port: {1} ({2})", pid, port, 'SIGUSR1');
 				pidOrPort = `${pid}${protocol}${port}`;
@@ -187,16 +178,6 @@ function listProcesses(ports: boolean): Promise<ProcessItem[]> {
 					pidOrPort = pid.toString();
 				}
 			}
-		} else {
-			if (port < 0) {
-				port = protocol === 'inspector' ? INSPECTOR_PORT_DEFAULT : LEGACY_PORT_DEFAULT;
-			}
-			if (protocol === 'inspector') {
-				description = localize('process.id.port', "process id: {0}, debug port: {1}", pid, port);
-			} else {
-				description = localize('process.id.port.legacy', "process id: {0}, debug port: {1} (legacy protocol)", pid, port);
-			}
-			pidOrPort = `${protocol}${port}`;
 		}
 
 		if (description && pidOrPort) {
