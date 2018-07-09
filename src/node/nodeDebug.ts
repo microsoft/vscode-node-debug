@@ -662,8 +662,8 @@ export class NodeDebugSession extends LoggingDebugSession {
 			let line = event.sourceLine;
 			let column = this._adjustColumn(line, event.sourceColumn);
 
-			return this._sourceMaps.MapToSource(localPath, null, line, column).then(mapresult => {
-				return ! mapresult;
+			return this._sourceMaps.CannotMapLine(localPath, null, line, column).then(skip => {
+				return skip;
 			});
 		}
 

@@ -46,6 +46,12 @@ export interface ISourceMaps {
 	 * line and column are 0 based.
 	 */
 	MapToSource(pathToGenerated: string, content: string | null, line: number, column: number): Promise<MappingResult | null>;
+
+	/*
+	 * Returns true if generated code has a source map but the given line and column cannot be mapped.
+	 * line and column are 0 based.
+	 */
+	CannotMapLine(pathToGenerated: string, content: string | null, line: number, column: number): Promise<boolean>;
 }
 
 export class SourceMaps implements ISourceMaps {
@@ -115,6 +121,25 @@ export class SourceMaps implements ISourceMaps {
 		});
 	}
 
+	public CannotMapLine(pathToGenerated: string, content: string, line: number, column: number): Promise<boolean> {
+		return this._preLoad.then(() => {
+			return this._findGeneratedToSourceMapping(pathToGenerated, content).then(map => {
+				if (map) {
+					line += 1;	// source map impl is 1 based
+					let mr = map.originalPositionFor(line, column,  Bias.GREATEST_LOWER_BOUND);
+					if (!mr) {
+						mr = map.originalPositionFor(line, column, Bias.LEAST_UPPER_BOUND);
+					}
+					if (mr && mr.source && mr.line !== null && mr.column !== null) {
+						return false;	// we have a corresponding source and could map line to it -> stop
+					}
+					return true;	// we have a corresponding source but could not map line to it -> skip
+				}
+				return false; // no corresponding source -> stop
+			});
+		});
+	}
+
 	public MapToSource(pathToGenerated: string, content: string, line: number, column: number): Promise<MappingResult | null> {
 		return this._preLoad.then(() => {
 			return this._findGeneratedToSourceMapping(pathToGenerated, content).then(map => {
@@ -132,7 +157,9 @@ export class SourceMaps implements ISourceMaps {
 							column: mr.column
 						};
 					}
+					return null;	// we have a corresponding source but could not map line to it.
 				}
+				// no corresponding source.
 				return null;
 			});
 		});
