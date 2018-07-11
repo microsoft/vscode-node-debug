@@ -121,11 +121,6 @@
 				"command": "extension.node-debug.toggleSkippingFile",
 				"title": "%toggle.skipping.this.file%",
 				"category": "Debug"
-			},
-			{
-				"command": "extension.node-debug.toggleAutoAttach",
-				"title": "%toggle.auto.attach%",
-				"category": "Debug"
 			}
 		],
 		"keybindings": [

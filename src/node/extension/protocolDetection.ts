@@ -209,7 +209,7 @@ function getPidListeningOnPortUnix(port: number): Promise<number> {
 	});
 }
 
-export class DebugArguments {
+export interface DebugArguments {
 	usePort: boolean;	// if true debug by using the debug port
 	protocol?: 'legacy' | 'inspector';	//
 	address?: string;

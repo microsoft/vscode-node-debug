@@ -112,7 +112,7 @@ function findChildProcesses(rootPid: number, inTerminal: boolean, cb: (pid: numb
 		}
 	}
 
-	function finder(node: ProcessTreeNode, pid) {
+	function finder(node: ProcessTreeNode, pid: number): ProcessTreeNode | undefined {
 		if (node.pid === pid) {
 			return node;
 		}
@@ -122,6 +122,7 @@ function findChildProcesses(rootPid: number, inTerminal: boolean, cb: (pid: numb
 				return p;
 			}
 		}
+		return undefined;
 	}
 
 	return getProcessTree(rootPid).then(tree => {

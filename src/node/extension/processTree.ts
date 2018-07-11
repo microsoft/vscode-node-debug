@@ -9,7 +9,7 @@ import { spawn, ChildProcess } from 'child_process';
 import { join } from 'path';
 
 export class ProcessTreeNode {
-	children: ProcessTreeNode[];
+	children?: ProcessTreeNode[];
 
 	constructor(public pid: number, public ppid: number, public command: string, public args: string) {
 	}
