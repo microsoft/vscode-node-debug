@@ -834,6 +834,9 @@ export class NodeDebugSession extends LoggingDebugSession {
 		// This debug adapter supports log points
 		response.body.supportsLogPoints = true;
 
+		// This debug adapter supports terminate request
+		response.body.supportsTerminateRequest = true;
+
 		this.sendResponse(response);
 	}
 
@@ -1571,6 +1574,16 @@ export class NodeDebugSession extends LoggingDebugSession {
 	}
 
 	//---- disconnect request -------------------------------------------------------------------------------------------------
+
+	protected terminateRequest(response: DebugProtocol.TerminateResponse, args: DebugProtocol.TerminateArguments): void {
+
+		if (!this._attachMode && !this._isWSL && this._nodeProcessId > 0) {
+			process.kill(this._nodeProcessId, 'SIGINT');
+		}
+
+		this.log('la', 'terminateRequest: send response');
+		this.sendResponse(response);
+	}
 
 	protected disconnectRequest(response: DebugProtocol.DisconnectResponse, args: DebugProtocol.DisconnectArguments): void {
 
