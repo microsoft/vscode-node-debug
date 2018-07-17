@@ -834,8 +834,8 @@ export class NodeDebugSession extends LoggingDebugSession {
 		// This debug adapter supports log points
 		response.body.supportsLogPoints = true;
 
-		// This debug adapter supports terminate request
-		response.body.supportsTerminateRequest = true;
+		// This debug adapter supports terminate request (but not on Windows)
+		response.body.supportsTerminateRequest = process.platform !== 'win32';
 
 		this.sendResponse(response);
 	}
@@ -1577,7 +1577,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 	protected terminateRequest(response: DebugProtocol.TerminateResponse, args: DebugProtocol.TerminateArguments): void {
 
-		if (!this._attachMode && !this._isWSL && this._nodeProcessId > 0) {
+		if (!this._isWSL && this._nodeProcessId > 0) {
 			process.kill(this._nodeProcessId, 'SIGINT');
 		}
 
