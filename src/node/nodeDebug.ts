@@ -837,6 +837,9 @@ export class NodeDebugSession extends LoggingDebugSession {
 		// This debug adapter supports terminate request (but not on Windows)
 		response.body.supportsTerminateRequest = process.platform !== 'win32';
 
+		// This debug adapter supports loaded sources request
+		response.body.supportsLoadedSourcesRequest = true;
+
 		this.sendResponse(response);
 	}
 
@@ -3834,7 +3837,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 		}
 	}
 
-	//--- exception info request ----------------------------------------------------------------------------------------------
+	//--- loaded sources request ----------------------------------------------------------------------------------------------
 
 	protected loadedSourcesRequest(response: DebugProtocol.LoadedSourcesResponse, args: DebugProtocol.LoadedSourcesArguments) {
 
