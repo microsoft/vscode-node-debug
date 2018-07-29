@@ -84,7 +84,6 @@
 		"onCommand:extension.pickNodeProcess",
 		"onCommand:extension.node-debug.toggleSkippingFile",
 		"onCommand:extension.node-debug.pickLoadedScript",
-		"onCommand:extension.node-debug.toggleAutoAttach",
 		"onCommand:extension.node-debug.attachNodeProcess"
 	],
 	"contributes": {
