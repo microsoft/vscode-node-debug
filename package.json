@@ -36,7 +36,7 @@
 		"ms-vscode.node-debug2"
 	],
 	"dependencies": {
-		"vscode-debugadapter": "1.31.0-pre.0",
+		"vscode-debugadapter": "1.31.0",
 		"source-map": "0.6.1",
 		"vscode-nls": "3.2.2",
 		"request-light": "0.2.2",
@@ -71,8 +71,8 @@
 		"typescript": "2.6.2",
 		"vscode": "1.1.18",
 		"vscode-nls-dev": "3.0.9",
-		"vscode-debugadapter-testsupport": "1.30.0",
-		"vscode-debugprotocol": "1.31.0-pre.0",
+		"vscode-debugadapter-testsupport": "1.31.0",
+		"vscode-debugprotocol": "1.31.0",
 		"event-stream": "3.3.4",
 		"nodemon": "1.17.5",
 		"vsce": "1.40.0"
