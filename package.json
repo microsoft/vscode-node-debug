@@ -87,15 +87,6 @@
 		"onCommand:extension.node-debug.attachNodeProcess"
 	],
 	"contributes": {
-		"views": {
-			"debug": [
-				{
-					"id": "extension.node-debug.loadedScriptsExplorer",
-					"name": "%loaded.scripts.view.name%",
-					"when": "inDebugMode && showLoadedScriptsExplorer"
-				}
-			]
-		},
 		"menus": {
 			"debug/callstack/context": [
 				{

@@ -7,7 +7,7 @@
 import * as vscode from 'vscode';
 
 import { NodeConfigurationProvider } from './configurationProvider';
-import { LoadedScriptsProvider, pickLoadedScript, openScript } from './loadedScripts';
+import { pickLoadedScript, openScript } from './loadedScripts';
 import { pickProcess, attachProcess } from './processPicker';
 import { Cluster } from './cluster';
 
@@ -26,7 +26,6 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.attachNodeProcess', attachProcess));
 
 	// loaded scripts
-	vscode.window.registerTreeDataProvider('extension.node-debug.loadedScriptsExplorer', new LoadedScriptsProvider(context));
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.pickLoadedScript', pickLoadedScript));
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.openScript', (session: vscode.DebugSession, source) => openScript(session, source)));
 
