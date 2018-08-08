@@ -9,7 +9,6 @@
 	"open.loaded.script": "Geladenes Skript öffnen",
 	"attach.node.process": "An Node-Prozess anfügen",
 	"toggle.skipping.this.file": "Überspringen dieser Datei umschalten",
-	"toggle.auto.attach": "Automatisches Anfügen umschalten",
 	"loaded.scripts.view.name": "Geladene Skripts",
 	"smartStep.description": "Durchläuft automatisch den generierten Code, der nicht der ursprünglichen Quelle erneut zugeordnet werden kann.",
 	"skipFiles.description": "Ein Array für Globmuster für Dateien, die beim Debuggen übersprungen werden.",

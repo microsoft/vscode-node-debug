@@ -9,7 +9,6 @@
 	"open.loaded.script": "Apri script caricato",
 	"attach.node.process": "Collega al processo Node",
 	"toggle.skipping.this.file": "Attiva/disattiva Ignora questo file",
-	"toggle.auto.attach": "Attiva/Disattiva Auto Attach",
 	"loaded.scripts.view.name": "Script caricati",
 	"smartStep.description": "Esegue automaticamente un'istruzione alla volta del codice generato che non può essere mappato all'origine.",
 	"skipFiles.description": "Matrice di criteri GLOB per i file da ignorare durante il debug.",

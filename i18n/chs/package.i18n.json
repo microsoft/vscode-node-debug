@@ -9,7 +9,6 @@
 	"open.loaded.script": "打开加载脚本",
 	"attach.node.process": "附加到 Node 进程",
 	"toggle.skipping.this.file": "切换是否跳过此文件",
-	"toggle.auto.attach": "切换开关自动附加",
 	"loaded.scripts.view.name": "已载入的脚本",
 	"smartStep.description": "自动单步执行无法映射回原始源的生成代码。",
 	"skipFiles.description": "在调试时文件要跳过的一组 glob 模式。",

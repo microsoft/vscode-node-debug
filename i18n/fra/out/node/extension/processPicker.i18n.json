@@ -8,9 +8,9 @@
 	"process.id.error": "Attacher au processus : '{0}' ne ressemble pas à un ID de processus.",
 	"pickNodeProcess": "Sélectionner le processus node.js auquel s'attacher",
 	"process.picker.error": "Le sélecteur de processus a échoué ({0})",
-	"process.id.port.signal": "id de processus : {0}, port de débogage : {1} ({2})",
-	"process.id.signal": "id de processus : {0} ({1})",
 	"process.id.port": "id de processus : {0}, port de débogage : {1}",
 	"process.id.port.legacy": "id de processus : {0}, port de débogage : {1} (protocole héritée)",
+	"process.id.port.signal": "id de processus : {0}, port de débogage : {1} ({2})",
+	"process.id.signal": "id de processus : {0} ({1})",
 	"cannot.enable.debug.mode.error": "Attacher au processus : impossible d'activer le mode de débogage pour le processus '{0}' ({1})."
 }

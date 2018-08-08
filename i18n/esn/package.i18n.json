@@ -9,7 +9,6 @@
 	"open.loaded.script": "Abrir script cargado",
 	"attach.node.process": "Conectarse con el proceso de Node",
 	"toggle.skipping.this.file": "Alternando omitir este archivo ",
-	"toggle.auto.attach": "Alternar auto conectarse",
 	"loaded.scripts.view.name": "Scripts Cargados",
 	"smartStep.description": "Explore automáticamente el código generado que no se puede volver a asignar al código fuente original.",
 	"skipFiles.description": "Una matriz de patrones globales para los archivos que se deben omitir en la depuración.",

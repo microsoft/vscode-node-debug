@@ -9,7 +9,6 @@
 	"open.loaded.script": "読み込み済みのスクリプトを開く",
 	"attach.node.process": "Node のプロセスにアタッチ",
 	"toggle.skipping.this.file": "このファイルをスキップする",
-	"toggle.auto.attach": "自動アタッチの切り替え",
 	"loaded.scripts.view.name": "読み込み済みのスクリプト",
 	"smartStep.description": "元のソースにマップし直すことができない、生成されたコードを自動的にステップ スルーします。",
 	"skipFiles.description": "デバッグ時にスキップするファイルの glob パターンの配列。",
