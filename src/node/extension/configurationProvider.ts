@@ -150,7 +150,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 		let nvsHome = process.env['NVS_HOME'];
 		if (!nvsHome) {
 			// NVS_HOME is not always set. Probe for 'nvs' directory instead
-			const nvsDir = process.platform === 'win32' ? join(process.env['LOCALAPPDATA'], 'nvs') : join(process.env['HOME'], '.nvs');
+			const nvsDir = process.platform === 'win32' ? join(process.env['LOCALAPPDATA'] || '', 'nvs') : join(process.env['HOME'] || '', '.nvs');
 			if (fs.existsSync(nvsDir)) {
 				nvsHome = nvsDir;
 			}
@@ -184,7 +184,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 				let nvmHome = process.env['NVM_DIR'];
 				if (!nvmHome) {
 					// if NVM_DIR is not set. Probe for '.nvm' directory instead
-					const nvmDir = join(process.env['HOME'], '.nvm');
+					const nvmDir = join(process.env['HOME'] || '', '.nvm');
 					if (fs.existsSync(nvmDir)) {
 						nvmHome = nvmDir;
 					}

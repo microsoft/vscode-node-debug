@@ -1294,15 +1294,18 @@ export class NodeDebugSession extends LoggingDebugSession {
 	/*
 	 * shared 'attach' code used in launchRequest and attachRequest.
 	 */
-	private _attach(response: DebugProtocol.Response, args: CommonArguments, port: number, address: string | undefined, timeout: number | undefined): void {
+	private _attach(response: DebugProtocol.Response, args: CommonArguments, port: number, adr: string | undefined, timeout: number | undefined): void {
 
 		if (!port) {
 			port = 5858;
 		}
 		this._port = port;
 
-		if (!address || address === 'localhost') {
+		let address: string;
+		if (!adr || adr === 'localhost') {
 			address = '127.0.0.1';
+		} else {
+			address = adr;
 		}
 
 		if (!timeout) {
@@ -4187,7 +4190,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 		if (process.platform === 'win32') {
 
-			const TASK_KILL = Path.join(process.env['SystemRoot'], 'System32', 'taskkill.exe');
+			const TASK_KILL = Path.join(process.env['SystemRoot'] || 'C:\\WINDOWS', 'System32', 'taskkill.exe');
 
 			// when killing a process in Windows its child processes are *not* killed but become root processes.
 			// Therefore we use TASKKILL.EXE
