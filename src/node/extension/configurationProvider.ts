@@ -9,7 +9,7 @@ import * as vscode from 'vscode';
 import { join, isAbsolute, dirname } from 'path';
 import * as fs from 'fs';
 
-import { writeToConsole, mkdirP } from './utilities';
+import { writeToConsole, mkdirP, Logger } from './utilities';
 import { detectDebugType } from './protocolDetection';
 import { resolveProcessId } from './processPicker';
 import { Cluster } from './cluster';
@@ -20,7 +20,10 @@ const localize = nls.loadMessageBundle();
 
 export class NodeConfigurationProvider implements vscode.DebugConfigurationProvider {
 
+	private _logger: Logger;
+
 	constructor(private _extensionContext: vscode.ExtensionContext) {
+		this._logger = new Logger();
 	}
 
 	/**
@@ -85,7 +88,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 
 		// remove 'useWSL' on all platforms but Windows
 		if (process.platform !== 'win32' && config.useWSL) {
-			this._extensionContext.logger.debug('useWSL attribute ignored on non-Windows OS.');
+			this._logger.debug('useWSL attribute ignored on non-Windows OS.');
 			delete config.useWSL;
 		}
 
@@ -113,7 +116,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 		}
 
 		// finally determine which protocol to use
-		const debugType = await determineDebugType(config, this._extensionContext.logger);
+		const debugType = await determineDebugType(config, this._logger);
 		if (debugType) {
 			config.type = debugType;
 		}
@@ -368,7 +371,7 @@ function guessProgramFromPackage(folder: vscode.WorkspaceFolder | undefined, pac
 
 //---- debug type -------------------------------------------------------------------------------------------------------------
 
-function determineDebugType(config: any, logger: vscode.Logger): Promise<string | null> {
+function determineDebugType(config: any, logger: Logger): Promise<string | null> {
 	if (config.protocol === 'legacy') {
 		return Promise.resolve('node');
 	} else if (config.protocol === 'inspector') {

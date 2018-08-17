@@ -7,6 +7,13 @@
 import * as vscode from 'vscode';
 import * as FS from 'fs';
 
+export class Logger {
+	debug(message: string) {
+		// TODO: enable based on log level
+		// vscode.debug.activeDebugConsole.appendLine(message);
+	}
+}
+
 /**
  * Send to debug console.
  */
