@@ -122,14 +122,14 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 		if (config.trace && !config.logFilePath) {
 			const fileName = config.type === 'node' ? 'debugadapter-legacy.txt' : 'debugadapter.txt';
 
-			if (this._extensionContext.logDirectory) {
+			if (this._extensionContext.logPath) {
 				try {
-					await mkdirP(this._extensionContext.logDirectory);
+					await mkdirP(this._extensionContext.logPath);
 				} catch (e) {
 					// Already exists
 				}
 
-				config.logFilePath = join(this._extensionContext.logDirectory, fileName);
+				config.logFilePath = join(this._extensionContext.logPath, fileName);
 			}
 		}
 
