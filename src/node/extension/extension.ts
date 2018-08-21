@@ -10,11 +10,15 @@ import { NodeConfigurationProvider } from './configurationProvider';
 import { pickLoadedScript, openScript } from './loadedScripts';
 import { pickProcess, attachProcess } from './processPicker';
 import { Cluster } from './cluster';
+import { initializeAutoAttach } from './autoAttach';
 
 export function activate(context: vscode.ExtensionContext) {
 
 	// register a configuration provider
 	context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('node', new NodeConfigurationProvider(context)));
+
+	// auto attach
+	initializeAutoAttach(context);
 
 	// toggle skipping file action
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.toggleSkippingFile', toggleSkippingFile));
