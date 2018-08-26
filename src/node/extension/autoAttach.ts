@@ -94,7 +94,8 @@ export function attachToProcess(folder: vscode.WorkspaceFolder | undefined, name
 				type: 'node',
 				request: 'attach',
 				name: name,
-				stopOnEntry: false
+				stopOnEntry: false,
+				__autoAttached: true
 			};
 
 			if (baseConfig) {
