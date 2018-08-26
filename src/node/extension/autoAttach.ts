@@ -54,12 +54,6 @@ export function initializeAutoAttach(context: vscode.ExtensionContext) {
 		}
 	}));
 
-	context.subscriptions.push(vscode.debug.onDidTerminateDebugSession(session => {
-		if (session.type === 'node' || session.type === 'node2') {
-			// sessions.delete(session.id);
-		}
-	}));
-
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.startAutoAttach', rootPid => {
 		if (typeof rootPid === 'number') {
 			autoAttacher = pollProcesses(rootPid, true, (pid, cmdPath, args) => {
