@@ -59,8 +59,7 @@ export function initializeAutoAttach(context: vscode.ExtensionContext) {
 			autoAttacher = pollProcesses(rootPid, true, (pid, cmdPath, args) => {
 				const cmdName = basename(cmdPath, '.exe');
 				if (cmdName === 'node') {
-					const name = localize('process.with.pid.label', "Process {0}", pid);
-					//console.log(`auto attach for ${pid}`);
+					const name = localize('process.with.pid.label', "Auto attached ({0})", pid);
 					attachToProcess(undefined, name, pid, args);
 				}
 			});;
