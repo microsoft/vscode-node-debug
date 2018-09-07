@@ -44,7 +44,7 @@
 	"node.launch.runtimeVersion.description": "Version of 'node' runtime to use. Requires 'nvm'.",
 	"node.launch.env.description": "Environment variables passed to the program. The value 'null' removes the variable from the environment.",
 	"node.launch.envFile.description": "Absolute path to a file containing environment variable definitions.",
-	"node.launch.useWSL.description": "Use Windows Subsystem Linux.",
+	"node.launch.useWSL.description": "Use Windows Subsystem for Linux.",
 	"node.launch.outputCapture.description": "From where to capture output messages: The debug API, or stdout/stderr streams.",
 	"node.launch.autoAttachChildProcesses.description": "Attach debugger to new child processes automatically.",
 
