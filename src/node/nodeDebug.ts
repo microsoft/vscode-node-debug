@@ -4126,13 +4126,13 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 	private static isJavaScript(path: string): boolean {
 
-		const name = Path.extname(path).toLowerCase();
-		if (name) {
-			if (NodeDebugSession.JS_EXTENSIONS.indexOf(name) >= 0) {
+		const ext = Path.extname(path).toLowerCase();
+		if (ext) {
+			if (NodeDebugSession.JS_EXTENSIONS.indexOf(ext) >= 0) {
 				return true;
 			}
 		} else {
-			if (Path.basename(path) === 'www') {
+			if (Path.basename(path).toLowerCase() === 'www') {
 				return true;
 			}
 		}
