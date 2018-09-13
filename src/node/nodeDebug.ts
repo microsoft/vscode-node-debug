@@ -4127,10 +4127,17 @@ export class NodeDebugSession extends LoggingDebugSession {
 	private static isJavaScript(path: string): boolean {
 
 		const name = Path.extname(path).toLowerCase();
-		if (NodeDebugSession.JS_EXTENSIONS.indexOf(name) >= 0) {
-			return true;
+		if (name) {
+			if (NodeDebugSession.JS_EXTENSIONS.indexOf(name) >= 0) {
+				return true;
+			}
+		} else {
+			if (Path.basename(path) === 'www') {
+				return true;
+			}
 		}
 
+		// look inside file
 		try {
 			const buffer = new Buffer(30);
 			const fd = FS.openSync(path, 'r');
