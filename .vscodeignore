@@ -1,5 +1,5 @@
 i18n/**/*
-out/tests/**/*
+out/**/*
 src/**/*
 testdata/**/*
 .gitignore
@@ -8,3 +8,4 @@ testdata/**/*
 appveyor.yml
 gulpfile.js
 package-lock.json
+extension.webpack.config.js
