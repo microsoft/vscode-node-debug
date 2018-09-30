@@ -159,7 +159,7 @@
 					},
 					{
 						"label": "%node.snippet.npm.label%",
-						"description": "%node.snippet.npm.description%",
+						"markdownDescription": "%node.snippet.npm.description%",
 						"body": {
 							"type": "node",
 							"request": "launch",
@@ -240,7 +240,7 @@
 					},
 					{
 						"label": "%node.snippet.yo.label%",
-						"description": "%node.snippet.yo.description%",
+						"markdownDescription": "%node.snippet.yo.description%",
 						"body": {
 							"type": "node",
 							"request": "launch",
@@ -343,12 +343,12 @@
 									"string",
 									"null"
 								],
-								"description": "%node.launch.runtimeExecutable.description%",
+								"markdownDescription": "%node.launch.runtimeExecutable.description%",
 								"default": "node"
 							},
 							"runtimeVersion": {
 								"type": "string",
-								"description": "%node.launch.runtimeVersion.description%",
+								"markdownDescription": "%node.launch.runtimeVersion.description%",
 								"default": "default"
 							},
 							"runtimeArgs": {
@@ -367,7 +367,7 @@
 										"null"
 									]
 								},
-								"description": "%node.launch.env.description%",
+								"markdownDescription": "%node.launch.env.description%",
 								"default": {}
 							},
 							"envFile": {
@@ -390,7 +390,7 @@
 							},
 							"outFiles": {
 								"type": "array",
-								"description": "%outFiles.description%",
+								"markdownDescription": "%outFiles.description%",
 								"items": {
 									"type": "string"
 								},
@@ -439,7 +439,7 @@
 							},
 							"skipFiles": {
 								"type": "array",
-								"description": "%skipFiles.description%",
+								"markdownDescription": "%skipFiles.description%",
 								"items": {
 									"type": "string"
 								},
@@ -549,7 +549,7 @@
 							},
 							"outFiles": {
 								"type": "array",
-								"description": "%outFiles.description%",
+								"markdownDescription": "%outFiles.description%",
 								"items": {
 									"type": "string"
 								},
@@ -583,7 +583,7 @@
 							},
 							"skipFiles": {
 								"type": "array",
-								"description": "%skipFiles.description%",
+								"markdownDescription": "%skipFiles.description%",
 								"items": {
 									"type": "string"
 								},
