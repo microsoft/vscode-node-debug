@@ -6,7 +6,7 @@
 
 import * as vscode from 'vscode';
 
-import { NodeConfigurationProvider } from './configurationProvider';
+import { NodeConfigurationProvider, startDebuggingAndStopOnEntry } from './configurationProvider';
 import { pickLoadedScript, openScript } from './loadedScripts';
 import { pickProcess, attachProcess } from './processPicker';
 import { Cluster } from './cluster';
@@ -32,6 +32,9 @@ export function activate(context: vscode.ExtensionContext) {
 	// loaded scripts
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.pickLoadedScript', pickLoadedScript));
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.openScript', (session: vscode.DebugSession, source) => openScript(session, source)));
+
+	// F10 and F11 should start debugging with stopOnEntry:true
+	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.startWithStopOnEntry', startDebuggingAndStopOnEntry));
 
 	// cluster
 	context.subscriptions.push(vscode.debug.onDidStartDebugSession(session => Cluster.startSession(session)));

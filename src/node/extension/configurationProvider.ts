@@ -15,6 +15,12 @@ import { resolveProcessId } from './processPicker';
 import { Cluster } from './cluster';
 
 const localize = nls.loadMessageBundle();
+let stopOnEntry = false;
+
+export function startDebuggingAndStopOnEntry() {
+	stopOnEntry = true;
+	vscode.commands.executeCommand('workbench.action.debug.start');
+}
 
 //---- NodeConfigurationProvider
 
@@ -31,7 +37,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 	 */
 	provideDebugConfigurations(folder: vscode.WorkspaceFolder | undefined, token?: vscode.CancellationToken): vscode.ProviderResult<vscode.DebugConfiguration[]> {
 
-		return [ createLaunchConfigFromContext(folder, false) ];
+		return [createLaunchConfigFromContext(folder, false)];
 	}
 
 	/**
@@ -135,6 +141,10 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 				config.logFilePath = join(this._extensionContext.logPath, fileName);
 			}
 		}
+		if (stopOnEntry) {
+			config.stopOnEntry = true;
+			stopOnEntry = false;
+		}
 
 		// everything ok: let VS Code start the debug session
 		return config;
@@ -144,7 +154,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 	 * if a runtime version is specified we prepend env.PATH with the folder that corresponds to the version.
 	 * Returns false on error
 	 */
-	private async nvmSupport(config: vscode.DebugConfiguration) : Promise<void> {
+	private async nvmSupport(config: vscode.DebugConfiguration): Promise<void> {
 
 		let bin: string | undefined = undefined;
 		let versionManagerName: string | undefined = undefined;
@@ -285,13 +295,13 @@ function createLaunchConfigFromContext(folder: vscode.WorkspaceFolder | undefine
 			let dir = '';
 			const tsConfig = loadJSON(folder, 'tsconfig.json');
 			if (tsConfig && tsConfig.compilerOptions && tsConfig.compilerOptions.outDir) {
-				const outDir = <string> tsConfig.compilerOptions.outDir;
+				const outDir = <string>tsConfig.compilerOptions.outDir;
 				if (!isAbsolute(outDir)) {
 					dir = outDir;
 					if (dir.indexOf('./') === 0) {
 						dir = dir.substr(2);
 					}
-					if (dir[dir.length-1] !== '/') {
+					if (dir[dir.length - 1] !== '/') {
 						dir += '/';
 					}
 				}
@@ -330,7 +340,7 @@ function configureMern(config: any) {
 	config.internalConsoleOptions = 'neverOpen';
 }
 
-function isTranspiledLanguage(languagId: string) : boolean {
+function isTranspiledLanguage(languagId: string): boolean {
 	return languagId === 'typescript' || languagId === 'coffeescript';
 }
 

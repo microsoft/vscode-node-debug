@@ -6,6 +6,7 @@
 	"open.loaded.script": "Open Loaded Script",
 	"attach.node.process": "Attach to Node Process",
 	"toggle.skipping.this.file": "Toggle Skipping this File",
+	"start.with.stop.on.entry": "Start Debugging and Stop on Entry",
 
 	"smartStep.description": "Automatically step through generated code that cannot be mapped back to the original source.",
 	"skipFiles.description": "An array of glob patterns for files to skip when debugging. The pattern `<node_internals>/**` matches all internal Node.js modules.",

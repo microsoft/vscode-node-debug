@@ -85,7 +85,8 @@
 		"onCommand:extension.node-debug.toggleSkippingFile",
 		"onCommand:extension.node-debug.pickLoadedScript",
 		"onCommand:extension.node-debug.attachNodeProcess",
-		"onCommand:extension.node-debug.startAutoAttach"
+		"onCommand:extension.node-debug.startAutoAttach",
+		"onCommand:extension.node-debug.startWithStopOnEntry"
 	],
 	"contributes": {
 		"menus": {
@@ -112,6 +113,11 @@
 				"command": "extension.node-debug.toggleSkippingFile",
 				"title": "%toggle.skipping.this.file%",
 				"category": "Debug"
+			},
+			{
+				"command": "extension.node-debug.startWithStopOnEntry",
+				"title": "%start.with.stop.on.entry%",
+				"category": "Debug"
 			}
 		],
 		"keybindings": [
@@ -120,6 +126,18 @@
 				"key": "ctrl+f4",
 				"mac": "cmd+f4",
 				"when": "debugType == 'node'"
+			},
+			{
+				"command": "extension.node-debug.startWithStopOnEntry",
+				"key": "F10",
+				"mac": "F10",
+				"when": "!inDebugMode && debugConfigurationType=='node'"
+			},
+			{
+				"command": "extension.node-debug.startWithStopOnEntry",
+				"key": "F11",
+				"mac": "F11",
+				"when": "!inDebugMode && debugConfigurationType=='node'"
 			}
 		],
 		"breakpoints": [
