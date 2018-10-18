@@ -139,6 +139,18 @@ gulp.task('internal-nls-compile', function() {
 	return compile(true);
 });
 
+gulp.task('nls-bundle-create', function () {
+	var r = tsProject.src()
+		.pipe(sourcemaps.init())
+		.pipe(tsProject()).js
+		.pipe(nls.createMetaDataFiles())
+		.pipe(nls.bundleMetaDataFiles('vscode-node-debug', 'dist'))
+		.pipe(nls.bundleLanguageFiles())
+		.pipe(filter('**/nls.*.json'));
+
+	return r.pipe(gulp.dest('dist'));
+})
+
 gulp.task('add-i18n', function() {
 	return gulp.src(['package.nls.json'])
 		.pipe(nls.createAdditionalLanguageFiles(defaultLanguages, 'i18n'))
