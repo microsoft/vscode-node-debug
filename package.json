@@ -15,10 +15,14 @@
 	"private": true,
 	"scripts": {
 		"postinstall": "node ./node_modules/vscode/bin/install",
+		"webpack": "gulp clean && webpack --mode development",
+		"webpack-watch": "webpack --mode development --watch",
+		"webpack-publish": "gulp clean && gulp nls-bundle-create && webpack --mode production --nls",
+
 		"build": "gulp build",
 		"watch": "gulp watch",
-		"test": "mocha --timeout 10000 -u tdd ./out/tests/",
-		"nodemon": "nodemon --debug --nolazy ./out/node/nodeDebug.js --server=4711",
+		"test": "gulp compile && mocha --timeout 10000 -u tdd ./out/tests/",
+		"nodemon": "nodemon --debug --nolazy ./dist/nodeDebug.js --server=4711",
 		"prepublish": "gulp build",
 		"package": "gulp package",
 		"publish": "gulp publish",
@@ -81,7 +85,7 @@
 		"webpack": "^4.21.0",
 		"webpack-cli": "^3.1.2"
 	},
-	"main": "./out/node/extension/extension.js",
+	"main": "./dist/extension.js",
 	"activationEvents": [
 		"onDebugInitialConfigurations",
 		"onDebugResolve:node",
@@ -156,7 +160,7 @@
 			{
 				"type": "node",
 				"label": "%node.label%",
-				"program": "./out/node/nodeDebug.js",
+				"program": "./dist/nodeDebug.js",
 				"runtime": "node",
 				"variables": {
 					"PickProcess": "extension.pickNodeProcess"

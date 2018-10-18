@@ -9,7 +9,7 @@
 			"args": [
 				"--extensionDevelopmentPath=${workspaceFolder}"
 			],
-			"outFiles": [ "${workspaceFolder}/out/**/*.js" ]
+			"outFiles": [ "${workspaceFolder}/dist/**/*.js" ]
 		},
 		{
 			"type": "node",
@@ -17,7 +17,7 @@
 			"name": "Server",
 			"program": "${workspaceFolder}/src/node/nodeDebug.ts",
 			"args": [ "--server=4711" ],
-			"outFiles": [ "${workspaceFolder}/out/**/*.js" ],
+			"outFiles": [ "${workspaceFolder}/dist/*.js" ],
 			"internalConsoleOptions": "openOnSessionStart"
 		},
 		{
@@ -30,7 +30,7 @@
 			],
 			"restart": true,
 			"port": 5858,
-			"outFiles": [ "${workspaceFolder}/out/**/*.js" ],
+			"outFiles": [ "${workspaceFolder}/dist/**/*.js" ],
 			"console": "integratedTerminal"
 		},
 		{

@@ -78,7 +78,7 @@ gulp.task('package', function(callback) {
 });
 
 gulp.task('clean', function() {
-	return del(['out/**', 'package.nls.*.json', 'node-debug-*.vsix']);
+	return del(['out/**', 'dist/**', 'package.nls.*.json', 'node-debug-*.vsix']);
 })
 
 gulp.task('watch', ['internal-build'], function(cb) {
