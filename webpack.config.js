@@ -33,11 +33,6 @@ const config = {
 	},
 	module: {
 		rules: [{
-			loader: 'vscode-nls-dev/lib/webpack-loader',
-			options: {
-				base: path.join(__dirname, 'src')
-			}
-		}, {
 			test: /\.ts$/,
 			exclude: /node_modules/,
 			use: [{
@@ -50,6 +45,16 @@ const config = {
 			{ from: './src/node/debugInjection.js', to: '.' }
 		])
 	],
+}
+
+if (process.argv.includes('--vscode-nls')) {
+	// rewrite nls call when being asked for
+	config.module.rules.unshift({
+		loader: 'vscode-nls-dev/lib/webpack-loader',
+		options: {
+			base: path.join(__dirname, 'src')
+		}
+	})
 }
 
 module.exports = config;
