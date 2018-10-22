@@ -52,6 +52,11 @@ export interface ISourceMaps {
 	 * line and column are 0 based.
 	 */
 	CannotMapLine(pathToGenerated: string, content: string | null, line: number, column: number): Promise<boolean>;
+
+	/*
+	 * Returns all source paths for the generated path.
+	 */
+	AllSources(pathToGenerated: string): Promise<string[] | undefined>;
 }
 
 export class SourceMaps implements ISourceMaps {
@@ -162,6 +167,19 @@ export class SourceMaps implements ISourceMaps {
 				// no corresponding source.
 				return null;
 			});
+		});
+	}
+
+	AllSources(pathToGenerated: string): Promise<string[] | undefined> {
+
+		return this._findGeneratedToSourceMapping(pathToGenerated).then(map => {
+			if (map) {
+				return map.allSourcePaths();
+			} else {
+				return undefined
+			}
+		}).catch(err => {
+			return undefined
 		});
 	}
 

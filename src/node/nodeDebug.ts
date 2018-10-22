@@ -450,9 +450,9 @@ export class NodeDebugSession extends LoggingDebugSession {
 		*/
 
 		this._node.on('afterCompile', (event: NodeV8Event) => {
-			//this.outLine(`afterCompile ${this._scriptToPath(event.body.script)}`);
-			this.sendEvent(new LoadedSourceEvent('new', this._scriptToSource(event.body.script)));
-			//this.sendEvent(new Event('scriptLoaded', { path: this._scriptToPath(event.body.script) }));
+			this._scriptToSource(event.body.script).then(source => {
+				this.sendEvent(new LoadedSourceEvent('new', source));
+			});
 		});
 
 		this._node.on('close', (event: NodeV8Event) => {
@@ -711,7 +711,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 	 * - script name is an internal module: return "<node_internals/name"
 	 * - script has no name: return "<node_internals/VMnnn" where nnn is the script ID
 	 */
-	private _scriptToSource(script: V8Script): Source {
+	private _scriptToSource(script: V8Script): Promise<Source> {
 		let path = script.name;
 		if (path) {
 			if (!PathUtils.isAbsolutePath(path)) {
@@ -720,7 +720,16 @@ export class NodeDebugSession extends LoggingDebugSession {
 		} else {
 			path = `${NodeDebugSession.NODE_INTERNALS}/VM${script.id}`;
 		}
-		return new Source(Path.basename(path), path, this._getScriptIdHandle(script.id));
+		const src = new Source(Path.basename(path), path, this._getScriptIdHandle(script.id));
+		if (this._sourceMaps) {
+			return this._sourceMaps.AllSources(path).then(sources => {
+				if (sources && sources.length > 0) {
+					(<DebugProtocol.Source>src).sources = sources.map(s => new Source(Path.basename(s), s) );
+				}
+				return src;
+			});
+		}
+		return Promise.resolve(src);
 	}
 
 	/**
@@ -3845,9 +3854,11 @@ export class NodeDebugSession extends LoggingDebugSession {
 	protected loadedSourcesRequest(response: DebugProtocol.LoadedSourcesResponse, args: DebugProtocol.LoadedSourcesArguments) {
 
 		this._node.scripts({ types: 4 }).then(resp => {
-			let sources = resp.body.map(script => this._scriptToSource(script));
-			response.body = { sources: sources };
-			this.sendResponse(response);
+			const sources = resp.body.map(script => this._scriptToSource(script));
+			Promise.all(sources).then(result => {
+				response.body = { sources: result };
+				this.sendResponse(response);
+			});
 		}).catch(err => {
 			this.sendErrorResponse(response, 9999, `scripts error: ${err}`);
 		});
