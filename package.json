@@ -138,7 +138,6 @@
 			},
 			{
 				"command": "extension.node-debug.startWithStopOnEntry",
-				"key": "F11",
 				"mac": "F11",
 				"when": "!inDebugMode && debugConfigurationType=='node'"
 			}
