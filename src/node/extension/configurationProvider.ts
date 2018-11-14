@@ -92,6 +92,12 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 			}
 		}
 
+		// if a 'remoteRoot' is specified without a corresponding 'localRoot', set 'localRoot' to the workspace folder.
+		// see https://github.com/Microsoft/vscode/issues/63118
+		if (config.remoteRoot && !config.localRoot) {
+			config.localRoot = '${workspaceFolder}';
+		}
+
 		// remove 'useWSL' on all platforms but Windows
 		if (process.platform !== 'win32' && config.useWSL) {
 			this._logger.debug('useWSL attribute ignored on non-Windows OS.');
