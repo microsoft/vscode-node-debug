@@ -98,19 +98,23 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 			delete config.useWSL;
 		}
 
-		// when using "integratedTerminal" ensure that debug console doesn't get activated; see #43164
-		if (config.console === 'integratedTerminal' && !config.internalConsoleOptions) {
-			config.internalConsoleOptions = 'neverOpen';
-		}
-
 		// "nvm" support
 		if (config.request === 'launch' && typeof config.runtimeVersion === 'string' && config.runtimeVersion !== 'default') {
 			await this.nvmSupport(config);
 		}
 
-		// "auto attach child process" support
+		// "auto attach child process" (aka Cluster) support
 		if (config.autoAttachChildProcesses) {
 			Cluster.prepareAutoAttachChildProcesses(folder, config);
+			// if no console is set, use the integrated terminal so that output of all child processes goes to one terminal. See https://github.com/Microsoft/vscode/issues/62420
+			if (!config.console) {
+				config.console = 'integratedTerminal';
+			}
+		}
+
+		// when using "integratedTerminal" ensure that debug console doesn't get activated; see https://github.com/Microsoft/vscode/issues/43164
+		if (config.console === 'integratedTerminal' && !config.internalConsoleOptions) {
+			config.internalConsoleOptions = 'neverOpen';
 		}
 
 		// "attach to process via picker" support
