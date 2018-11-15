@@ -37,7 +37,7 @@
 	],
 	"dependencies": {
 		"vscode-debugadapter": "1.32.1",
-		"source-map": "0.7.3",
+		"source-map": "0.6.1",
 		"vscode-nls": "4.0.0",
 		"request-light": "0.2.4",
 		"glob": "7.1.3",

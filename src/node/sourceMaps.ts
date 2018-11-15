@@ -518,15 +518,14 @@ export class SourceMap {
 
 
 		// source-map@0.6.1
-		/*
 		try {
 			this._smc = new SM.SourceMapConsumer(sm);
 		} catch (e) {
 			// ignore exception and leave _smc undefined
 		}
 		return Promise.resolve(this);
-		*/
 
+		/*
 		// source-map@0.7.3
 		return new SM.SourceMapConsumer(sm).then(x => {
 			this._smc = x;
@@ -535,6 +534,7 @@ export class SourceMap {
 			// ignore exception and leave _smc undefined
 			return this;
 		});
+		*/
 	}
 
 	/*
@@ -560,7 +560,7 @@ export class SourceMap {
 	 * Finds the nearest source location for the given location in the generated file.
 	 * Returns null if sourcemap is invalid.
 	 */
-	public originalPositionFor(line: number, column: number, bias: Bias): SM.NullableMappedPosition | null {
+	public originalPositionFor(line: number, column: number, bias: Bias): SM./*Nullable*/MappedPosition | null {
 
 		if (!this._smc) {
 			return null;
@@ -593,7 +593,7 @@ export class SourceMap {
 	 * Finds the nearest location in the generated file for the given source location.
 	 * Returns null if sourcemap is invalid.
 	 */
-	public generatedPositionFor(absPath: string, line: number, column: number, bias?: Bias): SM.NullablePosition | null {
+	public generatedPositionFor(absPath: string, line: number, column: number, bias?: Bias): SM./*Nullable*/Position | null {
 
 		if (!this._smc) {
 			return null;
