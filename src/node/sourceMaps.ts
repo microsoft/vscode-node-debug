@@ -334,24 +334,25 @@ export class SourceMaps implements ISourceMaps {
 
 		// use sha256 to ensure the hash value can be used in filenames
 		const hash = CRYPTO.createHash('sha256').update(uri.uri()).digest('hex');
-
 		let promise = this._sourceMapCache.get(hash);
-		if (promise) {
-			return promise;
+		if (!promise) {
+			try {
+				promise = this._loadSourceMap(uri, pathToGenerated, hash);
+				this._sourceMapCache.set(hash, promise);
+			} catch (err) {
+				this._log(`_loadSourceMap: loading source map '${uri.uri()}' failed with exception: ${err}`);
+				return Promise.resolve(null);
+			}
 		}
 
-		try {
-			const prom = this._loadSourceMap(uri, pathToGenerated, hash)
-				/*.catch(err => {
-					this._log(`_loadSourceMap: loading source map '${uri.uri()}' failed with exception: ${err}`);
-					return null;
-				})*/;
-			this._sourceMapCache.set(hash, prom);
-			return prom;
-		} catch (err) {
-			this._log(`_loadSourceMap: loading source map '${uri.uri()}' failed with exception: ${err}`);
-			return Promise.resolve(null);
-		}
+		return promise;
+	}
+
+	private registerSourceMap(map_path: string, pathToGenerated: string, content: string) : Promise<SourceMap> {
+		return SourceMap.newSourceMap(map_path, pathToGenerated, content).then(sm => {
+			this._registerSourceMap(sm);
+			return sm;
+		});
 	}
 
 	/**
@@ -363,7 +364,7 @@ export class SourceMaps implements ISourceMaps {
 
 			const map_path = uri.filePath();
 			return this._readFile(map_path).then(content => {
-				return this._registerSourceMap(new SourceMap(map_path, pathToGenerated, content));
+				return this.registerSourceMap(map_path, pathToGenerated, content);
 			});
 		}
 
@@ -375,7 +376,7 @@ export class SourceMaps implements ISourceMaps {
 					const buffer = new Buffer(data, 'base64');
 					const json = buffer.toString();
 					if (json) {
-						return Promise.resolve(this._registerSourceMap(new SourceMap(pathToGenerated, pathToGenerated, json)));
+						return this.registerSourceMap(pathToGenerated, pathToGenerated, json);
 					}
 				}
 				catch (e) {
@@ -394,7 +395,7 @@ export class SourceMaps implements ISourceMaps {
 
 				if (exists) {
 					return this._readFile(path).then(content => {
-						return this._registerSourceMap(new SourceMap(pathToGenerated, pathToGenerated, content));
+						return this.registerSourceMap(pathToGenerated, pathToGenerated, content);
 					});
 				}
 
@@ -405,7 +406,7 @@ export class SourceMaps implements ISourceMaps {
 
 				return XHR.xhr(options).then(response => {
 					return this._writeFile(path, response.responseText).then(content => {
-						return this._registerSourceMap(new SourceMap(pathToGenerated, pathToGenerated, content));
+						return this.registerSourceMap(pathToGenerated, pathToGenerated, content);
 					});
 				}).catch((error: XHR.XHRResponse) => {
 					return Promise.reject(XHR.getErrorStatusDescription(error.status) || error.toString());
@@ -472,7 +473,15 @@ export class SourceMap {
 	private _smc: SM.SourceMapConsumer;	// the internal source map
 
 
-	public constructor(mapPath: string, generatedPath: string, json: string) {
+	public static newSourceMap(mapPath: string, generatedPath: string, json: string): Promise<SourceMap> {
+		const sm = new SourceMap();
+		return sm.init(mapPath, generatedPath, json);
+	}
+
+	private constructor() {
+	}
+
+	private init(mapPath: string, generatedPath: string, json: string): Promise<SourceMap> {
 
 		this._sourcemapLocation = this.fixPath(Path.dirname(mapPath));
 
@@ -506,11 +515,26 @@ export class SourceMap {
 					? util.relative(this._sourceRoot, source)
 					: source;
 			});
+
+
+		// source-map@0.6.1
 		try {
 			this._smc = new SM.SourceMapConsumer(sm);
 		} catch (e) {
 			// ignore exception and leave _smc undefined
 		}
+		return Promise.resolve(this);
+
+		/*
+		// source-map@0.7.3
+		return new SM.SourceMapConsumer(sm).then(x => {
+			this._smc = x;
+			return this;
+		}).catch(err => {
+			// ignore exception and leave _smc undefined
+			return this;
+		});
+		*/
 	}
 
 	/*
@@ -536,7 +560,7 @@ export class SourceMap {
 	 * Finds the nearest source location for the given location in the generated file.
 	 * Returns null if sourcemap is invalid.
 	 */
-	public originalPositionFor(line: number, column: number, bias: Bias): SM.MappedPosition | null {
+	public originalPositionFor(line: number, column: number, bias: Bias): SM./*Nullable*/MappedPosition | null {
 
 		if (!this._smc) {
 			return null;
@@ -569,7 +593,7 @@ export class SourceMap {
 	 * Finds the nearest location in the generated file for the given source location.
 	 * Returns null if sourcemap is invalid.
 	 */
-	public generatedPositionFor(absPath: string, line: number, column: number, bias?: Bias): SM.Position | null {
+	public generatedPositionFor(absPath: string, line: number, column: number, bias?: Bias): SM./*Nullable*/Position | null {
 
 		if (!this._smc) {
 			return null;
