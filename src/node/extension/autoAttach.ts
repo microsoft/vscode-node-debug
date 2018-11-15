@@ -62,7 +62,7 @@ export function initializeAutoAttach(context: vscode.ExtensionContext) {
 					const name = localize('process.with.pid.label', "Auto attached ({0})", pid);
 					attachToProcess(undefined, name, pid, args);
 				}
-			});;
+			});
 		}
 	}));
 
@@ -77,7 +77,7 @@ export function initializeAutoAttach(context: vscode.ExtensionContext) {
 function alreadyAttached(pid: number): Promise<boolean> {
 
 	return Promise.all(pids).then(pids => {
-		return pids.indexOf(pid) >= 0
+		return pids.indexOf(pid) >= 0;
 	});
 }
 

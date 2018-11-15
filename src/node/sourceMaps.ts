@@ -176,10 +176,10 @@ export class SourceMaps implements ISourceMaps {
 			if (map) {
 				return map.allSourcePaths();
 			} else {
-				return undefined
+				return undefined;
 			}
 		}).catch(err => {
-			return undefined
+			return undefined;
 		});
 	}
 
