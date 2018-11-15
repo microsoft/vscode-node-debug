@@ -53,7 +53,6 @@
 	"devDependencies": {
 		"@types/mocha": "5.2.5",
 		"@types/node": "8.10.25",
-		"@types/source-map": "0.5.7",
 		"gulp": "3.9.1",
 		"gulp-util": "3.0.8",
 		"gulp-typescript": "3.2.2",
