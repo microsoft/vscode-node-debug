@@ -121,18 +121,11 @@ gulp.task('nls-bundle-create', function () {
 	return r.pipe(gulp.dest('dist'));
 })
 
-gulp.task('transifex-push', ['build'], function() {
+gulp.task('translations-export', ['build'], function() {
 	return gulp.src(['package.nls.json', 'out/nls.metadata.header.json','out/nls.metadata.json'])
 		.pipe(nls.createXlfFiles(transifexProjectName, transifexExtensionName))
-		.pipe(nls.pushXlfFiles(transifexApiHostname, transifexApiName, transifexApiToken));
+		.pipe(gulp.dest(path.join('..', 'vscode-translations-export')));
 });
-
-gulp.task('transifex-push-test', ['build'], function() {
-	return gulp.src(['package.nls.json', 'out/nls.metadata.header.json','out/nls.metadata.json'])
-		.pipe(nls.createXlfFiles(transifexProjectName, transifexExtensionName))
-		.pipe(gulp.dest(path.join('..', `${transifexExtensionName}-push-test`)));
-});
-
 
 var allTypeScript = [
 	'src/**/*.ts'
