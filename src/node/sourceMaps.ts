@@ -227,12 +227,10 @@ export class SourceMaps implements ISourceMaps {
 				// heuristic for VSCode extension host support:
 				// we know that the plugin has an "out" directory next to the "src" directory
 				// TODO: get rid of this and use glob patterns instead
-				if (!map) {
-					let srcSegment = Path.sep + 'src' + Path.sep;
-					if (pathToGenerated.indexOf(srcSegment) >= 0) {
-						const outSegment = Path.sep + 'out' + Path.sep;
-						return this._findGeneratedToSourceMapping(pathToGenerated.replace(srcSegment, outSegment));
-					}
+				let srcSegment = Path.sep + 'src' + Path.sep;
+				if (pathToGenerated.indexOf(srcSegment) >= 0) {
+					const outSegment = Path.sep + 'out' + Path.sep;
+					return this._findGeneratedToSourceMapping(pathToGenerated.replace(srcSegment, outSegment));
 				}
 			}
 			return map;

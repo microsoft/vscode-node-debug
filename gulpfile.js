@@ -36,7 +36,7 @@ var scripts2 = [
 
 var outDest = 'out';
 
-const transifexApiHostname = 'www.transifex.com'
+const transifexApiHostname = 'www.transifex.com';
 const transifexApiName = 'api';
 const transifexApiToken = process.env.TRANSIFEX_API_TOKEN;
 const transifexProjectName = 'vscode-extensions';
@@ -57,11 +57,11 @@ gulp.task('build', function(callback) {
 
 gulp.task('clean', function() {
 	return del(['out/**', 'dist/**', 'package.nls.*.json', 'node-debug-*.vsix']);
-})
+});
 
 gulp.task('prepare-for-webpack', function(callback) {
 	runSequence('clean', 'internal-minify-scripts', 'nls-bundle-create', callback);
-})
+});
 
 gulp.task('watch', ['internal-build'], function(cb) {
 	log('Watching build sources...');
@@ -119,7 +119,7 @@ gulp.task('nls-bundle-create', function () {
 		.pipe(filter('**/nls.*.json'));
 
 	return r.pipe(gulp.dest('dist'));
-})
+});
 
 gulp.task('translations-export', ['build'], function() {
 	return gulp.src(['package.nls.json', 'out/nls.metadata.header.json','out/nls.metadata.json'])

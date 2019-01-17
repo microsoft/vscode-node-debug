@@ -1238,7 +1238,8 @@ export class NodeDebugSession extends LoggingDebugSession {
 		if (typeof args.smartStep === 'boolean') {
 			this._smartStep = args.smartStep;
 		}
-		if (typeof args.skipFiles) {
+
+		if (Array.isArray(args.skipFiles)) {
 			this._skipFiles = args.skipFiles;
 		}
 
@@ -4244,9 +4245,9 @@ function isIndex(name: string | number) {
 
 const LOGMESSAGE_VARIABLE_REGEXP = /{(.*?)}/g;
 
-function logMessageToExpression(msg) {
+function logMessageToExpression(msg: string) {
 
-	msg = msg.replace('%', '%%');
+	msg = msg.replace(/%/g, '%%');
 
 	let args: string[] = [];
 	let format = msg.replace(LOGMESSAGE_VARIABLE_REGEXP, (match, group) => {
@@ -4259,7 +4260,7 @@ function logMessageToExpression(msg) {
 		}
 	});
 
-	format = format.replace('\'', '\\\'');
+	format = format.replace(/'/g, '\\\'');
 
 	if (args.length > 0) {
 		return `console.log('${format}', ${args.join(', ')})`;
