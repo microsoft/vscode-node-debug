@@ -30,7 +30,7 @@
 	],
 	"engines": {
 		"vscode": "^1.29.0",
-		"node": "^6.2.2"
+		"node": "^8.9.3"
 	},
 	"extensionDependencies": [
 		"ms-vscode.node-debug2"
