@@ -100,10 +100,10 @@ export function attachToProcess(folder: vscode.WorkspaceFolder | undefined, name
 
 			if (baseConfig) {
 				// selectively copy attributes
-				if (baseConfig.timeout) {
+				if (typeof baseConfig.timeout === 'number') {
 					config.timeout = baseConfig.timeout;
 				}
-				if (baseConfig.sourceMaps) {
+				if (typeof baseConfig.sourceMaps === 'boolean') {
 					config.sourceMaps = baseConfig.sourceMaps;
 				}
 				if (baseConfig.outFiles) {
@@ -112,17 +112,20 @@ export function attachToProcess(folder: vscode.WorkspaceFolder | undefined, name
 				if (baseConfig.sourceMapPathOverrides) {
 					config.sourceMapPathOverrides = baseConfig.sourceMapPathOverrides;
 				}
-				if (baseConfig.smartStep) {
+				if (typeof baseConfig.smartStep === 'boolean') {
 					config.smartStep = baseConfig.smartStep;
 				}
 				if (baseConfig.skipFiles) {
 					config.skipFiles = baseConfig.skipFiles;
 				}
-				if (baseConfig.showAsyncStacks) {
-					config.sourceMaps = baseConfig.showAsyncStacks;
+				if (typeof baseConfig.showAsyncStacks === 'boolean') {
+					config.showAsyncStacks = baseConfig.showAsyncStacks;
 				}
-				if (baseConfig.trace) {
+				if (typeof baseConfig.trace === 'boolean' || typeof baseConfig.trace === 'string') {
 					config.trace = baseConfig.trace;
+				}
+				if (typeof baseConfig.stopOnEntry === 'boolean') {
+					config.stopOnEntry = baseConfig.stopOnEntry;
 				}
 			}
 
