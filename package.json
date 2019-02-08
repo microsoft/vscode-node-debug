@@ -1,7 +1,7 @@
 {
 	"name": "node-debug",
 	"displayName": "Node Debug (legacy)",
-	"version": "1.31.2",
+	"version": "1.32.0",
 	"publisher": "ms-vscode",
 	"description": "%extension.description%",
 	"icon": "images/node-debug-icon.png",
@@ -29,7 +29,7 @@
 		"multi-root ready"
 	],
 	"engines": {
-		"vscode": "^1.29.0",
+		"vscode": "^1.32.0",
 		"node": "^8.9.3"
 	},
 	"extensionDependencies": [
