@@ -32,8 +32,14 @@ suite('Node Debug Adapter', () => {
 			const result = CP.spawnSync('node', ['--version']);
 			const semVerString = result.stdout ? result.stdout.toString() : undefined;
 			if (semVerString) {
+				console.log(`semVerString`);
 				const match = semVerString.trim().match(/v(\d+)\.(\d+)\.(\d+)/);
 				if (match && match.length === 4 && parseInt(match[1]) >= 8) {
+
+					console.log(`LEGACY_NODE_PATH: '${env.LEGACY_NODE_PATH}'`);
+					console.log(`NVM_DIR: '${env.NVM_DIR}'`);
+					console.log(`PATH: '${env.PATH}'`);
+
 					if (env.LEGACY_NODE_PATH) {
 						env = PathUtils.extendObject({}, process.env);
 						if (process.platform === 'win32') {
