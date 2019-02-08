@@ -32,7 +32,7 @@ suite('Node Debug Adapter', () => {
 			const result = CP.spawnSync('node', ['--version']);
 			const semVerString = result.stdout ? result.stdout.toString() : undefined;
 			if (semVerString) {
-				console.log(`semVerString`);
+				console.log(`NVM_HOME: ${env.NVM_HOME}`);
 				const match = semVerString.trim().match(/v(\d+)\.(\d+)\.(\d+)/);
 				if (match && match.length === 4 && parseInt(match[1]) >= 8) {
 					env = PathUtils.extendObject({}, process.env);
