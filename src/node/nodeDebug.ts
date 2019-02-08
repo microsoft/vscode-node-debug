@@ -1130,9 +1130,9 @@ export class NodeDebugSession extends LoggingDebugSession {
 				Object.keys(e).filter(v => e[v] === null).forEach(key => delete e[key] );
 			}
 
-			const options = {
+			const options: CP.SpawnOptions = {
 				cwd: workingDirectory,
-				env: envVars
+				env: <NodeJS.ProcessEnv> envVars
 			};
 
 			// see bug #45832
@@ -4273,11 +4273,14 @@ function findport(): Promise<number> {
 		let port = 0;
 		const server = Net.createServer();
 		server.on('listening', _ => {
-			port = server.address().port;
+			const ai = server.address();
+			if (typeof ai === 'object') {
+				port = ai.port;
+			}
 			server.close();
 		});
-		server.on('close', _ => c(port));
-		server.on('error', (err) => e(err));
+		server.on('close', () => c(port));
+		server.on('error', err => e(err));
 		server.listen(0, '127.0.0.1');
 	});
 }
