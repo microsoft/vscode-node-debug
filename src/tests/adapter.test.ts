@@ -35,22 +35,11 @@ suite('Node Debug Adapter', () => {
 				console.log(`semVerString`);
 				const match = semVerString.trim().match(/v(\d+)\.(\d+)\.(\d+)/);
 				if (match && match.length === 4 && parseInt(match[1]) >= 8) {
-
-					console.log(`LEGACY_NODE_PATH: '${env.LEGACY_NODE_PATH}'`);
-					console.log(`NVM_DIR: '${env.NVM_DIR}'`);
-					console.log(`PATH: '${env.PATH}'`);
-
-					env['LEGACY_NODE_PATH'] = `${env.NVM_DIR}/versions/node/v7.9.0/bin:${env.PATH}`;
-
-					if (env.LEGACY_NODE_PATH) {
-						env = PathUtils.extendObject({}, process.env);
-						if (process.platform === 'win32') {
-							env.Path = env.LEGACY_NODE_PATH;
-						} else {
-							env.PATH = env.LEGACY_NODE_PATH;
-						}
+					env = PathUtils.extendObject({}, process.env);
+					if (process.platform === 'win32') {
+						env.Path = env.LEGACY_NODE_PATH || `${env.NVM_HOME}\\v7.9.0;${env.Path}`;
 					} else {
-						throw new Error('Suite needs node.js version that supports legacy protocol. Make sure to have an env var LEGACY_NODE_PATH.');
+						env.PATH = env.LEGACY_NODE_PATH || `${env.NVM_DIR}/versions/node/v7.9.0/bin:${env.PATH}`;
 					}
 				}
 			}
