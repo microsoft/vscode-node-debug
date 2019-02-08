@@ -40,6 +40,8 @@ suite('Node Debug Adapter', () => {
 					console.log(`NVM_DIR: '${env.NVM_DIR}'`);
 					console.log(`PATH: '${env.PATH}'`);
 
+					env['LEGACY_NODE_PATH'] = `${env.NVM_DIR}/versions/node/v7.9.0/bin:${env.PATH}`;
+
 					if (env.LEGACY_NODE_PATH) {
 						env = PathUtils.extendObject({}, process.env);
 						if (process.platform === 'win32') {
