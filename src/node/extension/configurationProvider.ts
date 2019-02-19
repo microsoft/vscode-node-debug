@@ -6,7 +6,7 @@
 
 import * as nls from 'vscode-nls';
 import * as vscode from 'vscode';
-import { join, isAbsolute, dirname } from 'path';
+import { join, isAbsolute, dirname, posix } from 'path';
 import * as fs from 'fs';
 
 import { writeToConsole, mkdirP, Logger } from './utilities';
@@ -276,9 +276,10 @@ function createLaunchConfigFromContext(folder: vscode.WorkspaceFolder | undefine
 				const languageId = editor.document.languageId;
 				if (languageId === 'javascript' || isTranspiledLanguage(languageId)) {
 					const wf = vscode.workspace.getWorkspaceFolder(editor.document.uri);
-					if (wf === folder) {
-						program = vscode.workspace.asRelativePath(editor.document.uri);
-						if (!isAbsolute(program)) {
+					if (wf && wf === folder) {
+						// since we are dealing with node.js, we use forward slashes on all platforms
+						program = posix.relative(wf.uri.fsPath || '/', editor.document.uri.fsPath || '/');
+						if (program && !isAbsolute(program)) {
 							program = '${workspaceFolder}/' + program;
 						}
 					}
