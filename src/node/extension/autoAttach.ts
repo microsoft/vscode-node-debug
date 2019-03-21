@@ -81,7 +81,7 @@ function alreadyAttached(pid: number): Promise<boolean> {
 	});
 }
 
-export function attachToProcess(folder: vscode.WorkspaceFolder | undefined, name: string, pid: number, args: string, baseConfig?: vscode.DebugConfiguration) {
+export function attachToProcess(folder: vscode.WorkspaceFolder | undefined, name: string, pid: number, args: string, baseConfig?: vscode.DebugConfiguration, parentSession?: vscode.DebugSession) {
 
 	alreadyAttached(pid).then(isAttached => {
 		if (isAttached) {
@@ -140,7 +140,7 @@ export function attachToProcess(folder: vscode.WorkspaceFolder | undefined, name
 				}
 			}
 
-			vscode.debug.startDebugging(folder, config);
+			(<any>vscode.debug).startDebugging(folder, config, parentSession);
 		}
 	});
 }

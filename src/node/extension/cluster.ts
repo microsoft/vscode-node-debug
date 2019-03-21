@@ -56,8 +56,8 @@ export class Cluster {
 				// only attach to new child processes
 				if (!this._subProcesses.has(pid)) {
 					this._subProcesses.add(pid);
-					const name = localize('child.process.with.pid.label', "{0} (child process: {1})", this._config.name, this._childCounter++);
-					attachToProcess(this._folder, name, pid, args, this._config);
+					const name = localize('child.process.with.pid.label', "Child process {0}", this._childCounter++);
+					attachToProcess(this._folder, name, pid, args, this._config, session);
 				}
 			});
 		});
