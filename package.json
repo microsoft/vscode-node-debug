@@ -1,7 +1,7 @@
 {
 	"name": "node-debug",
 	"displayName": "Node Debug (legacy)",
-	"version": "1.32.5",
+	"version": "1.33.0",
 	"publisher": "ms-vscode",
 	"description": "%extension.description%",
 	"icon": "images/node-debug-icon.png",
@@ -71,7 +71,7 @@
 		"tslint-microsoft-contrib": "5.2.1",
 		"tsutils": "3.5.0",
 		"typescript": "2.9.2",
-		"vsce": "^1.57.1",
+		"vsce": "^1.58.0",
 		"vscode": "1.1.21",
 		"vscode-debugadapter-testsupport": "1.34.0",
 		"vscode-debugprotocol": "1.34.0",
