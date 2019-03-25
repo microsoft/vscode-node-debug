@@ -29,7 +29,7 @@
 		"multi-root ready"
 	],
 	"engines": {
-		"vscode": "^1.32.0",
+		"vscode": "^1.33.0",
 		"node": "^10.2.0"
 	},
 	"extensionDependencies": [

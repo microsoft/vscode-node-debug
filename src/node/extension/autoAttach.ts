@@ -140,7 +140,7 @@ export function attachToProcess(folder: vscode.WorkspaceFolder | undefined, name
 				}
 			}
 
-			(<any>vscode.debug).startDebugging(folder, config, parentSession);
+			vscode.debug.startDebugging(folder, config, parentSession);
 		}
 	});
 }
