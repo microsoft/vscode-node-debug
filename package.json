@@ -40,7 +40,7 @@
 		"minimatch": "3.0.4",
 		"request-light": "0.2.4",
 		"source-map": "0.6.1",
-		"vscode-debugadapter": "1.34.0",
+		"vscode-debugadapter": "1.35.0",
 		"vscode-nls": "4.0.0"
 	},
 	"repository": {
@@ -73,8 +73,8 @@
 		"typescript": "2.9.2",
 		"vsce": "^1.58.0",
 		"vscode": "1.1.21",
-		"vscode-debugadapter-testsupport": "1.34.0",
-		"vscode-debugprotocol": "1.34.0",
+		"vscode-debugadapter-testsupport": "1.35.0",
+		"vscode-debugprotocol": "1.35.0",
 		"vscode-nls-dev": "3.2.3",
 		"webpack": "^4.25.1",
 		"webpack-cli": "^3.1.2"
