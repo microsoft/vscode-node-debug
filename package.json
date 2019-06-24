@@ -91,6 +91,17 @@
 		"onCommand:extension.node-debug.startWithStopOnEntry"
 	],
 	"contributes": {
+		"configuration": {
+			"title": "Node debug",
+			"properties": {
+				"debug.node.showUseWslIsDeprecatedWarning": {
+					"scope": "window",
+					"type": "boolean",
+					"description": "%debug.node.showUseWslIsDeprecatedWarning.description%",
+					"default": true
+				}
+			}
+		},
 		"menus": {
 			"debug/callstack/context": [
 				{
@@ -472,7 +483,8 @@
 							"useWSL": {
 								"type": "boolean",
 								"description": "%node.launch.useWSL.description%",
-								"default": true
+								"default": true,
+								"deprecationMessage": "%node.launch.useWSL.deprecation%"
 							},
 							"trace": {
 								"type": [

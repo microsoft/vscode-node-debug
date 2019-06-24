@@ -14,6 +14,9 @@ import { detectDebugType } from './protocolDetection';
 import { resolveProcessId } from './processPicker';
 import { Cluster } from './cluster';
 
+const DEBUG_SETTINGS = 'debug.node';
+const SHOW_USE_WSL_IS_DEPRECATED_WARNING_SETTING = 'showUseWslIsDeprecatedWarning';
+
 const localize = nls.loadMessageBundle();
 let stopOnEntry = false;
 
@@ -98,6 +101,11 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 			config.localRoot = '${workspaceFolder}';
 		}
 
+		// warn about deprecated 'useWSL' attribute.
+		if (typeof config.useWSL !== 'undefined') {
+			this.warnAboutUseWSL();
+		}
+
 		// remove 'useWSL' on all platforms but Windows
 		if (process.platform !== 'win32' && config.useWSL) {
 			this._logger.debug('useWSL attribute ignored on non-Windows OS.');
@@ -158,6 +166,35 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 
 		// everything ok: let VS Code start the debug session
 		return config;
+	}
+
+	private warnAboutUseWSL() {
+
+		interface MyMessageItem extends vscode.MessageItem {
+			id: number;
+		}
+
+		if (vscode.workspace.getConfiguration(DEBUG_SETTINGS).get<boolean>(SHOW_USE_WSL_IS_DEPRECATED_WARNING_SETTING, true)) {
+			vscode.window.showWarningMessage<MyMessageItem>(
+				localize(
+					'useWslDeprecationWarning.title',
+					"Attribute 'useWSL' is deprecated. Please use the 'Remote WSL' extension instead. Click [here]({0}) to learn more.",
+					'https://go.microsoft.com/fwlink/?linkid=2097212'
+				), {
+					title: localize('useWslDeprecationWarning.doNotShowAgain', "Don't Show Again"),
+					id: 1
+				}
+			).then(selected => {
+				if (!selected) {
+					return;
+				}
+				switch (selected.id) {
+					case 1:
+						vscode.workspace.getConfiguration(DEBUG_SETTINGS).update(SHOW_USE_WSL_IS_DEPRECATED_WARNING_SETTING, false, vscode.ConfigurationTarget.Global);
+						break;
+				}
+			});
+		}
 	}
 
 	/**
