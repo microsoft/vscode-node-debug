@@ -24,7 +24,7 @@ export function writeToConsole(message: string) {
 /**
  * Copy attributes from fromObject to toObject.
  */
-export function extendObject<T>(toObject: T, fromObject: T): T {
+export function extendObject<T extends object>(toObject: T, fromObject: T): T {
 
 	for (let key in fromObject) {
 		if (fromObject.hasOwnProperty(key)) {

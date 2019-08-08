@@ -375,11 +375,13 @@ export function multiGlobMatches(patterns: string[], path: string): boolean {
 /**
  * Copy attributes from fromObject to toObject.
  */
-export function extendObject<T> (toObject: T, fromObject: T): T {
+export function extendObject<T extends object> (toObject: T, fromObject: T | undefined): T {
 
-	for (let key in fromObject) {
-		if (fromObject.hasOwnProperty(key)) {
-			toObject[key] = fromObject[key];
+	if (fromObject) {
+		for (let key in fromObject) {
+			if (fromObject.hasOwnProperty(key)) {
+				toObject[key] = fromObject[key];
+			}
 		}
 	}
 	return toObject;
