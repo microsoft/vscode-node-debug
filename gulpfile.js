@@ -7,12 +7,10 @@ var gulp = require('gulp');
 var path = require('path');
 var ts = require('gulp-typescript');
 var sourcemaps = require('gulp-sourcemaps');
-var log = require('gulp-util').log;
 var tslint = require("gulp-tslint");
 var filter = require('gulp-filter');
 var uglify = require('gulp-uglify');
 var del = require('del');
-var runSequence = require('run-sequence');
 var typescript = require('typescript');
 
 var tsProject = ts.createProject('./src/tsconfig.json', { typescript });
@@ -93,7 +91,7 @@ gulp.task('prepare-for-webpack', gulp.series('clean', 'internal-minify-scripts',
 
 
 gulp.task('watch', gulp.series(gulp.parallel('internal-build'), (done) => {
-	log('Watching build sources...');
+	//log('Watching build sources...');
 	gulp.watch(watchedSources, ['internal-build']);
 	done();
 }));

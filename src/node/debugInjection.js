@@ -43,7 +43,7 @@
 	} catch (error) {
 		indexedPropertyCount = function(mirror) {
 			var n = 0;
-			const names = mirror.propertyNames();
+			var names = mirror.propertyNames();
 			for (var i = 0; i < names.length; i++) {
 				if (isIndex(names[i])) {
 					n++;
@@ -53,7 +53,7 @@
 		};
 		namedPropertyCount = function(mirror) {
 			var n = 0;
-			const names = mirror.propertyNames();
+			var names = mirror.propertyNames();
 			for (var i = 0; i < names.length; i++) {
 				if (!isIndex(names[i])) {
 					n++;
@@ -66,7 +66,7 @@
 		};
 		namedProperties = function(mirror) {
 			var named = [];
-			const names = mirror.propertyNames();
+			var names = mirror.propertyNames();
 			for (var i = 0; i < names.length; i++) {
 				var name = names[i];
 				if (!isIndex(name)) {
@@ -243,10 +243,10 @@
 			var maxLocals = request.arguments.maxLocals;
 			var scopes = response.body.scopes;
 			for (var i = 0; i < scopes.length-1; i++) {
-				const details = scopes[i].details_.details_;
+				var details = scopes[i].details_.details_;
 				if (details && details[0] === 1) {	// locals
-					const locals = details[1];
-					const names = Object.keys(locals);
+					var locals = details[1];
+					var names = Object.keys(locals);
 					if (names.length > maxLocals) {
 						var locals2 = {};
 						for (var j = 0; j < maxLocals; j++) {
