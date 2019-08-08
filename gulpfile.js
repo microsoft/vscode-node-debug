@@ -36,55 +36,76 @@ var scripts2 = [
 
 var outDest = 'out';
 
-const transifexApiHostname = 'www.transifex.com';
-const transifexApiName = 'api';
-const transifexApiToken = process.env.TRANSIFEX_API_TOKEN;
 const transifexProjectName = 'vscode-extensions';
 const transifexExtensionName = 'vscode-node-debug';
 
-
-gulp.task('default', function(callback) {
-	runSequence('build', callback);
-});
-
-gulp.task('compile', function(callback) {
-	runSequence('clean', 'internal-build', callback);
-});
-
-gulp.task('build', function(callback) {
-	runSequence('clean', 'internal-build', callback);
-});
-
-gulp.task('clean', function() {
+gulp.task('clean', () => {
 	return del(['out/**', 'dist/**', 'package.nls.*.json', 'node-debug-*.vsix']);
 });
 
-gulp.task('prepare-for-webpack', function(callback) {
-	runSequence('clean', 'internal-minify-scripts', 'nls-bundle-create', callback);
+gulp.task('internal-compile', () => {
+	return compile();
 });
 
-gulp.task('watch', ['internal-build'], function(cb) {
-	log('Watching build sources...');
-	gulp.watch(watchedSources, ['internal-build']);
-});
-
-//---- internal
-
-// compile and copy everything to outDest
-gulp.task('internal-build', function(callback) {
-	runSequence('internal-compile', 'internal-copy-scripts', 'internal-minify-scripts', callback);
-});
-
-gulp.task('internal-copy-scripts', function() {
+gulp.task('internal-copy-scripts', () => {
 	return gulp.src(scripts)
 		.pipe(gulp.dest(outDest + '/node'));
 });
 
-gulp.task('internal-minify-scripts', function() {
+gulp.task('internal-minify-scripts', () => {
 	return gulp.src(scripts2)
 		.pipe(uglify())
 		.pipe(gulp.dest(outDest + '/node'));
 });
+
+// compile and copy everything to outDest
+gulp.task('internal-build', gulp.series('internal-compile', 'internal-copy-scripts', 'internal-minify-scripts', (done) => {
+	done();
+}));
+
+gulp.task('build', gulp.series('clean', 'internal-build', (done) => {
+	done();
+}));
+
+gulp.task('default', gulp.series('build', (done) => {
+	done();
+}));
+
+gulp.task('compile', gulp.series('clean', 'internal-build', (done) => {
+	done();
+}));
+
+gulp.task('nls-bundle-create', () => {
+	var r = tsProject.src()
+		.pipe(sourcemaps.init())
+		.pipe(tsProject()).js
+		.pipe(nls.createMetaDataFiles())
+		.pipe(nls.bundleMetaDataFiles('ms-vscode.node-debug', 'out'))
+		.pipe(nls.bundleLanguageFiles())
+		.pipe(filter('**/nls.*.json'));
+
+	return r.pipe(gulp.dest('dist'));
+});
+
+gulp.task('prepare-for-webpack', gulp.series('clean', 'internal-minify-scripts', 'nls-bundle-create', (done) => {
+	done();
+}));
+
+
+gulp.task('watch', gulp.series(gulp.parallel('internal-build'), (done) => {
+	log('Watching build sources...');
+	gulp.watch(watchedSources, ['internal-build']);
+	done();
+}));
+
+gulp.task('translations-export', gulp.series(gulp.parallel('build'), () => {
+	return gulp.src(['package.nls.json', 'out/nls.metadata.header.json','out/nls.metadata.json'])
+		.pipe(nls.createXlfFiles(transifexProjectName, transifexExtensionName))
+		.pipe(gulp.dest(path.join('..', 'vscode-translations-export')));
+}));
+
+
+//---- internal
 
 function compile() {
 	var r = tsProject.src()
@@ -105,28 +126,6 @@ function compile() {
 	return r.pipe(gulp.dest(outDest));
 }
 
-gulp.task('internal-compile', function() {
-	return compile();
-});
-
-gulp.task('nls-bundle-create', function () {
-	var r = tsProject.src()
-		.pipe(sourcemaps.init())
-		.pipe(tsProject()).js
-		.pipe(nls.createMetaDataFiles())
-		.pipe(nls.bundleMetaDataFiles('ms-vscode.node-debug', 'out'))
-		.pipe(nls.bundleLanguageFiles())
-		.pipe(filter('**/nls.*.json'));
-
-	return r.pipe(gulp.dest('dist'));
-});
-
-gulp.task('translations-export', ['build'], function() {
-	return gulp.src(['package.nls.json', 'out/nls.metadata.header.json','out/nls.metadata.json'])
-		.pipe(nls.createXlfFiles(transifexProjectName, transifexExtensionName))
-		.pipe(gulp.dest(path.join('..', 'vscode-translations-export')));
-});
-
 var allTypeScript = [
 	'src/**/*.ts'
 ];
@@ -136,7 +135,7 @@ var tslintFilter = [
 	'!**/*.d.ts'
 ];
 
-gulp.task('tslint', function () {
+gulp.task('tslint', (done) => {
 	gulp.src(allTypeScript)
 	.pipe(filter(tslintFilter))
 	.pipe(tslint({
@@ -145,5 +144,6 @@ gulp.task('tslint', function () {
 	}))
 	.pipe(tslint.report( {
 		emitError: false
-	}))
+	}));
+	done();
 });
