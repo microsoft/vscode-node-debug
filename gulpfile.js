@@ -97,7 +97,7 @@ gulp.task('watch', gulp.series('internal-build', (done) => {
 }));
 
 gulp.task('translations-export', gulp.series('build', () => {
-	return gulp.src(['package.nls.json', 'out/nls.metadata.header.json','out/nls.metadata.json'])
+	return gulp.src(['package.nls.json', 'out/nls.metadata.header.json','out/nls.metadata.json'], { allowEmpty: true } )
 		.pipe(nls.createXlfFiles(transifexProjectName, transifexExtensionName))
 		.pipe(gulp.dest(path.join('..', 'vscode-translations-export')));
 }));
