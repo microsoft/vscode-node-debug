@@ -90,18 +90,17 @@ gulp.task('prepare-for-webpack', gulp.series('clean', 'internal-minify-scripts',
 }));
 
 
-gulp.task('watch', gulp.series(gulp.parallel('internal-build'), (done) => {
+gulp.task('watch', gulp.series('internal-build', (done) => {
 	//log('Watching build sources...');
 	gulp.watch(watchedSources, ['internal-build']);
 	done();
 }));
 
-gulp.task('translations-export', gulp.series(gulp.parallel('build'), () => {
+gulp.task('translations-export', gulp.series('build', () => {
 	return gulp.src(['package.nls.json', 'out/nls.metadata.header.json','out/nls.metadata.json'])
 		.pipe(nls.createXlfFiles(transifexProjectName, transifexExtensionName))
 		.pipe(gulp.dest(path.join('..', 'vscode-translations-export')));
 }));
-
 
 //---- internal
 

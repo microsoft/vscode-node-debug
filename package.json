@@ -23,7 +23,8 @@
 		"package": "gulp prepare-for-webpack && webpack --mode production --vscode-nls && vsce package",
 		"publish": "gulp prepare-for-webpack && webpack --mode production --vscode-nls && vsce publish",
 		"bump": "npm version patch -m 'bump to %s'",
-		"tslint": "gulp tslint"
+		"tslint": "gulp tslint",
+		"translations-export": "gulp translations-export"
 	},
 	"keywords": [
 		"multi-root ready"
