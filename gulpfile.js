@@ -33,6 +33,7 @@ var scripts2 = [
 ];
 
 var outDest = 'out';
+var webPackedDest = 'dist';
 
 const transifexProjectName = 'vscode-extensions';
 const transifexExtensionName = 'vscode-node-debug';
@@ -57,19 +58,19 @@ gulp.task('internal-minify-scripts', () => {
 });
 
 // compile and copy everything to outDest
-gulp.task('internal-build', gulp.series('internal-compile', 'internal-copy-scripts', 'internal-minify-scripts', (done) => {
+gulp.task('internal-build', gulp.series('internal-compile', 'internal-copy-scripts', 'internal-minify-scripts', done => {
 	done();
 }));
 
-gulp.task('build', gulp.series('clean', 'internal-build', (done) => {
+gulp.task('build', gulp.series('clean', 'internal-build', done => {
 	done();
 }));
 
-gulp.task('default', gulp.series('build', (done) => {
+gulp.task('default', gulp.series('build', done => {
 	done();
 }));
 
-gulp.task('compile', gulp.series('clean', 'internal-build', (done) => {
+gulp.task('compile', gulp.series('clean', 'internal-build', done => {
 	done();
 }));
 
@@ -78,26 +79,26 @@ gulp.task('nls-bundle-create', () => {
 		.pipe(sourcemaps.init())
 		.pipe(tsProject()).js
 		.pipe(nls.createMetaDataFiles())
-		.pipe(nls.bundleMetaDataFiles('ms-vscode.node-debug', 'out'))
+		.pipe(nls.bundleMetaDataFiles('ms-vscode.node-debug', webPackedDest))
 		.pipe(nls.bundleLanguageFiles())
 		.pipe(filter('**/nls.*.json'));
 
-	return r.pipe(gulp.dest('dist'));
+	return r.pipe(gulp.dest(webPackedDest));
 });
 
-gulp.task('prepare-for-webpack', gulp.series('clean', 'internal-minify-scripts', 'nls-bundle-create', (done) => {
+gulp.task('prepare-for-webpack', gulp.series('clean', 'internal-minify-scripts', 'nls-bundle-create', done => {
 	done();
 }));
 
 
-gulp.task('watch', gulp.series('internal-build', (done) => {
+gulp.task('watch', gulp.series('internal-build', done => {
 	//log('Watching build sources...');
 	gulp.watch(watchedSources, ['internal-build']);
 	done();
 }));
 
-gulp.task('translations-export', gulp.series('build', () => {
-	return gulp.src(['package.nls.json', 'out/nls.metadata.header.json','out/nls.metadata.json'], { allowEmpty: true } )
+gulp.task('translations-export', gulp.series('build', 'prepare-for-webpack', () => {
+	return gulp.src(['package.nls.json', path.join(webPackedDest, 'nls.metadata.header.json'), path.join(webPackedDest, 'nls.metadata.json')])
 		.pipe(nls.createXlfFiles(transifexProjectName, transifexExtensionName))
 		.pipe(gulp.dest(path.join('..', 'vscode-translations-export')));
 }));
@@ -132,7 +133,7 @@ var tslintFilter = [
 	'!**/*.d.ts'
 ];
 
-gulp.task('tslint', (done) => {
+gulp.task('tslint', done => {
 	gulp.src(allTypeScript)
 	.pipe(filter(tslintFilter))
 	.pipe(tslint({
