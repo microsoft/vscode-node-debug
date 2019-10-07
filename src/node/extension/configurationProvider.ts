@@ -16,6 +16,7 @@ import { Cluster } from './cluster';
 
 const DEBUG_SETTINGS = 'debug.node';
 const SHOW_USE_WSL_IS_DEPRECATED_WARNING_SETTING = 'showUseWslIsDeprecatedWarning';
+const DEFAULT_JS_PATTERNS: ReadonlyArray<string> = ['*.js', '*.es6', '*.jsx', '*.mjs'];
 
 const localize = nls.loadMessageBundle();
 let stopOnEntry = false;
@@ -164,8 +165,24 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 			stopOnEntry = false;
 		}
 
+		// tell the extension what file patterns can be debugged
+		config.__debuggablePatterns = this.getJavaScriptPatterns();
+
 		// everything ok: let VS Code start the debug session
 		return config;
+	}
+
+	private getJavaScriptPatterns() {
+		const associations = vscode.workspace.getConfiguration('files.associations');
+		const extension = vscode.extensions.getExtension<{}>('ms-vscode.node-debug');
+		if (!extension) {
+			throw new Error('Expected to be able to load extension data');
+		}
+
+		const handledLanguages = extension.packageJSON.contributes.breakpoints.map(b => b.language);
+		return Object.keys(associations)
+			.filter(pattern => handledLanguages.indexOf(associations[pattern]) !== -1)
+			.concat(DEFAULT_JS_PATTERNS);
 	}
 
 	private warnAboutUseWSL() {
