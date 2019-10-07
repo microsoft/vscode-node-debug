@@ -93,7 +93,7 @@ gulp.task('prepare-for-webpack', gulp.series('clean', 'internal-minify-scripts',
 
 gulp.task('watch', gulp.series('internal-build', done => {
 	//log('Watching build sources...');
-	gulp.watch(watchedSources, ['internal-build']);
+	gulp.watch(watchedSources, gulp.series('internal-build'));
 	done();
 }));
 
