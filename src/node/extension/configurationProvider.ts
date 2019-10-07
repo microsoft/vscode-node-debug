@@ -95,6 +95,12 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 			}
 		}
 
+		// hide the Node standard library files unless the user has set up something explicitly.
+		// see:: https://github.com/microsoft/vscode/issues/69959
+		if (!config.skipFiles) {
+			config.skipFiles = ['<node_internals>/**'];
+		}
+
 		// if a 'remoteRoot' is specified without a corresponding 'localRoot', set 'localRoot' to the workspace folder.
 		// see https://github.com/Microsoft/vscode/issues/63118
 		if (config.remoteRoot && !config.localRoot) {
