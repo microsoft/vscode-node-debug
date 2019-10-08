@@ -279,7 +279,8 @@ function createLaunchConfigFromContext(folder: vscode.WorkspaceFolder | undefine
 	const config = {
 		type: 'node',
 		request: 'launch',
-		name: localize('node.launch.config.name', "Launch Program")
+		name: localize('node.launch.config.name', "Launch Program"),
+		skipFiles: ['<node_internals>/**'],
 	};
 
 	if (existingConfig && existingConfig.noDebug) {
