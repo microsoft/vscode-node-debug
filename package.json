@@ -182,7 +182,8 @@
 							"type": "node",
 							"request": "launch",
 							"name": "${2:Launch Program}",
-							"program": "^\"\\${workspaceFolder}/${1:app.js}\""
+							"program": "^\"\\${workspaceFolder}/${1:app.js}\"",
+							"skipFiles": ["<node_internals>/**"]
 						}
 					},
 					{
@@ -197,7 +198,8 @@
 								"run-script",
 								"debug"
 							],
-							"port": 9229
+							"port": 9229,
+							"skipFiles": ["<node_internals>/**"]
 						}
 					},
 					{
@@ -207,7 +209,8 @@
 							"type": "node",
 							"request": "attach",
 							"name": "${1:Attach}",
-							"port": 9229
+							"port": 9229,
+							"skipFiles": ["<node_internals>/**"]
 						}
 					},
 					{
@@ -220,7 +223,8 @@
 							"address": "${2:TCP/IP address of process to be debugged}",
 							"port": 9229,
 							"localRoot": "^\"\\${workspaceFolder}\"",
-							"remoteRoot": "${3:Absolute path to the remote directory containing the program}"
+							"remoteRoot": "${3:Absolute path to the remote directory containing the program}",
+							"skipFiles": ["<node_internals>/**"]
 						}
 					},
 					{
@@ -230,7 +234,8 @@
 							"type": "node",
 							"request": "attach",
 							"name": "${1:Attach by Process ID}",
-							"processId": "^\"\\${command:PickProcess}\""
+							"processId": "^\"\\${command:PickProcess}\"",
+							"skipFiles": ["<node_internals>/**"]
 						}
 					},
 					{
@@ -244,7 +249,8 @@
 							"program": "^\"\\${workspaceFolder}/${1:app.js}\"",
 							"restart": true,
 							"console": "integratedTerminal",
-							"internalConsoleOptions": "neverOpen"
+							"internalConsoleOptions": "neverOpen",
+							"skipFiles": ["<node_internals>/**"]
 						}
 					},
 					{
@@ -263,7 +269,8 @@
 								"--colors",
 								"^\"\\${workspaceFolder}/${1:test}\""
 							],
-							"internalConsoleOptions": "openOnSessionStart"
+							"internalConsoleOptions": "openOnSessionStart",
+							"skipFiles": ["<node_internals>/**"]
 						}
 					},
 					{
@@ -278,7 +285,8 @@
 								"${1:generator}"
 							],
 							"console": "integratedTerminal",
-							"internalConsoleOptions": "neverOpen"
+							"internalConsoleOptions": "neverOpen",
+							"skipFiles": ["<node_internals>/**"]
 						}
 					},
 					{
@@ -291,7 +299,8 @@
 							"program": "^\"\\${workspaceFolder}/node_modules/gulp/bin/gulp.js\"",
 							"args": [
 								"${1:task}"
-							]
+							],
+							"skipFiles": ["<node_internals>/**"]
 						}
 					},
 					{
@@ -302,7 +311,8 @@
 							"request": "launch",
 							"name": "Electron Main",
 							"runtimeExecutable": "^\"\\${workspaceFolder}/node_modules/.bin/electron\"",
-							"program": "^\"\\${workspaceFolder}/main.js\""
+							"program": "^\"\\${workspaceFolder}/main.js\"",
+							"skipFiles": ["<node_internals>/**"]
 						}
 					}
 				],
