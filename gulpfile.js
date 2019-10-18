@@ -7,16 +7,11 @@ var gulp = require('gulp');
 var path = require('path');
 var ts = require('gulp-typescript');
 var sourcemaps = require('gulp-sourcemaps');
-var log = require('gulp-util').log;
 var tslint = require("gulp-tslint");
 var filter = require('gulp-filter');
 var uglify = require('gulp-uglify');
 var del = require('del');
-var runSequence = require('run-sequence');
-var es = require('event-stream');
 var typescript = require('typescript');
-var cp = require('child_process');
-var vsce = require('vsce');
 
 var tsProject = ts.createProject('./src/tsconfig.json', { typescript });
 var nls = require('vscode-nls-dev');
@@ -38,84 +33,82 @@ var scripts2 = [
 ];
 
 var outDest = 'out';
+var webPackedDest = 'dist';
 
-const transifexApiHostname = 'www.transifex.com'
-const transifexApiName = 'api';
-const transifexApiToken = process.env.TRANSIFEX_API_TOKEN;
 const transifexProjectName = 'vscode-extensions';
 const transifexExtensionName = 'vscode-node-debug';
 
-const defaultLanguages = [
-	{ id: 'zh-tw', folderName: 'cht', transifexId: 'zh-hant' },
-	{ id: 'zh-cn', folderName: 'chs', transifexId: 'zh-hans' },
-	{ id: 'ja', folderName: 'jpn' },
-	{ id: 'ko', folderName: 'kor' },
-	{ id: 'de', folderName: 'deu' },
-	{ id: 'fr', folderName: 'fra' },
-	{ id: 'es', folderName: 'esn' },
-	{ id: 'ru', folderName: 'rus' },
-	{ id: 'it', folderName: 'ita' }
-];
-
-gulp.task('default', function(callback) {
-	runSequence('build', callback);
+gulp.task('clean', () => {
+	return del(['out/**', 'dist/**', 'package.nls.*.json', 'node-debug-*.vsix']);
 });
 
-gulp.task('compile', function(callback) {
-	runSequence('clean', 'internal-build', callback);
+gulp.task('internal-compile', () => {
+	return compile();
 });
 
-gulp.task('build', function(callback) {
-	runSequence('clean', 'internal-nls-build', callback);
-});
-
-gulp.task('publish', function(callback) {
-	runSequence('build', 'add-i18n', 'vsce-publish', callback);
-});
-
-gulp.task('package', function(callback) {
-	runSequence('build', 'add-i18n', 'vsce-package', callback);
-});
-
-gulp.task('clean', function() {
-	return del(['out/**', 'package.nls.*.json', 'node-debug-*.vsix']);
-})
-
-gulp.task('watch', ['internal-build'], function(cb) {
-	log('Watching build sources...');
-	gulp.watch(watchedSources, ['internal-build']);
-});
-
-//---- internal
-
-// compile and copy everything to outDest
-gulp.task('internal-build', function(callback) {
-	runSequence('internal-compile', 'internal-copy-scripts', 'internal-minify-scripts', callback);
-});
-
-gulp.task('internal-nls-build', function(callback) {
-	runSequence('internal-nls-compile', 'internal-copy-scripts', 'internal-minify-scripts', callback);
-});
-
-gulp.task('internal-copy-scripts', function() {
+gulp.task('internal-copy-scripts', () => {
 	return gulp.src(scripts)
 		.pipe(gulp.dest(outDest + '/node'));
 });
 
-gulp.task('internal-minify-scripts', function() {
+gulp.task('internal-minify-scripts', () => {
 	return gulp.src(scripts2)
 		.pipe(uglify())
 		.pipe(gulp.dest(outDest + '/node'));
 });
 
-function compile(buildNls) {
+// compile and copy everything to outDest
+gulp.task('internal-build', gulp.series('internal-compile', 'internal-copy-scripts', 'internal-minify-scripts', done => {
+	done();
+}));
+
+gulp.task('build', gulp.series('clean', 'internal-build', done => {
+	done();
+}));
+
+gulp.task('default', gulp.series('build', done => {
+	done();
+}));
+
+gulp.task('compile', gulp.series('clean', 'internal-build', done => {
+	done();
+}));
+
+gulp.task('nls-bundle-create', () => {
 	var r = tsProject.src()
 		.pipe(sourcemaps.init())
 		.pipe(tsProject()).js
-		.pipe(buildNls ? nls.rewriteLocalizeCalls() : es.through())
-		.pipe(buildNls ? nls.createAdditionalLanguageFiles(defaultLanguages, 'i18n', 'out') : es.through())
-		.pipe(buildNls ? nls.bundleMetaDataFiles('ms-vscode.node-debug', 'out') : es.through())
-		.pipe(buildNls ? nls.bundleLanguageFiles() : es.through());
+		.pipe(nls.createMetaDataFiles())
+		.pipe(nls.bundleMetaDataFiles('ms-vscode.node-debug', webPackedDest))
+		.pipe(nls.bundleLanguageFiles())
+		.pipe(filter('**/nls.*.json'));
+
+	return r.pipe(gulp.dest(webPackedDest));
+});
+
+gulp.task('prepare-for-webpack', gulp.series('clean', 'internal-minify-scripts', 'nls-bundle-create', done => {
+	done();
+}));
+
+
+gulp.task('watch', gulp.series('internal-build', done => {
+	//log('Watching build sources...');
+	gulp.watch(watchedSources, gulp.series('internal-build'));
+	done();
+}));
+
+gulp.task('translations-export', gulp.series('build', 'prepare-for-webpack', () => {
+	return gulp.src(['package.nls.json', path.join(webPackedDest, 'nls.metadata.header.json'), path.join(webPackedDest, 'nls.metadata.json')])
+		.pipe(nls.createXlfFiles(transifexProjectName, transifexExtensionName))
+		.pipe(gulp.dest(path.join('..', 'vscode-translations-export')));
+}));
+
+//---- internal
+
+function compile() {
+	var r = tsProject.src()
+		.pipe(sourcemaps.init())
+		.pipe(tsProject()).js;
 
 	if (inlineMap && inlineSource) {
 		r = r.pipe(sourcemaps.write());
@@ -131,56 +124,6 @@ function compile(buildNls) {
 	return r.pipe(gulp.dest(outDest));
 }
 
-gulp.task('internal-compile', function() {
-	return compile(false);
-});
-
-gulp.task('internal-nls-compile', function() {
-	return compile(true);
-});
-
-gulp.task('add-i18n', function() {
-	return gulp.src(['package.nls.json'])
-		.pipe(nls.createAdditionalLanguageFiles(defaultLanguages, 'i18n'))
-		.pipe(gulp.dest('.'));
-});
-
-gulp.task('transifex-push', ['build'], function() {
-	return gulp.src(['package.nls.json', 'out/nls.metadata.header.json','out/nls.metadata.json'])
-		.pipe(nls.createXlfFiles(transifexProjectName, transifexExtensionName))
-		.pipe(nls.pushXlfFiles(transifexApiHostname, transifexApiName, transifexApiToken));
-});
-
-gulp.task('transifex-push-test', ['build'], function() {
-	return gulp.src(['package.nls.json', 'out/nls.metadata.header.json','out/nls.metadata.json'])
-		.pipe(nls.createXlfFiles(transifexProjectName, transifexExtensionName))
-		.pipe(gulp.dest(path.join('..', `${transifexExtensionName}-push-test`)));
-});
-
-
-gulp.task('transifex-pull', function() {
-	return es.merge(defaultLanguages.map(function(language) {
-		return nls.pullXlfFiles(transifexApiHostname, transifexApiName, transifexApiToken, language, [{ name: transifexExtensionName, project: transifexProjectName }]).
-			pipe(gulp.dest(`../${transifexExtensionName}-localization/${language.folderName}`));
-	}));
-});
-
-gulp.task('i18n-import', function() {
-	return es.merge(defaultLanguages.map(function(language) {
-		return gulp.src(`../${transifexExtensionName}-localization/${language.folderName}/**/*.xlf`)
-			.pipe(nls.prepareJsonFiles())
-			.pipe(gulp.dest(path.join('./i18n', language.folderName)));
-	}));
-});
-
-gulp.task('vsce-publish', function() {
-	return vsce.publish();
-});
-
-gulp.task('vsce-package', function() {
-	return vsce.createVSIX();
-});
-
 var allTypeScript = [
 	'src/**/*.ts'
 ];
@@ -190,7 +133,7 @@ var tslintFilter = [
 	'!**/*.d.ts'
 ];
 
-gulp.task('tslint', function () {
+gulp.task('tslint', done => {
 	gulp.src(allTypeScript)
 	.pipe(filter(tslintFilter))
 	.pipe(tslint({
@@ -199,5 +142,6 @@ gulp.task('tslint', function () {
 	}))
 	.pipe(tslint.report( {
 		emitError: false
-	}))
+	}));
+	done();
 });

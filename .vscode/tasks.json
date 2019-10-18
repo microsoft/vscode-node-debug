@@ -11,8 +11,7 @@
 			"group": {
 				"kind": "build",
 				"isDefault": true
-			},
-			"identifier": "build"
+			}
 		},
 		{
 			"type": "npm",

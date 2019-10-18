@@ -450,9 +450,9 @@ export class NodeDebugSession extends LoggingDebugSession {
 		*/
 
 		this._node.on('afterCompile', (event: NodeV8Event) => {
-			//this.outLine(`afterCompile ${this._scriptToPath(event.body.script)}`);
-			this.sendEvent(new LoadedSourceEvent('new', this._scriptToSource(event.body.script)));
-			//this.sendEvent(new Event('scriptLoaded', { path: this._scriptToPath(event.body.script) }));
+			this._scriptToSource(event.body.script).then(source => {
+				this.sendEvent(new LoadedSourceEvent('new', source));
+			});
 		});
 
 		this._node.on('close', (event: NodeV8Event) => {
@@ -711,7 +711,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 	 * - script name is an internal module: return "<node_internals/name"
 	 * - script has no name: return "<node_internals/VMnnn" where nnn is the script ID
 	 */
-	private _scriptToSource(script: V8Script): Source {
+	private _scriptToSource(script: V8Script): Promise<Source> {
 		let path = script.name;
 		if (path) {
 			if (!PathUtils.isAbsolutePath(path)) {
@@ -720,7 +720,16 @@ export class NodeDebugSession extends LoggingDebugSession {
 		} else {
 			path = `${NodeDebugSession.NODE_INTERNALS}/VM${script.id}`;
 		}
-		return new Source(Path.basename(path), path, this._getScriptIdHandle(script.id));
+		const src = new Source(Path.basename(path), path, this._getScriptIdHandle(script.id));
+		if (this._sourceMaps) {
+			return this._sourceMaps.AllSources(path).then(sources => {
+				if (sources && sources.length > 0) {
+					(<DebugProtocol.Source>src).sources = sources.map(s => new Source(Path.basename(s), s) );
+				}
+				return src;
+			});
+		}
+		return Promise.resolve(src);
 	}
 
 	/**
@@ -834,8 +843,11 @@ export class NodeDebugSession extends LoggingDebugSession {
 		// This debug adapter supports log points
 		response.body.supportsLogPoints = true;
 
-		// This debug adapter supports terminate request
-		response.body.supportsTerminateRequest = true;
+		// This debug adapter supports terminate request (but not on Windows)
+		response.body.supportsTerminateRequest = process.platform !== 'win32';
+
+		// This debug adapter supports loaded sources request
+		response.body.supportsLoadedSourcesRequest = true;
 
 		this.sendResponse(response);
 	}
@@ -1118,9 +1130,9 @@ export class NodeDebugSession extends LoggingDebugSession {
 				Object.keys(e).filter(v => e[v] === null).forEach(key => delete e[key] );
 			}
 
-			const options = {
+			const options: CP.SpawnOptions = {
 				cwd: workingDirectory,
-				env: envVars
+				env: <NodeJS.ProcessEnv> envVars
 			};
 
 			// see bug #45832
@@ -1226,7 +1238,8 @@ export class NodeDebugSession extends LoggingDebugSession {
 		if (typeof args.smartStep === 'boolean') {
 			this._smartStep = args.smartStep;
 		}
-		if (typeof args.skipFiles) {
+
+		if (Array.isArray(args.skipFiles)) {
 			this._skipFiles = args.skipFiles;
 		}
 
@@ -1291,15 +1304,18 @@ export class NodeDebugSession extends LoggingDebugSession {
 	/*
 	 * shared 'attach' code used in launchRequest and attachRequest.
 	 */
-	private _attach(response: DebugProtocol.Response, args: CommonArguments, port: number, address: string | undefined, timeout: number | undefined): void {
+	private _attach(response: DebugProtocol.Response, args: CommonArguments, port: number, adr: string | undefined, timeout: number | undefined): void {
 
 		if (!port) {
 			port = 5858;
 		}
 		this._port = port;
 
-		if (!address || address === 'localhost') {
+		let address: string;
+		if (!adr || adr === 'localhost') {
 			address = '127.0.0.1';
+		} else {
+			address = adr;
 		}
 
 		if (!timeout) {
@@ -1577,7 +1593,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 	protected terminateRequest(response: DebugProtocol.TerminateResponse, args: DebugProtocol.TerminateArguments): void {
 
-		if (!this._attachMode && !this._isWSL && this._nodeProcessId > 0) {
+		if (!this._isWSL && this._nodeProcessId > 0) {
 			process.kill(this._nodeProcessId, 'SIGINT');
 		}
 
@@ -3834,14 +3850,16 @@ export class NodeDebugSession extends LoggingDebugSession {
 		}
 	}
 
-	//--- exception info request ----------------------------------------------------------------------------------------------
+	//--- loaded sources request ----------------------------------------------------------------------------------------------
 
 	protected loadedSourcesRequest(response: DebugProtocol.LoadedSourcesResponse, args: DebugProtocol.LoadedSourcesArguments) {
 
 		this._node.scripts({ types: 4 }).then(resp => {
-			let sources = resp.body.map(script => this._scriptToSource(script));
-			response.body = { sources: sources };
-			this.sendResponse(response);
+			const sources = resp.body.map(script => this._scriptToSource(script));
+			Promise.all(sources).then(result => {
+				response.body = { sources: result };
+				this.sendResponse(response);
+			});
 		}).catch(err => {
 			this.sendErrorResponse(response, 9999, `scripts error: ${err}`);
 		});
@@ -4120,11 +4138,18 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 	private static isJavaScript(path: string): boolean {
 
-		const name = Path.extname(path).toLowerCase();
-		if (NodeDebugSession.JS_EXTENSIONS.indexOf(name) >= 0) {
-			return true;
+		const ext = Path.extname(path).toLowerCase();
+		if (ext) {
+			if (NodeDebugSession.JS_EXTENSIONS.indexOf(ext) >= 0) {
+				return true;
+			}
+		} else {
+			if (Path.basename(path).toLowerCase() === 'www') {
+				return true;
+			}
 		}
 
+		// look inside file
 		try {
 			const buffer = new Buffer(30);
 			const fd = FS.openSync(path, 'r');
@@ -4184,7 +4209,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 
 		if (process.platform === 'win32') {
 
-			const TASK_KILL = Path.join(process.env['SystemRoot'], 'System32', 'taskkill.exe');
+			const TASK_KILL = Path.join(process.env['SystemRoot'] || 'C:\\WINDOWS', 'System32', 'taskkill.exe');
 
 			// when killing a process in Windows its child processes are *not* killed but become root processes.
 			// Therefore we use TASKKILL.EXE
@@ -4220,9 +4245,9 @@ function isIndex(name: string | number) {
 
 const LOGMESSAGE_VARIABLE_REGEXP = /{(.*?)}/g;
 
-function logMessageToExpression(msg) {
+function logMessageToExpression(msg: string) {
 
-	msg = msg.replace('%', '%%');
+	msg = msg.replace(/%/g, '%%');
 
 	let args: string[] = [];
 	let format = msg.replace(LOGMESSAGE_VARIABLE_REGEXP, (match, group) => {
@@ -4235,7 +4260,7 @@ function logMessageToExpression(msg) {
 		}
 	});
 
-	format = format.replace('\'', '\\\'');
+	format = format.replace(/'/g, '\\\'');
 
 	if (args.length > 0) {
 		return `console.log('${format}', ${args.join(', ')})`;
@@ -4248,11 +4273,14 @@ function findport(): Promise<number> {
 		let port = 0;
 		const server = Net.createServer();
 		server.on('listening', _ => {
-			port = server.address().port;
+			const ai = server.address();
+			if (typeof ai === 'object') {
+				port = ai.port;
+			}
 			server.close();
 		});
-		server.on('close', _ => c(port));
-		server.on('error', (err) => e(err));
+		server.on('close', () => c(port));
+		server.on('error', err => e(err));
 		server.listen(0, '127.0.0.1');
 	});
 }

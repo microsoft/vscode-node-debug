@@ -34,15 +34,11 @@ suite('Node Debug Adapter', () => {
 			if (semVerString) {
 				const match = semVerString.trim().match(/v(\d+)\.(\d+)\.(\d+)/);
 				if (match && match.length === 4 && parseInt(match[1]) >= 8) {
-					if (env.LEGACY_NODE_PATH) {
-						env = PathUtils.extendObject({}, process.env);
-						if (process.platform === 'win32') {
-							env.Path = env.LEGACY_NODE_PATH;
-						} else {
-							env.PATH = env.LEGACY_NODE_PATH;
-						}
+					env = PathUtils.extendObject({}, process.env);
+					if (process.platform === 'win32') {
+						env.Path = env.LEGACY_NODE_PATH || `${env.NVM_HOME}\\v7.9.0;${env.Path}`;
 					} else {
-						throw new Error('Suite needs node.js version that supports legacy protocol. Make sure to have an env var LEGACY_NODE_PATH.');
+						env.PATH = env.LEGACY_NODE_PATH || `${env.NVM_DIR}/versions/node/v7.9.0/bin:${env.PATH}`;
 					}
 				}
 			}
@@ -103,8 +99,9 @@ suite('Node Debug Adapter', () => {
 		});
 
 		if (process.platform === 'win32') {
-			const bash32bitPath = Path.join(process.env.SystemRoot, 'SYSNATIVE', 'bash.exe');
-			const bash64bitPath = Path.join(process.env.SystemRoot, 'System32', 'bash.exe');
+			const sysRoot = process.env['SystemRoot'] ||'C:\\WINDOWS';
+			const bash32bitPath = Path.join(sysRoot, 'SYSNATIVE', 'bash.exe');
+			const bash64bitPath = Path.join(sysRoot, 'System32', 'bash.exe');
 			if (FS.existsSync(bash32bitPath) || FS.existsSync(bash64bitPath)) {
 
 				test('should run program using WSL', () => {

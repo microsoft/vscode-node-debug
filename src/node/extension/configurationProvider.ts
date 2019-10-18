@@ -6,21 +6,34 @@
 
 import * as nls from 'vscode-nls';
 import * as vscode from 'vscode';
-import { join, isAbsolute, dirname } from 'path';
+import { join, isAbsolute, dirname, relative } from 'path';
 import * as fs from 'fs';
 
-import { writeToConsole, mkdirP } from './utilities';
+import { writeToConsole, mkdirP, Logger } from './utilities';
 import { detectDebugType } from './protocolDetection';
 import { resolveProcessId } from './processPicker';
 import { Cluster } from './cluster';
 
+const DEBUG_SETTINGS = 'debug.node';
+const SHOW_USE_WSL_IS_DEPRECATED_WARNING_SETTING = 'showUseWslIsDeprecatedWarning';
+const DEFAULT_JS_PATTERNS: ReadonlyArray<string> = ['*.js', '*.es6', '*.jsx', '*.mjs'];
+
 const localize = nls.loadMessageBundle();
+let stopOnEntry = false;
+
+export function startDebuggingAndStopOnEntry() {
+	stopOnEntry = true;
+	vscode.commands.executeCommand('workbench.action.debug.start');
+}
 
 //---- NodeConfigurationProvider
 
 export class NodeConfigurationProvider implements vscode.DebugConfigurationProvider {
 
+	private _logger: Logger;
+
 	constructor(private _extensionContext: vscode.ExtensionContext) {
+		this._logger = new Logger();
 	}
 
 	/**
@@ -28,7 +41,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 	 */
 	provideDebugConfigurations(folder: vscode.WorkspaceFolder | undefined, token?: vscode.CancellationToken): vscode.ProviderResult<vscode.DebugConfiguration[]> {
 
-		return [ createLaunchConfigFromContext(folder, false) ];
+		return [createLaunchConfigFromContext(folder, false)];
 	}
 
 	/**
@@ -83,15 +96,21 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 			}
 		}
 
-		// remove 'useWSL' on all platforms but Windows
-		if (process.platform !== 'win32' && config.useWSL) {
-			this._extensionContext.logger.debug('useWSL attribute ignored on non-Windows OS.');
-			delete config.useWSL;
+		// if a 'remoteRoot' is specified without a corresponding 'localRoot', set 'localRoot' to the workspace folder.
+		// see https://github.com/Microsoft/vscode/issues/63118
+		if (config.remoteRoot && !config.localRoot) {
+			config.localRoot = '${workspaceFolder}';
 		}
 
-		// when using "integratedTerminal" ensure that debug console doesn't get activated; see #43164
-		if (config.console === 'integratedTerminal' && !config.internalConsoleOptions) {
-			config.internalConsoleOptions = 'neverOpen';
+		// warn about deprecated 'useWSL' attribute.
+		if (typeof config.useWSL !== 'undefined') {
+			this.warnAboutUseWSL();
+		}
+
+		// remove 'useWSL' on all platforms but Windows
+		if (process.platform !== 'win32' && config.useWSL) {
+			this._logger.debug('useWSL attribute ignored on non-Windows OS.');
+			delete config.useWSL;
 		}
 
 		// "nvm" support
@@ -99,9 +118,18 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 			await this.nvmSupport(config);
 		}
 
-		// "auto attach child process" support
+		// "auto attach child process" (aka Cluster) support
 		if (config.autoAttachChildProcesses) {
 			Cluster.prepareAutoAttachChildProcesses(folder, config);
+			// if no console is set, use the integrated terminal so that output of all child processes goes to one terminal. See https://github.com/Microsoft/vscode/issues/62420
+			if (!config.console) {
+				config.console = 'integratedTerminal';
+			}
+		}
+
+		// when using "integratedTerminal" ensure that debug console doesn't get activated; see https://github.com/Microsoft/vscode/issues/43164
+		if (config.console === 'integratedTerminal' && !config.internalConsoleOptions) {
+			config.internalConsoleOptions = 'neverOpen';
 		}
 
 		// "attach to process via picker" support
@@ -113,7 +141,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 		}
 
 		// finally determine which protocol to use
-		const debugType = await determineDebugType(config, this._extensionContext.logger);
+		const debugType = await determineDebugType(config, this._logger);
 		if (debugType) {
 			config.type = debugType;
 		}
@@ -122,26 +150,75 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 		if (config.trace && !config.logFilePath) {
 			const fileName = config.type === 'node' ? 'debugadapter-legacy.txt' : 'debugadapter.txt';
 
-			if (this._extensionContext.logDirectory) {
+			if (this._extensionContext.logPath) {
 				try {
-					await mkdirP(this._extensionContext.logDirectory);
+					await mkdirP(this._extensionContext.logPath);
 				} catch (e) {
 					// Already exists
 				}
 
-				config.logFilePath = join(this._extensionContext.logDirectory, fileName);
+				config.logFilePath = join(this._extensionContext.logPath, fileName);
 			}
 		}
+		if (stopOnEntry) {
+			config.stopOnEntry = true;
+			stopOnEntry = false;
+		}
+
+		// tell the extension what file patterns can be debugged
+		config.__debuggablePatterns = this.getJavaScriptPatterns();
 
 		// everything ok: let VS Code start the debug session
 		return config;
+	}
+
+	private getJavaScriptPatterns() {
+		const associations = vscode.workspace.getConfiguration('files.associations');
+		const extension = vscode.extensions.getExtension<{}>('ms-vscode.node-debug');
+		if (!extension) {
+			throw new Error('Expected to be able to load extension data');
+		}
+
+		const handledLanguages = extension.packageJSON.contributes.breakpoints.map(b => b.language);
+		return Object.keys(associations)
+			.filter(pattern => handledLanguages.indexOf(associations[pattern]) !== -1)
+			.concat(DEFAULT_JS_PATTERNS);
+	}
+
+	private warnAboutUseWSL() {
+
+		interface MyMessageItem extends vscode.MessageItem {
+			id: number;
+		}
+
+		if (vscode.workspace.getConfiguration(DEBUG_SETTINGS).get<boolean>(SHOW_USE_WSL_IS_DEPRECATED_WARNING_SETTING, true)) {
+			vscode.window.showWarningMessage<MyMessageItem>(
+				localize(
+					'useWslDeprecationWarning.title',
+					"Attribute 'useWSL' is deprecated. Please use the 'Remote WSL' extension instead. Click [here]({0}) to learn more.",
+					'https://go.microsoft.com/fwlink/?linkid=2097212'
+				), {
+					title: localize('useWslDeprecationWarning.doNotShowAgain', "Don't Show Again"),
+					id: 1
+				}
+			).then(selected => {
+				if (!selected) {
+					return;
+				}
+				switch (selected.id) {
+					case 1:
+						vscode.workspace.getConfiguration(DEBUG_SETTINGS).update(SHOW_USE_WSL_IS_DEPRECATED_WARNING_SETTING, false, vscode.ConfigurationTarget.Global);
+						break;
+				}
+			});
+		}
 	}
 
 	/**
 	 * if a runtime version is specified we prepend env.PATH with the folder that corresponds to the version.
 	 * Returns false on error
 	 */
-	private async nvmSupport(config: vscode.DebugConfiguration) : Promise<void> {
+	private async nvmSupport(config: vscode.DebugConfiguration): Promise<void> {
 
 		let bin: string | undefined = undefined;
 		let versionManagerName: string | undefined = undefined;
@@ -150,7 +227,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 		let nvsHome = process.env['NVS_HOME'];
 		if (!nvsHome) {
 			// NVS_HOME is not always set. Probe for 'nvs' directory instead
-			const nvsDir = process.platform === 'win32' ? join(process.env['LOCALAPPDATA'], 'nvs') : join(process.env['HOME'], '.nvs');
+			const nvsDir = process.platform === 'win32' ? join(process.env['LOCALAPPDATA'] || '', 'nvs') : join(process.env['HOME'] || '', '.nvs');
 			if (fs.existsSync(nvsDir)) {
 				nvsHome = nvsDir;
 			}
@@ -184,7 +261,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 				let nvmHome = process.env['NVM_DIR'];
 				if (!nvmHome) {
 					// if NVM_DIR is not set. Probe for '.nvm' directory instead
-					const nvmDir = join(process.env['HOME'], '.nvm');
+					const nvmDir = join(process.env['HOME'] || '', '.nvm');
 					if (fs.existsSync(nvmDir)) {
 						nvmHome = nvmDir;
 					}
@@ -219,7 +296,8 @@ function createLaunchConfigFromContext(folder: vscode.WorkspaceFolder | undefine
 	const config = {
 		type: 'node',
 		request: 'launch',
-		name: localize('node.launch.config.name', "Launch Program")
+		name: localize('node.launch.config.name', "Launch Program"),
+		skipFiles: ['<node_internals>/**'],
 	};
 
 	if (existingConfig && existingConfig.noDebug) {
@@ -253,10 +331,10 @@ function createLaunchConfigFromContext(folder: vscode.WorkspaceFolder | undefine
 				const languageId = editor.document.languageId;
 				if (languageId === 'javascript' || isTranspiledLanguage(languageId)) {
 					const wf = vscode.workspace.getWorkspaceFolder(editor.document.uri);
-					if (wf === folder) {
-						program = vscode.workspace.asRelativePath(editor.document.uri);
-						if (!isAbsolute(program)) {
-							program = '${workspaceFolder}/' + program;
+					if (wf && wf === folder) {
+						program = relative(wf.uri.fsPath || '/', editor.document.uri.fsPath || '/');
+						if (program && !isAbsolute(program)) {
+							program = join('${workspaceFolder}', program);
 						}
 					}
 				}
@@ -265,7 +343,7 @@ function createLaunchConfigFromContext(folder: vscode.WorkspaceFolder | undefine
 		}
 
 		// if we couldn't find a value for 'program', we just let the launch config use the file open in the editor
-		if (!resolve && !program) {
+		if (!program) {
 			program = '${file}';
 		}
 
@@ -282,13 +360,13 @@ function createLaunchConfigFromContext(folder: vscode.WorkspaceFolder | undefine
 			let dir = '';
 			const tsConfig = loadJSON(folder, 'tsconfig.json');
 			if (tsConfig && tsConfig.compilerOptions && tsConfig.compilerOptions.outDir) {
-				const outDir = <string> tsConfig.compilerOptions.outDir;
+				const outDir = <string>tsConfig.compilerOptions.outDir;
 				if (!isAbsolute(outDir)) {
 					dir = outDir;
 					if (dir.indexOf('./') === 0) {
 						dir = dir.substr(2);
 					}
-					if (dir[dir.length-1] !== '/') {
+					if (dir[dir.length - 1] !== '/') {
 						dir += '/';
 					}
 				}
@@ -327,7 +405,7 @@ function configureMern(config: any) {
 	config.internalConsoleOptions = 'neverOpen';
 }
 
-function isTranspiledLanguage(languagId: string) : boolean {
+function isTranspiledLanguage(languagId: string): boolean {
 	return languagId === 'typescript' || languagId === 'coffeescript';
 }
 
@@ -368,7 +446,7 @@ function guessProgramFromPackage(folder: vscode.WorkspaceFolder | undefined, pac
 
 //---- debug type -------------------------------------------------------------------------------------------------------------
 
-function determineDebugType(config: any, logger: vscode.Logger): Promise<string | null> {
+function determineDebugType(config: any, logger: Logger): Promise<string | null> {
 	if (config.protocol === 'legacy') {
 		return Promise.resolve('node');
 	} else if (config.protocol === 'inspector') {

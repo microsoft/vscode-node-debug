@@ -1,7 +1,7 @@
 {
 	"name": "node-debug",
 	"displayName": "Node Debug (legacy)",
-	"version": "1.26.3",
+	"version": "1.38.8",
 	"publisher": "ms-vscode",
 	"description": "%extension.description%",
 	"icon": "images/node-debug-icon.png",
@@ -17,31 +17,32 @@
 		"postinstall": "node ./node_modules/vscode/bin/install",
 		"build": "gulp build",
 		"watch": "gulp watch",
-		"test": "mocha --timeout 10000 -u tdd ./out/tests/",
-		"nodemon": "nodemon --debug --nolazy ./out/node/nodeDebug.js --server=4711",
+		"test": "gulp compile && mocha --timeout 10000 -u tdd ./out/tests/",
+		"nodemon": "nodemon --debug --nolazy ./dist/nodeDebug.js --server=4711",
 		"prepublish": "gulp build",
-		"package": "gulp package",
-		"publish": "gulp publish",
+		"package": "gulp prepare-for-webpack && webpack --mode production --vscode-nls && vsce package",
+		"publish": "gulp prepare-for-webpack && webpack --mode production --vscode-nls && vsce publish",
 		"bump": "npm version patch -m 'bump to %s'",
-		"tslint": "gulp tslint"
+		"tslint": "gulp tslint",
+		"translations-export": "gulp translations-export"
 	},
 	"keywords": [
 		"multi-root ready"
 	],
 	"engines": {
-		"vscode": "^1.24.0",
-		"node": "^8.9.1"
+		"vscode": "^1.33.0",
+		"node": "^10.2.0"
 	},
 	"extensionDependencies": [
 		"ms-vscode.node-debug2"
 	],
 	"dependencies": {
-		"vscode-debugadapter": "1.31.0-pre.0",
+		"glob": "7.1.4",
+		"minimatch": "3.0.4",
+		"request-light": "0.2.4",
 		"source-map": "0.6.1",
-		"vscode-nls": "3.2.2",
-		"request-light": "0.2.2",
-		"glob": "7.1.2",
-		"minimatch": "3.0.4"
+		"vscode-debugadapter": "1.37.1",
+		"vscode-nls": "4.1.1"
 	},
 	"repository": {
 		"type": "git",
@@ -51,51 +52,53 @@
 		"url": "https://github.com/Microsoft/vscode-node-debug/issues"
 	},
 	"devDependencies": {
-		"@types/mocha": "2.2.46",
-		"@types/node": "7.0.43",
-		"@types/source-map": "0.5.7",
-		"gulp": "3.9.1",
-		"gulp-util": "3.0.8",
-		"gulp-typescript": "3.2.2",
-		"gulp-tsb": "2.0.5",
-		"gulp-sourcemaps": "2.6.4",
-		"gulp-filter": "5.1.0",
-		"gulp-tslint": "8.1.3",
-		"gulp-uglify": "2.0.0",
-		"tslint-microsoft-contrib": "5.0.3",
-		"del": "3.0.0",
-		"run-sequence": "2.2.1",
-		"mocha": "4.0.1",
-		"tslint": "5.9.1",
-		"tsutils": "2.12.2",
-		"typescript": "2.6.2",
-		"vscode": "1.1.18",
-		"vscode-nls-dev": "3.0.9",
-		"vscode-debugadapter-testsupport": "1.30.0",
-		"vscode-debugprotocol": "1.31.0-pre.0",
-		"event-stream": "3.3.4",
-		"nodemon": "1.17.5",
-		"vsce": "1.40.0"
+		"@types/mocha": "5.2.7",
+		"@types/node": "10.12.12",
+		"copy-webpack-plugin": "^5.0.4",
+		"del": "5.0.0",
+		"gulp": "4.0.2",
+		"gulp-filter": "6.0.0",
+		"gulp-sourcemaps": "2.6.5",
+		"gulp-tsb": "2.0.7",
+		"gulp-tslint": "8.1.4",
+		"gulp-typescript": "5.0.1",
+		"gulp-uglify": "3.0.2",
+		"mocha": "6.2.0",
+		"ts-loader": "6.0.4",
+		"tslint": "5.18.0",
+		"tslint-microsoft-contrib": "6.2.0",
+		"tsutils": "3.17.1",
+		"typescript": "3.5.3",
+		"vsce": "^1.66.0",
+		"vscode": "1.1.36",
+		"vscode-debugadapter-testsupport": "1.37.1",
+		"vscode-debugprotocol": "1.37.0",
+		"vscode-nls-dev": "3.3.1",
+		"webpack": "^4.39.1",
+		"webpack-cli": "^3.3.6"
 	},
-	"main": "./out/node/extension/extension.js",
+	"main": "./dist/extension.js",
 	"activationEvents": [
 		"onDebugInitialConfigurations",
 		"onDebugResolve:node",
 		"onCommand:extension.pickNodeProcess",
 		"onCommand:extension.node-debug.toggleSkippingFile",
 		"onCommand:extension.node-debug.pickLoadedScript",
-		"onCommand:extension.node-debug.toggleAutoAttach",
-		"onCommand:extension.node-debug.attachNodeProcess"
+		"onCommand:extension.node-debug.attachNodeProcess",
+		"onCommand:extension.node-debug.startAutoAttach",
+		"onCommand:extension.node-debug.startWithStopOnEntry"
 	],
 	"contributes": {
-		"views": {
-			"debug": [
-				{
-					"id": "extension.node-debug.loadedScriptsExplorer",
-					"name": "%loaded.scripts.view.name%",
-					"when": "inDebugMode && showLoadedScriptsExplorer"
+		"configuration": {
+			"title": "Node debug",
+			"properties": {
+				"debug.node.showUseWslIsDeprecatedWarning": {
+					"scope": "window",
+					"type": "boolean",
+					"description": "%debug.node.showUseWslIsDeprecatedWarning.description%",
+					"default": true
 				}
-			]
+			}
 		},
 		"menus": {
 			"debug/callstack/context": [
@@ -121,6 +124,11 @@
 				"command": "extension.node-debug.toggleSkippingFile",
 				"title": "%toggle.skipping.this.file%",
 				"category": "Debug"
+			},
+			{
+				"command": "extension.node-debug.startWithStopOnEntry",
+				"title": "%start.with.stop.on.entry%",
+				"category": "Debug"
 			}
 		],
 		"keybindings": [
@@ -129,6 +137,17 @@
 				"key": "ctrl+f4",
 				"mac": "cmd+f4",
 				"when": "debugType == 'node'"
+			},
+			{
+				"command": "extension.node-debug.startWithStopOnEntry",
+				"key": "F10",
+				"mac": "F10",
+				"when": "!inDebugMode && debugConfigurationType=='node'"
+			},
+			{
+				"command": "extension.node-debug.startWithStopOnEntry",
+				"mac": "F11",
+				"when": "!inDebugMode && debugConfigurationType=='node'"
 			}
 		],
 		"breakpoints": [
@@ -143,7 +162,7 @@
 			{
 				"type": "node",
 				"label": "%node.label%",
-				"program": "./out/node/nodeDebug.js",
+				"program": "./dist/nodeDebug.js",
 				"runtime": "node",
 				"variables": {
 					"PickProcess": "extension.pickNodeProcess"
@@ -163,12 +182,13 @@
 							"type": "node",
 							"request": "launch",
 							"name": "${2:Launch Program}",
-							"program": "^\"\\${workspaceFolder}/${1:app.js}\""
+							"program": "^\"\\${workspaceFolder}/${1:app.js}\"",
+							"skipFiles": ["<node_internals>/**"]
 						}
 					},
 					{
 						"label": "%node.snippet.npm.label%",
-						"description": "%node.snippet.npm.description%",
+						"markdownDescription": "%node.snippet.npm.description%",
 						"body": {
 							"type": "node",
 							"request": "launch",
@@ -178,7 +198,8 @@
 								"run-script",
 								"debug"
 							],
-							"port": 9229
+							"port": 9229,
+							"skipFiles": ["<node_internals>/**"]
 						}
 					},
 					{
@@ -188,7 +209,8 @@
 							"type": "node",
 							"request": "attach",
 							"name": "${1:Attach}",
-							"port": 9229
+							"port": 9229,
+							"skipFiles": ["<node_internals>/**"]
 						}
 					},
 					{
@@ -201,7 +223,8 @@
 							"address": "${2:TCP/IP address of process to be debugged}",
 							"port": 9229,
 							"localRoot": "^\"\\${workspaceFolder}\"",
-							"remoteRoot": "${3:Absolute path to the remote directory containing the program}"
+							"remoteRoot": "${3:Absolute path to the remote directory containing the program}",
+							"skipFiles": ["<node_internals>/**"]
 						}
 					},
 					{
@@ -211,7 +234,8 @@
 							"type": "node",
 							"request": "attach",
 							"name": "${1:Attach by Process ID}",
-							"processId": "^\"\\${command:PickProcess}\""
+							"processId": "^\"\\${command:PickProcess}\"",
+							"skipFiles": ["<node_internals>/**"]
 						}
 					},
 					{
@@ -225,7 +249,8 @@
 							"program": "^\"\\${workspaceFolder}/${1:app.js}\"",
 							"restart": true,
 							"console": "integratedTerminal",
-							"internalConsoleOptions": "neverOpen"
+							"internalConsoleOptions": "neverOpen",
+							"skipFiles": ["<node_internals>/**"]
 						}
 					},
 					{
@@ -244,12 +269,13 @@
 								"--colors",
 								"^\"\\${workspaceFolder}/${1:test}\""
 							],
-							"internalConsoleOptions": "openOnSessionStart"
+							"internalConsoleOptions": "openOnSessionStart",
+							"skipFiles": ["<node_internals>/**"]
 						}
 					},
 					{
 						"label": "%node.snippet.yo.label%",
-						"description": "%node.snippet.yo.description%",
+						"markdownDescription": "%node.snippet.yo.description%",
 						"body": {
 							"type": "node",
 							"request": "launch",
@@ -259,7 +285,8 @@
 								"${1:generator}"
 							],
 							"console": "integratedTerminal",
-							"internalConsoleOptions": "neverOpen"
+							"internalConsoleOptions": "neverOpen",
+							"skipFiles": ["<node_internals>/**"]
 						}
 					},
 					{
@@ -272,7 +299,8 @@
 							"program": "^\"\\${workspaceFolder}/node_modules/gulp/bin/gulp.js\"",
 							"args": [
 								"${1:task}"
-							]
+							],
+							"skipFiles": ["<node_internals>/**"]
 						}
 					},
 					{
@@ -284,7 +312,7 @@
 							"name": "Electron Main",
 							"runtimeExecutable": "^\"\\${workspaceFolder}/node_modules/.bin/electron\"",
 							"program": "^\"\\${workspaceFolder}/main.js\"",
-							"protocol": "legacy"
+							"skipFiles": ["<node_internals>/**"]
 						}
 					}
 				],
@@ -353,12 +381,12 @@
 									"string",
 									"null"
 								],
-								"description": "%node.launch.runtimeExecutable.description%",
+								"markdownDescription": "%node.launch.runtimeExecutable.description%",
 								"default": "node"
 							},
 							"runtimeVersion": {
 								"type": "string",
-								"description": "%node.launch.runtimeVersion.description%",
+								"markdownDescription": "%node.launch.runtimeVersion.description%",
 								"default": "default"
 							},
 							"runtimeArgs": {
@@ -377,7 +405,7 @@
 										"null"
 									]
 								},
-								"description": "%node.launch.env.description%",
+								"markdownDescription": "%node.launch.env.description%",
 								"default": {}
 							},
 							"envFile": {
@@ -400,7 +428,7 @@
 							},
 							"outFiles": {
 								"type": "array",
-								"description": "%outFiles.description%",
+								"markdownDescription": "%outFiles.description%",
 								"items": {
 									"type": "string"
 								},
@@ -449,7 +477,7 @@
 							},
 							"skipFiles": {
 								"type": "array",
-								"description": "%skipFiles.description%",
+								"markdownDescription": "%skipFiles.description%",
 								"items": {
 									"type": "string"
 								},
@@ -463,7 +491,8 @@
 							"useWSL": {
 								"type": "boolean",
 								"description": "%node.launch.useWSL.description%",
-								"default": true
+								"default": true,
+								"deprecationMessage": "%node.launch.useWSL.deprecation%"
 							},
 							"trace": {
 								"type": [
@@ -493,6 +522,11 @@
 							"autoAttachChildProcesses": {
 								"type": "boolean",
 								"description": "%node.launch.autoAttachChildProcesses.description%",
+								"default": true
+							},
+							"disableOptimisticBPs": {
+								"type": "boolean",
+								"description": "%node.disableOptimisticBPs.description%",
 								"default": true
 							}
 						}
@@ -559,7 +593,7 @@
 							},
 							"outFiles": {
 								"type": "array",
-								"description": "%outFiles.description%",
+								"markdownDescription": "%outFiles.description%",
 								"items": {
 									"type": "string"
 								},
@@ -593,7 +627,7 @@
 							},
 							"skipFiles": {
 								"type": "array",
-								"description": "%skipFiles.description%",
+								"markdownDescription": "%skipFiles.description%",
 								"items": {
 									"type": "string"
 								},
@@ -620,6 +654,11 @@
 									"webpack:///./*": "${workspaceRoot}/*",
 									"webpack:///*": "*"
 								}
+							},
+							"disableOptimisticBPs": {
+								"type": "boolean",
+								"description": "%node.disableOptimisticBPs.description%",
+								"default": true
 							}
 						}
 					}

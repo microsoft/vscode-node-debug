@@ -7,6 +7,13 @@
 import * as vscode from 'vscode';
 import * as FS from 'fs';
 
+export class Logger {
+	debug(message: string) {
+		// TODO: enable based on log level
+		// vscode.debug.activeDebugConsole.appendLine(message);
+	}
+}
+
 /**
  * Send to debug console.
  */
@@ -17,7 +24,7 @@ export function writeToConsole(message: string) {
 /**
  * Copy attributes from fromObject to toObject.
  */
-export function extendObject<T>(toObject: T, fromObject: T): T {
+export function extendObject<T extends object>(toObject: T, fromObject: T): T {
 
 	for (let key in fromObject) {
 		if (fromObject.hasOwnProperty(key)) {

@@ -6,10 +6,9 @@
 
 import * as nls from 'vscode-nls';
 import * as cp from 'child_process';
-import { writeToConsole, extendObject } from './utilities';
+import { writeToConsole, extendObject, Logger } from './utilities';
 import * as net from 'net';
 import * as WSL from '../wslSupport';
-import { Logger } from 'vscode';
 
 const localize = nls.loadMessageBundle();
 
