@@ -91,7 +91,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 			}
 
 			// last resort
-			if (!config.cwd) {
+			if (!config.cwd && folder) {
 				config.cwd = '${workspaceFolder}';
 			}
 		}
