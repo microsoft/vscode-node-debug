@@ -1,7 +1,7 @@
 {
 	"name": "node-debug",
 	"displayName": "Node Debug (legacy)",
-	"version": "1.40.0",
+	"version": "1.40.1",
 	"publisher": "ms-vscode",
 	"description": "%extension.description%",
 	"icon": "images/node-debug-icon.png",
@@ -183,7 +183,9 @@
 							"request": "launch",
 							"name": "${2:Launch Program}",
 							"program": "^\"\\${workspaceFolder}/${1:app.js}\"",
-							"skipFiles": ["<node_internals>/**"]
+							"skipFiles": [
+								"<node_internals>/**"
+							]
 						}
 					},
 					{
@@ -199,7 +201,9 @@
 								"debug"
 							],
 							"port": 9229,
-							"skipFiles": ["<node_internals>/**"]
+							"skipFiles": [
+								"<node_internals>/**"
+							]
 						}
 					},
 					{
@@ -210,7 +214,9 @@
 							"request": "attach",
 							"name": "${1:Attach}",
 							"port": 9229,
-							"skipFiles": ["<node_internals>/**"]
+							"skipFiles": [
+								"<node_internals>/**"
+							]
 						}
 					},
 					{
@@ -224,7 +230,9 @@
 							"port": 9229,
 							"localRoot": "^\"\\${workspaceFolder}\"",
 							"remoteRoot": "${3:Absolute path to the remote directory containing the program}",
-							"skipFiles": ["<node_internals>/**"]
+							"skipFiles": [
+								"<node_internals>/**"
+							]
 						}
 					},
 					{
@@ -235,7 +243,9 @@
 							"request": "attach",
 							"name": "${1:Attach by Process ID}",
 							"processId": "^\"\\${command:PickProcess}\"",
-							"skipFiles": ["<node_internals>/**"]
+							"skipFiles": [
+								"<node_internals>/**"
+							]
 						}
 					},
 					{
@@ -250,7 +260,9 @@
 							"restart": true,
 							"console": "integratedTerminal",
 							"internalConsoleOptions": "neverOpen",
-							"skipFiles": ["<node_internals>/**"]
+							"skipFiles": [
+								"<node_internals>/**"
+							]
 						}
 					},
 					{
@@ -270,7 +282,9 @@
 								"^\"\\${workspaceFolder}/${1:test}\""
 							],
 							"internalConsoleOptions": "openOnSessionStart",
-							"skipFiles": ["<node_internals>/**"]
+							"skipFiles": [
+								"<node_internals>/**"
+							]
 						}
 					},
 					{
@@ -286,7 +300,9 @@
 							],
 							"console": "integratedTerminal",
 							"internalConsoleOptions": "neverOpen",
-							"skipFiles": ["<node_internals>/**"]
+							"skipFiles": [
+								"<node_internals>/**"
+							]
 						}
 					},
 					{
@@ -300,7 +316,9 @@
 							"args": [
 								"${1:task}"
 							],
-							"skipFiles": ["<node_internals>/**"]
+							"skipFiles": [
+								"<node_internals>/**"
+							]
 						}
 					},
 					{
@@ -312,7 +330,9 @@
 							"name": "Electron Main",
 							"runtimeExecutable": "^\"\\${workspaceFolder}/node_modules/.bin/electron\"",
 							"program": "^\"\\${workspaceFolder}/main.js\"",
-							"skipFiles": ["<node_internals>/**"]
+							"skipFiles": [
+								"<node_internals>/**"
+							]
 						}
 					}
 				],
