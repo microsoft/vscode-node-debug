@@ -16,6 +16,7 @@ import { Cluster } from './cluster';
 
 const DEBUG_SETTINGS = 'debug.node';
 const SHOW_USE_WSL_IS_DEPRECATED_WARNING_SETTING = 'showUseWslIsDeprecatedWarning';
+const USE_V3_SETTING = 'useV3';
 const DEFAULT_JS_PATTERNS: ReadonlyArray<string> = ['*.js', '*.es6', '*.jsx', '*.mjs'];
 
 const localize = nls.loadMessageBundle();
@@ -446,11 +447,14 @@ function guessProgramFromPackage(folder: vscode.WorkspaceFolder | undefined, pac
 
 //---- debug type -------------------------------------------------------------------------------------------------------------
 
-function determineDebugType(config: any, logger: Logger): Promise<string | null> {
-	if (config.protocol === 'legacy') {
-		return Promise.resolve('node');
+async function determineDebugType(config: any, logger: Logger): Promise<string | null> {
+	const useV3 = !!vscode.workspace.getConfiguration(DEBUG_SETTINGS).get(USE_V3_SETTING);
+	if (useV3) {
+		return 'pwa-node';
+	} else if (config.protocol === 'legacy') {
+		return 'node';
 	} else if (config.protocol === 'inspector') {
-		return Promise.resolve('node2');
+		return 'node2';
 	} else {
 		// 'auto', or unspecified
 		return detectDebugType(config, logger);
