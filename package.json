@@ -14,7 +14,6 @@
 	"license": "MIT",
 	"private": true,
 	"scripts": {
-		"postinstall": "node ./node_modules/vscode/bin/install",
 		"build": "gulp build",
 		"watch": "gulp watch",
 		"test": "gulp compile && mocha --timeout 10000 -u tdd ./out/tests/",
@@ -54,6 +53,7 @@
 	"devDependencies": {
 		"@types/mocha": "5.2.7",
 		"@types/node": "10.12.12",
+		"@types/vscode": "^1.40.0",
 		"copy-webpack-plugin": "^5.0.4",
 		"del": "5.0.0",
 		"gulp": "4.0.2",
@@ -70,7 +70,6 @@
 		"tsutils": "3.17.1",
 		"typescript": "3.5.3",
 		"vsce": "^1.66.0",
-		"vscode": "1.1.36",
 		"vscode-debugadapter-testsupport": "1.37.1",
 		"vscode-debugprotocol": "1.37.0",
 		"vscode-nls-dev": "3.3.1",
