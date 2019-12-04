@@ -83,27 +83,12 @@ function listLoadedScripts(session: vscode.DebugSession | undefined): Thenable<S
 // Temp until 1.41 typings are published:
 declare module 'vscode' {
 	export namespace debug {
-		export const asDebugSourceUri: undefined | ((source: {}, session?: DebugSession) => Uri);
+		export function asDebugSourceUri(source: {}, session?: DebugSession): Uri;
 	}
 }
 
-export function openScript(session: vscode.DebugSession | undefined, source: Source) {
-	let uri: vscode.Uri;
-
-	// use new API in VS >1.41 if available:
-	if (vscode.debug.asDebugSourceUri) {
-		uri = vscode.debug.asDebugSourceUri(source, session);
-	} else if (source.sourceReference) {
-		let debug = `debug:${encodeURIComponent(source.path)}`;
-		let sep = '?';
-		if (session) {
-			debug += `${sep}session=${encodeURIComponent(session.id)}`;
-			sep = '&';
-		}
-		debug += `${sep}ref=${source.sourceReference}`;
-		uri = vscode.Uri.parse(debug);
-	} else {
-		uri = vscode.Uri.file(source.path);
-	}
-	vscode.workspace.openTextDocument(uri).then(doc => vscode.window.showTextDocument(doc));
+export async function openScript(session: vscode.DebugSession | undefined, source: Source) {
+	const uri = vscode.debug.asDebugSourceUri(source, session);
+	const doc = await vscode.workspace.openTextDocument(uri);
+	vscode.window.showTextDocument(doc);
 }
