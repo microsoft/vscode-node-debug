@@ -97,6 +97,11 @@
 					"type": "boolean",
 					"description": "%debug.node.showUseWslIsDeprecatedWarning.description%",
 					"default": true
+				},
+				"debug.node.useV3": {
+					"type": "boolean",
+					"description": "%debug.node.useV3.description%",
+					"default": false
 				}
 			}
 		},
