@@ -448,7 +448,9 @@ function guessProgramFromPackage(folder: vscode.WorkspaceFolder | undefined, pac
 //---- debug type -------------------------------------------------------------------------------------------------------------
 
 async function determineDebugType(config: any, logger: Logger): Promise<string | null> {
-	const useV3 = !!vscode.workspace.getConfiguration(DEBUG_SETTINGS).get(USE_V3_SETTING);
+	const useV3 = !!vscode.workspace.getConfiguration(DEBUG_SETTINGS).get(USE_V3_SETTING)
+		|| vscode.workspace.getConfiguration().get('debug.javascript.usePreview', false);
+
 	if (useV3) {
 		config['__workspaceFolder'] = '${workspaceFolder}';
 		return 'pwa-node';
