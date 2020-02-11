@@ -1,7 +1,7 @@
 {
 	"name": "node-debug",
 	"displayName": "Node Debug (legacy)",
-	"version": "1.42.0",
+	"version": "1.43.0",
 	"publisher": "ms-vscode",
 	"description": "%extension.description%",
 	"icon": "images/node-debug-icon.png",
@@ -36,9 +36,9 @@
 		"ms-vscode.node-debug2"
 	],
 	"dependencies": {
-		"glob": "7.1.4",
+		"glob": "7.1.6",
 		"minimatch": "3.0.4",
-		"request-light": "0.2.4",
+		"request-light": "0.2.5",
 		"source-map": "0.6.1",
 		"vscode-debugadapter": "1.38.0",
 		"vscode-nls": "4.1.1"
@@ -51,20 +51,20 @@
 		"url": "https://github.com/Microsoft/vscode-node-debug/issues"
 	},
 	"devDependencies": {
-		"@types/mocha": "5.2.7",
+		"@types/mocha": "7.0.1",
 		"@types/node": "^12.7.3",
 		"copy-webpack-plugin": "^5.1.1",
 		"del": "5.1.0",
 		"gulp": "4.0.2",
 		"gulp-filter": "6.0.0",
 		"gulp-sourcemaps": "2.6.5",
-		"gulp-tsb": "2.0.7",
+		"gulp-tsb": "4.0.5",
 		"gulp-tslint": "8.1.4",
 		"gulp-typescript": "5.0.1",
 		"gulp-uglify": "3.0.2",
-		"mocha": "6.2.0",
+		"mocha": "7.0.1",
 		"ts-loader": "~6.2.1",
-		"tslint": "5.18.0",
+		"tslint": "6.0.0",
 		"tslint-microsoft-contrib": "6.2.0",
 		"tsutils": "3.17.1",
 		"typescript": "~3.7.2",
