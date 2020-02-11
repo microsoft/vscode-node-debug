@@ -5,7 +5,7 @@
 
 'use strict';
 
-import { spawn, ChildProcess } from 'child_process';
+import { spawn, ChildProcessWithoutNullStreams } from 'child_process';
 import { join } from 'path';
 
 export class ProcessTreeNode {
@@ -66,7 +66,7 @@ export function getProcesses(one: (pid: number, ppid: number, command: string, a
 
 	return new Promise((resolve, reject) => {
 
-		let proc: ChildProcess;
+		let proc: ChildProcessWithoutNullStreams;
 
 		if (process.platform === 'win32') {
 

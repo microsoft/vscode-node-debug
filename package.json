@@ -30,8 +30,7 @@
 		"multi-root ready"
 	],
 	"engines": {
-		"vscode": "^1.33.0",
-		"node": "^10.2.0"
+		"vscode": "^1.42.0"
 	},
 	"extensionDependencies": [
 		"ms-vscode.node-debug2"
@@ -41,7 +40,7 @@
 		"minimatch": "3.0.4",
 		"request-light": "0.2.4",
 		"source-map": "0.6.1",
-		"vscode-debugadapter": "1.37.1",
+		"vscode-debugadapter": "1.38.0",
 		"vscode-nls": "4.1.1"
 	},
 	"repository": {
@@ -53,9 +52,9 @@
 	},
 	"devDependencies": {
 		"@types/mocha": "5.2.7",
-		"@types/node": "10.12.12",
-		"copy-webpack-plugin": "^5.0.4",
-		"del": "5.0.0",
+		"@types/node": "^12.7.3",
+		"copy-webpack-plugin": "^5.1.1",
+		"del": "5.1.0",
 		"gulp": "4.0.2",
 		"gulp-filter": "6.0.0",
 		"gulp-sourcemaps": "2.6.5",
@@ -64,18 +63,18 @@
 		"gulp-typescript": "5.0.1",
 		"gulp-uglify": "3.0.2",
 		"mocha": "6.2.0",
-		"ts-loader": "6.0.4",
+		"ts-loader": "~6.2.1",
 		"tslint": "5.18.0",
 		"tslint-microsoft-contrib": "6.2.0",
 		"tsutils": "3.17.1",
-		"typescript": "3.5.3",
-		"vsce": "^1.66.0",
+		"typescript": "~3.7.2",
+		"vsce": "^1.73.0",
 		"vscode": "1.1.36",
-		"vscode-debugadapter-testsupport": "1.37.1",
-		"vscode-debugprotocol": "1.37.0",
+		"vscode-debugadapter-testsupport": "1.40.1",
+		"vscode-debugprotocol": "1.38.0",
 		"vscode-nls-dev": "3.3.1",
-		"webpack": "^4.39.1",
-		"webpack-cli": "^3.3.6"
+		"webpack": "~4.41.2",
+		"webpack-cli": "~3.3.10"
 	},
 	"main": "./dist/extension.js",
 	"activationEvents": [

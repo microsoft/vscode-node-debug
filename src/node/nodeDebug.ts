@@ -32,6 +32,10 @@ let localize = nls.loadMessageBundle();
 
 type FilterType = 'named' | 'indexed' | 'all';
 
+interface ProcessEnvWithNull {
+	[key: string]: string | null;
+}
+
 export interface VariableContainer {
 	Expand(session: NodeDebugSession, filter: FilterType, start: number | undefined, count: number | undefined): Promise<Variable[]>;
 	SetValue(session: NodeDebugSession, name: string, value: string): Promise<Variable>;
@@ -1122,7 +1126,7 @@ export class NodeDebugSession extends LoggingDebugSession {
 			this._sendLaunchCommandToConsole(launchArgs);
 
 			// merge environment variables into a copy of the process.env
-			envVars = PathUtils.extendObject(PathUtils.extendObject( {}, process.env), envVars);
+			envVars = PathUtils.extendObject(PathUtils.extendObject( {}, <ProcessEnvWithNull> process.env), envVars);
 
 			// delete all variables that have a 'null' value
 			if (envVars) {
@@ -1197,12 +1201,16 @@ export class NodeDebugSession extends LoggingDebugSession {
 	}
 
 	private _captureOutput(process: CP.ChildProcess) {
-		process.stdout.on('data', (data: string) => {
-			this.sendEvent(new OutputEvent(data.toString(), 'stdout'));
-		});
-		process.stderr.on('data', (data: string) => {
-			this.sendEvent(new OutputEvent(data.toString(), 'stderr'));
-		});
+		if (process.stdout) {
+			process.stdout.on('data', (data: string) => {
+				this.sendEvent(new OutputEvent(data.toString(), 'stdout'));
+			});
+		}
+		if (process.stderr) {
+			process.stderr.on('data', (data: string) => {
+				this.sendEvent(new OutputEvent(data.toString(), 'stderr'));
+			});
+		}
 	}
 
 	/**
@@ -4274,7 +4282,7 @@ function findport(): Promise<number> {
 		const server = Net.createServer();
 		server.on('listening', _ => {
 			const ai = server.address();
-			if (typeof ai === 'object') {
+			if (typeof ai === 'object' && ai !== null) {
 				port = ai.port;
 			}
 			server.close();

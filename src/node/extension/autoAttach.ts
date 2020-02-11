@@ -171,7 +171,7 @@ function pollProcesses(rootPid: number, inTerminal: boolean, cb: (pid: number, c
 
 function findChildProcesses(rootPid: number, inTerminal: boolean, cb: (pid: number, cmd: string, args: string) => void): Promise<void> {
 
-	function walker(node: ProcessTreeNode, terminal: boolean, terminalPids: number[]) {
+	function walker(node: ProcessTreeNode, terminal: boolean, terminalPids: (number | undefined)[]) {
 
 		if (terminalPids.indexOf(node.pid) >= 0) {
 			terminal = true;	// found the terminal shell
