@@ -82,7 +82,6 @@
 		"onDebugResolve:node",
 		"onCommand:extension.pickNodeProcess",
 		"onCommand:extension.node-debug.toggleSkippingFile",
-		"onCommand:extension.node-debug.pickLoadedScript",
 		"onCommand:extension.node-debug.attachNodeProcess",
 		"onCommand:extension.node-debug.startAutoAttach",
 		"onCommand:extension.node-debug.startWithStopOnEntry"
@@ -115,11 +114,6 @@
 		},
 		"commands": [
 			{
-				"command": "extension.node-debug.pickLoadedScript",
-				"title": "%open.loaded.script%",
-				"category": "Debug"
-			},
-			{
 				"command": "extension.node-debug.attachNodeProcess",
 				"title": "%attach.node.process%",
 				"category": "Debug"
@@ -136,12 +130,6 @@
 			}
 		],
 		"keybindings": [
-			{
-				"command": "extension.node-debug.pickLoadedScript",
-				"key": "ctrl+f4",
-				"mac": "cmd+f4",
-				"when": "debugType == 'node'"
-			},
 			{
 				"command": "extension.node-debug.startWithStopOnEntry",
 				"key": "F10",
