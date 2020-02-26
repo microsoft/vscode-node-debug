@@ -5445,25 +5445,25 @@ vsce@^1.73.0:
     yauzl "^2.3.1"
     yazl "^2.2.2"
 
-vscode-debugadapter-testsupport@1.40.2-pre.0:
-  version "1.40.2-pre.0"
-  resolved "https://registry.yarnpkg.com/vscode-debugadapter-testsupport/-/vscode-debugadapter-testsupport-1.40.2-pre.0.tgz#2103afed81ce299f6c7b6f3b4f77faf64e24f802"
-  integrity sha512-BHkoNEys3Adspq8KQ3+OOczkYpB/IUyud4Mi0zqFcfaEzlagmHCvPe8RLrJuecNs3TdBa2x+3AcdIzjDzbsw0A==
+vscode-debugadapter-testsupport@1.40.2:
+  version "1.40.2"
+  resolved "https://registry.yarnpkg.com/vscode-debugadapter-testsupport/-/vscode-debugadapter-testsupport-1.40.2.tgz#701d5bb67fa856feb22c0fcd289b6137451a7c72"
+  integrity sha512-HN1KoQUtFwCfPz2r1XaOtw3aUPpkgDPPRpLSGjCbOGRYhUJKlnLEwSaq4djVvZsfav6Zfd9QaBoaBNy03eBTvg==
   dependencies:
-    vscode-debugprotocol "1.39.0-pre.0"
+    vscode-debugprotocol "1.39.0"
 
-vscode-debugadapter@1.39.0-pre.0:
-  version "1.39.0-pre.0"
-  resolved "https://registry.yarnpkg.com/vscode-debugadapter/-/vscode-debugadapter-1.39.0-pre.0.tgz#2a1e3a143a5861f034a5048c20c6e0f03ea18452"
-  integrity sha512-BSTuU/p8bMOTPtki1D32IS8EuhEaa37ojDqLT0B1rZCM+05+I7sqGb3VSmrqKl06j/kHlps8h/OsoArKrTszOA==
+vscode-debugadapter@1.39.0:
+  version "1.39.0"
+  resolved "https://registry.yarnpkg.com/vscode-debugadapter/-/vscode-debugadapter-1.39.0.tgz#8b2a1afb287e9be37e9fe88e2c05eb35f8724425"
+  integrity sha512-i8gU7H3N4EupmX4dMgh1DUS8PAy9AnB1je9QvZ4oWCbwrdREtOiB23cDGPRzyJDmcgoZLyikkrP05SyBCtRERA==
   dependencies:
     mkdirp "^0.5.1"
-    vscode-debugprotocol "1.39.0-pre.0"
+    vscode-debugprotocol "1.39.0"
 
-vscode-debugprotocol@1.39.0-pre.0:
-  version "1.39.0-pre.0"
-  resolved "https://registry.yarnpkg.com/vscode-debugprotocol/-/vscode-debugprotocol-1.39.0-pre.0.tgz#67843631a3c53f2d5282f75ab5996e1408c3958c"
-  integrity sha512-VpoD8m0gOo2Ag5dEpNT9sAI6BBxIyCxEk2dhGIBegxnlOuiB1SVxMgo1tmsvNYcRCpf9eng27kZ6d6FGoPpIAg==
+vscode-debugprotocol@1.39.0:
+  version "1.39.0"
+  resolved "https://registry.yarnpkg.com/vscode-debugprotocol/-/vscode-debugprotocol-1.39.0.tgz#0c639178d0d5ea7de7903b6478b53d2bc0d77461"
+  integrity sha512-Wkvgtuz90vjtQBcvw9Z+BYa4dA6W+sHwHMpqvJVNmwWSuT3JZdl0XDhZNLqtMXkVF4okxtAe0MmbupPSt+gnAQ==
 
 vscode-nls-dev@3.3.1:
   version "3.3.1"
