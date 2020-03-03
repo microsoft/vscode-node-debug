@@ -20,8 +20,9 @@ const USE_V3_SETTING = 'useV3';
 const DEFAULT_JS_PATTERNS: ReadonlyArray<string> = ['*.js', '*.es6', '*.jsx', '*.mjs'];
 
 const localize = nls.loadMessageBundle();
-let stopOnEntry = false;
 
+// unelegant fix for https://github.com/microsoft/vscode/issues/49855
+let stopOnEntry = false;
 export function startDebuggingAndStopOnEntry() {
 	stopOnEntry = true;
 	vscode.commands.executeCommand('workbench.action.debug.start');
@@ -133,20 +134,6 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 			config.internalConsoleOptions = 'neverOpen';
 		}
 
-		// "attach to process via picker" support
-		if (config.request === 'attach' && typeof config.processId === 'string') {
-			// we resolve Process Picker early (before VS Code) so that we can probe the process for its protocol
-			if (await resolveProcessId(config)) {
-				return undefined;	// abort launch
-			}
-		}
-
-		// finally determine which protocol to use
-		const debugType = await determineDebugType(config, this._logger);
-		if (debugType) {
-			config.type = debugType;
-		}
-
 		// fixup log parameters
 		if (config.trace && !config.logFilePath) {
 			const fileName = config.type === 'node' ? 'debugadapter-legacy.txt' : 'debugadapter.txt';
@@ -168,6 +155,35 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 
 		// tell the extension what file patterns can be debugged
 		config.__debuggablePatterns = this.getJavaScriptPatterns();
+
+		// everything ok: let VS Code start the debug session
+		return config;
+	}
+
+	/**
+	 * Try to add all missing attributes to the debug configuration being launched.
+	 */
+	resolveDebugConfigurationWithSubstitutedVariables(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration, token?: vscode.CancellationToken): vscode.ProviderResult<vscode.DebugConfiguration> {
+		return this.resolveConfigWithSubstitutedVariablesAsync(folder, config).catch(err => {
+			return vscode.window.showErrorMessage(err.message, { modal: true }).then(_ => undefined); // abort launch
+		});
+	}
+
+	/**
+	 * Try to add all missing attributes to the debug configuration being launched.
+	 */
+	private async resolveConfigWithSubstitutedVariablesAsync(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration): Promise<vscode.DebugConfiguration | undefined> {
+
+		// attach to process by processId
+		if (config.request === 'attach' && typeof config.processId === 'string') {
+			await resolveProcessId(config);
+		}
+
+		// determine which protocol to use after all variables have been substituted (including command variables for process picker)
+		const debugType = await determineDebugType(config, this._logger);
+		if (debugType) {
+			config.type = debugType;
+		}
 
 		// everything ok: let VS Code start the debug session
 		return config;

@@ -26,34 +26,29 @@ interface ProcessItem extends vscode.QuickPickItem {
  */
 export async function attachProcess() {
 
-	const config = {
-		type: 'node',
-		request: 'attach',
-		name: 'process',
-		processId: '${command:extension.pickNodeProcess}'
-	};
+	const result = await pickProcess(true);	// ask for pids and ports!
+	if (result) {
 
-	if (!await resolveProcessId(config)) {
+		const config = {
+			type: 'node',
+			request: 'attach',
+			name: 'process',
+			processId: result
+		};
+
+		await resolveProcessId(config);
+
 		return vscode.debug.startDebugging(undefined, config);
 	}
 	return undefined;
 }
 
 /**
- * returns true if UI was cancelled
+ * Process the special protocol/processId/port patterns that the process picker puts in the "processId" attribute.
  */
-export async function resolveProcessId(config: vscode.DebugConfiguration) : Promise<boolean> {
+export async function resolveProcessId(config: vscode.DebugConfiguration) : Promise<void> {
 
-	// we resolve Process Picker early (before VS Code) so that we can probe the process for its protocol
 	let processId = config.processId.trim();
-	if (processId === '${command:PickProcess}' || processId === '${command:extension.pickNodeProcess}') {
-		const result = await pickProcess(true);	// ask for pids and ports!
-		if (!result) {
-			// UI dismissed (cancelled)
-			return true;
-		}
-		processId = result;
-	}
 
 	const matches = /^(inspector|legacy)?([0-9]+)(inspector|legacy)?([0-9]+)?$/.exec(processId);
 	if (matches && matches.length === 5) {
@@ -101,8 +96,6 @@ export async function resolveProcessId(config: vscode.DebugConfiguration) : Prom
 	} else {
 		throw new Error(localize('process.id.error', "Attach to process: '{0}' doesn't look like a process id.", processId));
 	}
-
-	return false;
 }
 
 /**
