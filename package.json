@@ -40,7 +40,7 @@
 		"minimatch": "3.0.4",
 		"request-light": "0.2.5",
 		"source-map": "0.6.1",
-		"vscode-debugadapter": "1.39.0",
+		"vscode-debugadapter": "1.39.1",
 		"vscode-nls": "4.1.1"
 	},
 	"repository": {

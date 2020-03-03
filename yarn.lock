@@ -5452,10 +5452,10 @@ vscode-debugadapter-testsupport@1.40.2:
   dependencies:
     vscode-debugprotocol "1.39.0"
 
-vscode-debugadapter@1.39.0:
-  version "1.39.0"
-  resolved "https://registry.yarnpkg.com/vscode-debugadapter/-/vscode-debugadapter-1.39.0.tgz#8b2a1afb287e9be37e9fe88e2c05eb35f8724425"
-  integrity sha512-i8gU7H3N4EupmX4dMgh1DUS8PAy9AnB1je9QvZ4oWCbwrdREtOiB23cDGPRzyJDmcgoZLyikkrP05SyBCtRERA==
+vscode-debugadapter@1.39.1:
+  version "1.39.1"
+  resolved "https://registry.yarnpkg.com/vscode-debugadapter/-/vscode-debugadapter-1.39.1.tgz#c5d2565a1f27c95c6d2fc7a893ce94942570dc95"
+  integrity sha512-+WYpOcY0PiAEBILf6nIwbNVF8ig8gugWTKWhQ7Ds1884JXpVL336pG0xH66Nc1Z1W/KSzuXarm1gtccdwl6PKw==
   dependencies:
     mkdirp "^0.5.1"
     vscode-debugprotocol "1.39.0"
