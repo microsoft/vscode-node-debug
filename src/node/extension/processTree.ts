@@ -157,7 +157,12 @@ export function getProcesses(one: (pid: number, ppid: number, command: string, a
 
 		proc.stderr.setEncoding('utf8');
 		proc.stderr.on('data', data => {
-			reject(new Error(data.toString()));
+			const e = data.toString();
+			if (e.indexOf('screen size is bogus') >= 0) {
+				// ignore this error silently; see https://github.com/microsoft/vscode/issues/75932
+			} else {
+				reject(new Error(data.toString()));
+			}
 		});
 
 		proc.on('close', (code, signal) => {
