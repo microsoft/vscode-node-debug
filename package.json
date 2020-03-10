@@ -99,6 +99,11 @@
 					"type": "boolean",
 					"description": "%debug.node.useV3.description%",
 					"default": false
+				},
+				"debug.extensionHost.useV3": {
+					"type": "boolean",
+					"description": "%debug.extensionHost.useV3.description%",
+					"default": false
 				}
 			}
 		},
