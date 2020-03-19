@@ -5122,25 +5122,30 @@ vsce@^1.73.0:
     yauzl "^2.3.1"
     yazl "^2.2.2"
 
-vscode-debugadapter-testsupport@1.40.2:
-  version "1.40.2"
-  resolved "https://registry.yarnpkg.com/vscode-debugadapter-testsupport/-/vscode-debugadapter-testsupport-1.40.2.tgz#701d5bb67fa856feb22c0fcd289b6137451a7c72"
-  integrity sha512-HN1KoQUtFwCfPz2r1XaOtw3aUPpkgDPPRpLSGjCbOGRYhUJKlnLEwSaq4djVvZsfav6Zfd9QaBoaBNy03eBTvg==
+vscode-debugadapter-testsupport@1.40.3-pre.0:
+  version "1.40.3-pre.0"
+  resolved "https://registry.yarnpkg.com/vscode-debugadapter-testsupport/-/vscode-debugadapter-testsupport-1.40.3-pre.0.tgz#a87a8fc9e4e0a29550e721560d320654314b10b4"
+  integrity sha512-T5APveA4v7UAw8asxlzF2mHPP8EV4jpK4QUVj2MVd9gQFZckpl6ZQ72qToiFfxAthXjpE9WVMXQCJauscvce9A==
   dependencies:
-    vscode-debugprotocol "1.39.0"
+    vscode-debugprotocol "1.40.0-pre.0"
 
-vscode-debugadapter@1.39.1:
-  version "1.39.1"
-  resolved "https://registry.yarnpkg.com/vscode-debugadapter/-/vscode-debugadapter-1.39.1.tgz#c5d2565a1f27c95c6d2fc7a893ce94942570dc95"
-  integrity sha512-+WYpOcY0PiAEBILf6nIwbNVF8ig8gugWTKWhQ7Ds1884JXpVL336pG0xH66Nc1Z1W/KSzuXarm1gtccdwl6PKw==
+vscode-debugadapter@1.40.0-pre.2:
+  version "1.40.0-pre.2"
+  resolved "https://registry.yarnpkg.com/vscode-debugadapter/-/vscode-debugadapter-1.40.0-pre.2.tgz#bb5a6e8a977121dce15bd14d67248d0b26f0d448"
+  integrity sha512-kwH9xPEewxtrgWBZ9afM3d4tSRKg/X0doaRffuLH98QDzeTj0RKejltUdIWjxvyFVflOf2gh2jrcfKOTMCdN6A==
   dependencies:
     mkdirp "^0.5.1"
-    vscode-debugprotocol "1.39.0"
+    vscode-debugprotocol "1.40.0-pre.1"
 
-vscode-debugprotocol@1.39.0:
-  version "1.39.0"
-  resolved "https://registry.yarnpkg.com/vscode-debugprotocol/-/vscode-debugprotocol-1.39.0.tgz#0c639178d0d5ea7de7903b6478b53d2bc0d77461"
-  integrity sha512-Wkvgtuz90vjtQBcvw9Z+BYa4dA6W+sHwHMpqvJVNmwWSuT3JZdl0XDhZNLqtMXkVF4okxtAe0MmbupPSt+gnAQ==
+vscode-debugprotocol@1.40.0-pre.0:
+  version "1.40.0-pre.0"
+  resolved "https://registry.yarnpkg.com/vscode-debugprotocol/-/vscode-debugprotocol-1.40.0-pre.0.tgz#54300191649d4b3fa671b83fb6ea25c5f7622ff5"
+  integrity sha512-2ghen3Pcnxrw2+ZK0HuG/NQqhT0lAHfZodLQinBMWNbApucKva4jjTfUUoU69m39O46J0ENdVQeFTAL2oyy6Zg==
+
+vscode-debugprotocol@1.40.0-pre.1:
+  version "1.40.0-pre.1"
+  resolved "https://registry.yarnpkg.com/vscode-debugprotocol/-/vscode-debugprotocol-1.40.0-pre.1.tgz#62c066c0520cc5e318dfc9873907574018bc8460"
+  integrity sha512-MLlNUSoJbRPNP/7PpnNLOOubZP/X0ObDEjwC6frrn/GR+bT943S1iIdj9aMjT7i93HSpsIAx8YbwkqId7nxLgw==
 
 vscode-nls-dev@3.3.1:
   version "3.3.1"
