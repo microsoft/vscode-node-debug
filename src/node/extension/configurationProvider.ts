@@ -156,6 +156,9 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 		// tell the extension what file patterns can be debugged
 		config.__debuggablePatterns = this.getJavaScriptPatterns();
 
+		// add the workspace folder for js-debug, if useV3 is set
+		config.__workspaceFolder = '${workspaceFolder}';
+
 		// everything ok: let VS Code start the debug session
 		return config;
 	}
@@ -468,7 +471,6 @@ async function determineDebugType(config: any, logger: Logger): Promise<string |
 		|| vscode.workspace.getConfiguration().get('debug.javascript.usePreview', false);
 
 	if (useV3) {
-		config['__workspaceFolder'] = '${workspaceFolder}';
 		return 'pwa-node';
 	} else if (config.protocol === 'legacy') {
 		return 'node';
