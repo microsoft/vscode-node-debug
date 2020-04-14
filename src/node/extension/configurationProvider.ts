@@ -157,7 +157,11 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 		config.__debuggablePatterns = this.getJavaScriptPatterns();
 
 		// add the workspace folder for js-debug, if useV3 is set
-		config.__workspaceFolder = '${workspaceFolder}';
+		const useV3 = !!vscode.workspace.getConfiguration(DEBUG_SETTINGS).get(USE_V3_SETTING)
+			|| vscode.workspace.getConfiguration().get('debug.javascript.usePreview', false);
+		if (useV3) {
+			config.__workspaceFolder = '${workspaceFolder}';
+		}
 
 		// everything ok: let VS Code start the debug session
 		return config;
