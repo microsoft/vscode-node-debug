@@ -471,8 +471,9 @@ function guessProgramFromPackage(folder: vscode.WorkspaceFolder | undefined, pac
 //---- debug type -------------------------------------------------------------------------------------------------------------
 
 async function determineDebugType(config: any, logger: Logger): Promise<string | null> {
-	const useV3 = !!vscode.workspace.getConfiguration(DEBUG_SETTINGS).get(USE_V3_SETTING)
-		|| vscode.workspace.getConfiguration().get('debug.javascript.usePreview', false);
+	const useV3 =
+		(vscode.workspace.getConfiguration(DEBUG_SETTINGS).get(USE_V3_SETTING) || vscode.workspace.getConfiguration().get('debug.javascript.usePreview'))
+		?? isInsiders();
 
 	if (useV3) {
 		return 'pwa-node';
@@ -484,6 +485,12 @@ async function determineDebugType(config: any, logger: Logger): Promise<string |
 		// 'auto', or unspecified
 		return detectDebugType(config, logger);
 	}
+}
+
+function isInsiders() {
+	return vscode.env.uriScheme === 'vscode-insiders'
+		|| vscode.env.uriScheme === 'code-oss'
+		|| vscode.env.uriScheme === 'vscode-exploration';
 }
 
 function nvsStandardArchName(arch) {
