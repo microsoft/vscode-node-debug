@@ -16,7 +16,6 @@ import { Cluster } from './cluster';
 
 const DEBUG_SETTINGS = 'debug.node';
 const SHOW_USE_WSL_IS_DEPRECATED_WARNING_SETTING = 'showUseWslIsDeprecatedWarning';
-const USE_V3_SETTING = 'useV3';
 const DEFAULT_JS_PATTERNS: ReadonlyArray<string> = ['*.js', '*.es6', '*.jsx', '*.mjs'];
 
 const localize = nls.loadMessageBundle();
@@ -157,9 +156,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 		config.__debuggablePatterns = this.getJavaScriptPatterns();
 
 		// add the workspace folder for js-debug, if useV3 is set
-		const useV3 = !!vscode.workspace.getConfiguration(DEBUG_SETTINGS).get(USE_V3_SETTING)
-			|| vscode.workspace.getConfiguration().get('debug.javascript.usePreview', false);
-		if (useV3) {
+		if (useV3()) {
 			config.__workspaceFolder = '${workspaceFolder}';
 		}
 
@@ -471,11 +468,7 @@ function guessProgramFromPackage(folder: vscode.WorkspaceFolder | undefined, pac
 //---- debug type -------------------------------------------------------------------------------------------------------------
 
 async function determineDebugType(config: any, logger: Logger): Promise<string | null> {
-	const useV3 =
-		(vscode.workspace.getConfiguration(DEBUG_SETTINGS).get(USE_V3_SETTING) || vscode.workspace.getConfiguration().get('debug.javascript.usePreview'))
-		?? isInsiders();
-
-	if (useV3) {
+	if (useV3()) {
 		return 'pwa-node';
 	} else if (config.protocol === 'legacy') {
 		return 'node';
@@ -487,11 +480,21 @@ async function determineDebugType(config: any, logger: Logger): Promise<string |
 	}
 }
 
+function useV3() {
+	return getWithoutDefault('debug.node.useV3') ?? getWithoutDefault('debug.javascript.usePreview') ?? isInsiders();
+}
+
+function getWithoutDefault<T>(setting: string): T | undefined {
+	const info = vscode.workspace.getConfiguration().inspect<T>(setting);
+	return info?.workspaceValue ?? info?.globalValue;
+}
+
 function isInsiders() {
 	return vscode.env.uriScheme === 'vscode-insiders'
-		|| vscode.env.uriScheme === 'code-oss'
-		|| vscode.env.uriScheme === 'vscode-exploration';
+			|| vscode.env.uriScheme === 'code-oss'
+			|| vscode.env.uriScheme === 'vscode-exploration';
 }
+
 
 function nvsStandardArchName(arch) {
 	switch (arch) {
