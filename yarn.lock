@@ -5122,25 +5122,25 @@ vsce@^1.73.0:
     yauzl "^2.3.1"
     yazl "^2.2.2"
 
-vscode-debugadapter-testsupport@1.40.3:
-  version "1.40.3"
-  resolved "https://registry.yarnpkg.com/vscode-debugadapter-testsupport/-/vscode-debugadapter-testsupport-1.40.3.tgz#6e7e41de0bad2a31efe0469c513d2afd7a7f9098"
-  integrity sha512-geWmnxFX2Z7wxlgRHUaULtPj3u6d29reGzzKLFXYPd59I9xgudcFdS1dSczjO6Pwkb2jkfFcXAyNGRSzu+kBSg==
+vscode-debugadapter-testsupport@1.41.0:
+  version "1.41.0"
+  resolved "https://registry.yarnpkg.com/vscode-debugadapter-testsupport/-/vscode-debugadapter-testsupport-1.41.0.tgz#db2b6c743ef07b1f57828168bdc5f7a5e50ae21a"
+  integrity sha512-3aEDm+B6trSxUJWETbNBM5qbEAUbzPpLZ9YT9ez+C1ITG4uaioc8GIQtkVk1kpxP++WPWo0LVjYY8CbVRCRapg==
   dependencies:
-    vscode-debugprotocol "1.40.0"
+    vscode-debugprotocol "1.41.0"
 
-vscode-debugadapter@1.40.0:
-  version "1.40.0"
-  resolved "https://registry.yarnpkg.com/vscode-debugadapter/-/vscode-debugadapter-1.40.0.tgz#a5f2050601979913b289706e49dc58a95b7b1ae5"
-  integrity sha512-cudm9ROtFRxiBgcM+B8cQXA1DfsRKaOfEYDMh9upxbYxN3v0c40SHCPmNivIYp7LDzcG60UGaIYD1vsUfC1Qcg==
+vscode-debugadapter@1.41.0:
+  version "1.41.0"
+  resolved "https://registry.yarnpkg.com/vscode-debugadapter/-/vscode-debugadapter-1.41.0.tgz#2414b48b6f9925fd6cbc53ef5ce9dd8c6f41a9e2"
+  integrity sha512-b+J8wmsa3NCxJ+L9DAMpRfPM+8bmp4gFBoFp9lhkpwqn3UMs3sYvdcwugQr/T4lDaCCEr807HKMppRsD1EHhPQ==
   dependencies:
     mkdirp "^0.5.1"
-    vscode-debugprotocol "1.40.0"
+    vscode-debugprotocol "1.41.0"
 
-vscode-debugprotocol@1.40.0:
-  version "1.40.0"
-  resolved "https://registry.yarnpkg.com/vscode-debugprotocol/-/vscode-debugprotocol-1.40.0.tgz#63e1f670a6f5c4928f3f91b27b259a21c4db7861"
-  integrity sha512-Fwze+9qbLDPuQUhtITJSu/Vk6zIuakNM1iR2ZiZRgRaMEgBpMs2JSKaT0chrhJHCOy6/UbpsUbUBIseF6msV+g==
+vscode-debugprotocol@1.41.0:
+  version "1.41.0"
+  resolved "https://registry.yarnpkg.com/vscode-debugprotocol/-/vscode-debugprotocol-1.41.0.tgz#fc99b01dee26e9f25cbb5708318fc0081002808c"
+  integrity sha512-Sxp7kDDuhpEZiDaIfhM0jLF3RtMqvc6CpoESANE77t351uezsd/oDoqALLcOnmmsDzTgQ3W0sCvM4gErnjDFpA==
 
 vscode-nls-dev@3.3.1:
   version "3.3.1"
