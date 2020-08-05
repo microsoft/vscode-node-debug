@@ -157,7 +157,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 
 		// add the workspace folder for js-debug, if useV3 is set
 		if (useV3()) {
-			config.__workspaceFolder = '${workspaceFolder}';
+			config.__workspaceFolder = folder ? '${workspaceFolder}' : config.cwd /* attempt fallback */;
 		}
 
 		// everything ok: let VS Code start the debug session
