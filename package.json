@@ -98,11 +98,13 @@
 				"debug.node.useV3": {
 					"type": "boolean",
 					"description": "%debug.node.useV3.description%",
+					"deprecationMessage": "%debug.node.useV3.deprecated%",
 					"default": false
 				},
 				"debug.extensionHost.useV3": {
 					"type": "boolean",
 					"description": "%debug.extensionHost.useV3.description%",
+					"deprecationMessage": "%debug.extensionHost.useV3.deprecated%",
 					"default": false
 				}
 			}
