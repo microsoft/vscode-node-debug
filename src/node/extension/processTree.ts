@@ -123,14 +123,15 @@ export function getProcesses(one: (pid: number, ppid: number, command: string, a
 
 		} else {	// linux
 
-			proc = spawn('/bin/ps', [ '-ax', '-o', 'pid,ppid,comm:20,command' ]);
+			proc = spawn('/bin/ps', [ '-ax', '-o', 'pid:6,ppid:6,comm:20,command' ]);	// we specify the column width explicitly
 			proc.stdout.setEncoding('utf8');
 			proc.stdout.on('data', lines(line => {
 
-				const pid = Number(line.substr(0, 5));
-				const ppid = Number(line.substr(6, 5));
-				let command = line.substr(12, 20).trim();
-				let args = line.substr(33);
+				// the following substr arguments must match the column width specified for the "ps" command above
+				const pid = Number(line.substr(0, 6));
+				const ppid = Number(line.substr(7, 6));
+				let command = line.substr(14, 20).trim();
+				let args = line.substr(35);
 
 				let pos = args.indexOf(command);
 				if (pos >= 0) {
