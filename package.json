@@ -57,7 +57,7 @@
 		"del": "5.1.0",
 		"gulp": "4.0.2",
 		"gulp-filter": "6.0.0",
-		"gulp-sourcemaps": "1.6.0",
+		"gulp-sourcemaps": "2.6.5",
 		"gulp-tsb": "4.0.5",
 		"gulp-tslint": "8.1.4",
 		"gulp-typescript": "5.0.1",
