@@ -1,7 +1,7 @@
 {
 	"name": "node-debug",
 	"displayName": "Node Debug (legacy)",
-	"version": "1.44.11",
+	"version": "1.44.12",
 	"publisher": "ms-vscode",
 	"description": "%extension.description%",
 	"icon": "images/node-debug-icon.png",
@@ -29,7 +29,7 @@
 		"multi-root ready"
 	],
 	"engines": {
-		"vscode": "^1.42.0"
+		"vscode": "^1.49.0"
 	},
 	"extensionDependencies": [
 		"ms-vscode.node-debug2"
@@ -39,7 +39,7 @@
 		"minimatch": "3.0.4",
 		"request-light": "0.2.5",
 		"source-map": "0.6.1",
-		"vscode-debugadapter": "1.41.0",
+		"vscode-debugadapter": "1.42.1",
 		"vscode-nls": "4.1.1"
 	},
 	"repository": {
@@ -69,8 +69,8 @@
 		"tsutils": "3.17.1",
 		"typescript": "~3.7.2",
 		"vsce": "^1.73.0",
-		"vscode-debugadapter-testsupport": "1.41.0",
-		"vscode-debugprotocol": "1.41.0",
+		"vscode-debugadapter-testsupport": "1.42.0",
+		"vscode-debugprotocol": "1.42.0",
 		"vscode-nls-dev": "3.3.1",
 		"webpack": "~4.44.1",
 		"webpack-cli": "~3.3.12"
