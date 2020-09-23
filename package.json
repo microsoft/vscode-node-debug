@@ -68,7 +68,7 @@
 		"tslint-microsoft-contrib": "6.2.0",
 		"tsutils": "3.17.1",
 		"typescript": "~3.7.2",
-		"vsce": "^1.73.0",
+		"vsce": "^1.79.5",
 		"vscode-debugadapter-testsupport": "1.42.0",
 		"vscode-debugprotocol": "1.42.0",
 		"vscode-nls-dev": "3.3.1",
