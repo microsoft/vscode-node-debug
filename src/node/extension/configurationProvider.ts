@@ -481,7 +481,7 @@ async function determineDebugType(config: any, logger: Logger): Promise<string |
 }
 
 function useV3() {
-	return getWithoutDefault('debug.node.useV3') ?? getWithoutDefault('debug.javascript.usePreview') ?? true;
+	return getWithoutDefault('debug.javascript.usePreview') ?? true;
 }
 
 function getWithoutDefault<T>(setting: string): T | undefined {
