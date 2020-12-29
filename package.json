@@ -130,11 +130,7 @@
 				"mac": "F10",
 				"when": "!inDebugMode && debugConfigurationType=='node'"
 			},
-			{
-				"command": "extension.node-debug.startWithStopOnEntry",
-				"mac": "F11",
-				"when": "!inDebugMode && debugConfigurationType=='node'"
-			}
+			
 		],
 		"breakpoints": [
 			{
