@@ -77,7 +77,7 @@
 		"yargs-parser": "5.0.0-security.0"
 	},
 	"resolutions": {
-		"gulp/**/yargs-parser": "5.0.0-security.0"
+		"gulp/**/yargs-parser": "^5.0.0-security.0"
 	},
 	"main": "./dist/extension.js",
 	"activationEvents": [
