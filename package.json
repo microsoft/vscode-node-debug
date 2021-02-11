@@ -50,7 +50,7 @@
 		"url": "https://github.com/Microsoft/vscode-node-debug/issues"
 	},
 	"devDependencies": {
-		"@types/mocha": "7.0.1",
+		"@types/mocha": "8.2.0",
 		"@types/node": "^12.7.3",
 		"@types/vscode": "^1.42.0",
 		"copy-webpack-plugin": "^5.1.1",
@@ -62,7 +62,7 @@
 		"gulp-tslint": "8.1.4",
 		"gulp-typescript": "5.0.1",
 		"gulp-uglify": "3.0.2",
-		"mocha": "7.0.1",
+		"mocha": "8.2.1",
 		"ts-loader": "~6.2.1",
 		"tslint": "6.0.0",
 		"tslint-microsoft-contrib": "6.2.0",
