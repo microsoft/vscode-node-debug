@@ -6,7 +6,7 @@
 
 import * as vscode from 'vscode';
 
-import { NodeConfigurationProvider, startDebuggingAndStopOnEntry } from './configurationProvider';
+import { NodeConfigurationProvider } from './configurationProvider';
 import { pickProcess, attachProcess } from './processPicker';
 import { Cluster } from './cluster';
 import { initializeAutoAttach } from './autoAttach';
@@ -27,9 +27,6 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// attach process command
 	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.attachNodeProcess', attachProcess));
-
-	// F10 and F11 should start debugging with stopOnEntry:true
-	context.subscriptions.push(vscode.commands.registerCommand('extension.node-debug.startWithStopOnEntry', startDebuggingAndStopOnEntry));
 
 	// cluster
 	context.subscriptions.push(vscode.debug.onDidStartDebugSession(session => Cluster.startSession(session)));

@@ -20,13 +20,6 @@ const DEFAULT_JS_PATTERNS: ReadonlyArray<string> = ['*.js', '*.es6', '*.jsx', '*
 
 const localize = nls.loadMessageBundle();
 
-// unelegant fix for https://github.com/microsoft/vscode/issues/49855
-let stopOnEntry = false;
-export function startDebuggingAndStopOnEntry() {
-	stopOnEntry = true;
-	vscode.commands.executeCommand('workbench.action.debug.start');
-}
-
 //---- NodeConfigurationProvider
 
 export class NodeConfigurationProvider implements vscode.DebugConfigurationProvider {
@@ -146,10 +139,6 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 
 				config.logFilePath = join(this._extensionContext.logPath, fileName);
 			}
-		}
-		if (stopOnEntry) {
-			config.stopOnEntry = true;
-			stopOnEntry = false;
 		}
 
 		// tell the extension what file patterns can be debugged
