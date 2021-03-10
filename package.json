@@ -19,7 +19,7 @@
 		"test": "gulp compile && mocha --timeout 10000 -u tdd ./out/tests/",
 		"nodemon": "nodemon --debug --nolazy ./dist/nodeDebug.js --server=4711",
 		"prepublish": "gulp build",
-		"package": "gulp prepare-for-webpack && webpack --mode production --vscode-nls && vsce package",
+		"package": "gulp prepare-for-webpack && webpack --mode production --vscode-nls && vsce package --yarn",
 		"publish": "gulp prepare-for-webpack && webpack --mode production --vscode-nls && vsce publish",
 		"bump": "npm version patch -m 'bump to %s'",
 		"tslint": "gulp tslint",
@@ -44,16 +44,16 @@
 	"dependencies": {
 		"glob": "7.1.6",
 		"minimatch": "3.0.4",
-		"request-light": "0.2.5",
+		"request-light": "0.4.0",
 		"source-map": "0.6.1",
 		"vscode-debugadapter": "1.45.0",
-		"vscode-nls": "4.1.1"
+		"vscode-nls": "5.0.0"
 	},
 	"devDependencies": {
 		"@types/mocha": "8.2.0",
 		"@types/node": "^12.7.3",
 		"@types/vscode": "^1.42.0",
-		"copy-webpack-plugin": "^5.1.1",
+		"copy-webpack-plugin": "^6.4.1",
 		"del": "5.1.0",
 		"gulp": "4.0.2",
 		"gulp-filter": "6.0.0",
@@ -68,11 +68,11 @@
 		"tslint-microsoft-contrib": "6.2.0",
 		"tsutils": "3.17.1",
 		"typescript": "~3.7.2",
-		"vsce": "^1.79.5",
+		"vsce": "^1.86.0",
 		"vscode-debugadapter-testsupport": "1.45.0",
 		"vscode-debugprotocol": "1.45.0",
 		"vscode-nls-dev": "3.3.1",
-		"webpack": "~4.44.1",
+		"webpack": "^4.44.1",
 		"webpack-cli": "~3.3.12",
 		"yargs-parser": "5.0.0-security.0"
 	},

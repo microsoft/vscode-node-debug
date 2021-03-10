@@ -44,11 +44,14 @@ const config = {
 		}]
 	},
 	plugins: [
-		new CopyWebpackPlugin([
-			{ from: './out/node/debugInjection.js', to: '.' },
-			{ from: './src/node/terminateProcess.sh', to: '.' }
-		], {
-			copyUnmodified: true
+		new CopyWebpackPlugin({
+			patterns: [
+				{ from: './out/node/debugInjection.js', to: '.' },
+				{ from: './src/node/terminateProcess.sh', to: '.' }
+			],
+			options: {
+				concurrency: 100
+			}
 		})
 	]
 }
