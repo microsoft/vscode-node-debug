@@ -39,7 +39,7 @@ const transifexProjectName = 'vscode-extensions';
 const transifexExtensionName = 'vscode-node-debug';
 
 gulp.task('clean', () => {
-	return del(['out/**', 'dist/**', 'package.nls.*.json', 'node-debug-*.vsix']);
+	return del(['out/**', 'dist/**', 'package.nls.*.json', 'node-debug-*.vsix', 'package-lock.json']);
 });
 
 gulp.task('internal-compile', () => {
