@@ -19,7 +19,6 @@
 		"test": "gulp compile && mocha --timeout 10000 -u tdd ./out/tests/",
 		"nodemon": "nodemon --debug --nolazy ./dist/nodeDebug.js --server=4711",
 		"prepublish": "gulp build",
-		"vscode:prepublish": "gulp build",
 		"package": "gulp prepare-for-webpack && webpack --mode production --vscode-nls && vsce package --yarn",
 		"publish": "gulp prepare-for-webpack && webpack --mode production --vscode-nls && vsce publish",
 		"bump": "npm version patch -m 'bump to %s'",
