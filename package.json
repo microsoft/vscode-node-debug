@@ -88,6 +88,10 @@
 		"onCommand:extension.node-debug.attachNodeProcess",
 		"onCommand:extension.node-debug.startAutoAttach"
 	],
+	"workspaceTrust": {
+		"request": "never",
+		"description": "This extension provides the node.js debug adapter which is used by VS Code only after trust has been required."
+	},
 	"contributes": {
 		"configuration": {
 			"title": "Node debug",
