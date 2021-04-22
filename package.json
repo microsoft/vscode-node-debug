@@ -88,11 +88,11 @@
 		"onCommand:extension.node-debug.attachNodeProcess",
 		"onCommand:extension.node-debug.startAutoAttach"
 	],
-	 "capabilities": {
-    		"virtualWorkspaces": false,
-	    	"untrustedWorkspaces": {
-      			"supported": true
-    		}
+	"capabilities": {
+		"virtualWorkspaces": false,
+		"untrustedWorkspaces": {
+			"supported": true
+		}
 	},
 	"contributes": {
 		"configuration": {
