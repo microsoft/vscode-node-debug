@@ -13,7 +13,6 @@ import { writeToConsole, mkdirP, Logger } from './utilities';
 import { detectDebugType } from './protocolDetection';
 import { resolveProcessId } from './processPicker';
 import { Cluster } from './cluster';
-import { exec } from 'child_process';
 
 const DEBUG_SETTINGS = 'debug.node';
 const SHOW_USE_WSL_IS_DEPRECATED_WARNING_SETTING = 'showUseWslIsDeprecatedWarning';
@@ -234,6 +233,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 	private async nvmSupport(config: vscode.DebugConfiguration): Promise<void> {
 
 		let bin: string | undefined = undefined;
+		let versionString: string | undefined = undefined;
 		let versionManagerName: string | undefined = undefined;
 
 		// first try the Node Version Switcher 'nvs'
@@ -246,7 +246,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 			}
 		}
 
-		const { nvsFormat, remoteName, semanticVersion, arch } = parseVersionString(config.runtimeVersion);
+		const { nvsFormat, remoteName, semanticVersion, arch } = parseNvsVersionString(config.runtimeVersion);
 
 		if (nvsFormat || nvsHome) {
 			if (nvsHome) {
@@ -268,8 +268,8 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 				if (!nvmHome) {
 					throw new Error(localize('NVM_HOME.not.found.message', "Attribute 'runtimeVersion' requires Node.js version manager 'nvm-windows' or 'nvs'."));
 				}
-				const nodeVersion = await this.getNodeVersion(config);
-				bin = join(nvmHome, nodeVersion);
+				versionString = await getNvmrcNodeVersion(config);
+				bin = join(nvmHome, versionString);
 				versionManagerName = 'nvm-windows';
 			} else {	// macOS and linux
 				let nvmHome = process.env['NVM_DIR'];
@@ -283,8 +283,8 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 				if (!nvmHome) {
 					throw new Error(localize('NVM_DIR.not.found.message', "Attribute 'runtimeVersion' requires Node.js version manager 'nvm' or 'nvs'."));
 				}
-				const nodeVersion = await this.getNodeVersion(config);
-				bin = join(nvmHome, 'versions', 'node', nodeVersion, 'bin');
+				versionString = await getNvmrcNodeVersion(config);
+				bin = join(nvmHome, 'versions', 'node', versionString, 'bin');
 				versionManagerName = 'nvm';
 			}
 		}
@@ -299,23 +299,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 				config.env['PATH'] = `${bin}:${process.env['PATH']}`;
 			}
 		} else {
-			throw new Error(localize('runtime.version.not.found.message', "Node.js version '{0}' not installed for '{1}'.", config.runtimeVersion, versionManagerName));
-		}
-	}
-
-	private async getNodeVersion(config: vscode.DebugConfiguration): Promise<string> {
-		if (config.runtimeVersion === 'nvm') {
-			return new Promise((resolve, reject) => {
-				exec('nvm exec --silent -- node --version', { cwd: config.cwd }, (error, stdout) => {
-					if (error === null) {
-						resolve(stdout.trim());
-					} else {
-						reject(new Error(localize('could.not.get.nvm.version.message', "Failed to get version from nvm: '{0}'", error.message)))
-					}
-				});
-			});
-		} else {
-			return `v${config.runtimeVersion}`;
+			throw new Error(localize('runtime.version.not.found.message', "Node.js version '{0}' not installed for '{1}'.", versionString, versionManagerName));
 		}
 	}
 }
@@ -524,8 +508,8 @@ function nvsStandardArchName(arch) {
  * Parses a node version string into remote name, semantic version, and architecture
  * components. Infers some unspecified components based on configuration.
  */
-function parseVersionString(versionString) {
-	const versionRegex = /^(([\w-]+)\/)?(v?(\d+(\.\d+(\.\d+)?)?))(\/((x86)|(32)|((x)?64)|(arm\w*)|(ppc\w*)))?$/i;
+function parseNvsVersionString(versionString) {
+	const versionRegex = /^(([\w-]+)\/)?(v?(\d+(\.\d+(\.\d+)?)?))(\/((x86)|(32)|((x)?64)|(arm\w*)|(ppc\w*)))?$|nvmrc/i;
 
 	const match = versionRegex.exec(versionString);
 	if (!match) {
@@ -538,6 +522,19 @@ function parseVersionString(versionString) {
 	const arch = nvsStandardArchName(match[8] || process.arch);
 
 	return { nvsFormat, remoteName, semanticVersion, arch };
+}
+
+async function getNvmrcNodeVersion(config: vscode.DebugConfiguration): Promise<string> {
+	let versionString = config.runtimeVersion;
+	if (versionString === 'nvmrc') {
+		versionString = fs.readFileSync(join(config.cwd, '.nvmrc')).toString().trim();
+	}
+	const versionRegex = /^\d+\.\d+\.\d+$/;
+	const match = versionRegex.exec(versionString);
+	if (!match) {
+		throw new Error(localize('invalid.nvm.runtime.version.message', "Invalid version string: '{0}'", versionString));
+	}
+	return `v${versionString}`;
 }
 
 let hasShownDeprecation = false;
