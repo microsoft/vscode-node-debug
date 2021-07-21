@@ -13,6 +13,7 @@ import { writeToConsole, mkdirP, Logger } from './utilities';
 import { detectDebugType } from './protocolDetection';
 import { resolveProcessId } from './processPicker';
 import { Cluster } from './cluster';
+import { exec } from 'child_process';
 
 const DEBUG_SETTINGS = 'debug.node';
 const SHOW_USE_WSL_IS_DEPRECATED_WARNING_SETTING = 'showUseWslIsDeprecatedWarning';
@@ -267,7 +268,8 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 				if (!nvmHome) {
 					throw new Error(localize('NVM_HOME.not.found.message', "Attribute 'runtimeVersion' requires Node.js version manager 'nvm-windows' or 'nvs'."));
 				}
-				bin = join(nvmHome, `v${config.runtimeVersion}`);
+				const nodeVersion = await this.getNodeVersion(config);
+				bin = join(nvmHome, nodeVersion);
 				versionManagerName = 'nvm-windows';
 			} else {	// macOS and linux
 				let nvmHome = process.env['NVM_DIR'];
@@ -281,7 +283,8 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 				if (!nvmHome) {
 					throw new Error(localize('NVM_DIR.not.found.message', "Attribute 'runtimeVersion' requires Node.js version manager 'nvm' or 'nvs'."));
 				}
-				bin = join(nvmHome, 'versions', 'node', `v${config.runtimeVersion}`, 'bin');
+				const nodeVersion = await this.getNodeVersion(config);
+				bin = join(nvmHome, 'versions', 'node', nodeVersion, 'bin');
 				versionManagerName = 'nvm';
 			}
 		}
@@ -297,6 +300,22 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 			}
 		} else {
 			throw new Error(localize('runtime.version.not.found.message', "Node.js version '{0}' not installed for '{1}'.", config.runtimeVersion, versionManagerName));
+		}
+	}
+
+	private async getNodeVersion(config: vscode.DebugConfiguration): Promise<string> {
+		if (config.runtimeVersion === 'nvm') {
+			return new Promise((resolve, reject) => {
+				exec('nvm exec --silent -- node --version', { cwd: config.cwd }, (error, stdout) => {
+					if (error === null) {
+						resolve(stdout.trim());
+					} else {
+						reject(new Error(localize('could.not.get.nvm.version.message', "Failed to get version from nvm: '{0}'", error.message)))
+					}
+				});
+			});
+		} else {
+			return `v${config.runtimeVersion}`;
 		}
 	}
 }
