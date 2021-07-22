@@ -8,6 +8,7 @@ import * as nls from 'vscode-nls';
 import * as vscode from 'vscode';
 import { join, isAbsolute, dirname, relative } from 'path';
 import * as fs from 'fs';
+import * as semver from 'semver';
 
 import { writeToConsole, mkdirP, Logger } from './utilities';
 import { detectDebugType } from './protocolDetection';
@@ -268,7 +269,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 				if (!nvmHome) {
 					throw new Error(localize('NVM_HOME.not.found.message', "Attribute 'runtimeVersion' requires Node.js version manager 'nvm-windows' or 'nvs'."));
 				}
-				versionString = await getNvmrcNodeVersion(config);
+				versionString = await getNvmNodeVersion(config, nvmHome);
 				bin = join(nvmHome, versionString);
 				versionManagerName = 'nvm-windows';
 			} else {	// macOS and linux
@@ -283,7 +284,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 				if (!nvmHome) {
 					throw new Error(localize('NVM_DIR.not.found.message', "Attribute 'runtimeVersion' requires Node.js version manager 'nvm' or 'nvs'."));
 				}
-				versionString = await getNvmrcNodeVersion(config);
+				versionString = await getNvmNodeVersion(config, nvmHome);
 				bin = join(nvmHome, 'versions', 'node', versionString, 'bin');
 				versionManagerName = 'nvm';
 			}
@@ -524,17 +525,45 @@ function parseNvsVersionString(versionString) {
 	return { nvsFormat, remoteName, semanticVersion, arch };
 }
 
-async function getNvmrcNodeVersion(config: vscode.DebugConfiguration): Promise<string> {
+/**
+ * Gets the exact Node version to use with nvm.
+ *
+ * If a numeric version is specified in config.runtimeVersion, it uses that. If 'nvmrc' is set as
+ * the runtime version, it will read the .nvmrc file for a version.
+ *
+ * @returns If a full major.minor.patch version is specified, that is returned, prefixed with 'v'
+ * to match the path used by nvm. If a partial version (e.g. 10, or 10.16) is specified, the
+ * latest matching installed version is found, and returned (with a 'v' prefix). If no matching
+ * version is installed, the version specified by the user is returned as-is to propagate to the
+ * error message.
+ */
+async function getNvmNodeVersion(config: vscode.DebugConfiguration, nvmHome: string): Promise<string> {
 	let versionString = config.runtimeVersion;
 	if (versionString === 'nvmrc') {
 		versionString = fs.readFileSync(join(config.cwd, '.nvmrc')).toString().trim();
 	}
-	const versionRegex = /^\d+\.\d+\.\d+$/;
+
+	const versionRegex = /^\d+(\.\d+)?(\.\d+)?$/;
 	const match = versionRegex.exec(versionString);
 	if (!match) {
-		throw new Error(localize('invalid.nvm.runtime.version.message', "Invalid version string: '{0}'", versionString));
+		throw new Error(localize('invalid.nvm.runtime.version.message', "Invalid version string: '{0}'. Only numeric versions are supported for 'runtimeVersion': 'nvmrc', not aliases.", versionString));
+	} else {
+		if (match[2]) {
+			return `v${versionString}`;
+		} else {
+			const versionsDir = process.platform === 'win32' ? nvmHome : join(nvmHome, "versions", "node");
+			const versions = fs.readdirSync(versionsDir);
+			const latestMatchingInstalledVersion = versions
+				.filter(v => semver.satisfies(v, versionString))
+				.sort((a, b) => semver.compare(a, b))
+				.pop();
+			if (latestMatchingInstalledVersion) {
+				return latestMatchingInstalledVersion;
+			} else {
+				return versionString;
+			}
+		}
 	}
-	return `v${versionString}`;
 }
 
 let hasShownDeprecation = false;

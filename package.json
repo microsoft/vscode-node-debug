@@ -45,6 +45,7 @@
 		"glob": "7.1.6",
 		"minimatch": "3.0.4",
 		"request-light": "0.4.0",
+		"semver": "^7.3.5",
 		"source-map": "0.6.1",
 		"vscode-debugadapter": "1.47.0",
 		"vscode-nls": "5.0.0"
@@ -52,6 +53,7 @@
 	"devDependencies": {
 		"@types/mocha": "8.2.0",
 		"@types/node": "^12.7.3",
+		"@types/semver": "^7.3.7",
 		"@types/vscode": "^1.42.0",
 		"copy-webpack-plugin": "^6.4.1",
 		"del": "5.1.0",
