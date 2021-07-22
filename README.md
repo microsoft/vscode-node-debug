@@ -3,7 +3,7 @@
 [![build status](https://travis-ci.org/Microsoft/vscode-node-debug.svg?branch=master)](https://travis-ci.org/Microsoft/vscode-node-debug)
 [![build status](https://ci.appveyor.com/api/projects/status/t74psolxi3k7bcjp/branch/master?svg=true)](https://ci.appveyor.com/project/weinand/vscode-node-debug)
 
-This extension is bundled with Visual Studio Code and together with **Node Debug** forms the [Node.js](https://nodejs.org) debugging experience.
+This extension is bundled with Visual Studio Code and together with [**Node Debug**](https://github.com/microsoft/vscode-node-debug2) forms the [Node.js](https://nodejs.org) debugging experience.
 
 **Node debug (legacy)** is the debugger for Node.js versions < 8.0.
 
