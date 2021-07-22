@@ -147,6 +147,8 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 		// add the workspace folder for js-debug, if useV3 is set
 		if (useV3()) {
 			config.__workspaceFolder = folder ? '${workspaceFolder}' : config.cwd /* attempt fallback */;
+		} else {
+			annoyingDeprecationNotification();
 		}
 
 		// everything ok: let VS Code start the debug session
@@ -469,8 +471,10 @@ async function determineDebugType(config: any, logger: Logger): Promise<string |
 	}
 }
 
+const v3Setting ='debug.javascript.usePreview';
+
 function useV3() {
-	return getWithoutDefault('debug.javascript.usePreview') ?? true;
+	return getWithoutDefault(v3Setting) ?? true;
 }
 
 function getWithoutDefault<T>(setting: string): T | undefined {
@@ -515,4 +519,29 @@ function parseVersionString(versionString) {
 	const arch = nvsStandardArchName(match[8] || process.arch);
 
 	return { nvsFormat, remoteName, semanticVersion, arch };
+}
+
+let hasShownDeprecation = false;
+
+async function annoyingDeprecationNotification() {
+	if (hasShownDeprecation) {
+			return;
+	}
+
+	const useNewDebugger = 'Upgrade';
+	hasShownDeprecation = true;
+	const result = await vscode.window.showWarningMessage("You're using an old Node.js debugger which will be deprecated soon. Please upgrade to our new debugger, and file issues if you run into any problems", useNewDebugger);
+
+	if (result !== useNewDebugger) {
+			return;
+	}
+
+	const config = vscode.workspace.getConfiguration();
+	const inspect = config.inspect(v3Setting);
+	if (inspect?.globalValue === false) {
+			config.update(v3Setting, true, vscode.ConfigurationTarget.Global);
+	}
+	if (inspect?.workspaceValue === false) {
+			config.update(v3Setting, true, vscode.ConfigurationTarget.Workspace);
+	}
 }
