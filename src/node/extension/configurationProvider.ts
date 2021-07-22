@@ -510,7 +510,11 @@ function nvsStandardArchName(arch) {
  * components. Infers some unspecified components based on configuration.
  */
 function parseNvsVersionString(versionString) {
-	const versionRegex = /^(([\w-]+)\/)?(v?(\d+(\.\d+(\.\d+)?)?))(\/((x86)|(32)|((x)?64)|(arm\w*)|(ppc\w*)))?$|nvmrc/i;
+	if (versionString === 'nvmrc') {
+		return { nvsFormat: false, remoteName: '', semanticVersion: '', arch: '' };
+	}
+
+	const versionRegex = /^(([\w-]+)\/)?(v?(\d+(\.\d+(\.\d+)?)?))(\/((x86)|(32)|((x)?64)|(arm\w*)|(ppc\w*)))?$/i;
 
 	const match = versionRegex.exec(versionString);
 	if (!match) {
