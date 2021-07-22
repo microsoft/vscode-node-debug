@@ -555,7 +555,7 @@ async function getNvmNodeVersion(config: vscode.DebugConfiguration, nvmHome: str
 		if (match[2]) {
 			return `v${versionString}`;
 		} else {
-			const versionsDir = process.platform === 'win32' ? nvmHome : join(nvmHome, "versions", "node");
+			const versionsDir = process.platform === 'win32' ? nvmHome : join(nvmHome, 'versions', 'node');
 			const versions = fs.readdirSync(versionsDir);
 			const latestMatchingInstalledVersion = versions
 				.filter(v => semver.satisfies(v, versionString))
