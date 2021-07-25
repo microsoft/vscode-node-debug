@@ -251,6 +251,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 
 		if (nvsFormat || nvsHome) {
 			if (nvsHome) {
+				versionString = config.runtimeVersion;
 				bin = join(nvsHome, remoteName, semanticVersion, arch);
 				if (process.platform !== 'win32') {
 					bin = join(bin, 'bin');
