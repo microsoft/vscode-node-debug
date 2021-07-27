@@ -482,7 +482,6 @@ function getWithoutDefault<T>(setting: string): T | undefined {
 	return info?.workspaceValue ?? info?.globalValue;
 }
 
-
 function nvsStandardArchName(arch) {
 	switch (arch) {
 		case '32':
@@ -530,14 +529,18 @@ async function annoyingDeprecationNotification() {
 
 	const useNewDebugger = 'Upgrade';
 	hasShownDeprecation = true;
-	const result = await vscode.window.showWarningMessage("You're using an old Node.js debugger which will be deprecated soon. Please upgrade to our new debugger, and file issues if you run into any problems", useNewDebugger);
+	const inspect = vscode.workspace.getConfiguration().inspect(v3Setting);
+	const isWorkspace = inspect?.workspaceValue === false;
+	const result = await vscode.window.showWarningMessage(
+		`You're using a ${isWorkspace ? 'workspace' : 'user'} setting to use VS Code's legacy Node.js debugger, which will be removed soon. Please update your settings using the "Upgrade" button to use our modern debugger.`,
+		useNewDebugger,
+	);
 
 	if (result !== useNewDebugger) {
 			return;
 	}
 
 	const config = vscode.workspace.getConfiguration();
-	const inspect = config.inspect(v3Setting);
 	if (inspect?.globalValue === false) {
 			config.update(v3Setting, true, vscode.ConfigurationTarget.Global);
 	}
