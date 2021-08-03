@@ -1,7 +1,7 @@
 {
 	"name": "node-debug",
 	"displayName": "[Deprecated] Node Debug (legacy)",
-	"version": "1.44.32",
+	"version": "1.45.0",
 	"publisher": "ms-vscode",
 	"description": "%extension.description%",
 	"icon": "images/node-debug-icon.png",
@@ -28,10 +28,10 @@
 	"keywords": [
 		"multi-root ready"
 	],
-  "engines": {
-    "vscode": "^1.60.0-insider",
-    "node": ">=10"
-  },
+	"engines": {
+		"vscode": "^1.60.0-insider",
+		"node": ">=10"
+	},
 	"extensionDependencies": [
 		"ms-vscode.node-debug2"
 	],
