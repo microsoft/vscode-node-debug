@@ -22,11 +22,11 @@ export function detectDebugType(config: any, logger: Logger): Promise<string|nul
 	switch (config.request) {
 		case 'attach':
 			return detectProtocolForAttach(config, logger).then(protocol => {
-				return protocol === 'inspector' ? 'node2' : 'node';
+				return protocol === 'inspector' ? 'legacy-node2' : 'legacy-node';
 			});
 
 		case 'launch':
-			return Promise.resolve(detectProtocolForLaunch(config, logger) === 'inspector' ? 'node2' : 'node');
+			return Promise.resolve(detectProtocolForLaunch(config, logger) === 'inspector' ? 'legacy-node2' : 'legacy-node');
 		default:
 			// should not happen
 			break;

@@ -31,14 +31,6 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 	}
 
 	/**
-	 * Returns an initial debug configuration based on contextual information, e.g. package.json or folder.
-	 */
-	provideDebugConfigurations(folder: vscode.WorkspaceFolder | undefined, token?: vscode.CancellationToken): vscode.ProviderResult<vscode.DebugConfiguration[]> {
-
-		return [createLaunchConfigFromContext(folder, false)];
-	}
-
-	/**
 	 * Try to add all missing attributes to the debug configuration being launched.
 	 */
 	resolveDebugConfiguration(folder: vscode.WorkspaceFolder | undefined, config: vscode.DebugConfiguration, token?: vscode.CancellationToken): vscode.ProviderResult<vscode.DebugConfiguration> {
@@ -128,7 +120,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 
 		// fixup log parameters
 		if (config.trace && !config.logFilePath) {
-			const fileName = config.type === 'node' ? 'debugadapter-legacy.txt' : 'debugadapter.txt';
+			const fileName = config.type === 'legacy-node' ? 'debugadapter-legacy.txt' : 'debugadapter.txt';
 
 			if (this._extensionContext.logPath) {
 				try {
@@ -143,13 +135,6 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 
 		// tell the extension what file patterns can be debugged
 		config.__debuggablePatterns = this.getJavaScriptPatterns();
-
-		// add the workspace folder for js-debug, if useV3 is set
-		if (useV3()) {
-			config.__workspaceFolder = folder ? '${workspaceFolder}' : config.cwd /* attempt fallback */;
-		} else {
-			annoyingDeprecationNotification();
-		}
 
 		// everything ok: let VS Code start the debug session
 		return config;
@@ -306,7 +291,7 @@ export class NodeConfigurationProvider implements vscode.DebugConfigurationProvi
 function createLaunchConfigFromContext(folder: vscode.WorkspaceFolder | undefined, resolve: boolean, existingConfig?: vscode.DebugConfiguration): vscode.DebugConfiguration {
 
 	const config = {
-		type: 'node',
+		type: 'legacy-node',
 		request: 'launch',
 		name: localize('node.launch.config.name', "Launch Program"),
 		skipFiles: ['<node_internals>/**'],
@@ -459,28 +444,16 @@ function guessProgramFromPackage(folder: vscode.WorkspaceFolder | undefined, pac
 //---- debug type -------------------------------------------------------------------------------------------------------------
 
 async function determineDebugType(config: any, logger: Logger): Promise<string | null> {
-	if (useV3()) {
-		return 'pwa-node';
-	} else if (config.protocol === 'legacy') {
-		return 'node';
+	if (config.protocol === 'legacy') {
+		return 'legacy-node';
 	} else if (config.protocol === 'inspector') {
-		return 'node2';
+		return 'legacy-node2';
 	} else {
 		// 'auto', or unspecified
 		return detectDebugType(config, logger);
 	}
 }
 
-const v3Setting ='debug.javascript.usePreview';
-
-function useV3() {
-	return getWithoutDefault(v3Setting) ?? true;
-}
-
-function getWithoutDefault<T>(setting: string): T | undefined {
-	const info = vscode.workspace.getConfiguration().inspect<T>(setting);
-	return info?.workspaceValue ?? info?.globalValue;
-}
 
 function nvsStandardArchName(arch) {
 	switch (arch) {
@@ -518,33 +491,4 @@ function parseVersionString(versionString) {
 	const arch = nvsStandardArchName(match[8] || process.arch);
 
 	return { nvsFormat, remoteName, semanticVersion, arch };
-}
-
-let hasShownDeprecation = false;
-
-async function annoyingDeprecationNotification() {
-	if (hasShownDeprecation) {
-			return;
-	}
-
-	const useNewDebugger = 'Upgrade';
-	hasShownDeprecation = true;
-	const inspect = vscode.workspace.getConfiguration().inspect(v3Setting);
-	const isWorkspace = inspect?.workspaceValue === false;
-	const result = await vscode.window.showWarningMessage(
-		`You're using a ${isWorkspace ? 'workspace' : 'user'} setting to use VS Code's legacy Node.js debugger, which will be removed soon. Please update your settings using the "Upgrade" button to use our modern debugger.`,
-		useNewDebugger,
-	);
-
-	if (result !== useNewDebugger) {
-			return;
-	}
-
-	const config = vscode.workspace.getConfiguration();
-	if (inspect?.globalValue === false) {
-			config.update(v3Setting, true, vscode.ConfigurationTarget.Global);
-	}
-	if (inspect?.workspaceValue === false) {
-			config.update(v3Setting, true, vscode.ConfigurationTarget.Workspace);
-	}
 }

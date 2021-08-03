@@ -41,14 +41,14 @@ export function getPidFromSession(session: vscode.DebugSession): Promise<number>
 				clearTimeout(timer);
 				resolve(NaN);
 			}
-		}, session.type === 'node2' ? 500 : 100);
+		}, session.type === 'legacy-node2' ? 500 : 100);
 	});
 }
 
 export function initializeAutoAttach(context: vscode.ExtensionContext) {
 
 	context.subscriptions.push(vscode.debug.onDidStartDebugSession(session => {
-		if (session.type === 'node' || session.type === 'node2') {
+		if (session.type === 'legacy-node' || session.type === 'legacy-node2') {
 			// try to get pid from newly started node.js debug session
 			pids.push(getPidFromSession(session));
 		}

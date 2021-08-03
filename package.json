@@ -1,6 +1,6 @@
 {
 	"name": "node-debug",
-	"displayName": "Node Debug (legacy)",
+	"displayName": "[Deprecated] Node Debug (legacy)",
 	"version": "1.44.32",
 	"publisher": "ms-vscode",
 	"description": "%extension.description%",
@@ -28,9 +28,10 @@
 	"keywords": [
 		"multi-root ready"
 	],
-	"engines": {
-		"vscode": "^1.49.0"
-	},
+  "engines": {
+    "vscode": "^1.60.0-insider",
+    "node": ">=10"
+  },
 	"extensionDependencies": [
 		"ms-vscode.node-debug2"
 	],
@@ -81,8 +82,7 @@
 	},
 	"main": "./dist/extension.js",
 	"activationEvents": [
-		"onDebugInitialConfigurations",
-		"onDebugResolve:node",
+		"onDebugResolve:legacy-node",
 		"onCommand:extension.pickNodeProcess",
 		"onCommand:extension.node-debug.toggleSkippingFile",
 		"onCommand:extension.node-debug.attachNodeProcess",
@@ -111,7 +111,7 @@
 				{
 					"command": "extension.node-debug.toggleSkippingFile",
 					"group": "navigation",
-					"when": "inDebugMode && debugType == 'node' && callStackItemType == 'stackFrame'"
+					"when": "inDebugMode && debugType == 'legacy-node' && callStackItemType == 'stackFrame'"
 				}
 			]
 		},
@@ -137,7 +137,7 @@
 		],
 		"debuggers": [
 			{
-				"type": "node",
+				"type": "legacy-node",
 				"label": "%node.label%",
 				"program": "./dist/nodeDebug.js",
 				"runtime": "node",
@@ -150,168 +150,6 @@
 					"typescript",
 					"javascriptreact",
 					"typescriptreact"
-				],
-				"configurationSnippets": [
-					{
-						"label": "%node.snippet.launch.label%",
-						"description": "%node.snippet.launch.description%",
-						"body": {
-							"type": "node",
-							"request": "launch",
-							"name": "${2:Launch Program}",
-							"program": "^\"\\${workspaceFolder}/${1:app.js}\"",
-							"skipFiles": [
-								"<node_internals>/**"
-							]
-						}
-					},
-					{
-						"label": "%node.snippet.npm.label%",
-						"markdownDescription": "%node.snippet.npm.description%",
-						"body": {
-							"type": "node",
-							"request": "launch",
-							"name": "${1:Launch via NPM}",
-							"runtimeExecutable": "npm",
-							"runtimeArgs": [
-								"run-script",
-								"debug"
-							],
-							"port": 9229,
-							"skipFiles": [
-								"<node_internals>/**"
-							]
-						}
-					},
-					{
-						"label": "%node.snippet.attach.label%",
-						"description": "%node.snippet.attach.description%",
-						"body": {
-							"type": "node",
-							"request": "attach",
-							"name": "${1:Attach}",
-							"port": 9229,
-							"skipFiles": [
-								"<node_internals>/**"
-							]
-						}
-					},
-					{
-						"label": "%node.snippet.remoteattach.label%",
-						"description": "%node.snippet.remoteattach.description%",
-						"body": {
-							"type": "node",
-							"request": "attach",
-							"name": "${1:Attach to Remote}",
-							"address": "${2:TCP/IP address of process to be debugged}",
-							"port": 9229,
-							"localRoot": "^\"\\${workspaceFolder}\"",
-							"remoteRoot": "${3:Absolute path to the remote directory containing the program}",
-							"skipFiles": [
-								"<node_internals>/**"
-							]
-						}
-					},
-					{
-						"label": "%node.snippet.attachProcess.label%",
-						"description": "%node.snippet.attachProcess.description%",
-						"body": {
-							"type": "node",
-							"request": "attach",
-							"name": "${1:Attach by Process ID}",
-							"processId": "^\"\\${command:PickProcess}\"",
-							"skipFiles": [
-								"<node_internals>/**"
-							]
-						}
-					},
-					{
-						"label": "%node.snippet.nodemon.label%",
-						"description": "%node.snippet.nodemon.description%",
-						"body": {
-							"type": "node",
-							"request": "launch",
-							"name": "nodemon",
-							"runtimeExecutable": "nodemon",
-							"program": "^\"\\${workspaceFolder}/${1:app.js}\"",
-							"restart": true,
-							"console": "integratedTerminal",
-							"internalConsoleOptions": "neverOpen",
-							"skipFiles": [
-								"<node_internals>/**"
-							]
-						}
-					},
-					{
-						"label": "%node.snippet.mocha.label%",
-						"description": "%node.snippet.mocha.description%",
-						"body": {
-							"type": "node",
-							"request": "launch",
-							"name": "Mocha Tests",
-							"program": "^\"\\${workspaceFolder}/node_modules/mocha/bin/_mocha\"",
-							"args": [
-								"-u",
-								"tdd",
-								"--timeout",
-								"999999",
-								"--colors",
-								"^\"\\${workspaceFolder}/${1:test}\""
-							],
-							"internalConsoleOptions": "openOnSessionStart",
-							"skipFiles": [
-								"<node_internals>/**"
-							]
-						}
-					},
-					{
-						"label": "%node.snippet.yo.label%",
-						"markdownDescription": "%node.snippet.yo.description%",
-						"body": {
-							"type": "node",
-							"request": "launch",
-							"name": "Yeoman ${1:generator}",
-							"program": "^\"\\${workspaceFolder}/node_modules/yo/lib/cli.js\"",
-							"args": [
-								"${1:generator}"
-							],
-							"console": "integratedTerminal",
-							"internalConsoleOptions": "neverOpen",
-							"skipFiles": [
-								"<node_internals>/**"
-							]
-						}
-					},
-					{
-						"label": "%node.snippet.gulp.label%",
-						"description": "%node.snippet.gulp.description%",
-						"body": {
-							"type": "node",
-							"request": "launch",
-							"name": "Gulp ${1:task}",
-							"program": "^\"\\${workspaceFolder}/node_modules/gulp/bin/gulp.js\"",
-							"args": [
-								"${1:task}"
-							],
-							"skipFiles": [
-								"<node_internals>/**"
-							]
-						}
-					},
-					{
-						"label": "%node.snippet.electron.label%",
-						"description": "%node.snippet.electron.description%",
-						"body": {
-							"type": "node",
-							"request": "launch",
-							"name": "Electron Main",
-							"runtimeExecutable": "^\"\\${workspaceFolder}/node_modules/.bin/electron\"",
-							"program": "^\"\\${workspaceFolder}/main.js\"",
-							"skipFiles": [
-								"<node_internals>/**"
-							]
-						}
-					}
 				],
 				"configurationAttributes": {
 					"launch": {

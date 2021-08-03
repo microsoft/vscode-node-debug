@@ -30,7 +30,7 @@ export async function attachProcess() {
 	if (result) {
 
 		const config = {
-			type: 'node',
+			type: 'legacy-node',
 			request: 'attach',
 			name: 'process',
 			processId: result
@@ -85,8 +85,8 @@ export async function resolveProcessId(config: vscode.DebugConfiguration) : Prom
 				if (debugType) {
 					// processID is handled, so turn this config into a normal port attach configuration
 					delete config.processId;
-					config.port = debugType === 'node2' ? INSPECTOR_PORT_DEFAULT : LEGACY_PORT_DEFAULT;
-					config.protocol = debugType === 'node2' ? 'inspector' : 'legacy';
+					config.port = debugType === 'legacy-node2' ? INSPECTOR_PORT_DEFAULT : LEGACY_PORT_DEFAULT;
+					config.protocol = debugType === 'legacy-node2' ? 'inspector' : 'legacy';
 				} else {
 					throw new Error(localize('pid.error', "Attach to process: cannot put process '{0}' in debug mode.", processId));
 				}
@@ -220,8 +220,8 @@ function determineDebugTypeForPidInDebugMode(config: any, pid: number): Promise<
 	}
 
 	return debugProtocolP.then(debugProtocol => {
-		return debugProtocol === 'inspector' ? 'node2' :
-			debugProtocol === 'legacy' ? 'node' :
+		return debugProtocol === 'inspector' ? 'legacy-node2' :
+			debugProtocol === 'legacy' ? 'legacy-node' :
 				null;
 	});
 }

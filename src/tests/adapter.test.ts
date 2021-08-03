@@ -44,7 +44,7 @@ suite('Node Debug Adapter', () => {
 			}
 		}
 
-		dc = new DebugClient('node', DEBUG_ADAPTER, 'node', { env: env });
+		dc = new DebugClient('node', DEBUG_ADAPTER, 'legacy-node', { env: env });
 		return dc.start();	// add port to run as server
 	});
 
